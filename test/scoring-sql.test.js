@@ -1006,10 +1006,13 @@ test("diverDivesWhere: keyed on the diver's and the lead's dive-list rows, no cd
   assert.ok(sql.includes("NOT EXISTS (SELECT 1 FROM scores own"));
   assert.ok(!/\bcdl\./.test(sql), "doesn't need the caller's cdl join");
   assert.ok(!sql.includes("$1"));
-  // The public profile's cut: newest n events first, then the same chain.
+  // The public profile's cut: newest n events first (by when they took
+  // place, like recent_form), then the same chain.
+  const { EVENT_DATE } = require("../db/queries");
   assert.equal(FULL_FIELD_RANKING, fullFieldRanking());
   const cut = fullFieldRanking({ latest: 5 });
-  assert.ok(cut.includes("ORDER BY e.created_at DESC, e.id DESC\n    LIMIT 5"));
+  assert.ok(cut.includes(`ORDER BY ${EVENT_DATE} DESC, e.id DESC\n    LIMIT 5`));
+  assert.ok(!cut.includes("e.created_at DESC"));
   assert.ok(!FULL_FIELD_RANKING.includes("LIMIT 5"));
   assert.throws(() => fullFieldRanking({ latest: 0 }), /positive integer/);
 });

@@ -25,7 +25,7 @@
 const express = require("express");
 const sharp = require("sharp");
 const { perDivePointsCte } = require("../lib/scoring-sql");
-const { fullFieldRanking, diverDivesWhere } = require("../db/queries");
+const { fullFieldRanking, diverDivesWhere, EVENT_DATE } = require("../db/queries");
 const { PUBLIC_CLUB_JOIN } = require("../lib/club-approvals");
 
 // In-memory cache of rendered OG cards. Each crawler hits the
@@ -113,7 +113,8 @@ module.exports = function createPublicProfileRouter({ pool, readPool }) {
   //                    over the diver's full history, so the
   //                    page has something to say even for a
   //                    diver who just wrapped one event)
-  //   recent_meets:    last 5 events with placing + score
+  //   recent_meets:    last 5 events with placing + score, newest
+  //                    first; created_at is when the event took place
   //
   // No PII (no email, no internal id, no dashboard layout).
   // -------------------------------------------------------------
@@ -163,18 +164,24 @@ module.exports = function createPublicProfileRouter({ pool, readPool }) {
       // A place only depends on that event's own field, so pick the 5
       // events first and rank just those (latest: 5). Ranking the diver's
       // whole career and then keeping 5 cost ~300ms for a long career, on
-      // a public, uncached URL that link-preview crawlers hit too. Both
-      // ORDER BYs break created_at ties on the id so they agree on which 5.
+      // a public, uncached URL that link-preview crawlers hit too.
+      //
+      // Newest first by when the event took place (EVENT_DATE), and that's
+      // the created_at sent back, same as the analytics recent_form. Events
+      // are set up weeks before they're held, so ordering on the row's
+      // created_at put a January meet made in December behind December's,
+      // and could pick a different five from the dashboard's. Both ORDER
+      // BYs break ties on the id so they agree on which 5.
       reads.query(
         `WITH ${fullFieldRanking({ latest: 5 })}
-         SELECT e.id AS event_id, e.name AS event_name, e.created_at,
+         SELECT e.id AS event_id, e.name AS event_name, ${EVENT_DATE} AS created_at,
                 e.event_type::text AS event_type, e.height,
                 ranked.total::numeric(8,2) AS total,
                 ranked.rank::int AS rank,
                 ranked.field_size
          FROM ranked
          JOIN events e ON e.id = ranked.event_id
-         ORDER BY e.created_at DESC, e.id DESC
+         ORDER BY ${EVENT_DATE} DESC, e.id DESC
          LIMIT 5`,
         [diver.id, null, null],
       )]);

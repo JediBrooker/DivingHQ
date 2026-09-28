@@ -149,10 +149,12 @@ const PER_DIVE = perDiveSelect({
 // surfaces (routes/scoreboard.js, routes/archive.js).
 //
 // fullFieldRanking({ latest: n }) is the same chain cut down to the
-// diver's n most recent events (created_at, id breaking ties) before
-// anything gets ranked. A place only depends on its own event's field,
-// so the public profile's "last 5 meets" doesn't have to rank a whole
-// career to keep five rows of it. FULL_FIELD_RANKING is the uncut one.
+// diver's n most recent events before anything gets ranked. Most recent
+// by EVENT_DATE with the id breaking ties, the order the analytics
+// recent_form lists them in, so the public profile's five are the same
+// five. A place only depends on its own event's field, so the public
+// profile's "last 5 meets" doesn't have to rank a whole career to keep
+// five rows of it. FULL_FIELD_RANKING is the uncut one.
 // =====================================================================
 function fullFieldRanking({ latest = null } = {}) {
   const scoredIn = `
@@ -171,7 +173,7 @@ function fullFieldRanking({ latest = null } = {}) {
     FROM (${scoredIn}
     ) de
     JOIN events e ON e.id = de.event_id
-    ORDER BY e.created_at DESC, e.id DESC
+    ORDER BY ${EVENT_DATE} DESC, e.id DESC
     LIMIT ${latest}`;
   }
   return `

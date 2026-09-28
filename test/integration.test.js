@@ -10750,7 +10750,7 @@ test("the latest-5 ranking cut matches the full ranking, and a partner's synchro
   if (!serverReady) return t.skip("server didn't boot — see warning above");
   const st = await setupFixture({ withEvent: false });
   try {
-    const { FULL_FIELD_RANKING, fullFieldRanking } = require("../db/queries");
+    const { FULL_FIELD_RANKING, fullFieldRanking, EVENT_DATE } = require("../db/queries");
     const dive = await recordKit.threeMetreDive();
     const me = await recordKit.diver(st.orgId, null, "female", "Cut Mara");
     const lead = await recordKit.diver(st.orgId, null, "female", "Cut Lead");
@@ -10791,7 +10791,7 @@ test("the latest-5 ranking cut matches the full ranking, and a partner's synchro
     await recordKit.dive(sync, rival, 1, dive, 6);
 
     const cols = (rows) => rows.map((r) => [r.event_id, Number(r.total).toFixed(2), Number(r.rank), r.field_size]);
-    const order = "JOIN events e ON e.id = ranked.event_id ORDER BY e.created_at DESC, e.id DESC";
+    const order = `JOIN events e ON e.id = ranked.event_id ORDER BY ${EVENT_DATE} DESC, e.id DESC`;
     const full = (await pool.query(`WITH ${FULL_FIELD_RANKING} SELECT ranked.* FROM ranked ${order}`, [me, null, null])).rows;
     const cut = (await pool.query(`WITH ${fullFieldRanking({ latest: 5 })} SELECT ranked.* FROM ranked ${order}`, [me, null, null])).rows;
     assert.equal(full.length, 7);
@@ -10866,6 +10866,48 @@ test("a Super Final reserve's scored try-out doesn't carry their H2H total onto 
     assert.deepEqual(board.body.rounds.flatMap((rd) => rd.rankings.map((row) => row.full_name)).sort(), ["Reserve Xena", "Reserve Yara"]);
     const sheet = await fetch(`${baseUrl}/api/events/${sf.id}/divers/${x}/score-sheet.pdf`);
     assert.match(pdfText(Buffer.from(await sheet.arrayBuffer())).join("\n"), /1st of 2/);
+  } finally {
+    await recordKit.cleanup(st.orgId);
+    await teardownFixture(st);
+  }
+});
+
+// The public profile's last five meets are the analytics recent_form's five,
+// newest by when each event took place (EVENT_DATE), and dated that way.
+// They were ordered and dated by the event row's created_at, so a meet set up
+// early but held last could fall out of the public five while it headed the
+// dashboard's.
+test("the public profile's last five meets are the dashboard's five, dated when they were held", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const dive = await recordKit.threeMetreDive();
+    const me = await recordKit.diver(st.orgId, null, "female", "Held Hana");
+    const rival = await recordKit.diver(st.orgId, null, "female", "Held Rival");
+    const held = [];
+    // Created January to June, held in the opposite order: the one set up
+    // first is the most recent meet.
+    for (let i = 0; i < 6; i++) {
+      const ev = await recordKit.event(st.orgId, { gender: "Female" });
+      await pool.query(
+        "UPDATE events SET status = 'Completed', created_at = $2, scheduled_at = $3 WHERE id = $1",
+        [ev.id, `2026-0${i + 1}-01T09:00:00Z`, `2026-${String(12 - i).padStart(2, "0")}-01T09:00:00Z`],
+      );
+      await recordKit.dive(ev, me, 1, dive, 6 + i * 0.5);
+      await recordKit.dive(ev, rival, 1, dive, 7);
+      held.push({ id: ev.id, at: `2026-${String(12 - i).padStart(2, "0")}-01T09:00:00.000Z` });
+    }
+    const slug = crypto.randomBytes(16).toString("hex");
+    await pool.query("UPDATE users SET public_slug = $1 WHERE id = $2", [slug, me]);
+    const pub = await fetchJson("GET", `/api/public/divers/${slug}`);
+    assert.equal(pub.status, 200, JSON.stringify(pub.body));
+    const analytics = await fetchJson("GET", `/api/divers/${me}/analytics`);
+    assert.equal(analytics.status, 200, JSON.stringify(analytics.body));
+    const newestFive = held.slice(0, 5);
+    assert.deepEqual(pub.body.recent_meets.map((m) => m.event_id), newestFive.map((e) => e.id));
+    assert.deepEqual(analytics.body.recent_form.map((m) => m.event_id), newestFive.map((e) => e.id));
+    assert.deepEqual(pub.body.recent_meets.map((m) => new Date(m.created_at).toISOString()), newestFive.map((e) => e.at));
   } finally {
     await recordKit.cleanup(st.orgId);
     await teardownFixture(st);
