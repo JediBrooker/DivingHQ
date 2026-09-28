@@ -293,6 +293,22 @@ module.exports = function createAuthRouter({
   const router = express.Router();
   const { mintVerifyToken, mintResetToken } = createAuthLinks(JWT_SECRET);
 
+  // Sign a fresh session for userId, set the cookie and answer with
+  // { ...before, user, ...payload, ...after }, plus the token for clients
+  // that want it in the body. Login and login/totp pass withExtras so the
+  // SPA gets the nav flags too; those go on after signing so they never
+  // end up inside the JWT. Change-password and the locale switch never
+  // sent them, and still don't.
+  async function sendSession(req, res, userId, { before = {}, after = {}, withExtras = false } = {}) {
+    const payload = await buildTokenPayload(userId);
+    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRY });
+    setSessionCookie(res, token);
+    if (withExtras) await addSessionExtras(pool, payload, userId);
+    const resBody = { ...before, user: payload, ...payload, ...after };
+    if (includeBodyToken(req)) resBody.token = token;
+    res.json(resBody);
+  }
+
   // -------------------------------------------------------------
   // GET /api/auth/me: rehydrate the signed-in identity from the
   // httpOnly session cookie. The SPA calls this on boot because the
@@ -419,14 +435,7 @@ module.exports = function createAuthRouter({
         return res.json({ needs_totp: true, totp_token });
       }
 
-      const payload = await buildTokenPayload(user.id);
-      const token = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRY });
-      setSessionCookie(res, token);
-      // After signing, so the flags never enter the JWT.
-      await addSessionExtras(pool, payload, user.id);
-      const resBody = { user: payload, ...payload };
-      if (includeBodyToken(req)) resBody.token = token;
-      res.json(resBody);
+      await sendSession(req, res, user.id, { withExtras: true });
     } catch (err) {
       console.error("[Login Error]", err.message);
       res.status(500).json({ error: "Login failed" });
@@ -516,20 +525,12 @@ module.exports = function createAuthRouter({
         return res.status(401).json({ error: "Invalid TOTP / recovery code" });
       }
 
-      const payload = await buildTokenPayload(user.id);
-      const token = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRY });
-      setSessionCookie(res, token);
-      // Same body-only extras as the password login.
-      await addSessionExtras(pool, payload, user.id);
-      const resBody = {
-        user: payload,
-        ...payload,
-        ...(consumedRecovery
+      await sendSession(req, res, user.id, {
+        withExtras: true,
+        after: consumedRecovery
           ? { warning: "Recovery code consumed. Re-generate your recovery codes when convenient." }
-          : {}),
-      };
-      if (includeBodyToken(req)) resBody.token = token;
-      res.json(resBody);
+          : {},
+      });
     } catch (err) {
       console.error("[Login TOTP Error]", err.message);
       res.status(500).json({ error: "TOTP login failed" });
@@ -1511,12 +1512,7 @@ module.exports = function createAuthRouter({
       await bumpTokenVersion(client, user.id);
       await client.query("COMMIT");
       sendPasswordChangedEmail(user.id).catch(() => {});
-      const payload = await buildTokenPayload(user.id);
-      const token = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRY });
-      setSessionCookie(res, token);
-      const resBody = { ok: true, user: payload, ...payload };
-      if (includeBodyToken(req)) resBody.token = token;
-      res.json(resBody);
+      await sendSession(req, res, user.id, { before: { ok: true } });
     } catch (err) {
       await client.query("ROLLBACK").catch(() => {});
       console.error("[Change Password Error]", err.message);
@@ -1564,12 +1560,9 @@ module.exports = function createAuthRouter({
       // Reissue the token so the next request resolves this
       // user's locale from req.user.locale (cheap path) rather
       // than falling through to Accept-Language.
-      const payload = await buildTokenPayload(req.user.id);
-      const token = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRY });
-      setSessionCookie(res, token);
-      const resBody = { ok: true, locale: cleared ? null : raw, user: payload, ...payload };
-      if (includeBodyToken(req)) resBody.token = token;
-      res.json(resBody);
+      await sendSession(req, res, req.user.id, {
+        before: { ok: true, locale: cleared ? null : raw },
+      });
     } catch (err) {
       console.error("[Set Locale Error]", err.message);
       res.status(500).json({
