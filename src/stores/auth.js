@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { idbClear, cachedFetch } from '@/lib/idbCache'
 import { fingerprintFromUser } from '@/lib/userFingerprint'
+import { setLocale, currentLocale } from '@/i18n'
 
 export const useAuthStore = defineStore('auth', () => {
   // The session credential (the JWT) lives in an httpOnly cookie now,
@@ -75,6 +76,7 @@ export const useAuthStore = defineStore('auth', () => {
     idbClear().catch(() => {})
     user.value = next
     cacheIdentity(next)
+    adoptAccountLocale()
   }
 
   function clearSession() {
@@ -129,6 +131,45 @@ export const useAuthStore = defineStore('auth', () => {
     } catch {
       // Network unreachable. Same reasoning as a 5xx.
       user.value = readCachedIdentity()
+    }
+  }
+
+  // Set by the switcher while signed out, read once by adoptAccountLocale.
+  const PICKED_LOCALE_KEY = 'dhq_locale_picked'
+  function notePickedLocale(code) {
+    try { sessionStorage.setItem(PICKED_LOCALE_KEY, code) } catch { /* private mode */ }
+  }
+
+  // users.locale is the language server-side mail goes out in (receipts,
+  // fines, a verify link an admin resends), and nothing ever set it: the
+  // switcher only wrote localStorage, so all of that went out in English.
+  // Now a switch made while signed in is saved to the account.
+  async function saveLocale(code) {
+    if (!user.value || !code) return
+    try {
+      await apiFetch('/api/users/me/locale', { method: 'POST', body: JSON.stringify({ locale: code }) })
+      user.value = { ...user.value, locale: code }
+      cacheIdentity(user.value)
+    } catch { /* best effort, the UI has already switched */ }
+  }
+
+  // On boot and on sign-in. The account's language follows the person to
+  // a new device. One picked on this device just before signing in (the
+  // login page has a switcher, see LocaleSwitcher) wins and gets saved,
+  // and an account with none yet takes whatever this device is showing.
+  // Never rejects: main.js awaits it before mounting.
+  async function adoptAccountLocale() {
+    if (!user.value) return
+    let picked = null
+    try {
+      picked = sessionStorage.getItem(PICKED_LOCALE_KEY)
+      sessionStorage.removeItem(PICKED_LOCALE_KEY)
+    } catch { /* private mode */ }
+    const account = user.value.locale || null
+    if (picked && picked !== account) { saveLocale(picked); return }
+    if (!account) { saveLocale(currentLocale()); return }
+    if (account !== currentLocale()) {
+      try { await setLocale(account) } catch { /* keep what's showing */ }
     }
   }
 
@@ -239,6 +280,7 @@ export const useAuthStore = defineStore('auth', () => {
     user, isLoggedIn, fingerprint, hasDependents, clubAdminOf, isClubAdmin,
     regionAdminOf, isRegionAdmin, hasClaim, pendingClub,
     saveSession, clearSession, fetchMe,
+    saveLocale, adoptAccountLocale, notePickedLocale,
     hasRole, hasAnyRole, getHeaders,
     apiFetch, cachedApiFetch,
     formatRoles,

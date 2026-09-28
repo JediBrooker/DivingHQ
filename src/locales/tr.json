@@ -80,7 +80,8 @@
       "success_club_pending": "{club}, {org} onayını bekliyor. E-postanızı doğruladığınız anda görecekler; karar verildiğinde size e-posta göndereceğiz.",
       "region_will_ask": "{region} hangi kulüpleri alacağına kendisi karar verir; e-postanızı doğruladığınızda ona bir talep gönderilir. Kabul edene kadar kulübünüz bölgede değildir.",
       "founder_role_note": "Kulübün kurucusu olarak kendi antrenör veya hakem talebinizi onaylayamazsınız; talep bölgenizin yöneticilerine ya da DivingHQ'ya gider.",
-      "spectator_note_see_above": "Tüm hesaplar Seyirci olarak başlar. Yukarıda talep ettiğiniz rol, altındaki notta belirtildiği gibi incelenir. E-postanız doğrulandıktan sonra giriş yapabilirsiniz."
+      "spectator_note_see_above": "Tüm hesaplar Seyirci olarak başlar. Yukarıda talep ettiğiniz rol, altındaki notta belirtildiği gibi incelenir. E-postanız doğrulandıktan sonra giriş yapabilirsiniz.",
+      "username_taken": "Bu kullanıcı adı zaten alınmış. Başka bir tane seçin."
     },
     "register_org": {
       "title": "Kuruluş Kaydı",
@@ -1077,7 +1078,9 @@
     "orgs_need_country_title": "Ülkesi olmayan kuruluşlar ({n})",
     "orgs_need_country_hint": "Kayıt olanlar federasyonlarını ülkeye göre bulur, bu yüzden bir ülke atanana kadar kimse bunlara katılamaz.",
     "org_suspended": "Askıya alındı",
-    "orgs_show_all": "Tümünü göster ({n})"
+    "orgs_show_all": "Tümünü göster ({n})",
+    "guardian_requests_title": "Veli bağlantı istekleri",
+    "guardian_request_by": "{name} onun adına ödeme yapmak istiyor"
   },
   "setup": {
     "title": "Federasyon Kurulumu",
@@ -1848,7 +1851,11 @@
     "search_placeholder": "Ada göre ara...",
     "age_years": "{age} yaşında",
     "paying_for": "Şunun için ödeme yapılıyor",
-    "paying_for_self": "Kendiniz"
+    "paying_for_self": "Kendiniz",
+    "pending_badge": "Onay bekliyor",
+    "withdraw": "İsteği geri çek",
+    "withdraw_confirm": "Bu bağlantı isteği geri çekilsin mi?",
+    "no_results": "Kuruluşunuzda bu isimde kimse yok."
   },
   "my_club": {
     "title": "Kulübüm",

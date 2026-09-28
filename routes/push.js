@@ -7,13 +7,14 @@
 //                                            before it can subscribe
 //   POST   /api/push/subscribe              AUTH:   register a sub
 //   DELETE /api/push/subscribe              AUTH:   revoke a sub
-//   GET    /api/notifications/me            AUTH:   inbox feed
+//   GET    /api/notifications/me            AUTH:   inbox feed (?limit, ?before_id)
 //   POST   /api/notifications/:id/acknowledge AUTH: mark seen
 //
 // Mounted via:
 //   app.use(require('./routes/push')({ verifyToken, push }))
 
 const express = require("express");
+const { isUuid } = require("../lib/uuid");
 
 module.exports = function createPushRouter({ verifyToken, push }) {
   if (!verifyToken || !push) {
@@ -69,16 +70,25 @@ module.exports = function createPushRouter({ verifyToken, push }) {
   });
 
   // -------------------------------------------------------------
-  // GET /api/notifications/me?limit=20&since_id=<uuid>
+  // GET /api/notifications/me?limit=20&before_id=<uuid>
   // SPA inbox: recent notifications for the signed-in user,
-  // newest first. Excludes expired rows server-side. FYI, since_id
-  // is optional, it's the pagination cursor for "load more".
+  // newest first. Excludes expired rows server-side. before_id is the
+  // optional "load more" cursor: pass the last id of the page you have.
+  // since_id is the old name for it and still works.
+  //
+  // limit is clamped to 1..100: a negative one used to reach LIMIT -1 and
+  // 500. A cursor that isn't a uuid is a 400 rather than a Postgres cast
+  // error.
   // -------------------------------------------------------------
   router.get("/api/notifications/me", verifyToken, async (req, res) => {
-    const limit = Math.min(Number(req.query.limit) || 20, 100);
-    const sinceId = req.query.since_id || null;
+    const n = Number.parseInt(req.query.limit, 10);
+    const limit = Number.isFinite(n) ? Math.min(Math.max(n, 1), 100) : 20;
+    const beforeId = req.query.before_id || req.query.since_id || null;
+    if (beforeId && !isUuid(beforeId)) {
+      return res.status(400).json({ error: "before_id must be a notification id" });
+    }
     try {
-      const rows = await push.listForUser(req.user.id, { limit, sinceId });
+      const rows = await push.listForUser(req.user.id, { limit, beforeId });
       res.json(rows);
     } catch (err) {
       console.error("[notifications list]", err.message);
@@ -93,6 +103,7 @@ module.exports = function createPushRouter({ verifyToken, push }) {
   // a system notification clears it from the inbox.
   // -------------------------------------------------------------
   router.post("/api/notifications/:id/acknowledge", verifyToken, async (req, res) => {
+    if (!isUuid(req.params.id)) return res.status(404).json({ error: "Notification not found" });
     try {
       const ok = await push.acknowledgeNotification(req.params.id, req.user.id);
       if (!ok) return res.status(404).json({ error: "Notification not found" });

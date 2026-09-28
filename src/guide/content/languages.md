@@ -44,7 +44,8 @@ The chosen language is written to `localStorage('locale')` on every change. That
 
 - **Across pages within the same session** — instant. The vue-i18n locale is a globally reactive ref; every page that uses `$t(...)` re-renders the moment the locale changes.
 - **Across reload / sign-in / sign-out** — covered by `localStorage`. Returning users see their language immediately on the next visit, even before they sign in.
-- **Across devices** — currently no. Each browser keeps its own `localStorage`. Cross-device persistence will land when the `users.locale` server-side column is rolled out alongside server-side i18n for email templates and PDF exports.
+- **On your account** — when you're signed in, a change is saved to your account too, and an account that has no language yet takes the one on screen when you sign in. That's the language the emails DivingHQ sends you are written in (payment receipts, fines, a verification or reset link an admin sends you), whatever language the person who triggered them uses.
+- **Across devices** — signing in on another device switches it to your account's language. A language you pick on the sign-in page just before signing in wins, and becomes your account's.
 
 ### First-visit auto-detect
 

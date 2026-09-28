@@ -84,10 +84,11 @@ A diver can have multiple coaches over time; a coach can mentor multiple divers.
 
 Divers initiate club changes from their own profile ("My club" card). Org admins action the resulting requests in **User Manager → Requests tab**.
 
-The Requests tab shows two sections:
+The Requests tab shows these sections:
 
 - **Role requests** — pending role grant requests, approve or deny each.
 - **Club change requests** — pending club or org moves, with type badges (`club change` or `transfer`).
+- **Guardian link requests** — a parent asking to pay on a child's behalf, with the child's age. Only shown while payments is switched on.
 
 For **same-org club changes** (diver moving from one club to another within your federation), a single org-admin approval completes the move.
 
@@ -107,7 +108,7 @@ The move only finalises once all three are in. Every approval and the final tran
 - **List** — every club in your org, with member counts derived from `users.club_id`
 - **+ New Club** — name + short code (up to 8 letters, numbers or dashes, unique among the federation's clubs; surfaces as the cyan pill in scoreboards)
 - **Edit** — rename, change short code
-- **Delete** — non-destructive; clubs with members can't be deleted (prevents orphaning users)
+- **Delete** — non-destructive; clubs with members can't be deleted (prevents orphaning users). Anyone still waiting on a request to join the club has it closed and gets a note saying why.
 - **Admins** — appoint or remove the club's admins (see [Club admins](#club-admins))
 - **Regions** — the strip above the list shows your states, provinces or home nations with their club counts; click one to appoint its admins. If your country has no regions yet, **Set up regions** loads the standard list for Australia, Canada or the UK
 - **Waiting for approval** — clubs someone started when they signed up in your country. Each shows who started it (with their username and email, which they've verified), when they asked, and a **Looks like …** warning when an existing club has the same code or much the same name. Until you decide, the club is hidden from every club list, nobody can join it and it can't host meets. **Approve** lets you fix the name, short code and region first, and makes the founder the club's admin unless you untick the box. **Reject** deletes the club, optionally moves its members into an existing club (the look-alike is picked for you), and sends the founder your reason. Either way the founder keeps their account and is told by email. The **`🏛 N NEW CLUBS`** chip on your dashboard counts what's waiting.

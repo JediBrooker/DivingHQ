@@ -8925,3 +8925,872 @@ test("coach up-next pushes skip rehearsal events", async (t) => {
     await compKit.cleanup(orgId);
   }
 });
+
+// ---------------------------------------------------------------------
+// Accounts and orgs bug sweep (area 3). Each test below failed before
+// its fix landed.
+// ---------------------------------------------------------------------
+
+// A second org admin (or any fixture user) signs in with the password
+// insertUser gives everyone.
+async function b3Login(username) {
+  const r = await fetchJson("POST", "/api/auth/login", { body: { username, password: "not-used-here" } });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  return r.body.token;
+}
+
+test("two admins deciding one role request at once: one wins, the other gets a 409", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    await insertUser({ orgId: st.orgId, role: "org_admin", username: `int-b3a2-${st.slug}`, fullName: "Second Admin" });
+    const other = await b3Login(`int-b3a2-${st.slug}`);
+    for (let i = 0; i < 6; i++) {
+      const asker = await insertUser({ orgId: st.orgId, role: "spectator", username: `int-b3rr${i}-${st.slug}`, fullName: `Asker ${i}` });
+      const rq = (await pool.query(
+        "INSERT INTO role_requests (user_id, org_id, requested_role) VALUES ($1, $2, 'judge') RETURNING id", [asker, st.orgId],
+      )).rows[0].id;
+      const second = i % 2 ? "approved" : "rejected";
+      const [x, y] = await Promise.all([
+        fetchJson("POST", `/api/role-requests/${rq}/review`, { token: st.adminToken, body: { decision: "approved" } }),
+        fetchJson("POST", `/api/role-requests/${rq}/review`, { token: other, body: { decision: second } }),
+      ]);
+      assert.deepEqual([x.status, y.status].sort(), [200, 409], `round ${i}: ${JSON.stringify([x.body, y.body])}`);
+      const status = (await pool.query("SELECT status::text FROM role_requests WHERE id = $1", [rq])).rows[0].status;
+      const held = (await pool.query("SELECT 1 FROM user_org_roles WHERE user_id = $1 AND role = 'judge'", [asker])).rows.length > 0;
+      const grants = (await pool.query(
+        "SELECT count(*)::int AS n FROM role_audit_log WHERE user_id = $1 AND role = 'judge' AND action = 'granted'", [asker],
+      )).rows[0].n;
+      assert.equal(held, status === "approved", `round ${i}: role ${held} but request ${status}`);
+      assert.equal(grants, held ? 1 : 0);
+    }
+  } finally {
+    await teardownFixture(st);
+  }
+});
+
+test("a club change decided twice at once is applied once and reads the way it went", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    await insertUser({ orgId: st.orgId, role: "org_admin", username: `int-b3c2-${st.slug}`, fullName: "Second Admin" });
+    const other = await b3Login(`int-b3c2-${st.slug}`);
+    const club = async (name) => (await pool.query(
+      "INSERT INTO clubs (org_id, name) VALUES ($1, $2) RETURNING id", [st.orgId, name],
+    )).rows[0].id;
+    for (let i = 0; i < 6; i++) {
+      const from = await club(`From ${i}`);
+      const to = await club(`To ${i}`);
+      const uname = `int-b3cc${i}-${st.slug}`;
+      const diver = await insertUser({ orgId: st.orgId, role: "diver", username: uname, fullName: `Mover ${i}` });
+      await pool.query("UPDATE users SET club_id = $1 WHERE id = $2", [from, diver]);
+      const dt = await b3Login(uname);
+      const made = await fetchJson("POST", "/api/club-change-requests", { token: dt, body: { to_club_id: to } });
+      assert.equal(made.status, 201, JSON.stringify(made.body));
+      const [x, y] = await Promise.all([
+        fetchJson("POST", `/api/club-change-requests/${made.body.id}/review`, { token: st.adminToken, body: { decision: "approved" } }),
+        i % 2
+          ? fetchJson("POST", `/api/club-change-requests/${made.body.id}/review`, { token: other, body: { decision: "rejected" } })
+          : fetchJson("POST", `/api/club-change-requests/${made.body.id}/cancel`, { token: dt }),
+      ]);
+      assert.deepEqual([x.status, y.status].sort(), [200, 409], `round ${i}: ${JSON.stringify([x.body, y.body])}`);
+      const status = (await pool.query("SELECT status::text FROM club_change_requests WHERE id = $1", [made.body.id])).rows[0].status;
+      const now = (await pool.query("SELECT club_id FROM users WHERE id = $1", [diver])).rows[0].club_id;
+      assert.equal(now === to, status === "approved", `round ${i}: in ${now === to ? "new" : "old"} club, request ${status}`);
+      const told = (await pool.query(
+        "SELECT count(*)::int AS n FROM notifications WHERE user_id = $1 AND category = 'club_change'", [diver],
+      )).rows[0].n;
+      assert.ok(told <= 1, `round ${i}: the diver heard ${told} outcomes`);
+    }
+  } finally {
+    await pool.query("DELETE FROM clubs WHERE org_id = $1", [st.orgId]);
+    await teardownFixture(st);
+  }
+});
+
+test("a guardian link approved and rejected at once keeps the first decision", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    await insertUser({ orgId: st.orgId, role: "org_admin", username: `int-b3g2-${st.slug}`, fullName: "Second Admin" });
+    const other = await b3Login(`int-b3g2-${st.slug}`);
+    const parent = await insertUser({ orgId: st.orgId, role: "spectator", username: `int-b3gp-${st.slug}`, fullName: "Parent" });
+    for (let i = 0; i < 6; i++) {
+      const kid = await insertUser({ orgId: st.orgId, role: "diver", username: `int-b3gk${i}-${st.slug}`, fullName: `Kid ${i}` });
+      const link = (await pool.query(
+        "INSERT INTO guardians (org_id, guardian_user_id, dependent_user_id) VALUES ($1, $2, $3) RETURNING id",
+        [st.orgId, parent, kid],
+      )).rows[0].id;
+      const [x, y] = await Promise.all([
+        fetchJson("POST", `/api/guardian-requests/${link}/review`, { token: st.adminToken, body: { decision: "approved" } }),
+        fetchJson("POST", `/api/guardian-requests/${link}/review`, { token: other, body: { decision: "rejected" } }),
+      ]);
+      assert.deepEqual([x.status, y.status].sort(), [200, 409], `round ${i}: ${JSON.stringify([x.body, y.body])}`);
+      const status = (await pool.query("SELECT status FROM guardians WHERE id = $1", [link])).rows[0].status;
+      assert.equal(status, x.status === 200 ? "approved" : "rejected");
+    }
+  } finally {
+    await teardownFixture(st);
+  }
+});
+
+test("transferring away drops the old org's roles, so coming back doesn't restore org_admin", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const X = await setupFixture({ withEvent: false });
+  const Y = await setupFixture({ withEvent: false });
+  try {
+    const sys = await claimKit.login("admin", "admin");
+    const uname = `int-b3tr-${X.slug}`;
+    const mover = await insertUser({ orgId: X.orgId, role: "org_admin", username: uname, fullName: "Travelling Admin" });
+    await pool.query("INSERT INTO user_org_roles (user_id, org_id, role) VALUES ($1, $2, 'meet_manager')", [mover, X.orgId]);
+    const move = async (toOrg) => {
+      const tok = await b3Login(uname);
+      const made = await fetchJson("POST", "/api/club-change-requests", { token: tok, body: { to_org_id: toOrg } });
+      assert.equal(made.status, 201, JSON.stringify(made.body));
+      const ok = await fetchJson("POST", `/api/club-change-requests/${made.body.id}/review`, { token: sys.token, body: { decision: "approved" } });
+      assert.equal(ok.body.status, "approved", JSON.stringify(ok.body));
+    };
+    const rolesNow = async () => (await fetchJson("GET", "/api/auth/me", { token: await b3Login(uname) })).body.user.org_roles.slice().sort();
+
+    await move(Y.orgId);
+    assert.deepEqual(await rolesNow(), ["diver"]);
+    const left = (await pool.query(
+      "SELECT role::text FROM user_org_roles WHERE user_id = $1 AND org_id = $2", [mover, X.orgId],
+    )).rows;
+    assert.deepEqual(left, [], "nothing left behind in the old org");
+    const revoked = (await pool.query(
+      "SELECT role::text FROM role_audit_log WHERE user_id = $1 AND org_id = $2 AND action = 'revoked' ORDER BY role::text",
+      [mover, X.orgId],
+    )).rows.map((r) => r.role);
+    assert.deepEqual(revoked, ["meet_manager", "org_admin"]);
+
+    // Coming home is joining as a diver, nothing more.
+    await move(X.orgId);
+    assert.deepEqual(await rolesNow(), ["diver"]);
+
+    // Rows a transfer from before this fix left behind don't come back
+    // to life either.
+    await pool.query("INSERT INTO user_org_roles (user_id, org_id, role) VALUES ($1, $2, 'org_admin')", [mover, Y.orgId]);
+    await move(Y.orgId);
+    assert.deepEqual(await rolesNow(), ["diver"]);
+  } finally {
+    await pool.query("DELETE FROM users WHERE username = $1", [`int-b3tr-${X.slug}`]);
+    await teardownFixture(X);
+    await teardownFixture(Y);
+  }
+});
+
+// Rows like these are what transfers before the fix above left behind:
+// org_admin in a federation the person has since left.
+test("someone who left a federation isn't counted as its admin or told about its business", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const { liveOrgAdminIds } = require("../lib/admin-rows");
+  const clubApprovals = require("../lib/club-approvals");
+  const CODE = "GUY";
+  await claimKit.wipe(CODE);
+  const X = await setupFixture({ withEvent: false });
+  const Y = await setupFixture({ withEvent: false });
+  try {
+    const gone = await insertUser({ orgId: Y.orgId, role: "diver", username: `int-b3gone-${X.slug}`, fullName: "Former Admin" });
+    await pool.query("INSERT INTO user_org_roles (user_id, org_id, role) VALUES ($1, $2, 'org_admin')", [gone, X.orgId]);
+
+    assert.deepEqual(await liveOrgAdminIds(pool, X.orgId), [X.adminId]);
+    assert.deepEqual(await clubApprovals.reviewerIds(pool, X.orgId), [X.adminId]);
+
+    // A region claim the federation decides: its admins hear when it goes
+    // live and again when it's decided. The one who left hears neither.
+    await pool.query("UPDATE organisations SET country_code = $2 WHERE id = $1", [X.orgId, CODE]);
+    await pool.query("INSERT INTO regions (org_id, name, short_code) VALUES ($1, 'Demerara', 'DE')", [X.orgId]);
+    const body = await claimKit.claim({ org_name: "Demerara Diving", country_code: CODE, region_code: "de" });
+    assert.equal(body.res.status, 201, JSON.stringify(body.res.body));
+    assert.equal(body.res.body.approver, "parent");
+    await claimKit.verify(body.id);
+    const told = async (id) => (await pool.query(
+      "SELECT count(*)::int AS n FROM notifications WHERE user_id = $1", [id],
+    )).rows[0].n;
+    assert.ok(await told(X.adminId) >= 1, "the federation's real admin hears about it");
+    const decided = await fetchJson("POST", `/api/claims/${body.res.body.claim_id}/decide`, {
+      token: X.adminToken, body: { decision: "approve" },
+    });
+    assert.equal(decided.status, 200, JSON.stringify(decided.body));
+    assert.equal(await told(gone), 0, "nothing reaches someone who's left");
+  } finally {
+    await pool.query("DELETE FROM claims WHERE org_id = $1", [X.orgId]).catch(() => {});
+    await pool.query("DELETE FROM users WHERE username = $1", [`int-b3gone-${X.slug}`]);
+    await teardownFixture(X);
+    await teardownFixture(Y);
+    await claimKit.wipe(CODE);
+  }
+});
+
+test("forgot-password finds an account whatever case its email was typed in, and every account on it", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const { resetAccountsFor } = require("../routes/auth");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const tag = crypto.randomBytes(3).toString("hex");
+    const typed = `John.Smith.${tag}@Example.test`;
+    const reg = await fetchJson("POST", "/api/auth/register", {
+      body: { username: `int-b3fp-${tag}`, password: TEST_PASSWORD, full_name: "John Smith", email: typed, org_id: st.orgId },
+    });
+    assert.equal(reg.status, 201, JSON.stringify(reg.body));
+    const found = await resetAccountsFor(pool, `  john.smith.${tag}@example.test `);
+    assert.deepEqual(found.map((u) => u.full_name), ["John Smith"]);
+
+    // A parent's address on two children's accounts: each gets a link.
+    const sibling = await insertUser({ orgId: st.orgId, role: "diver", username: `int-b3fp2-${tag}`, fullName: "Jane Smith" });
+    await pool.query("UPDATE users SET email = $2 WHERE id = $1", [sibling, typed.toLowerCase()]);
+    const both = await resetAccountsFor(pool, typed.toUpperCase());
+    assert.deepEqual(both.map((u) => u.full_name).sort(), ["Jane Smith", "John Smith"]);
+
+    const res = await fetchJson("POST", "/api/auth/forgot-password", { body: { email: typed.toLowerCase() } });
+    assert.equal(res.status, 200);
+    assert.equal(res.body.ok, true);
+  } finally {
+    await teardownFixture(st);
+  }
+});
+
+test("deleting a club closes requests to join it instead of turning them into 'leave your club'", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const club = async (name) => (await pool.query(
+      "INSERT INTO clubs (org_id, name) VALUES ($1, $2) RETURNING id", [st.orgId, name],
+    )).rows[0].id;
+    const home = await club("Home Divers");
+    const doomed = await club("Doomed Divers");
+    const uname = `int-b3dc-${st.slug}`;
+    const diver = await insertUser({ orgId: st.orgId, role: "diver", username: uname, fullName: "Hopeful Diver" });
+    await pool.query("UPDATE users SET club_id = $1 WHERE id = $2", [home, diver]);
+    const made = await fetchJson("POST", "/api/club-change-requests", { token: await b3Login(uname), body: { to_club_id: doomed } });
+    assert.equal(made.status, 201, JSON.stringify(made.body));
+
+    const del = await fetchJson("DELETE", `/api/clubs/${doomed}`, { token: st.adminToken });
+    assert.equal(del.status, 200, JSON.stringify(del.body));
+    const rq = (await pool.query("SELECT status::text FROM club_change_requests WHERE id = $1", [made.body.id])).rows[0];
+    assert.equal(rq.status, "rejected");
+    const late = await fetchJson("POST", `/api/club-change-requests/${made.body.id}/review`, { token: st.adminToken, body: { decision: "approved" } });
+    assert.equal(late.status, 409, JSON.stringify(late.body));
+    assert.equal((await pool.query("SELECT club_id FROM users WHERE id = $1", [diver])).rows[0].club_id, home, "still in their own club");
+    const told = (await pool.query(
+      "SELECT title, body FROM notifications WHERE user_id = $1 AND category = 'club_change'", [diver],
+    )).rows;
+    assert.equal(told.length, 1);
+    assert.match(told[0].body, /Doomed Divers/);
+  } finally {
+    await pool.query("DELETE FROM clubs WHERE org_id = $1", [st.orgId]);
+    await teardownFixture(st);
+  }
+});
+
+test("claiming a deleted account brings its payments, team places, memberships, fines and enrolments along", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: true });
+  try {
+    const name = `Returning Diver ${st.slug}`;
+    const oldName = `int-b3old-${st.slug}`;
+    const old = await insertUser({ orgId: st.orgId, role: "diver", username: oldName, fullName: name });
+    const clubId = (await pool.query("INSERT INTO clubs (org_id, name) VALUES ($1, 'Claim Club') RETURNING id", [st.orgId])).rows[0].id;
+    const team = (await pool.query("INSERT INTO teams (org_id, name) VALUES ($1, 'Claim Team') RETURNING id", [st.orgId])).rows[0].id;
+    await pool.query("INSERT INTO team_members (team_id, user_id) VALUES ($1, $2)", [team, old]);
+    await pool.query(
+      `INSERT INTO payments (org_id, subject_type, amount_cents, currency, payer_user_id, status)
+       VALUES ($1, 'donation', 500, 'aud', $2, 'paid')`, [st.orgId, old]);
+    await pool.query(
+      "INSERT INTO memberships (org_id, user_id, period_start, period_end) VALUES ($1, $2, '2025-01-01', '2026-01-01')", [st.orgId, old]);
+    await pool.query("INSERT INTO official_accreditations (org_id, user_id, role_type) VALUES ($1, $2, 'judge')", [st.orgId, old]);
+    await pool.query("INSERT INTO fines (org_id, liable_user_id, amount_cents, currency) VALUES ($1, $2, 2500, 'aud')", [st.orgId, old]);
+    await pool.query(
+      "INSERT INTO entry_charges (org_id, event_id, entrant_user_id, kind, amount_cents) VALUES ($1, $2, $3, 'scratch', 1000)",
+      [st.orgId, st.eventId, old]);
+    const cls = (await pool.query(
+      "INSERT INTO classes (club_id, org_id, name) VALUES ($1, $2, 'Squad') RETURNING id", [clubId, st.orgId])).rows[0].id;
+    await pool.query(
+      "INSERT INTO class_enrolments (class_id, diver_user_id, club_id, org_id) VALUES ($1, $2, $3, $4)", [cls, old, clubId, st.orgId]);
+
+    const gone = await fetchJson("POST", "/api/users/me/delete", { token: await b3Login(oldName), body: { password: "not-used-here" } });
+    assert.equal(gone.status, 200, JSON.stringify(gone.body));
+
+    const newName = `int-b3new-${st.slug}`;
+    const me = await insertUser({ orgId: st.orgId, role: "diver", username: newName, fullName: name });
+    const claim = await fetchJson("POST", "/api/users/me/claim", {
+      token: await b3Login(newName), body: { old_user_ids: [old], password: "not-used-here" },
+    });
+    assert.equal(claim.status, 200, JSON.stringify(claim.body));
+    assert.deepEqual(claim.body.claimed, [old]);
+
+    const owner = async (sql) => (await pool.query(sql, [me])).rows[0].n;
+    assert.equal(await owner("SELECT count(*)::int AS n FROM team_members WHERE user_id = $1"), 1, "still on the team");
+    assert.equal(await owner("SELECT count(*)::int AS n FROM payments WHERE payer_user_id = $1"), 1);
+    assert.equal(await owner("SELECT count(*)::int AS n FROM memberships WHERE user_id = $1"), 1);
+    assert.equal(await owner("SELECT count(*)::int AS n FROM official_accreditations WHERE user_id = $1"), 1);
+    assert.equal(await owner("SELECT count(*)::int AS n FROM fines WHERE liable_user_id = $1"), 1, "a fine still owed stays owed");
+    assert.equal(await owner("SELECT count(*)::int AS n FROM entry_charges WHERE entrant_user_id = $1"), 1);
+    assert.equal(await owner("SELECT count(*)::int AS n FROM class_enrolments WHERE diver_user_id = $1"), 1);
+  } finally {
+    for (const tbl of ["payments", "memberships", "official_accreditations", "fines", "entry_charges", "class_enrolments", "classes", "teams"]) {
+      await pool.query(`DELETE FROM ${tbl} WHERE org_id = $1`, [st.orgId]).catch(() => {});
+    }
+    await pool.query("DELETE FROM clubs WHERE org_id = $1", [st.orgId]);
+    await teardownFixture(st);
+  }
+});
+
+test("claiming an account that overlaps the new one on a live charge is a 409, not a 500", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: true });
+  try {
+    const name = `Twice Charged ${st.slug}`;
+    const oldName = `int-b3old2-${st.slug}`;
+    const old = await insertUser({ orgId: st.orgId, role: "diver", username: oldName, fullName: name });
+    const newName = `int-b3new2-${st.slug}`;
+    const me = await insertUser({ orgId: st.orgId, role: "diver", username: newName, fullName: name });
+    for (const who of [old, me]) {
+      await pool.query(
+        "INSERT INTO entry_charges (org_id, event_id, entrant_user_id, kind, amount_cents) VALUES ($1, $2, $3, 'scratch', 1000)",
+        [st.orgId, st.eventId, who]);
+    }
+    assert.equal((await fetchJson("POST", "/api/users/me/delete", { token: await b3Login(oldName), body: { password: "not-used-here" } })).status, 200);
+    const claim = await fetchJson("POST", "/api/users/me/claim", {
+      token: await b3Login(newName), body: { old_user_ids: [old], password: "not-used-here" },
+    });
+    assert.equal(claim.status, 409, JSON.stringify(claim.body));
+    assert.equal(claim.body.code, "claim_conflict");
+    assert.equal((await pool.query("SELECT count(*)::int AS n FROM users WHERE id = $1", [old])).rows[0].n, 1, "nothing half-merged");
+  } finally {
+    await pool.query("DELETE FROM entry_charges WHERE org_id = $1", [st.orgId]).catch(() => {});
+    await teardownFixture(st);
+  }
+});
+
+test("guardian linking works for a parent: scoped search, pending shown, withdraw, admin queue", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  const other = await setupFixture({ withEvent: false });
+  try {
+    const kid = await insertUser({ orgId: st.orgId, role: "diver", username: `int-b3kid-${st.slug}`, fullName: `Ivy Marsh ${st.slug}` });
+    await pool.query("UPDATE users SET date_of_birth = (CURRENT_DATE - interval '11 years')::date WHERE id = $1", [kid]);
+    await insertUser({ orgId: other.orgId, role: "diver", username: `int-b3far-${st.slug}`, fullName: `Ivy Marsh ${st.slug} Abroad` });
+    await insertUser({ orgId: st.orgId, role: "spectator", username: `int-b3par-${st.slug}`, fullName: "Rosa Marsh" });
+    const parent = await b3Login(`int-b3par-${st.slug}`);
+
+    // A parent can search (GET /api/users is the admin's member list and
+    // 403s for them), only in their own federation, and only names come back.
+    const found = await fetchJson("GET", `/api/guardians/search?q=${encodeURIComponent(`ivy marsh ${st.slug}`)}`, { token: parent });
+    assert.equal(found.status, 200, JSON.stringify(found.body));
+    assert.deepEqual(found.body.map((u) => u.id), [kid]);
+    assert.deepEqual(Object.keys(found.body[0]).sort(), ["club_name", "full_name", "id"]);
+    assert.deepEqual((await fetchJson("GET", "/api/guardians/search?q=i", { token: parent })).body, [], "two characters at least");
+
+    const asked = await fetchJson("POST", "/api/guardians/request", { token: parent, body: { dependent_user_id: kid } });
+    assert.equal(asked.status, 201, JSON.stringify(asked.body));
+    // The payment picker still only sees approved links; the page sees the wait.
+    assert.deepEqual((await fetchJson("GET", "/api/guardians/my-dependents", { token: parent })).body, []);
+    const mine = (await fetchJson("GET", "/api/guardians/my-dependents?include_pending=1", { token: parent })).body;
+    assert.deepEqual(mine.map((d) => [d.id, d.status]), [[kid, "pending"]]);
+
+    // Asked the wrong way? Withdraw it and ask again.
+    const withdrawn = await fetchJson("POST", `/api/guardians/${mine[0].guardian_link_id}/revoke`, { token: parent });
+    assert.equal(withdrawn.status, 200, JSON.stringify(withdrawn.body));
+    assert.equal((await fetchJson("POST", "/api/guardians/request", { token: parent, body: { dependent_user_id: kid } })).status, 201);
+
+    const queue = await fetchJson("GET", "/api/guardian-requests", { token: st.adminToken });
+    const rq = queue.body.find((g) => g.dependent_id === kid);
+    assert.ok(rq, "the org admin sees it");
+    assert.equal((await fetchJson("POST", `/api/guardian-requests/${rq.id}/review`, { token: st.adminToken, body: { decision: "approved" } })).status, 200);
+    assert.deepEqual((await fetchJson("GET", "/api/guardians/my-dependents", { token: parent })).body.map((d) => d.id), [kid]);
+  } finally {
+    await teardownFixture(st);
+    await teardownFixture(other);
+  }
+});
+
+test("a 2FA recovery code opens one session however many logins race for it", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const speakeasy = require("speakeasy");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const uname = `int-b3tf-${st.slug}`;
+    const u = await insertUser({ orgId: st.orgId, role: "diver", username: uname, fullName: "Two Factor" });
+    const tok = await b3Login(uname);
+    const setup = await fetchJson("POST", "/api/auth/2fa/setup", { token: tok });
+    assert.equal(setup.status, 200, JSON.stringify(setup.body));
+    const code = speakeasy.totp({ secret: setup.body.base32, encoding: "base32" });
+    assert.equal((await fetchJson("POST", "/api/auth/2fa/confirm", { token: tok, body: { code } })).status, 200);
+    const codes = setup.body.recovery_codes;
+    const stepUp = async () => (await fetchJson("POST", "/api/auth/login", {
+      body: { username: uname, password: "not-used-here" },
+    })).body.totp_token;
+    const left = async () => (await pool.query(
+      "SELECT jsonb_array_length(totp_recovery_codes) AS n FROM users WHERE id = $1", [u],
+    )).rows[0].n;
+
+    // The same code twice at once: one session, not two.
+    const [a, b] = await Promise.all([stepUp(), stepUp()]);
+    const same = await Promise.all([a, b].map((totp_token) =>
+      fetchJson("POST", "/api/auth/login/totp", { body: { totp_token, code: codes[0] } })));
+    assert.deepEqual(same.map((r) => r.status).sort(), [200, 401], JSON.stringify(same.map((r) => r.body?.error || "ok")));
+    assert.equal(await left(), codes.length - 1);
+
+    // Two different codes at once: both work, and both are used up (a lost
+    // update used to write one of them back).
+    const [c, d] = await Promise.all([stepUp(), stepUp()]);
+    const both = await Promise.all([[c, codes[1]], [d, codes[2]]].map(([totp_token, rc]) =>
+      fetchJson("POST", "/api/auth/login/totp", { body: { totp_token, code: rc } })));
+    assert.deepEqual(both.map((r) => r.status), [200, 200], JSON.stringify(both.map((r) => r.body?.error || "ok")));
+    assert.equal(await left(), codes.length - 3);
+  } finally {
+    await teardownFixture(st);
+  }
+});
+
+test("register refuses an email longer than the column with a 400, not a 500", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const r = await fetchJson("POST", "/api/auth/register", {
+      body: { username: `int-b3le-${st.slug}`, password: TEST_PASSWORD, full_name: "Long Mail",
+              email: `${"a".repeat(290)}@example.test`, org_id: st.orgId },
+    });
+    assert.equal(r.status, 400, JSON.stringify(r.body));
+  } finally {
+    await teardownFixture(st);
+  }
+});
+
+test("a taken username at signup is a 409 username_taken without the database's wording", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const again = await fetchJson("POST", "/api/auth/register", {
+      body: { username: st.username, password: TEST_PASSWORD, full_name: "Copy Cat",
+              email: `copy-${st.slug}@example.test`, org_id: st.orgId },
+    });
+    assert.equal(again.status, 409, JSON.stringify(again.body));
+    assert.equal(again.body.code, "username_taken");
+    assert.doesNotMatch(again.body.error, /Key \(|already exists/);
+
+    const org = await fetchJson("POST", "/api/auth/register-org", {
+      body: { org_name: `Copy Fed ${st.slug}`, country_code: "TST", username: st.username, password: TEST_PASSWORD,
+              full_name: "Copy Cat", email: `copy2-${st.slug}@example.test` },
+    });
+    assert.equal(org.status, 409, JSON.stringify(org.body));
+    assert.equal(org.body.code, "username_taken");
+    assert.doesNotMatch(org.body.error, /Key \(|already exists/);
+  } finally {
+    await pool.query("DELETE FROM organisations WHERE name = $1", [`Copy Fed ${st.slug}`]);
+    await teardownFixture(st);
+  }
+});
+
+test("the event-is-live email skips withdrawn divers and reserves", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: true });
+  const saved = { fetch: global.fetch, env: { ...process.env } };
+  try {
+    const dive = (await pool.query("SELECT id FROM dive_directory LIMIT 1")).rows[0].id;
+    const entrant = async (name, extra) => {
+      const id = await insertUser({ orgId: st.orgId, role: "diver", username: `int-b3ev-${name}-${st.slug}`, fullName: name });
+      await pool.query("UPDATE users SET email = $2 WHERE id = $1", [id, `${name.toLowerCase()}-${st.slug}@example.test`]);
+      await pool.query(
+        `INSERT INTO competitor_dive_lists (event_id, competitor_id, dive_id, round_number, withdrawn_at, is_reserve)
+         VALUES ($1, $2, $3, 1, $4, $5)`,
+        [st.eventId, id, dive, extra.withdrawn ? new Date() : null, !!extra.reserve],
+      );
+    };
+    await entrant("Competing", {});
+    await entrant("Withdrawn", { withdrawn: true });
+    await entrant("Reserve", { reserve: true });
+
+    const sent = [];
+    Object.assign(process.env, { CF_ACCOUNT_ID: "acct-test", CF_EMAIL_TOKEN: "token-test", EMAIL_FROM: "noreply@example.test" });
+    global.fetch = async (_url, opts) => { sent.push(JSON.parse(opts.body).to); return { ok: true, json: async () => ({}) }; };
+    const email = require("../lib/email")({ pool });
+    await email.sendEventStartedEmails({ id: st.eventId, name: "B3 Open" });
+    assert.deepEqual(sent, [`competing-${st.slug}@example.test`]);
+  } finally {
+    global.fetch = saved.fetch;
+    process.env = saved.env;
+    await teardownFixture(st);
+  }
+});
+
+test("role requests in an unclaimed country skip a suspended club admin and reach the region", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const { reviewersFor } = require("../lib/role-requests");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    await pool.query("UPDATE organisations SET claim_state = 'unclaimed' WHERE id = $1", [st.orgId]);
+    const region = (await pool.query(
+      "INSERT INTO regions (org_id, name, short_code) VALUES ($1, 'Paramaribo', 'PM') RETURNING id", [st.orgId],
+    )).rows[0].id;
+    const club = (await pool.query(
+      "INSERT INTO clubs (org_id, name, region_id) VALUES ($1, 'Suriname Divers', $2) RETURNING id", [st.orgId, region],
+    )).rows[0].id;
+    const mk = async (tag, name) => {
+      const id = await insertUser({ orgId: st.orgId, role: "spectator", username: `int-b3rv${tag}-${st.slug}`, fullName: name });
+      await pool.query("UPDATE users SET email = $2, club_id = $3 WHERE id = $1", [id, `${tag}-${st.slug}@example.test`, club]);
+      return id;
+    };
+    const clubAdmin = await mk("ca", "Club Admin");
+    const regionAdmin = await mk("ra", "Region Admin");
+    const member = await mk("m", "Member");
+    await pool.query("INSERT INTO club_admins (club_id, user_id, org_id) VALUES ($1, $2, $3)", [club, clubAdmin, st.orgId]);
+    await pool.query("INSERT INTO region_admins (region_id, user_id, org_id) VALUES ($1, $2, $3)", [region, regionAdmin, st.orgId]);
+
+    assert.equal((await reviewersFor(pool, member, st.orgId, "judge")).via, "club");
+    await pool.query("UPDATE users SET suspended_at = now() WHERE id = $1", [clubAdmin]);
+    const next = await reviewersFor(pool, member, st.orgId, "judge");
+    assert.equal(next.via, "region", "not the club admin who can't sign in");
+    assert.deepEqual(next.recipients.map((r) => r.full_name), ["Region Admin"]);
+    await pool.query("UPDATE users SET suspended_at = now() WHERE id = $1", [regionAdmin]);
+    assert.equal((await reviewersFor(pool, member, st.orgId, "judge")).via, "sysadmin");
+  } finally {
+    await pool.query("DELETE FROM clubs WHERE org_id = $1", [st.orgId]);
+    await pool.query("DELETE FROM regions WHERE org_id = $1", [st.orgId]);
+    await teardownFixture(st);
+  }
+});
+
+test("the inbox pages newest-first without skipping or repeating, and bad paging input is a 400", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    // Ids are random uuids, so their order has nothing to do with time.
+    for (let i = 0; i < 7; i++) {
+      await pool.query(
+        `INSERT INTO notifications (user_id, category, title, created_at)
+         VALUES ($1, 'generic', $2, now() - make_interval(mins => $3::int))`,
+        [st.adminId, `note ${i}`, i],
+      );
+    }
+    const seen = [];
+    let cursor = null;
+    for (let page = 0; page < 5; page++) {
+      const r = await fetchJson("GET", `/api/notifications/me?limit=3${cursor ? `&before_id=${cursor}` : ""}`, { token: st.adminToken });
+      assert.equal(r.status, 200, JSON.stringify(r.body));
+      if (!r.body.length) break;
+      seen.push(...r.body.map((n) => n.title));
+      cursor = r.body[r.body.length - 1].id;
+    }
+    assert.deepEqual(seen, [0, 1, 2, 3, 4, 5, 6].map((i) => `note ${i}`));
+
+    const one = await fetchJson("GET", "/api/notifications/me?limit=-1", { token: st.adminToken });
+    assert.equal(one.status, 200);
+    assert.equal(one.body.length, 1, "a silly limit is clamped, not passed to Postgres");
+    assert.equal((await fetchJson("GET", "/api/notifications/me?before_id=nope", { token: st.adminToken })).status, 400);
+    assert.equal((await fetchJson("GET", "/api/notifications/me?since_id=nope", { token: st.adminToken })).status, 400);
+  } finally {
+    await teardownFixture(st);
+  }
+});
+
+test("the dashboard's recent activity keeps audit rows whose event or org has since been deleted", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const sys = await claimKit.login("admin", "admin");
+  // Dated ahead so they're the newest rows whatever else the test DB holds.
+  const score = (await pool.query(
+    `INSERT INTO score_audit_log (event_id, round_number, action, old_score, new_score, created_at)
+     VALUES (NULL, 1, 'update', 6.5, 7.0, now() + interval '1 hour') RETURNING id`,
+  )).rows[0].id;
+  const role = (await pool.query(
+    `INSERT INTO role_audit_log (org_id, role, action, created_at)
+     VALUES (NULL, 'judge', 'granted', now() + interval '1 hour') RETURNING id`,
+  )).rows[0].id;
+  try {
+    const dash = await fetchJson("GET", "/api/dashboard", { token: sys.token });
+    assert.equal(dash.status, 200, JSON.stringify(dash.body));
+    const ids = (dash.body.recent_activity || []).map((a) => `${a.kind}:${a.id}`);
+    assert.ok(ids.includes(`score:${score}`), "the score correction from a deleted event is listed");
+    assert.ok(ids.includes(`role:${role}`), "the role change from a deleted org is listed");
+  } finally {
+    await pool.query("DELETE FROM score_audit_log WHERE id = $1", [score]);
+    await pool.query("DELETE FROM role_audit_log WHERE id = $1", [role]);
+  }
+});
+
+test("clubs let in by a revoked claim don't come live sharing another club's code", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const clubApprovals = require("../lib/club-approvals");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    await pool.query("INSERT INTO clubs (org_id, name, short_code, status) VALUES ($1, 'Sydney Divers', 'SYD', 'active')", [st.orgId]);
+    const founder = await insertUser({ orgId: st.orgId, role: "diver", username: `int-b3cc-${st.slug}`, fullName: "Second Founder" });
+    const waiting = (await pool.query(
+      `INSERT INTO clubs (org_id, name, short_code, status, created_by)
+       VALUES ($1, 'Sydney Springboard', 'syd', 'pending', $2) RETURNING id`, [st.orgId, founder],
+    )).rows[0].id;
+    const fine = (await pool.query(
+      "INSERT INTO clubs (org_id, name, short_code, status) VALUES ($1, 'Bondi Divers', 'BON', 'pending') RETURNING id", [st.orgId],
+    )).rows[0].id;
+    await pool.query("UPDATE users SET club_id = $1 WHERE id = $2", [waiting, founder]);
+
+    const out = await clubApprovals.withTx(pool, (c) => clubApprovals.activateAllPending(c, st.orgId, { actorId: st.adminId }));
+    const row = async (id) => (await pool.query("SELECT status, short_code FROM clubs WHERE id = $1", [id])).rows[0];
+    assert.deepEqual(await row(waiting), { status: "active", short_code: null }, "the clashing code is cleared");
+    assert.deepEqual(await row(fine), { status: "active", short_code: "BON" }, "a free code is kept");
+    const note = out.notes.find((n) => n.userIds.includes(founder));
+    assert.match(note.email.body, /SYD/);
+  } finally {
+    await pool.query("DELETE FROM clubs WHERE org_id = $1", [st.orgId]);
+    await teardownFixture(st);
+  }
+});
+
+test("asking for 'no club' just clears it, rather than a request nobody in the country can decide", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    await pool.query("UPDATE organisations SET claim_state = 'unclaimed' WHERE id = $1", [st.orgId]);
+    const club = async (name) => (await pool.query(
+      "INSERT INTO clubs (org_id, name) VALUES ($1, $2) RETURNING id", [st.orgId, name],
+    )).rows[0].id;
+    const a = await club("Georgetown Divers");
+    const b = await club("Linden Divers");
+    const uname = `int-b3nc-${st.slug}`;
+    const diver = await insertUser({ orgId: st.orgId, role: "diver", username: uname, fullName: "Leaving Diver" });
+    await pool.query("UPDATE users SET club_id = $1 WHERE id = $2", [a, diver]);
+    const tok = await b3Login(uname);
+
+    const leave = await fetchJson("POST", "/api/club-change-requests", { token: tok, body: { to_club_id: null } });
+    assert.equal(leave.status, 201, JSON.stringify(leave.body));
+    assert.equal(leave.body.finalised, true);
+    assert.equal((await pool.query("SELECT club_id FROM users WHERE id = $1", [diver])).rows[0].club_id, null);
+
+    const join = await fetchJson("POST", "/api/club-change-requests", { token: tok, body: { to_club_id: b } });
+    assert.equal(join.status, 201, `nothing stuck in the way: ${JSON.stringify(join.body)}`);
+    assert.equal(join.body.status, "pending");
+  } finally {
+    await pool.query("DELETE FROM clubs WHERE org_id = $1", [st.orgId]);
+    await teardownFixture(st);
+  }
+});
+
+test("deleting your account closes your pending club requests, and a tombstone can't be moved", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const X = await setupFixture({ withEvent: false });
+  const Y = await setupFixture({ withEvent: false });
+  try {
+    const sys = await claimKit.login("admin", "admin");
+    const uname = `int-b3sd-${X.slug}`;
+    const diver = await insertUser({ orgId: X.orgId, role: "diver", username: uname, fullName: "Leaving For Good" });
+    const tok = await b3Login(uname);
+    const made = await fetchJson("POST", "/api/club-change-requests", { token: tok, body: { to_org_id: Y.orgId } });
+    assert.equal(made.status, 201, JSON.stringify(made.body));
+    assert.equal((await fetchJson("POST", "/api/users/me/delete", { token: tok, body: { password: "not-used-here" } })).status, 200);
+
+    assert.equal((await pool.query("SELECT status::text FROM club_change_requests WHERE id = $1", [made.body.id])).rows[0].status, "rejected");
+    const late = await fetchJson("POST", `/api/club-change-requests/${made.body.id}/review`, { token: sys.token, body: { decision: "approved" } });
+    assert.equal(late.status, 409, JSON.stringify(late.body));
+
+    // One left open from before this fix: approving it still doesn't move
+    // the tombstone.
+    const legacy = (await pool.query(
+      `INSERT INTO club_change_requests (user_id, kind, from_org_id, to_org_id, diver_confirmed_at, requested_by)
+       VALUES ($1, 'org_transfer', $2, $3, now(), $1) RETURNING id`,
+      [diver, X.orgId, Y.orgId],
+    )).rows[0].id;
+    const refused = await fetchJson("POST", `/api/club-change-requests/${legacy}/review`, { token: sys.token, body: { decision: "approved" } });
+    assert.equal(refused.status, 409, JSON.stringify(refused.body));
+    assert.equal((await pool.query("SELECT org_id FROM users WHERE id = $1", [diver])).rows[0].org_id, X.orgId);
+  } finally {
+    await teardownFixture(X);
+    await teardownFixture(Y);
+  }
+});
+
+test("club member counts leave out deleted accounts", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const club = (await pool.query("INSERT INTO clubs (org_id, name) VALUES ($1, 'Ghost Divers') RETURNING id", [st.orgId])).rows[0].id;
+    await pool.query(
+      "INSERT INTO users (username, full_name, org_id, club_id, deleted_at) VALUES ($1, 'Gone', $2, $3, now())",
+      [`deleted-b3-${st.slug}`, st.orgId, club],
+    );
+    const list = await fetchJson("GET", "/api/clubs", { token: st.adminToken });
+    assert.equal(list.body.find((c) => c.id === club).member_count, 0);
+    const del = await fetchJson("DELETE", `/api/clubs/${club}`, { token: st.adminToken });
+    assert.equal(del.status, 200, JSON.stringify(del.body));
+    assert.equal(del.body.unassigned_members, 0);
+  } finally {
+    await pool.query("DELETE FROM clubs WHERE org_id = $1", [st.orgId]);
+    await teardownFixture(st);
+  }
+});
+
+test("malformed ids and impossible dates in the accounts and org routes are 4xx, never 500", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const sys = (await claimKit.login("admin", "admin")).token;
+    const tok = st.adminToken;
+    const probes = [
+      ["GET", "/api/orgs/nope/clubs", null, null],
+      ["POST", "/api/auth/register", null, { username: `int-b3bad-${st.slug}`, password: TEST_PASSWORD, full_name: "X", email: `bad-${st.slug}@example.test`, org_id: "nope" }],
+      ["POST", "/api/auth/register", null, { username: `int-b3bad2-${st.slug}`, password: TEST_PASSWORD, full_name: "X", email: `bad2-${st.slug}@example.test`, org_id: st.orgId, club_id: "nope" }],
+      ["PUT", "/api/users/nope/roles", sys, { roles: ["diver"] }],
+      ["PUT", "/api/users/nope/profile", tok, { full_name: "X" }],
+      ["POST", "/api/users/nope/suspend", tok, {}],
+      ["POST", "/api/users/nope/reactivate", tok, {}],
+      ["GET", "/api/users/nope/role-audit", tok, null],
+      ["PUT", "/api/users/nope/club", tok, { club_id: null }],
+      ["POST", "/api/role-requests/nope/review", tok, { decision: "approved" }],
+      ["POST", "/api/club-change-requests/nope/review", sys, { decision: "approved" }],
+      ["POST", "/api/club-change-requests/nope/confirm", tok, {}],
+      ["POST", "/api/club-change-requests/nope/cancel", tok, {}],
+      ["POST", "/api/club-change-requests", tok, { to_club_id: "nope" }],
+      ["POST", "/api/club-change-requests", tok, { to_org_id: "nope" }],
+      ["POST", "/api/club-change-requests", tok, { user_id: "nope" }],
+      ["POST", "/api/guardian-requests/nope/review", sys, { decision: "approved" }],
+      ["POST", "/api/guardians/nope/revoke", tok, {}],
+      ["POST", "/api/guardians/request", tok, { dependent_user_id: "nope" }],
+      ["POST", "/api/notifications/nope/acknowledge", tok, {}],
+      ["DELETE", "/api/clubs/nope", tok, null],
+      ["PUT", "/api/clubs/nope", tok, { name: "X" }],
+      ["GET", "/api/orgs/nope/divers", tok, null],
+      ["GET", "/api/orgs/nope/members", tok, null],
+      ["POST", "/api/claims/nope/vote", tok, { vote: "approve" }],
+      ["POST", "/api/claims/nope/decide", sys, { decision: "approve" }],
+      ["POST", "/api/claims/nope/revoke", sys, {}],
+    ];
+    const bad = [];
+    for (const [method, path, token, body] of probes) {
+      const r = await fetchJson(method, path, { token, body });
+      if (r.status >= 500 || r.status < 400) bad.push(`${method} ${path} ${JSON.stringify(body)} -> ${r.status}`);
+    }
+    assert.deepEqual(bad, []);
+
+    const member = await insertUser({ orgId: st.orgId, role: "diver", username: `int-b3dob-${st.slug}`, fullName: "Leap Day" });
+    for (const date_of_birth of ["2020-02-30", "2020-13-01", 20200101]) {
+      const dob = await fetchJson("PUT", `/api/users/${member}/profile`, { token: tok, body: { date_of_birth } });
+      assert.equal(dob.status, 400, `${date_of_birth}: ${JSON.stringify(dob.body)}`);
+    }
+    const ok = await fetchJson("PUT", `/api/users/${member}/profile`, { token: tok, body: { date_of_birth: "2020-02-29" } });
+    assert.equal(ok.status, 200, JSON.stringify(ok.body));
+  } finally {
+    await teardownFixture(st);
+  }
+});
+
+test("deleting a club that has paid for things is a 409 club_has_payments, not a 500", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const club = (await pool.query("INSERT INTO clubs (org_id, name) VALUES ($1, 'Paying Club') RETURNING id", [st.orgId])).rows[0].id;
+    await pool.query(
+      `INSERT INTO payments (org_id, subject_type, amount_cents, currency, payer_type, payer_club_id, status)
+       VALUES ($1, 'club_affiliation', 500, 'aud', 'club', $2, 'paid')`, [st.orgId, club]);
+    const del = await fetchJson("DELETE", `/api/clubs/${club}`, { token: st.adminToken });
+    assert.equal(del.status, 409, JSON.stringify(del.body));
+    assert.equal(del.body.code, "club_has_payments");
+    assert.equal((await pool.query("SELECT count(*)::int AS n FROM clubs WHERE id = $1", [club])).rows[0].n, 1);
+  } finally {
+    await pool.query("DELETE FROM payments WHERE org_id = $1", [st.orgId]);
+    await pool.query("DELETE FROM clubs WHERE org_id = $1", [st.orgId]);
+    await teardownFixture(st);
+  }
+});
+
+test("the judge picker leaves out judges who have moved to another federation", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const X = await setupFixture({ withEvent: false });
+  const Y = await setupFixture({ withEvent: false });
+  try {
+    const here = await insertUser({ orgId: X.orgId, role: "judge", username: `int-b3jh-${X.slug}`, fullName: "Judge Here" });
+    const gone = await insertUser({ orgId: Y.orgId, role: "judge", username: `int-b3jg-${X.slug}`, fullName: "Judge Gone" });
+    // What a transfer before the role fix left behind.
+    await pool.query("INSERT INTO user_org_roles (user_id, org_id, role) VALUES ($1, $2, 'judge')", [gone, X.orgId]);
+    const list = await fetchJson("GET", "/api/judges", { token: X.adminToken });
+    assert.equal(list.status, 200, JSON.stringify(list.body));
+    const ids = list.body.map((j) => j.id);
+    assert.ok(ids.includes(here));
+    assert.ok(!ids.includes(gone), "not someone who left");
+  } finally {
+    await pool.query("DELETE FROM users WHERE username = $1", [`int-b3jg-${X.slug}`]);
+    await teardownFixture(X);
+    await teardownFixture(Y);
+  }
+});
+
+test("a role request left waiting in the federation someone moved out of can't grant a role there", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const X = await setupFixture({ withEvent: false });
+  const Y = await setupFixture({ withEvent: false });
+  const uname = `int-b3rq-${X.slug}`;
+  try {
+    const sys = await claimKit.login("admin", "admin");
+    const mover = await insertUser({ orgId: X.orgId, role: "diver", username: uname, fullName: "Moving Judge" });
+    const ask = async (role) => (await pool.query(
+      "INSERT INTO role_requests (user_id, org_id, requested_role) VALUES ($1, $2, $3) RETURNING id", [mover, X.orgId, role],
+    )).rows[0].id;
+    const judgeRq = await ask("judge");
+
+    // A finished transfer closes what they left waiting behind.
+    const tok = await b3Login(uname);
+    const made = await fetchJson("POST", "/api/club-change-requests", { token: tok, body: { to_org_id: Y.orgId } });
+    assert.equal(made.status, 201, JSON.stringify(made.body));
+    const moved = await fetchJson("POST", `/api/club-change-requests/${made.body.id}/review`, { token: sys.token, body: { decision: "approved" } });
+    assert.equal(moved.body.status, "approved", JSON.stringify(moved.body));
+    const st = (await pool.query("SELECT status::text FROM role_requests WHERE id = $1", [judgeRq])).rows[0].status;
+    assert.equal(st, "rejected", "closed with the move");
+
+    // One that slipped through (from before this) is refused on approval.
+    const coachRq = await ask("coach");
+    const late = await fetchJson("POST", `/api/role-requests/${coachRq}/review`, { token: X.adminToken, body: { decision: "approved" } });
+    assert.equal(late.status, 409, JSON.stringify(late.body));
+    assert.equal(late.body.code, "not_a_member");
+    const held = (await pool.query("SELECT role::text FROM user_org_roles WHERE user_id = $1 AND org_id = $2", [mover, X.orgId])).rows;
+    assert.deepEqual(held, [], "no role minted in the org they left");
+    // Declining it still works, so it can leave the queue.
+    const no = await fetchJson("POST", `/api/role-requests/${coachRq}/review`, { token: X.adminToken, body: { decision: "rejected" } });
+    assert.equal(no.status, 200, JSON.stringify(no.body));
+  } finally {
+    await pool.query("DELETE FROM users WHERE username = $1", [uname]);
+    await teardownFixture(X);
+    await teardownFixture(Y);
+  }
+});
+
+test("an admin profile edit refuses a year-zero birth date with a 400", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const diver = await insertUser({ orgId: st.orgId, role: "diver", username: `int-b3dob-${st.slug}`, fullName: "Old Timer" });
+    for (const dob of ["0000-01-01", "1850-06-01", "2999-01-01"]) {
+      const r = await fetchJson("PUT", `/api/users/${diver}/profile`, { token: st.adminToken, body: { date_of_birth: dob } });
+      assert.equal(r.status, 400, `${dob}: ${JSON.stringify(r.body)}`);
+    }
+    const ok = await fetchJson("PUT", `/api/users/${diver}/profile`, { token: st.adminToken, body: { date_of_birth: "2012-02-29" } });
+    assert.equal(ok.status, 200, JSON.stringify(ok.body));
+  } finally {
+    await teardownFixture(st);
+  }
+});

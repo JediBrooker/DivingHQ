@@ -23,11 +23,12 @@
 //   POST /api/users/:id/reset-password       send a reset link
 //
 //   Guardians (migration 083):
-//   GET  /api/guardians/my-dependents
+//   GET  /api/guardians/my-dependents   (?include_pending=1 for the page)
+//   GET  /api/guardians/search       find someone in my org to link to
 //   POST /api/guardians/request
 //   GET  /api/guardian-requests      org admin's queue
 //   POST /api/guardian-requests/:id/review
-//   POST /api/guardians/:id/revoke
+//   POST /api/guardians/:id/revoke   end a link, or withdraw a request
 //
 // Both writes that change a user's privilege set call
 // bumpTokenVersion inside the same transaction, so a rollback rolls
@@ -47,6 +48,7 @@ const { recordAudit, auditFromReq } = require("../lib/audit");
 const { supportContact } = require("../lib/support");
 const { ADMIN_ORG_ID } = require("../lib/admin-org");
 const { isOrgAdminOf } = require("../lib/admin-rows");
+const { isUuid, requireUuidParam } = require("../lib/uuid");
 
 // Enum values from init.sql's CREATE TYPE org_role. system_admin is
 // intentionally NOT in this set, it's a column on users, not a role
@@ -83,6 +85,8 @@ module.exports = function createUsersRouter({
 }) {
   if (!pool) throw new Error("createUsersRouter requires { pool, … }");
   const router = express.Router();
+  // Every :id here is a users, role_requests or guardians row.
+  router.param("id", requireUuidParam);
   // Same links the self-service flows in routes/auth.js send. The routes
   // below 503 before minting when JWT_SECRET isn't wired in.
   const { mintVerifyToken, mintResetToken } = createAuthLinks(JWT_SECRET);
@@ -280,8 +284,14 @@ module.exports = function createUsersRouter({
       // request once we know which org it belongs to. Granting the
       // role uses rq.org_id, not the caller's org_id, so system
       // admins approving cross-org requests work too.
+      //
+      // FOR UPDATE, because two admins (or one double click) deciding
+      // the same request both used to read it as pending and both win:
+      // the role got granted while the row ended up 'rejected', and the
+      // requester got both emails. Now the second one waits here, then
+      // sees the first decision and gets a 409.
       const rqRes = await client.query(
-        "SELECT * FROM role_requests WHERE id = $1 AND status = 'pending'",
+        "SELECT * FROM role_requests WHERE id = $1 FOR UPDATE",
         [req.params.id],
       );
       if (!rqRes.rows.length) {
@@ -289,6 +299,10 @@ module.exports = function createUsersRouter({
         return res.status(404).json({ error: "Request not found" });
       }
       const rq = rqRes.rows[0];
+      if (rq.status !== "pending") {
+        await client.query("ROLLBACK");
+        return res.status(409).json({ error: "This request has already been decided", code: "already_decided" });
+      }
 
       if (!req.user.is_system_admin && rq.org_id !== req.user.org_id) {
         await client.query("ROLLBACK");
@@ -300,10 +314,27 @@ module.exports = function createUsersRouter({
         await client.query("ROLLBACK");
         return res.status(403).json({ error: "Only your own club members' requests" });
       }
+      // Roles only count in the org someone belongs to. A request they left
+      // behind when they transferred out (a transfer closes them now, older
+      // ones may still be sitting here) would mint a role in an org they've
+      // left, the stale row the transfer is careful to clear. Declining it
+      // is still fine, that's how it leaves the queue.
+      if (decision === "approved") {
+        const who = (await client.query(
+          "SELECT org_id, deleted_at FROM users WHERE id = $1", [rq.user_id],
+        )).rows[0];
+        if (!who || who.deleted_at || who.org_id !== rq.org_id) {
+          await client.query("ROLLBACK");
+          return res.status(409).json({
+            error: "That person isn't a member of this organisation any more",
+            code: "not_a_member",
+          });
+        }
+      }
 
       await client.query(
-        "UPDATE role_requests SET status=$1, reviewed_by=$2, reviewed_at=now() WHERE id=$3",
-        [decision, req.user.id, req.params.id],
+        "UPDATE role_requests SET status=$1, reviewed_by=$2, reviewed_at=now() WHERE id=$3 AND status='pending'",
+        [decision, req.user.id, rq.id],
       );
 
       if (decision === "approved") {
@@ -581,8 +612,8 @@ module.exports = function createUsersRouter({
   //
   // Self-service account deletion. Strips every PII column from the
   // user row, wipes settings, push subscriptions, role grants and
-  // club / region admin rows, withdraws any claim still being decided,
-  // then stamps deleted_at = now(). What stays: full_name, org_id,
+  // club / region admin rows, withdraws any claim still being decided
+  // and closes any open club change, then stamps deleted_at = now(). What stays: full_name, org_id,
   // club_id, so the user's name remains on the dives they actually
   // competed in (sporting record). See docs/privacy-policy.md §7
   // for the user-facing contract.
@@ -704,6 +735,15 @@ module.exports = function createUsersRouter({
       const regionAdminRows = await client.query(
         "DELETE FROM region_admins WHERE user_id = $1", [req.user.id],
       );
+      // A join or transfer request still open sat in admins' queues under
+      // the kept name, and approving a transfer moved the tombstone into
+      // another federation, where claim-candidates can't find it. It goes
+      // with the account.
+      const clubRequestRows = await client.query(
+        `UPDATE club_change_requests SET status = 'rejected', reviewed_by = $1, reviewed_at = now()
+          WHERE user_id = $1 AND status = 'pending'`,
+        [req.user.id],
+      );
       // Guardian links (parent pays for a child) are a link to another
       // person as well. Revoked rather than deleted, the same way a club
       // transfer ends them (routes/club-changes.js), so payment history
@@ -732,6 +772,7 @@ module.exports = function createUsersRouter({
           role_grants_removed:        grantRows.rowCount,
           club_admin_rows_removed:    clubAdminRows.rowCount,
           region_admin_rows_removed:  regionAdminRows.rowCount,
+          club_requests_closed:       clubRequestRows.rowCount,
           claims_withdrawn:           claimsWithdrawn,
         },
       });
@@ -1072,6 +1113,35 @@ module.exports = function createUsersRouter({
           await client.query(`UPDATE ${tbl} SET holder_id = $2 WHERE holder_id = $1`, [oldId, me.id]);
         }
 
+        // Money, teams and memberships. payments.payer_user_id is ON
+        // DELETE RESTRICT, so an old account that had ever paid for
+        // anything made the delete below throw and the whole claim came
+        // back a 500, forever. The rest cascade: team places,
+        // memberships, accreditations, fines still owed, entry charges
+        // and class enrolments all vanished with the shell row. They're
+        // this person's record as much as their dives are, so they move.
+        // A team the new account is already on keeps that row, and the
+        // old duplicate goes with the delete.
+        await client.query(
+          `UPDATE payments
+              SET payer_user_id   = CASE WHEN payer_user_id   = $1 THEN $2 ELSE payer_user_id END,
+                  subject_user_id = CASE WHEN subject_user_id = $1 THEN $2 ELSE subject_user_id END,
+                  liable_user_id  = CASE WHEN liable_user_id  = $1 THEN $2 ELSE liable_user_id END
+            WHERE payer_user_id = $1 OR subject_user_id = $1 OR liable_user_id = $1`,
+          [oldId, me.id],
+        );
+        await client.query(
+          `UPDATE team_members t SET user_id = $2
+            WHERE t.user_id = $1
+              AND NOT EXISTS (SELECT 1 FROM team_members n WHERE n.team_id = t.team_id AND n.user_id = $2)`,
+          [oldId, me.id],
+        );
+        await client.query("UPDATE memberships SET user_id = $2 WHERE user_id = $1", [oldId, me.id]);
+        await client.query("UPDATE official_accreditations SET user_id = $2 WHERE user_id = $1", [oldId, me.id]);
+        await client.query("UPDATE fines SET liable_user_id = $2 WHERE liable_user_id = $1", [oldId, me.id]);
+        await client.query("UPDATE entry_charges SET entrant_user_id = $2 WHERE entrant_user_id = $1", [oldId, me.id]);
+        await client.query("UPDATE class_enrolments SET diver_user_id = $2 WHERE diver_user_id = $1", [oldId, me.id]);
+
         // The shell row is now disconnected from every
         // sporting-record FK we care about, safe to hard-delete.
         // Everything that ON DELETE CASCADEs from here (e.g.
@@ -1109,6 +1179,17 @@ module.exports = function createUsersRouter({
     } catch (err) {
       await client.query("ROLLBACK").catch(() => {});
       console.error("[User Claim Error]", err.message);
+      // Both accounts holding the same live thing (one paid entry per
+      // event, one live enrolment per class, and so on), or a reference
+      // to the old account nothing above moves. Either way it's a merge
+      // for a person to look at, not a server fault.
+      if (err.code === "23505" || err.code === "23503") {
+        return res.status(409).json({
+          error: `Cannot merge these accounts automatically: they overlap in ${err.table || "a record"}. `
+            + `Untick that one, or contact ${supportContact()} to merge them by hand.`,
+          code: "claim_conflict",
+        });
+      }
       res.status(500).json({ error: "Claim failed" });
     } finally {
       client.release();
@@ -1124,9 +1205,11 @@ module.exports = function createUsersRouter({
   router.get("/api/judges", requireMeetOrClubEditor || requireMeetEditor, async (req, res) => {
     try {
       const r = await pool.query(
+        // Members of the org only: a judge row left in an org someone has
+        // since transferred out of isn't a judge here.
         `SELECT u.id, u.full_name
          FROM users u
-         JOIN user_org_roles r ON u.id = r.user_id
+         JOIN user_org_roles r ON u.id = r.user_id AND r.org_id = u.org_id
          WHERE r.org_id = $1 AND r.role = 'judge'
            AND u.deleted_at IS NULL
          ORDER BY u.full_name ASC`,
@@ -1172,8 +1255,17 @@ module.exports = function createUsersRouter({
       }
       if (date_of_birth !== undefined) {
         const dob = date_of_birth || null;
-        if (dob && !/^\d{4}-\d{2}-\d{2}$/.test(dob))
-          return res.status(400).json({ error: "Date of birth must be YYYY-MM-DD" });
+        // The shape alone let 2020-02-30 through to Postgres, which
+        // refused it and the route answered 500. Round-trip it through a
+        // real date so only ones that exist pass.
+        // Year 0000 still got through (JS takes it, Postgres doesn't) and so
+        // did 1066 or 2999, so it has to be a plausible birthday as well:
+        // 1900 on, and not past tomorrow (a day of slack for timezones).
+        const parsed = typeof dob === "string" ? new Date(`${dob}T00:00:00Z`) : null;
+        const latest = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+        if (dob && (!/^\d{4}-\d{2}-\d{2}$/.test(String(dob)) || Number.isNaN(parsed.getTime())
+            || parsed.toISOString().slice(0, 10) !== dob || dob < "1900-01-01" || dob > latest))
+          return res.status(400).json({ error: "Date of birth must be a real date, YYYY-MM-DD" });
         sets.push(`date_of_birth = $${i++}`); vals.push(dob);
       }
       if (gender !== undefined) {
@@ -1256,7 +1348,9 @@ module.exports = function createUsersRouter({
       if (target.email_verified_at) return res.status(400).json({ error: "This email is already verified" });
       if (!JWT_SECRET || typeof sendVerifyEmailEmail !== "function")
         return res.status(503).json({ error: "Email is not configured on this server" });
-      sendVerifyEmailEmail(req.params.id, mintVerifyToken(req.params.id), { req }).catch(() => {});
+      // No { req }: that's the admin's browser language. With no options
+      // the mail goes out in the member's own saved locale.
+      sendVerifyEmailEmail(req.params.id, mintVerifyToken(req.params.id), {}).catch(() => {});
       await recordAudit(pool, {
         ...auditFromReq(req), org_id: target.org_id, entity_type: "user",
         entity_id: req.params.id, entity_name: target.full_name, action: "user.verification_resent",
@@ -1271,16 +1365,17 @@ module.exports = function createUsersRouter({
   // Send the user a password-reset link (reuses the forgot-password JWT).
   router.post("/api/users/:id/reset-password", writeLimiter, requireOrgAdmin, async (req, res) => {
     try {
-      const target = await loadEditableTarget(req, res, "org_id, full_name, email, password, deleted_at");
+      const target = await loadEditableTarget(req, res, "org_id, full_name, email, password, deleted_at, locale");
       if (!target) return;
       if (target.deleted_at) return res.status(404).json({ error: "User not found" });
       if (!target.email) return res.status(400).json({ error: "This user has no email on file" });
       if (!JWT_SECRET || typeof sendPasswordResetEmail !== "function" || typeof hashFingerprint !== "function")
         return res.status(503).json({ error: "Email is not configured on this server" });
       const token = mintResetToken(req.params.id, hashFingerprint(target.password));
+      // The member's language, not the admin's (which is what { req } gave).
       sendPasswordResetEmail(
         { id: req.params.id, full_name: target.full_name, email: target.email },
-        token, { req }).catch(() => {});
+        token, { locale: target.locale || undefined }).catch(() => {});
       await recordAudit(pool, {
         ...auditFromReq(req), org_id: target.org_id, entity_type: "user",
         entity_id: req.params.id, entity_name: target.full_name, action: "user.password_reset_sent",
@@ -1300,7 +1395,12 @@ module.exports = function createUsersRouter({
   // are org-scoped and need org_admin approval.
   // ===============================================================
 
+  // ?include_pending=1 adds the links still waiting for an admin, for the
+  // Dependents page, so a parent can see their request went in (and
+  // withdraw it). The "Paying for" picker calls it without, and only ever
+  // gets approved links.
   router.get("/api/guardians/my-dependents", verifyToken, async (req, res) => {
+    const statuses = req.query.include_pending === "1" ? ["approved", "pending"] : ["approved"];
     try {
       // Scoped to the caller's own federation. A guardian link belongs to
       // one org (guardians.org_id) and routes/payments.js won't act on a
@@ -1315,9 +1415,40 @@ module.exports = function createUsersRouter({
            JOIN users u ON u.id = g.dependent_user_id
           WHERE g.guardian_user_id = $1
             AND g.org_id = $2
-            AND g.status = 'approved'
-          ORDER BY u.full_name`,
-        [req.user.id, req.user.org_id],
+            AND g.status = ANY($3::text[])
+          ORDER BY g.status = 'pending', u.full_name`,
+        [req.user.id, req.user.org_id, statuses],
+      )).rows;
+      res.json(rows);
+    } catch (err) {
+      console.error("[Guardians]", err.message);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Finding the child to link to. The Dependents page used GET /api/users,
+  // which is the org admin's member list: a parent got a 403, and an admin
+  // got every member of the org (emails and birthdays too) on each
+  // keystroke with the search ignored. This is only what a link request
+  // can be made for, people in the caller's own federation, and only the
+  // name and club come back, the same as the diver search already shows
+  // anyone. It doesn't filter to minors on purpose: that would make it a
+  // "which members are children" lookup. The request itself checks age.
+  router.get("/api/guardians/search", verifyToken, async (req, res) => {
+    const q = typeof req.query.q === "string" ? req.query.q.trim().slice(0, 100) : "";
+    if (q.length < 2) return res.json([]);
+    // LIKE wildcards in a name are literal here.
+    const pattern = `%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
+    try {
+      const rows = (await pool.query(
+        `SELECT u.id, u.full_name, c.name AS club_name
+           FROM users u
+           LEFT JOIN clubs c ON c.id = u.club_id AND c.status = 'active'
+          WHERE u.org_id = $1 AND u.id <> $2 AND u.deleted_at IS NULL
+            AND u.full_name ILIKE $3
+          ORDER BY u.full_name
+          LIMIT 20`,
+        [req.user.org_id, req.user.id, pattern],
       )).rows;
       res.json(rows);
     } catch (err) {
@@ -1329,6 +1460,7 @@ module.exports = function createUsersRouter({
   router.post("/api/guardians/request", verifyToken, async (req, res) => {
     const { dependent_user_id } = req.body || {};
     if (!dependent_user_id) return res.status(400).json({ error: "dependent_user_id is required" });
+    if (!isUuid(dependent_user_id)) return res.status(404).json({ error: "User not found" });
     if (dependent_user_id === req.user.id) return res.status(400).json({ error: "Cannot link to yourself" });
     try {
       const dep = (await pool.query(
@@ -1388,17 +1520,23 @@ module.exports = function createUsersRouter({
     }
     try {
       const g = (await pool.query(
-        "SELECT * FROM guardians WHERE id = $1 AND status = 'pending'",
+        "SELECT * FROM guardians WHERE id = $1",
         [req.params.id],
       )).rows[0];
       if (!g) return res.status(404).json({ error: "Request not found" });
       if (!req.user.is_system_admin && g.org_id !== req.user.org_id) {
         return res.status(403).json({ error: "Cannot review requests in other organisations" });
       }
-      await pool.query(
-        "UPDATE guardians SET status = $1, reviewed_by = $2, reviewed_at = now() WHERE id = $3",
-        [decision, req.user.id, req.params.id],
+      // Only a link that's still pending changes, so an approve racing a
+      // reject (or a revoke) can't overwrite a decision already made.
+      const done = await pool.query(
+        `UPDATE guardians SET status = $1, reviewed_by = $2, reviewed_at = now()
+          WHERE id = $3 AND status = 'pending' RETURNING id`,
+        [decision, req.user.id, g.id],
       );
+      if (!done.rowCount) {
+        return res.status(409).json({ error: "This request has already been decided", code: "already_decided" });
+      }
       res.json({ message: `Guardian request ${decision}` });
     } catch (err) {
       console.error("[Guardians]", err.message);
@@ -1406,10 +1544,13 @@ module.exports = function createUsersRouter({
     }
   });
 
+  // Ends an approved link, or withdraws one still waiting for an admin
+  // (without that, a request made by mistake sat there for good and asking
+  // again was a 409).
   router.post("/api/guardians/:id/revoke", verifyToken, async (req, res) => {
     try {
       const g = (await pool.query(
-        "SELECT * FROM guardians WHERE id = $1 AND status = 'approved'",
+        "SELECT * FROM guardians WHERE id = $1 AND status IN ('approved', 'pending')",
         [req.params.id],
       )).rows[0];
       if (!g) return res.status(404).json({ error: "Guardian link not found" });
@@ -1417,8 +1558,9 @@ module.exports = function createUsersRouter({
       const isAdmin = isOrgAdminOf(req.user, g.org_id);
       if (!isGuardian && !isAdmin) return res.status(403).json({ error: "Forbidden" });
       await pool.query(
-        "UPDATE guardians SET status = 'revoked', reviewed_by = $1, reviewed_at = now() WHERE id = $2",
-        [req.user.id, req.params.id],
+        `UPDATE guardians SET status = 'revoked', reviewed_by = $1, reviewed_at = now()
+          WHERE id = $2 AND status IN ('approved', 'pending')`,
+        [req.user.id, g.id],
       );
       res.json({ message: "Guardian link revoked" });
     } catch (err) {

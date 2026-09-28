@@ -80,7 +80,8 @@
       "success_club_pending": "{club} menunggu persetujuan {org}. Mereka akan melihatnya begitu Anda mengonfirmasi email, dan kami akan mengirim email kepada Anda setelah mereka memutuskan.",
       "region_will_ask": "{region} memutuskan klub mana yang diterimanya, jadi permintaan akan dikirim setelah Anda memverifikasi email. Sampai diterima, klub Anda belum masuk wilayah itu.",
       "founder_role_note": "Sebagai pendiri klub, Anda tidak bisa menyetujui sendiri permintaan Anda menjadi pelatih atau juri, jadi permintaan itu ditinjau oleh admin wilayah Anda atau oleh DivingHQ.",
-      "spectator_note_see_above": "Semua akun dimulai sebagai Penonton. Peran yang Anda minta di atas ditinjau seperti yang dijelaskan catatan di bawahnya. Anda dapat masuk setelah email Anda terverifikasi."
+      "spectator_note_see_above": "Semua akun dimulai sebagai Penonton. Peran yang Anda minta di atas ditinjau seperti yang dijelaskan catatan di bawahnya. Anda dapat masuk setelah email Anda terverifikasi.",
+      "username_taken": "Nama pengguna itu sudah dipakai. Pilih yang lain."
     },
     "register_org": {
       "title": "Daftarkan organisasi",
@@ -1077,7 +1078,9 @@
     "orgs_need_country_title": "Organisasi tanpa negara ({n})",
     "orgs_need_country_hint": "Pendaftar menemukan federasi mereka berdasarkan negara, jadi tidak ada yang bisa bergabung dengan organisasi ini sampai negaranya ditetapkan.",
     "org_suspended": "Ditangguhkan",
-    "orgs_show_all": "Tampilkan semua {n}"
+    "orgs_show_all": "Tampilkan semua {n}",
+    "guardian_requests_title": "Permintaan tautan wali",
+    "guardian_request_by": "{name} meminta untuk membayar atas namanya"
   },
   "setup": {
     "title": "Penyiapan federasi",
@@ -1848,7 +1851,11 @@
     "search_placeholder": "Cari berdasarkan nama...",
     "age_years": "{age} tahun",
     "paying_for": "Membayar untuk",
-    "paying_for_self": "Diri Anda sendiri"
+    "paying_for_self": "Diri Anda sendiri",
+    "pending_badge": "Menunggu persetujuan",
+    "withdraw": "Tarik permintaan",
+    "withdraw_confirm": "Tarik permintaan tautan ini?",
+    "no_results": "Tidak ada orang dengan nama itu di organisasi Anda."
   },
   "my_club": {
     "title": "Klub saya",

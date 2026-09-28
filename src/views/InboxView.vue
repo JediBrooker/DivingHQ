@@ -18,7 +18,7 @@
 // otherwise window.open) AND marks the row acknowledged.
 //
 // Filter chips: All / Unread / By category. Pagination via
-// ?since_id=<uuid>.
+// ?before_id=<uuid> (the last id of the page already loaded).
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'

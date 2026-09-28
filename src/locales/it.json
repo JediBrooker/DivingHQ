@@ -80,7 +80,8 @@
       "success_club_pending": "{club} è in attesa dell'approvazione di {org}. Lo vedranno appena confermi la tua email, e ti scriveremo quando avranno deciso.",
       "region_will_ask": "{region} decide quali club accogliere, quindi riceverà una richiesta appena avrai verificato l'email. Finché non accetta, il tuo club non fa parte della regione.",
       "founder_role_note": "Come fondatore del club non puoi approvare la tua richiesta di allenatore o giudice, quindi la esaminano gli amministratori della tua regione o DivingHQ.",
-      "spectator_note_see_above": "Tutti gli account partono come Spettatore. Il ruolo che richiedi qui sopra viene esaminato come indica la nota sotto. Potrai accedere dopo aver verificato la tua email."
+      "spectator_note_see_above": "Tutti gli account partono come Spettatore. Il ruolo che richiedi qui sopra viene esaminato come indica la nota sotto. Potrai accedere dopo aver verificato la tua email.",
+      "username_taken": "Questo nome utente è già in uso. Scegline un altro."
     },
     "register_org": {
       "title": "Registra organizzazione",
@@ -1088,7 +1089,9 @@
     "orgs_need_country_title": "Organizzazioni senza paese ({n})",
     "orgs_need_country_hint": "Le iscrizioni trovano la propria federazione in base al paese, quindi nessuno può unirsi a queste finché non ne hanno uno.",
     "org_suspended": "Sospesa",
-    "orgs_show_all": "Mostra tutte ({n})"
+    "orgs_show_all": "Mostra tutte ({n})",
+    "guardian_requests_title": "Richieste di collegamento tutore",
+    "guardian_request_by": "{name} chiede di pagare per suo conto"
   },
   "setup": {
     "title": "Configurazione federazione",
@@ -1848,7 +1851,11 @@
     "search_placeholder": "Cerca per nome...",
     "age_years": "{age} anni",
     "paying_for": "Pagamento per",
-    "paying_for_self": "Te stesso"
+    "paying_for_self": "Te stesso",
+    "pending_badge": "In attesa di approvazione",
+    "withdraw": "Ritira la richiesta",
+    "withdraw_confirm": "Ritirare questa richiesta di collegamento?",
+    "no_results": "Nessuno con questo nome nella tua organizzazione."
   },
   "my_club": {
     "title": "Il mio club",

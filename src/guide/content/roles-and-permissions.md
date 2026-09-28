@@ -88,6 +88,8 @@ A diver requests a club change from the "My club" card on their own profile. The
 
 For cross-org transfers the Requests tab shows which of the three approvals have been received (Source / Target / Diver). The transfer only completes when all three are in. Everything is audit-logged.
 
+A completed transfer ends every role the person held in the federation they left, and any role request of theirs still waiting there is declined. They join the new one as a diver. Coming back later is a fresh start too: nothing they used to hold switches back on.
+
 ## Club admin
 
 Runs one club. In a country whose federation isn't on DivingHQ yet, a club admin is the person who created the club, plus the co-admins they add on **My club**. Under a federation, the federation appoints club admins. A club someone creates at signup there waits for the federation to approve it first, and approving it normally makes the founder its admin.

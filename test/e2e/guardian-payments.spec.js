@@ -24,12 +24,13 @@ async function signIn(page, username) {
 }
 
 test.beforeAll(async ({ request }) => {
-  const { orgId, adminId, adminToken } = await setup.createOrgAndAdmin(request, {
+  const { orgId, adminId, adminToken, username: adminUsername } = await setup.createOrgAndAdmin(request, {
     orgName: "Guardian Access Fed",
     countryCode: "GBR",
   });
   world.orgId = orgId;
   world.adminToken = adminToken;
+  world.adminUsername = adminUsername;
 
   // The dependent needs a date_of_birth or SubjectSelector prints "(NaN)".
   world.minor = await setup.insertUser({ orgId, role: "diver", fullName: "Ivy Marsh" });
@@ -124,4 +125,38 @@ test("the guardian can switch /charges to the dependent", async ({ page }) => {
 
   // Appeals belong to the person who was fined, not to their guardian.
   await expect(page.locator(".btn-appeal")).toHaveCount(0);
+});
+
+// Linking from the app. The page searched GET /api/users (the org admin's
+// member list), so a parent got "Forbidden", nothing showed a request once
+// it was made, and no screen let an admin approve one.
+test("a parent links to a child from /guardians and an admin approves it in User Manager", async ({ page, browser }) => {
+  const kid = await setup.insertUser({ orgId: world.orgId, role: "diver", fullName: "Otto Quillfeather" });
+  await setup.pool.query("UPDATE users SET date_of_birth = '2014-03-09' WHERE id = $1", [kid.userId]);
+  const parent = await setup.insertUser({ orgId: world.orgId, role: "spectator", fullName: "Nell Quillfeather" });
+
+  await signIn(page, parent.username);
+  await page.goto("/guardians");
+  await page.getByPlaceholder(/search by name/i).fill("Quillfeather");
+  const result = page.getByRole("button", { name: /Otto Quillfeather/ });
+  await expect(result).toBeVisible({ timeout: 10_000 });
+  await result.focus();
+  await page.keyboard.press("Enter");
+  const link = page.locator('[data-testid="guardian-link"]', { hasText: "Otto Quillfeather" });
+  await expect(link).toContainText(/waiting for approval/i, { timeout: 10_000 });
+
+  const adminCtx = await browser.newContext();
+  const admin = await adminCtx.newPage();
+  await signIn(admin, world.adminUsername);
+  await admin.goto("/users");
+  await admin.getByRole("button", { name: /pending/i }).first().click();
+  const card = admin.locator('[data-testid="guardian-requests"] .request-card', { hasText: "Otto Quillfeather" });
+  await expect(card).toContainText("Nell Quillfeather", { timeout: 10_000 });
+  await card.getByRole("button", { name: /approve/i }).click();
+  await expect(card).toHaveCount(0, { timeout: 10_000 });
+  await adminCtx.close();
+
+  await page.reload();
+  await expect(link).toBeVisible({ timeout: 10_000 });
+  await expect(link).not.toContainText(/waiting for approval/i);
 });

@@ -219,6 +219,10 @@ module.exports = function createDashboardRouter({ pool, verifyToken }) {
     // Mirrors /api/audit/recent but inlined here so we
     // don't pay the extra HTTP round trip. 7-day window,
     // top 10 across score + role + activity logs.
+    // LEFT JOINs like routes/audit.js: migration 035 made the event and
+    // org FKs SET NULL so these rows outlive a deletion, and an inner join
+    // dropped them from here while Audit Log still listed them. The org
+    // filter still keeps orphans to the sysadmin.
     if (has("org_admin")) {
       const since = new Date(Date.now() - 7 * 86_400_000).toISOString();
       const orgScope = isSysAdmin ? null : user.org_id;
@@ -232,7 +236,7 @@ module.exports = function createDashboardRouter({ pool, verifyToken }) {
                  a.round_number, a.old_score, a.new_score, a.reason,
                  e.org_id, o.name AS org_name
           FROM score_audit_log a
-          JOIN events e        ON e.id = a.event_id
+          LEFT JOIN events e   ON e.id = a.event_id
           LEFT JOIN organisations o ON o.id = e.org_id
           LEFT JOIN users comp ON comp.id = a.competitor_id
           LEFT JOIN users jud  ON jud.id  = a.judge_id
@@ -248,7 +252,7 @@ module.exports = function createDashboardRouter({ pool, verifyToken }) {
                  a.role::text AS role, a.note,
                  a.org_id, o.name AS org_name
           FROM role_audit_log a
-          JOIN organisations o ON o.id = a.org_id
+          LEFT JOIN organisations o ON o.id = a.org_id
           LEFT JOIN users target ON target.id = a.user_id
           LEFT JOIN users actor  ON actor.id  = a.actor_id
           WHERE a.created_at >= $1

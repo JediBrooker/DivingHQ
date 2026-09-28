@@ -80,7 +80,8 @@
       "success_club_pending": "{club} は {org} の承認待ちです。メールアドレスを確認すると先方に届き、決定したらメールでお知らせします。",
       "region_will_ask": "{region}は受け入れるクラブを自分で決めるため、メールアドレスの確認後に受け入れの申請が届きます。承認されるまで、クラブはその地域に入りません。",
       "founder_role_note": "クラブの創設者はコーチや審判員としての自分の申請を承認できないため、地域の管理者または DivingHQ が審査します。",
-      "spectator_note_see_above": "すべてのアカウントは観戦者として開始します。上で申請した役割は、その下の注記のとおりに審査されます。メールアドレスの確認後にサインインできます。"
+      "spectator_note_see_above": "すべてのアカウントは観戦者として開始します。上で申請した役割は、その下の注記のとおりに審査されます。メールアドレスの確認後にサインインできます。",
+      "username_taken": "このユーザー名は既に使われています。別のものを選んでください。"
     },
     "register_org": {
       "title": "組織を登録",
@@ -1077,7 +1078,9 @@
     "orgs_need_country_title": "国が未設定の組織（{n}）",
     "orgs_need_country_hint": "登録者は国で連盟を探すため、国が設定されるまで誰もこれらの組織に参加できません。",
     "org_suspended": "停止中",
-    "orgs_show_all": "すべて表示（{n}）"
+    "orgs_show_all": "すべて表示（{n}）",
+    "guardian_requests_title": "保護者リンクのリクエスト",
+    "guardian_request_by": "{name}さんが代理での支払いを希望しています"
   },
   "setup": {
     "title": "連盟のセットアップ",
@@ -1848,7 +1851,11 @@
     "search_placeholder": "名前で検索…",
     "age_years": "{age}歳",
     "paying_for": "お支払い対象者",
-    "paying_for_self": "ご本人"
+    "paying_for_self": "ご本人",
+    "pending_badge": "承認待ち",
+    "withdraw": "リクエストを取り下げる",
+    "withdraw_confirm": "このリンクリクエストを取り下げますか？",
+    "no_results": "あなたの組織にその名前の人はいません。"
   },
   "my_club": {
     "title": "マイクラブ",

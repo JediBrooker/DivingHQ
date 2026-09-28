@@ -80,7 +80,8 @@
       "success_club_pending": "{club} odottaa organisaation {org} hyväksyntää. He näkevät sen, kun olet vahvistanut sähköpostiosoitteesi, ja lähetämme sinulle sähköpostia, kun päätös on tehty.",
       "region_will_ask": "Alue {region} päättää itse, mitkä seurat se ottaa, joten siltä kysytään, kun olet vahvistanut sähköpostisi. Ennen hyväksyntää seurasi ei kuulu alueeseen.",
       "founder_role_note": "Seuran perustajana et voi hyväksyä omaa valmentaja- tai tuomaripyyntöäsi, joten sen käsittelevät alueesi ylläpitäjät tai DivingHQ.",
-      "spectator_note_see_above": "Kaikki tilit alkavat katsojan oikeuksilla. Yllä pyytämäsi rooli käsitellään sen alla olevan huomautuksen mukaisesti. Voit kirjautua, kun sähköpostisi on vahvistettu."
+      "spectator_note_see_above": "Kaikki tilit alkavat katsojan oikeuksilla. Yllä pyytämäsi rooli käsitellään sen alla olevan huomautuksen mukaisesti. Voit kirjautua, kun sähköpostisi on vahvistettu.",
+      "username_taken": "Käyttäjätunnus on jo käytössä. Valitse toinen."
     },
     "register_org": {
       "title": "Rekisteröi organisaatio",
@@ -1088,7 +1089,9 @@
     "orgs_need_country_title": "Organisaatiot ilman maata ({n})",
     "orgs_need_country_hint": "Rekisteröityjät löytävät liittonsa maan perusteella, joten kukaan ei voi liittyä näihin ennen kuin niille on asetettu maa.",
     "org_suspended": "Keskeytetty",
-    "orgs_show_all": "Näytä kaikki {n}"
+    "orgs_show_all": "Näytä kaikki {n}",
+    "guardian_requests_title": "Huoltajalinkityspyynnöt",
+    "guardian_request_by": "{name} pyytää saada maksaa tämän henkilön puolesta"
   },
   "setup": {
     "title": "Liiton käyttöönotto",
@@ -1848,7 +1851,11 @@
     "search_placeholder": "Hae nimellä...",
     "age_years": "{age} vuotta",
     "paying_for": "Maksaa puolesta",
-    "paying_for_self": "Itsesi"
+    "paying_for_self": "Itsesi",
+    "pending_badge": "Odottaa hyväksyntää",
+    "withdraw": "Peru pyyntö",
+    "withdraw_confirm": "Perutaanko tämä linkityspyyntö?",
+    "no_results": "Organisaatiossasi ei ole ketään tällä nimellä."
   },
   "my_club": {
     "title": "Oma seura",

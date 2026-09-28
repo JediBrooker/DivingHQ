@@ -80,7 +80,8 @@
       "success_club_pending": "{club} väntar på godkännande från {org}. De ser den så snart du har bekräftat din e-post, och vi mejlar dig när de har bestämt sig.",
       "region_will_ask": "{region} bestämmer själv vilka klubbar den tar in, så den får en förfrågan när du har bekräftat din e-post. Tills den tackar ja är din klubb inte med i regionen.",
       "founder_role_note": "Som klubbens grundare kan du inte godkänna din egen förfrågan om att bli tränare eller domare, så den går till regionens administratörer eller till DivingHQ.",
-      "spectator_note_see_above": "Alla konton börjar som åskådare. En roll du begär ovan granskas som anteckningen under den säger. Du kan logga in när din e-post är verifierad."
+      "spectator_note_see_above": "Alla konton börjar som åskådare. En roll du begär ovan granskas som anteckningen under den säger. Du kan logga in när din e-post är verifierad.",
+      "username_taken": "Det användarnamnet är upptaget. Välj ett annat."
     },
     "register_org": {
       "title": "Registrera organisation",
@@ -1088,7 +1089,9 @@
     "orgs_need_country_title": "Organisationer utan land ({n})",
     "orgs_need_country_hint": "Registreringar hittar sitt förbund efter land, så ingen kan gå med i dessa förrän de har ett.",
     "org_suspended": "Avstängd",
-    "orgs_show_all": "Visa alla {n}"
+    "orgs_show_all": "Visa alla {n}",
+    "guardian_requests_title": "Förfrågningar om vårdnadshavarlänk",
+    "guardian_request_by": "{name} ber om att få betala för denna person"
   },
   "setup": {
     "title": "Förbundsuppsättning",
@@ -1848,7 +1851,11 @@
     "search_placeholder": "Sök efter namn...",
     "age_years": "{age} år gammal",
     "paying_for": "Betalar för",
-    "paying_for_self": "Dig själv"
+    "paying_for_self": "Dig själv",
+    "pending_badge": "Väntar på godkännande",
+    "withdraw": "Dra tillbaka förfrågan",
+    "withdraw_confirm": "Dra tillbaka denna länkförfrågan?",
+    "no_results": "Ingen med det namnet i din organisation."
   },
   "my_club": {
     "title": "Min klubb",

@@ -24,10 +24,12 @@ const express = require("express");
 const { recordAudit, auditFromReq } = require("../lib/audit");
 const notices = require("../lib/notices");
 const { isOrgAdminOf, liveAdminIds, liveOrgAdminIds } = require("../lib/admin-rows");
+const { isUuid, requireUuidParam } = require("../lib/uuid");
 
 module.exports = function createClubChangesRouter({ pool, verifyToken, bumpTokenVersion }) {
   if (!pool) throw new Error("createClubChangesRouter requires { pool }");
   const router = express.Router();
+  router.param("id", requireUuidParam);
 
   // Can this club (or region) admin decide this request? Only a within-org
   // move into a club they run, in an org with no federation to ask, and
@@ -162,6 +164,8 @@ module.exports = function createClubChangesRouter({ pool, verifyToken, bumpToken
 
     let revokedLinks = [];
     let seats = { clubs: [], regions: [], events: [] };
+    let droppedRoles = [];
+    let closedRoleRequests = 0;
 
     if (r.kind === "org_transfer") {
       await client.query(
@@ -172,9 +176,37 @@ module.exports = function createClubChangesRouter({ pool, verifyToken, bumpToken
       // Their token still carries the old org and its roles until it
       // expires, so make them sign in again.
       if (typeof bumpTokenVersion === "function") await bumpTokenVersion(client, r.user_id);
+      // Roles are kept per org and the token reads the ones in
+      // users.org_id, so rows left in the old org weren't history, they
+      // were grants waiting to switch back on. A former org_admin who
+      // later moved home came back an admin without anyone granting it.
+      // So everything held outside the new org goes. Anything beyond
+      // diver/spectator they already hold in the new org is left over
+      // from an earlier stay there (nobody can grant roles to a
+      // non-member), so that goes too. Every one is audited as revoked.
+      droppedRoles = (await client.query(
+        `DELETE FROM user_org_roles
+          WHERE user_id = $1 AND (org_id <> $2 OR role NOT IN ('diver', 'spectator'))
+          RETURNING org_id, role::text AS role`,
+        [r.user_id, r.to_org_id],
+      )).rows;
+      for (const d of droppedRoles) {
+        await client.query(
+          `INSERT INTO role_audit_log (user_id, org_id, role, action, actor_id, note)
+           VALUES ($1, $2, $3, 'revoked', $4, 'transferred to another federation')`,
+          [r.user_id, d.org_id, d.role, req.user.id],
+        );
+      }
+      // A role request still waiting back in the old org would put one of
+      // those rows straight back the day an admin there approved it. They
+      // go with the move, same as the roles.
+      closedRoleRequests = (await client.query(
+        `UPDATE role_requests SET status = 'rejected', reviewed_by = $2, reviewed_at = now()
+          WHERE user_id = $1 AND status = 'pending' AND org_id <> $3`,
+        [r.user_id, req.user.id, r.to_org_id],
+      )).rowCount;
       // Carry the diver role into the receiving org so they show up
-      // on its roster; leave any historical roles behind in the old
-      // org.
+      // on its roster.
       await client.query(
         `INSERT INTO user_org_roles (user_id, org_id, role, granted_by)
          VALUES ($1, $2, 'diver', $3) ON CONFLICT DO NOTHING`,
@@ -195,7 +227,7 @@ module.exports = function createClubChangesRouter({ pool, verifyToken, bumpToken
     await client.query(
       `UPDATE club_change_requests
          SET status='approved', reviewed_by=$1, reviewed_at=now()
-       WHERE id=$2`,
+       WHERE id=$2 AND status='pending'`,
       [req.user.id, r.id],
     );
 
@@ -221,6 +253,8 @@ module.exports = function createClubChangesRouter({ pool, verifyToken, bumpToken
         revoked_guardian_links: revokedLinks.length,
         ...(r.kind === "org_transfer" ? {
           removed: {
+            roles: droppedRoles.map((d) => ({ org_id: d.org_id, role: d.role })),
+            role_requests: closedRoleRequests,
             club_admins: seats.clubs.map((c) => c.id),
             region_admins: seats.regions.map((g) => g.id),
             event_managers: seats.events.map((e) => e.id),
@@ -271,6 +305,9 @@ module.exports = function createClubChangesRouter({ pool, verifyToken, bumpToken
   // --- CREATE -------------------------------------------------
   router.post("/api/club-change-requests", verifyToken, async (req, res) => {
     const { user_id, to_club_id, to_org_id, note } = req.body || {};
+    for (const [name, v] of [["user_id", user_id], ["to_club_id", to_club_id], ["to_org_id", to_org_id]]) {
+      if (v != null && v !== "" && !isUuid(v)) return res.status(400).json({ error: `${name} must be an id` });
+    }
     const targetId = user_id || req.user.id;
     const client = await pool.connect();
     try {
@@ -315,8 +352,14 @@ module.exports = function createClubChangesRouter({ pool, verifyToken, bumpToken
       }
 
       // Seed handshake stamps based on who initiated.
+      // Leaving your club needs nobody's say-so: PUT /api/users/:id/club
+      // already lets a diver clear their own. Filed as a request it sat
+      // waiting, and where there's no federation nobody but the sysadmin
+      // could decide it (club admins only review joins), while it blocked
+      // every later request to join a club. So it applies straight away.
+      const selfLeave = isSelf && kind === "club_change" && !to_club_id;
       const diverConfirmed = isSelf ? "now()" : "NULL";
-      const sourceApproved = !isSelf && isOrgAdminOf(req.user, u.org_id) ? "now()" : "NULL";
+      const sourceApproved = selfLeave || (!isSelf && isOrgAdminOf(req.user, u.org_id)) ? "now()" : "NULL";
       const sourceApprovedBy = sourceApproved === "now()" ? req.user.id : null;
 
       let insRes;
@@ -410,12 +453,22 @@ module.exports = function createClubChangesRouter({ pool, verifyToken, bumpToken
     }
   });
 
-  async function loadPending(client, id) {
-    const r = await client.query(
-      "SELECT * FROM club_change_requests WHERE id = $1 AND status = 'pending'",
+  // Lock the request for the rest of the transaction. Two admins (or an
+  // admin and the diver cancelling) used to both read it as pending and
+  // both win, so a move could be applied while the row ended up
+  // 'rejected' and the diver heard both outcomes. The second one now
+  // waits on this lock, then finds it decided. Answers the 404 or 409
+  // itself and returns null when the caller should stop.
+  async function lockPending(client, id, res) {
+    const r = (await client.query(
+      "SELECT * FROM club_change_requests WHERE id = $1 FOR UPDATE",
       [id],
-    );
-    return r.rows[0] || null;
+    )).rows[0];
+    if (r && r.status === "pending") return r;
+    await client.query("ROLLBACK");
+    if (!r) res.status(404).json({ error: "Request not found" });
+    else res.status(409).json({ error: "This request has already been decided", code: "already_decided" });
+    return null;
   }
 
   // --- REVIEW (org admin approves / rejects) ------------------
@@ -426,8 +479,8 @@ module.exports = function createClubChangesRouter({ pool, verifyToken, bumpToken
     const client = await pool.connect();
     try {
       await client.query("BEGIN");
-      const r = await loadPending(client, req.params.id);
-      if (!r) { await client.query("ROLLBACK"); return res.status(404).json({ error: "Request not found" }); }
+      const r = await lockPending(client, req.params.id, res);
+      if (!r) return;
 
       // A club (or region) admin approving someone into their club counts
       // as the one approval a club_change needs.
@@ -438,9 +491,16 @@ module.exports = function createClubChangesRouter({ pool, verifyToken, bumpToken
         await client.query("ROLLBACK");
         return res.status(403).json({ error: "Not an admin of either organisation in this request" });
       }
-      if (decision === "approved" && r.kind === "club_change") {
-        const still = await client.query("SELECT 1 FROM users WHERE id = $1 AND org_id = $2", [r.user_id, r.to_org_id]);
-        if (!still.rows.length) {
+      if (decision === "approved") {
+        const who = (await client.query("SELECT org_id, deleted_at FROM users WHERE id = $1", [r.user_id])).rows[0];
+        // Self-delete closes open requests now, but one left from before
+        // that would move the tombstone to another federation (granting it
+        // 'diver' there) and out of reach of claim-candidates.
+        if (!who || who.deleted_at) {
+          await client.query("ROLLBACK");
+          return res.status(409).json({ error: "That account has been deleted", code: "account_deleted" });
+        }
+        if (r.kind === "club_change" && who.org_id !== r.to_org_id) {
           await client.query("ROLLBACK");
           return res.status(409).json({ error: "That person has moved to another organisation" });
         }
@@ -448,7 +508,7 @@ module.exports = function createClubChangesRouter({ pool, verifyToken, bumpToken
 
       if (decision === "rejected") {
         await client.query(
-          "UPDATE club_change_requests SET status='rejected', reviewed_by=$1, reviewed_at=now() WHERE id=$2",
+          "UPDATE club_change_requests SET status='rejected', reviewed_by=$1, reviewed_at=now() WHERE id=$2 AND status='pending'",
           [req.user.id, r.id],
         );
         await notify(client, [r.user_id], {
@@ -495,8 +555,8 @@ module.exports = function createClubChangesRouter({ pool, verifyToken, bumpToken
     const client = await pool.connect();
     try {
       await client.query("BEGIN");
-      const r = await loadPending(client, req.params.id);
-      if (!r) { await client.query("ROLLBACK"); return res.status(404).json({ error: "Request not found" }); }
+      const r = await lockPending(client, req.params.id, res);
+      if (!r) return;
       if (r.user_id !== req.user.id) {
         await client.query("ROLLBACK");
         return res.status(403).json({ error: "Only the diver can confirm their own transfer" });
@@ -519,14 +579,20 @@ module.exports = function createClubChangesRouter({ pool, verifyToken, bumpToken
   router.post("/api/club-change-requests/:id/cancel", verifyToken, async (req, res) => {
     try {
       const r = (await pool.query(
-        "SELECT * FROM club_change_requests WHERE id=$1 AND status='pending'",
+        "SELECT * FROM club_change_requests WHERE id=$1",
         [req.params.id])).rows[0];
       if (!r) return res.status(404).json({ error: "Request not found" });
       const allowed = r.user_id === req.user.id || isOrgAdminOf(req.user, r.from_org_id) || isOrgAdminOf(req.user, r.to_org_id);
       if (!allowed) return res.status(403).json({ error: "Not allowed to cancel this request" });
-      await pool.query(
-        "UPDATE club_change_requests SET status='rejected', reviewed_by=$1, reviewed_at=now(), note=COALESCE(note,'') WHERE id=$2",
+      // Guarded on status, so a cancel that lands while an approval holds
+      // the row waits for it and then touches nothing, rather than marking
+      // a move that already happened as rejected.
+      const done = await pool.query(
+        "UPDATE club_change_requests SET status='rejected', reviewed_by=$1, reviewed_at=now(), note=COALESCE(note,'') WHERE id=$2 AND status='pending'",
         [req.user.id, r.id]);
+      if (!done.rowCount) {
+        return res.status(409).json({ error: "This request has already been decided", code: "already_decided" });
+      }
       res.json({ status: "cancelled" });
     } catch (err) {
       console.error("[club-change cancel]", err.message);

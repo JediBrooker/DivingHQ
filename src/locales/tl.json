@@ -80,7 +80,8 @@
       "success_club_pending": "Naghihintay ang {club} ng pag-apruba ng {org}. Makikita nila ito kapag nakumpirma mo na ang iyong email, at mag-e-email kami sa iyo kapag nakapagpasya na sila.",
       "region_will_ask": "Ang {region} ang nagpapasya kung aling mga club ang tatanggapin nito, kaya padadalhan ito ng hiling kapag na-verify mo na ang iyong email. Hangga't hindi pa ito tumatanggap, wala pa sa rehiyon ang iyong club.",
       "founder_role_note": "Bilang tagapagtatag ng club, hindi mo maaaprubahan ang sarili mong kahilingan bilang tagasanay o hukom, kaya susuriin ito ng mga admin ng iyong rehiyon o ng DivingHQ.",
-      "spectator_note_see_above": "Lahat ng account ay nagsisimula bilang Manonood. Ang role na hihilingin mo sa itaas ay susuriin ayon sa nakasaad sa paalala sa ilalim nito. Makakapag-log in ka kapag na-verify na ang iyong email."
+      "spectator_note_see_above": "Lahat ng account ay nagsisimula bilang Manonood. Ang role na hihilingin mo sa itaas ay susuriin ayon sa nakasaad sa paalala sa ilalim nito. Makakapag-log in ka kapag na-verify na ang iyong email.",
+      "username_taken": "Ginagamit na ang username na iyan. Pumili ng iba."
     },
     "register_org": {
       "title": "Irehistro ang organisasyon",
@@ -1077,7 +1078,9 @@
     "orgs_need_country_title": "Mga organisasyong walang bansa ({n})",
     "orgs_need_country_hint": "Hinahanap ng mga nagsa-sign up ang kanilang federation ayon sa bansa, kaya walang makakasali sa mga ito hangga't wala silang bansa.",
     "org_suspended": "Suspendido",
-    "orgs_show_all": "Ipakita lahat ({n})"
+    "orgs_show_all": "Ipakita lahat ({n})",
+    "guardian_requests_title": "Mga kahilingan sa pag-link ng guardian",
+    "guardian_request_by": "Humihiling si {name} na magbayad para sa kanya"
   },
   "setup": {
     "title": "Federation Setup",
@@ -1848,7 +1851,11 @@
     "search_placeholder": "Maghanap ayon sa pangalan...",
     "age_years": "{age} taong gulang",
     "paying_for": "Nagbabayad para kay",
-    "paying_for_self": "Sarili mo"
+    "paying_for_self": "Sarili mo",
+    "pending_badge": "Naghihintay ng pag-apruba",
+    "withdraw": "Bawiin ang kahilingan",
+    "withdraw_confirm": "Bawiin ang kahilingang ito sa pag-link?",
+    "no_results": "Walang tao na may ganyang pangalan sa inyong organisasyon."
   },
   "my_club": {
     "title": "Aking club",

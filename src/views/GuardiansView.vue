@@ -12,6 +12,9 @@ const loading = ref(true)
 
 const searchQuery = ref('')
 const searchResults = ref([])
+// Set once a search for the current text has come back, so "nobody by
+// that name" only shows after we've actually looked.
+const searchedFor = ref('')
 let searchTimer = null
 
 function ageFromDob(dob) {
@@ -27,8 +30,10 @@ function ageFromDob(dob) {
 async function loadDependents() {
   loading.value = true
   try {
-    const data = await auth.apiFetch('/api/guardians/my-dependents')
-    dependents.value = data.dependents || data || []
+    // Pending ones too, so a request that's gone in shows as waiting
+    // rather than vanishing until an admin gets to it.
+    const data = await auth.apiFetch('/api/guardians/my-dependents?include_pending=1')
+    dependents.value = Array.isArray(data) ? data : []
   } catch (e) {
     showError(e.message || 'Failed to load dependents')
   } finally {
@@ -37,10 +42,11 @@ async function loadDependents() {
 }
 
 async function revoke(link) {
-  if (!confirm(t('guardians.revoke_confirm'))) return
+  const pending = link.status === 'pending'
+  if (!confirm(t(pending ? 'guardians.withdraw_confirm' : 'guardians.revoke_confirm'))) return
   try {
     await auth.apiFetch(`/api/guardians/${link.guardian_link_id}/revoke`, { method: 'POST' })
-    showSuccess(t('guardians.revoke'))
+    showSuccess(t(pending ? 'guardians.withdraw' : 'guardians.revoke'))
     await loadDependents()
   } catch (e) {
     showError(e.message || 'Revoke failed')
@@ -50,15 +56,19 @@ async function revoke(link) {
 function onSearchInput() {
   clearTimeout(searchTimer)
   const q = searchQuery.value.trim()
-  if (!q) { searchResults.value = []; return }
+  if (q.length < 2) { searchResults.value = []; searchedFor.value = ''; return }
   searchTimer = setTimeout(() => searchUsers(q), 300)
 }
 
+// GET /api/users is the org admin's member list, so a parent got a 403
+// here. This one is scoped to the caller's own federation and names only.
 async function searchUsers(q) {
   try {
-    const data = await auth.apiFetch(`/api/users?search=${encodeURIComponent(q)}`)
-    const rows = data.users || data || []
-    searchResults.value = rows.filter(u => u.id !== auth.user?.id)
+    const rows = await auth.apiFetch(`/api/guardians/search?q=${encodeURIComponent(q)}`)
+    // A slow answer for an older query mustn't overwrite a newer one.
+    if (q !== searchQuery.value.trim()) return
+    searchResults.value = Array.isArray(rows) ? rows : []
+    searchedFor.value = q
   } catch (e) {
     showError(e.message || 'Search failed')
   }
@@ -73,6 +83,8 @@ async function requestLink(user) {
     showSuccess(t('guardians.request_sent'))
     searchQuery.value = ''
     searchResults.value = []
+    searchedFor.value = ''
+    await loadDependents()
   } catch (e) {
     showError(e.message || 'Request failed')
   }
@@ -96,14 +108,20 @@ onMounted(loadDependents)
           {{ t('guardians.empty') }}
         </div>
 
-        <div v-for="dep in dependents" :key="dep.guardian_link_id" class="gv-dep">
+        <div v-for="dep in dependents" :key="dep.guardian_link_id" class="gv-dep" data-testid="guardian-link">
           <div class="gv-dep-info">
             <span class="gv-dep-name">{{ dep.full_name }}</span>
             <span v-if="dep.date_of_birth" class="gv-dep-age">
               {{ t('guardians.age_years', { age: ageFromDob(dep.date_of_birth) }) }}
             </span>
+            <!-- Under the name rather than beside it: on a phone a third
+                 item in the row squeezed the name down to one word a line
+                 and the badge ended up on top of it. -->
+            <span v-if="dep.status === 'pending'" class="badge badge-amber gv-dep-badge">{{ t('guardians.pending_badge') }}</span>
           </div>
-          <button class="btn btn-ghost btn-sm" @click="revoke(dep)">{{ t('guardians.revoke') }}</button>
+          <button class="btn btn-ghost btn-sm gv-dep-action" @click="revoke(dep)">
+            {{ dep.status === 'pending' ? t('guardians.withdraw') : t('guardians.revoke') }}
+          </button>
         </div>
       </template>
 
@@ -118,16 +136,15 @@ onMounted(loadDependents)
             @input="onSearchInput"
           />
         </label>
-        <div v-if="searchResults.length" class="gv-results">
-          <div
-            v-for="u in searchResults"
-            :key="u.id"
-            class="gv-result-item"
-            @click="requestLink(u)"
-          >
-            {{ u.full_name }}
-          </div>
-        </div>
+        <ul v-if="searchResults.length" class="gv-results">
+          <li v-for="u in searchResults" :key="u.id">
+            <button type="button" class="gv-result-item" @click="requestLink(u)">
+              <span>{{ u.full_name }}</span>
+              <span v-if="u.club_name" class="gv-result-club">{{ u.club_name }}</span>
+            </button>
+          </li>
+        </ul>
+        <p v-else-if="searchedFor" class="gv-no-results">{{ t('guardians.no_results') }}</p>
       </div>
     </div>
   </div>
@@ -161,21 +178,30 @@ onMounted(loadDependents)
   margin-bottom: 0.5rem;
 }
 .gv-dep-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.1rem; }
-.gv-dep-name { font-weight: 600; color: var(--text); }
+.gv-dep-name { font-weight: 600; color: var(--text); overflow-wrap: anywhere; }
 .gv-dep-age { font-size: var(--text-sm); color: var(--text-3); }
+.gv-dep-badge { align-self: flex-start; margin-top: 0.25rem; }
+.gv-dep-action { flex-shrink: 0; }
 
 .gv-link-section { margin-top: 1.25rem; }
 
 .gv-results {
+  list-style: none; margin: 0.35rem 0 0; padding: 0;
   border: 1px solid var(--border); border-radius: var(--radius);
-  max-height: 220px; overflow-y: auto; margin-top: 0.35rem;
+  max-height: 220px; overflow-y: auto;
   background: var(--surface);
 }
+.gv-results li:not(:last-child) { border-bottom: 1px solid var(--border); }
+/* Real buttons, so the list works from the keyboard. */
 .gv-result-item {
-  padding: 0.6rem 0.85rem; cursor: pointer;
+  display: flex; width: 100%; align-items: baseline; justify-content: space-between; gap: 0.75rem;
+  padding: 0.6rem 0.85rem; cursor: pointer; text-align: start;
+  background: none; border: 0; font: inherit;
   font-size: var(--text-body); color: var(--text-2);
   transition: background var(--dur) var(--ease);
 }
 .gv-result-item:hover { background: var(--surface-hover); }
-.gv-result-item:not(:last-child) { border-bottom: 1px solid var(--border); }
+.gv-result-item:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.gv-result-club { font-size: var(--text-sm); color: var(--text-3); }
+.gv-no-results { margin-top: 0.5rem; font-size: var(--text-sm); color: var(--text-3); }
 </style>

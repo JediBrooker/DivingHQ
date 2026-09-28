@@ -80,7 +80,8 @@
       "success_club_pending": "Klub {club} czeka na zatwierdzenie przez {org}. Zobaczą go, gdy tylko potwierdzisz e-mail, a o decyzji poinformujemy cię e-mailem.",
       "region_will_ask": "Region {region} sam decyduje, które kluby przyjmuje, więc po potwierdzeniu adresu e-mail dostanie prośbę o przyjęcie twojego klubu. Dopóki jej nie przyjmie, twój klub nie należy do regionu.",
       "founder_role_note": "Jako założyciel klubu nie możesz zatwierdzić własnej prośby o rolę trenera lub sędziego, więc rozpatrują ją administratorzy twojego regionu albo DivingHQ.",
-      "spectator_note_see_above": "Wszystkie konta zaczynają jako Widz. Rolę, o którą prosisz powyżej, rozpatruje się tak, jak mówi uwaga pod nią. Zalogujesz się po potwierdzeniu adresu e-mail."
+      "spectator_note_see_above": "Wszystkie konta zaczynają jako Widz. Rolę, o którą prosisz powyżej, rozpatruje się tak, jak mówi uwaga pod nią. Zalogujesz się po potwierdzeniu adresu e-mail.",
+      "username_taken": "Ta nazwa użytkownika jest już zajęta. Wybierz inną."
     },
     "register_org": {
       "title": "Rejestracja organizacji",
@@ -1088,7 +1089,9 @@
     "orgs_need_country_title": "Organizacje bez kraju ({n})",
     "orgs_need_country_hint": "Rejestrujący znajdują swoją federację po kraju, więc nikt nie może dołączyć do tych organizacji, dopóki nie mają kraju.",
     "org_suspended": "Zawieszona",
-    "orgs_show_all": "Pokaż wszystkie ({n})"
+    "orgs_show_all": "Pokaż wszystkie ({n})",
+    "guardian_requests_title": "Prośby o połączenie z opiekunem",
+    "guardian_request_by": "{name} prosi o możliwość płacenia w imieniu tej osoby"
   },
   "setup": {
     "title": "Konfiguracja federacji",
@@ -1848,7 +1851,11 @@
     "search_placeholder": "Szukaj po nazwisku...",
     "age_years": "{age} lat",
     "paying_for": "Płaci za",
-    "paying_for_self": "Siebie"
+    "paying_for_self": "Siebie",
+    "pending_badge": "Oczekuje na zatwierdzenie",
+    "withdraw": "Wycofaj prośbę",
+    "withdraw_confirm": "Wycofać tę prośbę o połączenie?",
+    "no_results": "W Twojej organizacji nie ma nikogo o tym imieniu i nazwisku."
   },
   "my_club": {
     "title": "Mój klub",

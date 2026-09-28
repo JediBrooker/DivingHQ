@@ -24,6 +24,9 @@
  * @property {string}   org_id          Primary org of the user.
  * @property {string[]} org_roles       e.g. ['org_admin', 'meet_manager', 'judge', 'coach', 'diver', 'spectator']
  * @property {boolean}  is_system_admin
+ * @property {?string}  [locale]        users.locale (migration 052), null until set. The
+ *   SPA's auth store saves the on-screen language here and adopts it on
+ *   sign-in (adoptAccountLocale); server-side mail goes out in it.
  * @property {number}   iat             issued-at, set by jsonwebtoken
  * @property {number}   exp             expiry, set by jsonwebtoken
  * @property {boolean}  [has_dependents] Body-only (login + /api/auth/me), never in the JWT.
@@ -875,6 +878,33 @@
  * @property {{id: string, name: string}[]} activated_clubs
  *   clubs that were waiting on the federation's approval (migration 096)
  *   and joined when the claim went; empty for a region claim
+ */
+
+// ---- guardians (migration 083) --------------------------------------
+
+/**
+ * @typedef {Object} GuardianSearchResult
+ * GET /api/guardians/search?q=. Live members of the caller's own
+ * federation, at least two characters of name, up to 20. Names and club
+ * only; the link request checks the age.
+ *
+ * @property {string}  id
+ * @property {string}  full_name
+ * @property {?string} club_name
+ */
+
+/**
+ * @typedef {Object} GuardianLink
+ * GET /api/guardians/my-dependents. Approved links only, unless
+ * ?include_pending=1, which the Dependents page passes (pending ones sort
+ * last). POST /api/guardians/:id/revoke ends either kind.
+ *
+ * @property {string}  guardian_link_id
+ * @property {'approved'|'pending'} status
+ * @property {string}  id               the dependent's user id
+ * @property {string}  username
+ * @property {string}  full_name
+ * @property {?string} date_of_birth
  */
 
 // Force this file to be a module so import('@/types') works in

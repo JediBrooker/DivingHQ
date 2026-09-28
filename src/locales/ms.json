@@ -80,7 +80,8 @@
       "success_club_pending": "{club} sedang menunggu kelulusan {org}. Mereka akan melihatnya sebaik sahaja anda mengesahkan e-mel, dan kami akan menghantar e-mel kepada anda apabila mereka membuat keputusan.",
       "region_will_ask": "{region} menentukan kelab yang diterimanya, jadi permintaan akan dihantar sebaik sahaja anda mengesahkan e-mel. Sehingga ia menerima, kelab anda belum berada dalam rantau itu.",
       "founder_role_note": "Sebagai pengasas kelab, anda tidak boleh meluluskan sendiri permintaan anda sebagai jurulatih atau hakim, jadi ia disemak oleh pentadbir rantau anda atau DivingHQ.",
-      "spectator_note_see_above": "Semua akaun bermula sebagai Penonton. Peranan yang anda minta di atas disemak seperti yang diterangkan dalam nota di bawahnya. Anda boleh log masuk selepas e-mel anda disahkan."
+      "spectator_note_see_above": "Semua akaun bermula sebagai Penonton. Peranan yang anda minta di atas disemak seperti yang diterangkan dalam nota di bawahnya. Anda boleh log masuk selepas e-mel anda disahkan.",
+      "username_taken": "Nama pengguna itu sudah digunakan. Pilih yang lain."
     },
     "register_org": {
       "title": "Daftarkan organisasi",
@@ -1077,7 +1078,9 @@
     "orgs_need_country_title": "Organisasi tanpa negara ({n})",
     "orgs_need_country_hint": "Pendaftar mencari persekutuan mereka mengikut negara, jadi tiada sesiapa boleh menyertai organisasi ini sehingga negaranya ditetapkan.",
     "org_suspended": "Digantung",
-    "orgs_show_all": "Tunjuk semua {n}"
+    "orgs_show_all": "Tunjuk semua {n}",
+    "guardian_requests_title": "Permintaan pautan penjaga",
+    "guardian_request_by": "{name} meminta untuk membayar bagi pihaknya"
   },
   "setup": {
     "title": "Penyediaan persekutuan",
@@ -1848,7 +1851,11 @@
     "search_placeholder": "Cari mengikut nama...",
     "age_years": "{age} tahun",
     "paying_for": "Membayar untuk",
-    "paying_for_self": "Diri sendiri"
+    "paying_for_self": "Diri sendiri",
+    "pending_badge": "Menunggu kelulusan",
+    "withdraw": "Tarik balik permintaan",
+    "withdraw_confirm": "Tarik balik permintaan pautan ini?",
+    "no_results": "Tiada sesiapa dengan nama itu dalam organisasi anda."
   },
   "my_club": {
     "title": "Kelab saya",

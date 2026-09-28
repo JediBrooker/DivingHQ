@@ -80,7 +80,8 @@
       "success_club_pending": "{club} aguarda a aprovação de {org}. O pedido chega-lhes assim que confirmar o seu e-mail, e enviamos-lhe um e-mail quando decidirem.",
       "region_will_ask": "{region} decide que clubes aceita, por isso receberá um pedido assim que verificar o seu e-mail. Até aceitar, o seu clube não pertence à região.",
       "founder_role_note": "Como fundador do clube, não pode aprovar o seu próprio pedido de treinador ou juiz, por isso é analisado pelos administradores da sua região ou pela DivingHQ.",
-      "spectator_note_see_above": "Todas as contas começam como Espectador. A função que solicitar acima é analisada como indica a nota por baixo. Pode iniciar sessão depois de verificar o seu e-mail."
+      "spectator_note_see_above": "Todas as contas começam como Espectador. A função que solicitar acima é analisada como indica a nota por baixo. Pode iniciar sessão depois de verificar o seu e-mail.",
+      "username_taken": "Esse nome de utilizador já está a ser usado. Escolha outro."
     },
     "register_org": {
       "title": "Registar Organização",
@@ -1088,7 +1089,9 @@
     "orgs_need_country_title": "Organizações sem país ({n})",
     "orgs_need_country_hint": "Os registos encontram a sua federação pelo país, por isso ninguém se pode juntar a estas enquanto não tiverem um.",
     "org_suspended": "Suspensa",
-    "orgs_show_all": "Mostrar todas ({n})"
+    "orgs_show_all": "Mostrar todas ({n})",
+    "guardian_requests_title": "Pedidos de associação de responsáveis",
+    "guardian_request_by": "{name} pede para pagar em seu nome"
   },
   "setup": {
     "title": "Configuração da Federação",
@@ -1848,7 +1851,11 @@
     "search_placeholder": "Pesquisar por nome...",
     "age_years": "{age} anos",
     "paying_for": "A pagar por",
-    "paying_for_self": "Si próprio"
+    "paying_for_self": "Si próprio",
+    "pending_badge": "A aguardar aprovação",
+    "withdraw": "Retirar pedido",
+    "withdraw_confirm": "Retirar este pedido de associação?",
+    "no_results": "Não existe ninguém com esse nome na sua organização."
   },
   "my_club": {
     "title": "O meu clube",

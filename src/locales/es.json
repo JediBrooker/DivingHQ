@@ -80,7 +80,8 @@
       "success_club_pending": "{club} está esperando la aprobación de {org}. Lo verán en cuanto confirmes tu correo, y te escribiremos cuando decidan.",
       "region_will_ask": "{region} decide qué clubes acepta, así que se le pedirá que acepte el tuyo en cuanto verifiques tu correo. Hasta que lo acepte, tu club no está en la región.",
       "founder_role_note": "Como fundador del club no puedes aprobar tu propia solicitud de entrenador o juez, así que la revisan los administradores de tu región o DivingHQ.",
-      "spectator_note_see_above": "Todas las cuentas empiezan como Espectador. El rol que solicites arriba se revisa como indica la nota que tiene debajo. Podrás iniciar sesión cuando verifiques tu correo."
+      "spectator_note_see_above": "Todas las cuentas empiezan como Espectador. El rol que solicites arriba se revisa como indica la nota que tiene debajo. Podrás iniciar sesión cuando verifiques tu correo.",
+      "username_taken": "Ese nombre de usuario ya está en uso. Elige otro."
     },
     "register_org": {
       "title": "Registrar Organización",
@@ -1077,7 +1078,9 @@
     "orgs_need_country_title": "Organizaciones sin país ({n})",
     "orgs_need_country_hint": "Los registros encuentran su federación por país, así que nadie puede unirse a estas hasta que tengan uno.",
     "org_suspended": "Suspendida",
-    "orgs_show_all": "Ver las {n}"
+    "orgs_show_all": "Ver las {n}",
+    "guardian_requests_title": "Solicitudes de vínculo de tutor",
+    "guardian_request_by": "{name} pide pagar en su nombre"
   },
   "setup": {
     "title": "Configuración de la federación",
@@ -1848,7 +1851,11 @@
     "search_placeholder": "Buscar por nombre...",
     "age_years": "{age} años",
     "paying_for": "Pagando por",
-    "paying_for_self": "Ti mismo"
+    "paying_for_self": "Ti mismo",
+    "pending_badge": "Pendiente de aprobación",
+    "withdraw": "Retirar solicitud",
+    "withdraw_confirm": "¿Retirar esta solicitud de vínculo?",
+    "no_results": "No hay nadie con ese nombre en tu organización."
   },
   "my_club": {
     "title": "Mi club",

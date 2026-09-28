@@ -243,7 +243,7 @@ The country (or state) hasn't been claimed on DivingHQ by its governing body yet
 
 ### "I forgot my password"
 
-Click **Reset it** on the sign-in page and enter the email address on your account. You'll get a single-use link valid for 30 minutes. Use it from any device.
+Click **Reset it** on the sign-in page and enter the email address on your account (capitals don't matter). You'll get a single-use link valid for 30 minutes. Use it from any device. If more than one account uses that address, for example a parent's email on two children's accounts, each one gets its own link, addressed by name.
 
 ### "The reset link doesn't work / says 'expired'"
 

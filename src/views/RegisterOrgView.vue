@@ -148,7 +148,10 @@ async function handleSubmit() {
       body: JSON.stringify(body),
     })
     const data = await res.json()
-    if (!res.ok) throw new Error(data.error || t('auth.register.failed'))
+    if (!res.ok) {
+      if (data.code === 'username_taken') throw new Error(t('auth.register.username_taken'))
+      throw new Error(data.error || t('auth.register.failed'))
+    }
     registered.value = {
       email: email.value.trim(),
       username: username.value.trim(),

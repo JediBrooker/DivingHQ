@@ -180,7 +180,7 @@ You can delete your account from **Profile → Delete account**. We ask for your
 
 - The login itself: password, email address, 2FA secret and recovery codes.
 - Personal details and settings: date of birth, gender, nationality, language, dashboard layout, push subscriptions.
-- Anything that links your *account* to other people: roles, coach links, guardian links, role requests, club and region admin roles, any claim you made that's still being decided (it's withdrawn), and your public profile address (so `/profile/<you>` stops working).
+- Anything that links your *account* to other people: roles, coach links, guardian links, role requests, club change or transfer requests still open (they're closed), club and region admin roles, any claim you made that's still being decided (it's withdrawn), and your public profile address (so `/profile/<you>` stops working).
 - Every active session, on every device. You're signed out immediately.
 
 **What stays, and why:**
@@ -190,7 +190,7 @@ You can delete your account from **Profile → Delete account**. We ask for your
 
 **Coming back later: claim your old results.**
 
-If you create a new account in the future with the same name, we check whether any historical entries in your organisation match. At sign-in we show you past meets that look like yours; you pick the ones that are, and we link them to your new profile. You can also do this from **Profile → Claim past competition entries**. We ask you to confirm rather than matching automatically, because two divers can share a name.
+If you create a new account in the future with the same name, we check whether any historical entries in your organisation match. At sign-in we show you past meets that look like yours; you pick the ones that are, and we link them to your new profile. You can also do this from **Profile → Claim past competition entries**. We ask you to confirm rather than matching automatically, because two divers can share a name. Team places, memberships, accreditations and payment records on the old account come across with them.
 
 **If a result needs removing completely** (safeguarding, child protection, a court order, mistaken identity), contact the club or federation that ran the event, and us at [support@divinghq.app](mailto:support@divinghq.app). We'll work with the organisation that ran it.
 

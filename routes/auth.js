@@ -28,6 +28,7 @@ const { withTx } = clubApprovals;
 const notices = require("../lib/notices");
 const { recordAudit } = require("../lib/audit");
 const createAuthLinks = require("../lib/auth-links");
+const { isUuid } = require("../lib/uuid");
 
 // Loose on purpose, something@something.tld: the verification link is what
 // actually proves the address. Register, register-org and the email change
@@ -53,6 +54,39 @@ function setSessionCookie(res, token) {
 // signal; absence safely falls back to the legacy token-in-body shape.
 function includeBodyToken(req) {
   return !req.get("sec-fetch-site");
+}
+
+// Someone picking a username that's taken is an everyday mistake, not a
+// server fault. Both signup routes used to answer it with a 500 carrying
+// Postgres's own "Key (username)=(bob) already exists." (err.detail),
+// which also leaks whatever a future constraint's detail holds, so
+// neither sends err.detail any more.
+const USERNAME_TAKEN = { error: "That username is taken. Pick another one.", code: "username_taken" };
+function isUsernameClash(err) {
+  return err && err.code === "23505" && err.constraint === "users_username_key";
+}
+
+// Who a forgot-password request for this address should reach. Register
+// keeps the email as typed while the email change lower-cases it, so an
+// exact match missed "John.Smith@Example.com" asked for as
+// "john.smith@example.com", and the person got ok:true and no mail.
+// users.email isn't unique either (a parent's address on two children's
+// accounts is normal here), and rows[0] used to pick one of them at
+// random. Every live account on it gets its own link now, greeted by its
+// own name. Capped, so one address can't fan out without limit.
+const RESET_ACCOUNTS_MAX = 5;
+async function resetAccountsFor(db, email) {
+  if (typeof email !== "string") return [];
+  const addr = email.trim();
+  if (!addr || addr.length > 320) return [];
+  const r = await db.query(
+    `SELECT id, password, full_name, email FROM users
+      WHERE lower(email) = lower($1) AND deleted_at IS NULL
+      ORDER BY (email_verified_at IS NOT NULL) DESC, created_at DESC
+      LIMIT ${RESET_ACCOUNTS_MAX}`,
+    [addr],
+  );
+  return r.rows;
 }
 
 // Pre-computed dummy bcrypt hash used by the login flow to keep
@@ -477,6 +511,30 @@ module.exports = function createAuthRouter({
   // ...payload }. Recovery codes are one-time, on success the
   // matched hash is removed from the user's stored array.
   // -------------------------------------------------------------
+  // Spend one recovery code. The bcrypt compares take a while, and the
+  // write used to be a plain overwrite of the whole list, so two logins
+  // racing with the same code both matched it and both got a session
+  // (and two different codes at once wrote one of them back, unused).
+  // The write is a compare-and-set against the list we matched in: if it
+  // changed underneath us, re-read and match again. A code the other
+  // request already spent isn't there the second time, so it fails.
+  async function consumeRecoveryAtomically(userId, hashes, code) {
+    let current = hashes || [];
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const { matched, remainingHashes } = await totp.consumeRecoveryCode(current, code);
+      if (!matched) return false;
+      const done = await pool.query(
+        `UPDATE users SET totp_recovery_codes = $1::jsonb
+          WHERE id = $2 AND totp_recovery_codes = $3::jsonb`,
+        [JSON.stringify(remainingHashes), userId, JSON.stringify(current)],
+      );
+      if (done.rowCount) return true;
+      const fresh = await pool.query("SELECT totp_recovery_codes FROM users WHERE id = $1", [userId]);
+      current = fresh.rows[0]?.totp_recovery_codes || [];
+    }
+    return false;
+  }
+
   router.post("/api/auth/login/totp", authLimiter, async (req, res) => {
     const { totp_token, code } = req.body || {};
     if (!totp_token || !code) {
@@ -509,18 +567,8 @@ module.exports = function createAuthRouter({
       let consumedRecovery = false;
       if (looksLikeTotp) accepted = await consumeTotpStep(user.id, user.totp_secret, code);
       if (!accepted) {
-        const { matched, remainingHashes } = await totp.consumeRecoveryCode(
-          user.totp_recovery_codes || [],
-          code,
-        );
-        if (matched) {
-          accepted = true;
-          consumedRecovery = true;
-          await pool.query(
-            "UPDATE users SET totp_recovery_codes = $1::jsonb WHERE id = $2",
-            [JSON.stringify(remainingHashes), user.id],
-          );
-        }
+        consumedRecovery = await consumeRecoveryAtomically(user.id, user.totp_recovery_codes, code);
+        accepted = consumedRecovery;
       }
       if (!accepted) {
         return res.status(401).json({ error: "Invalid TOTP / recovery code" });
@@ -807,6 +855,14 @@ module.exports = function createAuthRouter({
     if (!org_id && !country) {
       return res.status(400).json({ error: "Pick your country" });
     }
+    // Same answers as an id that matches nothing, rather than the 500 a
+    // failed uuid cast used to give.
+    if (org_id && !isUuid(org_id)) {
+      return res.status(400).json({ error: "Organisation not found or not yet active" });
+    }
+    if (club_id && !isUuid(club_id)) {
+      return res.status(400).json({ error: "Selected club doesn't belong to that organisation" });
+    }
 
     const fullName = safeText(req.body?.full_name, 100);
     const cleanClubName = safeText(new_club_name, 80);
@@ -829,7 +885,9 @@ module.exports = function createAuthRouter({
     }
     const pwErr = validatePassword(password);
     if (pwErr) return res.status(400).json({ error: pwErr });
-    if (typeof email !== "string" || !EMAIL_RE.test(email)) {
+    // users.email is varchar(255); a longer one failed the INSERT and came
+    // back a 500. Same cap as register-org and the email change.
+    if (typeof email !== "string" || email.length > 254 || !EMAIL_RE.test(email)) {
       return res.status(400).json({ error: "A valid email address is required for verification" });
     }
 
@@ -1088,8 +1146,9 @@ module.exports = function createAuthRouter({
       });
     } catch (err) {
       await client.query("ROLLBACK");
+      if (isUsernameClash(err)) return res.status(409).json(USERNAME_TAKEN);
       console.error("[Register Error]", err.message);
-      res.status(500).json({ error: err.detail || "Registration failed" });
+      res.status(500).json({ error: "Registration failed" });
     } finally {
       client.release();
     }
@@ -1445,6 +1504,7 @@ module.exports = function createAuthRouter({
       if (err instanceof claims.ClaimError) {
         return res.status(err.status).json({ error: err.message, ...(err.code ? { code: err.code } : {}) });
       }
+      if (isUsernameClash(err)) return res.status(409).json(USERNAME_TAKEN);
       console.error("[Register Org Error]", err.message);
       if (err.constraint === "organisations_slug_key")
         return res
@@ -1452,7 +1512,7 @@ module.exports = function createAuthRouter({
           .json({ error: "That organisation slug is already taken" });
       res
         .status(500)
-        .json({ error: err.detail || "Organisation registration failed" });
+        .json({ error: "Organisation registration failed" });
     } finally {
       client.release();
     }
@@ -1790,19 +1850,13 @@ module.exports = function createAuthRouter({
     // out-of-band (setImmediate) so the email-send latency doesn't
     // leak through the response time either.
     try {
-      let user = null;
-      if (typeof email === "string" && email.length <= 320) {
-        // Migration 053: deleted users have email = NULL, so they
-        // won't match here anyway, but we add an explicit
-        // deleted_at filter so the constant-time response shape
-        // doesn't depend on whether a tombstoned row exists.
-        const u = await pool.query(
-          "SELECT id, password, full_name, email FROM users WHERE email = $1 AND deleted_at IS NULL",
-          [email],
-        );
-        user = u.rows[0] || null;
-      }
-      if (user && user.email) {
+      // Migration 053: deleted users have email = NULL, so they won't
+      // match anyway, but resetAccountsFor filters deleted_at too so the
+      // constant-time response shape doesn't depend on whether a
+      // tombstoned row exists.
+      const users = await resetAccountsFor(pool, email);
+      for (const user of users) {
+        if (!user.email) continue;
         const fingerprint = mintResetToken(user.id, hashFingerprint(user.password));
         // Defer the mail API round-trip so the response time doesn't
         // depend on whether we found a user. The catch is swallowed
@@ -1882,4 +1936,5 @@ module.exports = function createAuthRouter({
 // Exposed for unit testing the response-token content-negotiation
 // (same pattern as lib/idempotency.js's helper export).
 module.exports.includeBodyToken = includeBodyToken;
+module.exports.resetAccountsFor = resetAccountsFor;
 module.exports.slugFromName = slugFromName;

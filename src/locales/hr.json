@@ -80,7 +80,8 @@
       "success_club_pending": "Klub {club} čeka odobrenje organizacije {org}. Vidjet će ga čim potvrdite svoju e-poštu, a javit ćemo vam e-poštom kad odluče.",
       "region_will_ask": "Regija {region} sama odlučuje koje klubove prima, pa će joj zahtjev stići čim potvrdite e-poštu. Dok ga ne prihvati, vaš klub nije u regiji.",
       "founder_role_note": "Kao osnivač kluba ne možete odobriti vlastiti zahtjev za trenera ili suca, pa ga pregledavaju administratori vaše regije ili DivingHQ.",
-      "spectator_note_see_above": "Svi računi počinju kao Gledatelj. Uloga koju gore zatražite pregledava se kako kaže napomena ispod nje. Moći ćete se prijaviti nakon potvrde e-pošte."
+      "spectator_note_see_above": "Svi računi počinju kao Gledatelj. Uloga koju gore zatražite pregledava se kako kaže napomena ispod nje. Moći ćete se prijaviti nakon potvrde e-pošte.",
+      "username_taken": "To korisničko ime je zauzeto. Odaberite drugo."
     },
     "register_org": {
       "title": "Registracija organizacije",
@@ -1077,7 +1078,9 @@
     "orgs_need_country_title": "Organizacije bez države ({n})",
     "orgs_need_country_hint": "Prijave pronalaze svoj savez prema državi, pa im se nitko ne može pridružiti dok je nemaju.",
     "org_suspended": "Suspendirano",
-    "orgs_show_all": "Prikaži svih {n}"
+    "orgs_show_all": "Prikaži svih {n}",
+    "guardian_requests_title": "Zahtjevi za povezivanje skrbnika",
+    "guardian_request_by": "{name} traži da plaća u ime ove osobe"
   },
   "setup": {
     "title": "Postavljanje federacije",
@@ -1848,7 +1851,11 @@
     "search_placeholder": "Pretraži po imenu...",
     "age_years": "{age} godina",
     "paying_for": "Plaća za",
-    "paying_for_self": "Sebe"
+    "paying_for_self": "Sebe",
+    "pending_badge": "Čeka odobrenje",
+    "withdraw": "Povuci zahtjev",
+    "withdraw_confirm": "Povući ovaj zahtjev za povezivanje?",
+    "no_results": "U vašoj organizaciji nema nikoga s tim imenom."
   },
   "my_club": {
     "title": "Moj klub",
