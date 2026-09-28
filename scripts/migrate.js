@@ -294,6 +294,16 @@ async function printStatus(client, migs, ledger) {
     }
 
     if (!pending.length) {
+      // Nothing to apply, but schema_meta can still have drifted from the
+      // ledger (a test re-running an old migration file stamps its own
+      // number back in). The ledger is the truth, so bring it back in line
+      // here too, not only after applying something.
+      if (!DRY_RUN) {
+        const before = await getLegacyVersion(client);
+        await syncSchemaMeta(client);
+        const after = await getLegacyVersion(client);
+        if (after !== before) console.log(`[migrate] schema_meta.version was ${before}, reset to ${after} from the ledger.`);
+      }
       console.log("[migrate] up to date.");
       return;
     }
