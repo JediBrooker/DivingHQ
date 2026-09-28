@@ -200,3 +200,47 @@ test("a referee hotkey stops the focused pool's auto-next countdown", async ({ r
   await expect(cardA.locator(".cv2-live-diver")).toContainText("AAA RF");
   await setup.deleteOrg(orgId);
 });
+
+// The card disables Next while held or until the panel is in, but Space /
+// ArrowRight called the advance directly: a stray Space during a video
+// review moved every judge on, and with no scores in at all it skipped
+// the diver on the blocks without asking.
+test("Space respects a hold, and asks before skipping a diver nobody has scored", async ({ request, page, baseURL }) => {
+  test.setTimeout(120_000);
+  const { orgId, username, adminToken } = await setup.createOrgAndAdmin(request, { countryCode: "AUS", orgName: "Keyboard Gate Diving" });
+  const A = await liveEvent(request, { orgId, adminToken, name: "Gate Pool", diverNames: ["AAA G", "BBB G", "CCC G"] });
+
+  await signIn(page, username);
+  await page.goto(`/control?event=${A.event.id}`);
+  const cardA = page.locator(`.cv2-pool[data-event-id="${A.event.id}"]`);
+  const diver = cardA.locator(".cv2-live-diver");
+  await expect(diver).toContainText("AAA G", { timeout: 10_000 });
+  const confirm = page.locator('.confirm-backdrop[aria-modal="true"]');
+
+  // No scores: Space asks first, and Cancel leaves the diver up
+  await diver.click();
+  await page.keyboard.press("Space");
+  await expect(confirm).toHaveCount(1);
+  await confirm.locator(".confirm-btn-cancel").click();
+  await expect(confirm).toHaveCount(0);
+  await expect(diver).toContainText("AAA G");
+
+  // Held: Space does nothing at all
+  await cardA.locator(".cv2-pool-hold").click();
+  await expect(cardA.locator(".cv2-pool-heldbar")).toBeVisible();
+  await diver.click();
+  await page.keyboard.press("Space");
+  await page.waitForTimeout(400);
+  await expect(confirm).toHaveCount(0);
+  await expect(diver).toContainText("AAA G");
+
+  // Resumed, and the operator really means it: the skip goes through
+  await cardA.locator(".cv2-pool-hold").click();
+  await expect(cardA.locator(".cv2-pool-heldbar")).toHaveCount(0);
+  await diver.click();
+  await page.keyboard.press("Space");
+  await expect(confirm).toHaveCount(1);
+  await confirm.locator(".confirm-btn:not(.confirm-btn-cancel)").click();
+  await expect(diver).toContainText("BBB G");
+  await setup.deleteOrg(orgId);
+});

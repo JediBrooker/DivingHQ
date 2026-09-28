@@ -333,28 +333,52 @@ async function announceFocused() {
 // confirm, then advance that pool's cursor or finalise. Per-pool shot
 // clock + auto-advance live in each card, which re-arms its clock when its
 // active diver changes here.
+//
+// The card's own button is disabled while the event is held or the panel
+// is short, but Space, the arrow key and the card's Skip all land here,
+// so the same gates live here too: nothing moves during a hold, and
+// moving past a dive that's short of a full panel (none at all included,
+// a no-show) always asks first.
 async function advancePool(ev) {
   if (!ev) return
   const p = pools[ev.id]
   if (!p) return
+  if (holdStore[String(ev.id)]) {
+    showInfo(`"${ev.name}" is on hold. Resume it before moving on.`)
+    return
+  }
   const totalJudges = numberOfJudgesFor(ev.id) || 0
   const scoresIn = Object.keys(p.scoresThisRound || {}).length
   const isLast = p.currentIndex >= (p.roster?.length || 0) - 1
   const isComplete = !!p.advanceArmed && isLast
-  const partial = totalJudges > 0 && scoresIn > 0 && scoresIn < totalJudges
-  if (!isComplete && partial) {
-    if (
-      !(await confirmAction({
+  const short = !p.advanceArmed && !!p.currentActive
+  if (short) {
+    const name = p.currentActive.full_name || 'this diver'
+    const ok = scoresIn > 0
+      ? await confirmAction({
         title: 'Skip ahead with partial scores?',
-        body: `Only ${scoresIn} of ${totalJudges} judges have submitted for this dive in "${ev.name}".`,
+        body: `Only ${scoresIn} of ${totalJudges || '?'} judges have submitted for this dive in "${ev.name}".`,
         consequences: [
           'The dive will close with whatever scores arrived',
           'Missing judges can still amend via score correction afterwards',
         ],
         confirmLabel: 'Move on',
         confirmKind: 'warn',
-      }))
-    ) {
+      })
+      : await confirmAction({
+        title: `Skip ${name}?`,
+        body: `No judge has scored this dive in "${ev.name}" yet.`,
+        consequences: [
+          'No score is recorded for this dive',
+          'Use it for a no-show or a diver who can\'t dive',
+        ],
+        confirmLabel: 'Skip diver',
+        confirmKind: 'warn',
+      })
+    if (!ok) return
+    // Skipping the last dive in the queue is finishing the event.
+    if (isLast) {
+      await finalisePool(ev)
       return
     }
   }
@@ -841,6 +865,7 @@ function onBeforeUnload(e) {
               :conflict="conflicts[lp.event.id] || null"
               @focus="selectEvent"
               @advance="advancePool(lp.event)"
+              @skip="advancePool(lp.event)"
             />
           </div>
 

@@ -28,7 +28,9 @@ const props = defineProps({
   // Lease: another operator/window is also driving this event (or null)
   conflict: { type: String, default: null },
 })
-const emit = defineEmits(['focus', 'advance'])
+// skip: move past the live diver without a full panel (a no-show, say).
+// The parent asks before it does anything.
+const emit = defineEmits(['focus', 'advance', 'skip'])
 const { t } = useI18n()
 
 // ---- Per-pool controllers (own lifecycle, auto-clean on card unmount) --
@@ -142,6 +144,10 @@ onMounted(armClockForActive)
 function fireAdvance() {
   emit('advance')
 }
+function onSkip() {
+  cancelAutoAdvance()
+  emit('skip')
+}
 function onPrimary() {
   // A manual advance cancels any in-flight countdown so the click wins.
   cancelAutoAdvance()
@@ -253,6 +259,15 @@ defineExpose({ refAction, toggleHold })
         <button type="button" class="cv2-ref-btn cv2-ref-failed" v-tip="'Referee: failed dive (scores → 0)'" @click.stop="refAction('failed')">Failed</button>
         <button type="button" class="cv2-ref-btn" v-tip="'Referee: cap each judge score at 2.0'" @click.stop="refAction('cap')">Cap 2.0</button>
         <button type="button" class="cv2-ref-btn" v-tip="'Referee: re-dive (clear scores, dive again)'" @click.stop="refAction('redive')">Re-dive</button>
+        <!-- Next stays disabled until the whole panel is in, so without
+             this a no-show could only be skipped from the keyboard. -->
+        <button
+          v-if="!pool.advanceArmed"
+          type="button"
+          class="cv2-skip"
+          v-tip="'Move past this diver without a full panel (asks first)'"
+          @click.stop="onSkip"
+        >Skip</button>
       </div>
       <div class="cv2-primary-slot">
         <div class="cv2-split">
@@ -385,6 +400,13 @@ defineExpose({ refAction, toggleHold })
 }
 .cv2-ref-btn:hover { color: var(--fg); border-color: var(--text-3); }
 .cv2-ref-failed:hover { color: var(--red); border-color: var(--red); }
+.cv2-skip {
+  flex: none; padding: 0.4rem 0.6rem;
+  border: 1px dashed var(--border-2); border-radius: var(--radius-sm);
+  background: transparent; color: var(--text-3); cursor: pointer;
+  font-family: var(--font-display); font-size: 11px; font-weight: 700; letter-spacing: 0.04em;
+}
+.cv2-skip:hover { color: var(--amber); border-color: var(--amber); }
 
 .cv2-primary-slot { margin-top: auto; padding-top: 1rem; }
 .cv2-split { display: flex; gap: 2px; position: relative; }

@@ -95,3 +95,32 @@ test("the roster endpoint says which rows are reserves", async ({ request }) => 
   expect(byName["Flag Primary"].is_reserve).toBe(false);
   await setup.deleteOrg(orgId);
 });
+
+// A no-show used to need the keyboard: Next stays disabled until a full
+// panel is in, so a mouse-only operator had no way past them.
+test("Skip moves past a diver with no panel, and on the last diver it offers Finalise", async ({ page, request }) => {
+  test.setTimeout(120_000);
+  const { orgId, username, adminToken } = await setup.createOrgAndAdmin(request, { countryCode: "AUS", orgName: "Queue Skip" });
+  const { event } = await liveEvent(request, { orgId, adminToken, name: "Skip Queue", diverNames: ["AAA Skip", "BBB Skip"] });
+
+  await signIn(page, username);
+  await page.goto(`/control?event=${event.id}`);
+  const card = page.locator(`.cv2-pool[data-event-id="${event.id}"]`);
+  await expect(card.locator(".cv2-live-diver")).toContainText("AAA Skip", { timeout: 10_000 });
+  const confirm = page.locator('.confirm-backdrop[aria-modal="true"]');
+
+  await card.locator(".cv2-skip").click();
+  await expect(confirm).toContainText(/Skip/);
+  await confirm.locator(".confirm-btn:not(.confirm-btn-cancel)").click();
+  await expect(card.locator(".cv2-live-diver")).toContainText("BBB Skip");
+
+  // Last diver in the queue: skipping them is finishing the event
+  await card.locator(".cv2-skip").click();
+  await confirm.locator(".confirm-btn:not(.confirm-btn-cancel)").click();
+  // (the skip confirm may still be fading out, so look for the title)
+  const finalise = page.locator(".confirm-title", { hasText: /Finalise event/ });
+  await expect(finalise).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(finalise).toHaveCount(0);
+  await setup.deleteOrg(orgId);
+});

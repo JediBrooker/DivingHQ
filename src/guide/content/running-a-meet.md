@@ -35,6 +35,7 @@ During the day, use **Hold / Resume** for a temporary pause inside the current e
 | Wrong score landed | Click the completed-dive card in **History** → Score Correction |
 | Diver needs to redo the dive | **Re-dive** on the pool card |
 | Referee calls a failed dive | **Failed** on the pool card |
+| Diver doesn't show | **Skip** on the pool card (it asks first; on the last diver it offers Finalise) |
 | Meet must pause | **⏸ Hold** on that event's pool card (pauses only that pool) |
 | Event is running late | Update [Session Scheduler](/guide/session-scheduler), then publish the change |
 | Wrong person was withdrawn | Use the Undo snackbar, or toggle the row back if the snackbar expired |
@@ -336,6 +337,7 @@ Every destructive or consequential action in the Control Room (and across the re
 - *Delete event?* — "All dives, scores, and the audit log for this event are deleted; records set at this event stay with their holders, without the link back to the event."
 - *Finalise event?* — "Public scoreboard switches to recap; results emails go out to N competitors; reversible by an org admin."
 - *Skip ahead with partial scores?* — "Only N of M judges have submitted; missing judges can still amend via score correction afterwards."
+- *Skip <diver>?* — no judge has scored the dive yet (a no-show). Asked for the card's **Skip** button and for Space / → alike.
 
 Confirm buttons are colour-coded by severity: cyan for routine actions, amber for warnings (`Move on`, `Reset workflow`), red for destructive ones (`Delete event`, `Delete club`).
 
