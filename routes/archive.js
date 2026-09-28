@@ -225,8 +225,9 @@ module.exports = function createArchiveRouter({ pool, readPool }) {
   //   event:     event metadata, plus the meet's represent_as and the
   //              org's region_label for the medal table heading
   //   standings: total per competitor (or per team, for team
-  //              events), World Aquatics tie-break by descending dive
-  //              points
+  //              events), ranked on the total alone: equal totals
+  //              share the place (WA Art 4.1.5), same as the live
+  //              scoreboard
   //   dives:     dive-by-dive history with judge scores chips
   //              ordered by panel position
   //   records:   record marks the event's dives hold (scoreboard chip)

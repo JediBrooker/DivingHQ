@@ -329,9 +329,10 @@
  * @property {string}      event_id
  * @property {string}      event_name
  * @property {string}      created_at
- * @property {number}      total
- * @property {number}      rank        Diver's finishing place in this meet.
- * @property {number}      field_size  Total competitors in the meet.
+ * @property {number}      total       In a team event, the team's total.
+ * @property {number}      rank        Place in the event's standings (equal totals share
+ *                                     it); the team's place in a team event.
+ * @property {number}      field_size  Entries ranked in the event: teams in a team event.
  * @property {RecentFormDive[]} [dives] Per-dive breakdown for the click-to-expand panel.
  */
 
