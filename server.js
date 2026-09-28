@@ -223,21 +223,44 @@ const bulkWriteLimiter = rateLimit({
   skip: skipWhenDisabled,
 });
 
-// Export-class endpoints (PDF program / results, results.csv,
-// archive listing, OG-card render). These are anonymous-readable
-// and individually expensive (PDFKit, sharp, multi-CTE aggregates),
-// so without a limiter a single anonymous client can saturate the
-// event loop with a few dozen RPS. Per-IP cap is intentionally
-// generous so a federation kiosk legitimately downloading every
-// program in the lobby still works.
-const exportLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  limit: 30,
-  standardHeaders: "draft-7",
-  legacyHeaders: false,
-  message: { error: "Too many export requests, please try again shortly." },
-  skip: skipWhenDisabled,
-});
+// Export-class endpoints (PDF program / results, results.csv, the
+// archive recap, OG-card render). These are anonymous-readable and
+// individually expensive (PDFKit, sharp, multi-CTE aggregates), so
+// without a limiter a single anonymous client can saturate the event
+// loop with a few dozen RPS. Per-IP cap is intentionally generous so a
+// federation kiosk legitimately downloading every program in the lobby
+// still works.
+//
+// A fresh one per router, like createSearchLimiter below. It used to be
+// one instance shared by the archive, PDF, judge-ranking and public
+// profile routers, so 30 requests a minute from a venue's one public IP
+// across all four ran every one of them out, and the archive listing is
+// on every scoreboard page load.
+function createExportLimiter({ limit = 30 } = {}) {
+  return rateLimit({
+    windowMs: 60 * 1000,
+    limit,
+    standardHeaders: "draft-7",
+    legacyHeaders: false,
+    message: { error: "Too many export requests, please try again shortly." },
+    skip: skipWhenDisabled,
+  });
+}
+
+// The archive listing (/api/archive, /api/archive/clubs) is served from
+// a 60s cache (lib/archive-cache.js) and every scoreboard visitor loads
+// it, so it's nowhere near export-class. It still gets a ceiling, since
+// a paged request (?limit/?before) skips the cache.
+function createListingLimiter() {
+  return rateLimit({
+    windowMs: 60 * 1000,
+    limit: 300,
+    standardHeaders: "draft-7",
+    legacyHeaders: false,
+    message: { error: "Too many requests, please try again shortly." },
+    skip: skipWhenDisabled,
+  });
+}
 
 // Every limiter below is mounted through limitRoutes() so it only
 // counts requests for the router it guards. A bare app.use(limiter,
@@ -1329,7 +1352,14 @@ setInterval(() => {
 // /api/archive, /api/archive/clubs, /api/archive/:eventId/results
 // extracted into routes/archive.js.
 // =============================================================
-app.use(limitRoutes(exportLimiter, require("./routes/archive")({ pool, readPool })));
+// The recap (/api/archive/:eventId/results) is uncached but spectators
+// open it straight from the scoreboard, so it gets more room than a PDF.
+app.use(limitRoutes(createExportLimiter({ limit: 120 }), require("./routes/archive")({ pool, readPool }), {
+  overrides: {
+    "/api/archive": createListingLimiter(),
+    "/api/archive/clubs": createListingLimiter(),
+  },
+}));
 
 // DiveRecorder mined archive (dr_* tables): public, read-only
 // browse of historical results imported from diverecorder.co.uk.
@@ -1361,7 +1391,7 @@ app.use(limitRoutes(createSearchLimiter(), require("./routes/dr-archive")({ pool
 // the local csvCell / csvRow helpers and the World Aquatics trim
 // annotation used by the score sheet.
 // =============================================================
-app.use(limitRoutes(exportLimiter, require("./routes/pdf")({ pool })));
+app.use(limitRoutes(createExportLimiter(), require("./routes/pdf")({ pool })));
 
 // =============================================================
 // JUDGE RANKING ANALYSIS
@@ -1372,7 +1402,7 @@ app.use(limitRoutes(exportLimiter, require("./routes/pdf")({ pool })));
 // + PDF exports for federation reporting. See routes/judge-
 // ranking.js for the rationale (public read; v1 individual only).
 // =============================================================
-app.use(limitRoutes(exportLimiter, require("./routes/judge-ranking")({ pool })));
+app.use(limitRoutes(createExportLimiter(), require("./routes/judge-ranking")({ pool })));
 
 // =============================================================
 // PUBLIC DIVER PROFILE
@@ -1382,7 +1412,7 @@ app.use(limitRoutes(exportLimiter, require("./routes/judge-ranking")({ pool })))
 // SPA fall-through for browsers). Mounted BEFORE the SPA static
 // fallback so the crawler path can next() into it.
 // =============================================================
-app.use(limitRoutes(exportLimiter, require("./routes/public-profile")({ pool, readPool })));
+app.use(limitRoutes(createExportLimiter(), require("./routes/public-profile")({ pool, readPool })));
 
 // =============================================================
 // SPA FALLBACK (must come after all API routes)
