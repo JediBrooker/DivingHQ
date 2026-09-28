@@ -148,8 +148,12 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
               ORDER BY lower(o.name), lower(cl.name)`,
           )
         : await pool.query(
+            // Seats only count while the holder is still in the club's
+            // org (lib/middleware CLUB_SEAT_SQL), or a stranded row lists
+            // a club every club route would then refuse.
             `SELECT cl.id, cl.name
                FROM club_admins ca
+               JOIN users u ON u.id = ca.user_id AND u.org_id = ca.org_id
                JOIN clubs cl ON cl.id = ca.club_id
               WHERE ca.user_id = $1
               ORDER BY lower(cl.name)`,

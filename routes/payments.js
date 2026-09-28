@@ -26,6 +26,7 @@ const express = require("express");
 const { resolvePrice, priceCharge } = require("../lib/fee-pricing");
 const { recordAudit, auditFromReq } = require("../lib/audit");
 const ledger = require("../lib/payout-ledger");
+const { CLUB_SEAT_SQL } = require("../lib/middleware");
 const { uuidParams } = require("../lib/uuid-params");
 const { fromStripeAmount, toAlpha2 } = require("../lib/stripe");
 const {
@@ -2882,10 +2883,9 @@ module.exports = function createPaymentsRouter({
 
       if (!req.user.is_system_admin) {
         if (p.recipient_type === "club") {
-          const isClubAdmin = (await client.query(
-            "SELECT 1 FROM club_admins WHERE club_id = $1 AND user_id = $2",
-            [p.club_id, req.user.id],
-          )).rows.length > 0;
+          // A seat left behind by a transfer doesn't count (CLUB_SEAT_SQL),
+          // same as on every other club route.
+          const isClubAdmin = (await client.query(CLUB_SEAT_SQL, [p.club_id, req.user.id])).rows.length > 0;
           if (!isClubAdmin) {
             await client.query("ROLLBACK");
             return res.status(403).json({ error: "Only this club's admins can refund its class payments." });

@@ -597,3 +597,46 @@ test("a partial refund emails the payer once, a later one emails again", async (
   const row = (await pool.query("SELECT status, refunded_amount_cents, stripe_charge_id FROM payments WHERE id = $1", [co.body.payment_id])).rows[0];
   assert.deepEqual(row, { status: "partially_refunded", refunded_amount_cents: 2500, stripe_charge_id: `ch_${suffix}` });
 });
+
+// B4-26: a club_admins row only counts while its holder is still in the
+// club's federation (lib/middleware CLUB_SEAT_SQL). The class-payment
+// refund check counted any row, so an admin stranded by an old transfer
+// could still refund the club's class income.
+test("a stranded club admin seat can't refund the club's class payments", async (t) => {
+  if (!ready) return t.skip();
+  const club = (await pool.query(
+    "INSERT INTO clubs (org_id, name, short_code) VALUES ($1, $2, 'RFD') RETURNING id",
+    [orgId, `Refund Club ${suffix}`],
+  )).rows[0].id;
+  const otherOrg = (await pool.query(
+    "INSERT INTO organisations (name, slug, default_currency) VALUES ($1, $2, 'GBP') RETURNING id",
+    [`Elsewhere ${suffix}`, `elsewhere-${suffix}`],
+  )).rows[0].id;
+  try {
+    const mkUser = async (name, org) => (await pool.query(
+      "INSERT INTO users (username, full_name, org_id) VALUES ($1, $1, $2) RETURNING id", [`gc-${name}-${suffix}`, org],
+    )).rows[0].id;
+    const stranded = await mkUser("stranded", otherOrg);
+    const seated = await mkUser("seated", orgId);
+    for (const u of [stranded, seated]) {
+      await pool.query("INSERT INTO club_admins (club_id, user_id, org_id) VALUES ($1, $2, $3)", [club, u, orgId]);
+    }
+    const pay = async () => (await pool.query(
+      `INSERT INTO payments (org_id, payer_user_id, payer_type, subject_type, club_id, recipient_type,
+                             amount_cents, platform_fee_cents, currency, fee_payer, status, stripe_payment_intent, paid_at)
+       VALUES ($1, $2, 'user', 'class_enrolment', $3, 'club', 3000, 300, 'GBP', 'absorb', 'paid', $4, now())
+       RETURNING id`,
+      [orgId, A, club, `pi_rfd_${crypto.randomUUID().slice(0, 8)}`],
+    )).rows[0].id;
+    const p1 = await pay();
+    acting = { id: stranded, org_id: otherOrg, org_roles: [], is_system_admin: false };
+    const refused = await api("POST", `/api/payments/${p1}/refund`, {});
+    assert.equal(refused.status, 403, JSON.stringify(refused.body));
+    acting = { id: seated, org_id: orgId, org_roles: [], is_system_admin: false };
+    assert.equal((await api("POST", `/api/payments/${p1}/refund`, {})).status, 200);
+  } finally {
+    await pool.query("DELETE FROM club_admins WHERE club_id = $1", [club]);
+    await pool.query("DELETE FROM users WHERE org_id = $1", [otherOrg]);
+    await pool.query("DELETE FROM organisations WHERE id = $1", [otherOrg]);
+  }
+});
