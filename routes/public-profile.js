@@ -155,16 +155,25 @@ module.exports = function createPublicProfileRouter({ pool, readPool }) {
       // Last 5 meets ranked against the full field. Same FULL_FIELD
       // ranking shape as the analytics dashboard's recent_form,
       // simplified for public consumption.
+      //
+      // A place only depends on that event's own field, so pick the 5
+      // events first and rank just those. Ranking the diver's whole
+      // career and then keeping 5 cost ~300ms for a long career, on a
+      // public, uncached URL that link-preview crawlers hit too. Both
+      // ORDER BYs break created_at ties on the id so they agree on
+      // which 5.
       reads.query(
         `WITH ${perDivePointsCte({
            select:      ["s.event_id", "s.competitor_id", "s.round_number"],
            pointsAlias: "pts",
            where: `s.event_id IN (
-             SELECT DISTINCT s0.event_id
-             FROM scores s0
-             JOIN events e0 ON e0.id = s0.event_id
-             WHERE s0.competitor_id = $1
-               AND COALESCE(e0.is_rehearsal, FALSE) = FALSE
+             SELECT e0.id
+             FROM events e0
+             WHERE COALESCE(e0.is_rehearsal, FALSE) = FALSE
+               AND EXISTS (SELECT 1 FROM scores s0
+                            WHERE s0.event_id = e0.id AND s0.competitor_id = $1)
+             ORDER BY e0.created_at DESC, e0.id DESC
+             LIMIT 5
            )`,
          })},
          totals AS (
@@ -185,7 +194,7 @@ module.exports = function createPublicProfileRouter({ pool, readPool }) {
          JOIN events e ON e.id = ranked.event_id
          WHERE ranked.competitor_id = $1
            AND COALESCE(e.is_rehearsal, FALSE) = FALSE
-         ORDER BY e.created_at DESC
+         ORDER BY e.created_at DESC, e.id DESC
          LIMIT 5`,
         [diver.id],
       )]);

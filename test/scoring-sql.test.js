@@ -458,16 +458,22 @@ const CALL_SITES = [
       select:      ["s.event_id", "s.competitor_id", "s.round_number"],
       pointsAlias: "pts",
       where: `s.event_id IN (
-             SELECT DISTINCT s0.event_id
-             FROM scores s0
-             JOIN events e0 ON e0.id = s0.event_id
-             WHERE s0.competitor_id = $1
-               AND COALESCE(e0.is_rehearsal, FALSE) = FALSE
+             SELECT e0.id
+             FROM events e0
+             WHERE COALESCE(e0.is_rehearsal, FALSE) = FALSE
+               AND EXISTS (SELECT 1 FROM scores s0
+                            WHERE s0.event_id = e0.id AND s0.competitor_id = $1)
+             ORDER BY e0.created_at DESC, e0.id DESC
+             LIMIT 5
            )`,
     }),
     pointsAlias: "pts",
-    where: "SELECT DISTINCT s0.event_id",
-    expect: (sql) => assert.ok(sql.startsWith("per_dive AS (")),
+    where: "ORDER BY e0.created_at DESC, e0.id DESC\n             LIMIT 5",
+    expect: (sql) => {
+      assert.ok(sql.startsWith("per_dive AS ("));
+      // Ranks only the 5 events the page shows, not the whole career.
+      assert.ok(!sql.includes("SELECT DISTINCT s0.event_id"));
+    },
   },
   {
     site: "routes/diver-profile.js personal bests dive_totals",
