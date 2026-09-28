@@ -841,7 +841,11 @@
     "col_code": "Kód",
     "col_dd": "KO",
     "col_position": "Poloha",
-    "col_description": "Popis"
+    "col_description": "Popis",
+    "dd_range_hint": "Oficiální skoky z {height} mají KO od {min} do {max}. Vlastní skok musí zůstat v tomto rozmezí.",
+    "dd_range_hint_all": "Z {height} nejsou žádné oficiální skoky, takže vlastní skok z této výšky musí zůstat v rozmezí všech oficiálních skoků: KO od {min} do {max}.",
+    "dd_out_of_range": "KO mimo rozmezí",
+    "dd_out_of_range_tip": "Jeho KO je mimo rozmezí oficiálních skoků z této výšky, takže ho žádný seznam skoků nepřijme. Opravte KO nebo přidejte novou verzi skoku."
   },
   "judges_directory": {
     "title": "Adresář rozhodčích",

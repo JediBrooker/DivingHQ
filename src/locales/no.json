@@ -852,7 +852,11 @@
     "col_code": "Kode",
     "col_dd": "Vanskelighet",
     "col_position": "Posisjon",
-    "col_description": "Beskrivelse"
+    "col_description": "Beskrivelse",
+    "dd_range_hint": "Offisielle stup fra {height} har vanskelighetsgrad fra {min} til {max}. Et eget stup må holde seg innenfor det området.",
+    "dd_range_hint_all": "Det finnes ingen offisielle stup fra {height}, så et eget stup derfra må holde seg innenfor området til alle offisielle stup: vanskelighetsgrad {min} til {max}.",
+    "dd_out_of_range": "Vanskelighetsgrad utenfor området",
+    "dd_out_of_range_tip": "Vanskelighetsgraden ligger utenfor området for de offisielle stupene fra denne høyden, så ingen stupliste godtar det. Rett vanskelighetsgraden eller legg til en ny versjon av stupet."
   },
   "judges_directory": {
     "title": "Dommerkatalog",

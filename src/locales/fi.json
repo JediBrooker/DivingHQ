@@ -852,7 +852,11 @@
     "col_code": "Koodi",
     "col_dd": "Vaikeus",
     "col_position": "Asento",
-    "col_description": "Kuvaus"
+    "col_description": "Kuvaus",
+    "dd_range_hint": "Virallisten hyppyjen vaikeuskerroin korkeudelta {height} on {min}–{max}. Oman hypyn on pysyttävä tällä välillä.",
+    "dd_range_hint_all": "Korkeudelta {height} ei ole virallisia hyppyjä, joten sieltä tehtävän oman hypyn on pysyttävä kaikkien virallisten hyppyjen vaihteluvälillä: vaikeuskerroin {min}–{max}.",
+    "dd_out_of_range": "Vaikeuskerroin sallitun välin ulkopuolella",
+    "dd_out_of_range_tip": "Sen vaikeuskerroin on tämän korkeuden virallisten hyppyjen vaihteluvälin ulkopuolella, joten mikään hyppylista ei hyväksy sitä. Korjaa vaikeuskerroin tai lisää hypystä uusi versio."
   },
   "judges_directory": {
     "title": "Tuomariluettelo",

@@ -852,7 +852,11 @@
     "col_code": "Código",
     "col_dd": "CD",
     "col_position": "Posição",
-    "col_description": "Descrição"
+    "col_description": "Descrição",
+    "dd_range_hint": "Os saltos oficiais a {height} vão de um CD de {min} a {max}. Um salto personalizado tem de ficar dentro desse intervalo.",
+    "dd_range_hint_all": "Não há saltos oficiais a {height}, por isso um salto personalizado a essa altura tem de ficar dentro do intervalo de todos os saltos oficiais: CD de {min} a {max}.",
+    "dd_out_of_range": "CD fora do intervalo",
+    "dd_out_of_range_tip": "O CD está fora do intervalo dos saltos oficiais a esta altura, por isso nenhuma lista de saltos o aceita. Corrija o CD ou adicione uma nova versão do salto."
   },
   "judges_directory": {
     "title": "Diretório de Juízes",

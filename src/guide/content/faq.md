@@ -290,7 +290,7 @@ The bigger PDFs (meet program with 80 events, results PDF for a 200-diver meet) 
 
 ### DD (Degree of Difficulty)
 
-A multiplier specific to each dive at each board height. Higher DD = harder dive. From the dive directory — DivingHQ ships with all ~830 World Aquatics dives. Custom dives an organisation adds to its own directory (drills, progressions) only show up for that organisation, and a dive list can only use them in that organisation's own events.
+A multiplier specific to each dive at each board height. Higher DD = harder dive. From the dive directory — DivingHQ ships with all ~830 World Aquatics dives. Custom dives an organisation adds to its own directory (drills, progressions) only show up for that organisation, and a dive list can only use them in that organisation's own events. A custom dive's DD has to sit inside the range the official dives at the same height use, from the easiest official dive's DD to the hardest's. There are no official dives at 0 m, so poolside drills use the range across every height. The [Dive Directory](/dive-directory) shows the range as you add a dive, and flags any older custom dive outside it: no dive list will take one of those until its DD is fixed.
 
 ### Trim rule
 

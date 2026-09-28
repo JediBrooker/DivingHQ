@@ -38,6 +38,8 @@ const {
   refuseIfScoresExist,
 } = require("./stage-helpers");
 const { canSeeEvent } = require("../../lib/event-visibility");
+const { scoreAuthoritySql } = require("../../lib/middleware");
+const { customDivesOutOfRange } = require("../../lib/custom-dive-dd");
 
 // Migration 039: shape-check operator-prescribed round_dives. We
 // only validate structure here (round numbering 1..N contiguous,
@@ -83,6 +85,19 @@ function validateRoundDivesShape(round_dives) {
     }
   }
   return { valid: true };
+}
+
+// A prescribed dive ends up on every entrant's list, so a custom one has
+// to carry a DD inside the official range for its height as well
+// (lib/custom-dive-dd.js). Checked when the event is saved, or the event
+// would take a dive no diver could then submit. Returns the 400 message
+// or null.
+async function prescribedDdError(db, roundDives) {
+  if (!Array.isArray(roundDives)) return null;
+  const [bad] = await customDivesOutOfRange(db, roundDives.map((slot) => slot?.dive_id));
+  if (!bad) return null;
+  const slot = roundDives.find((sl) => sl?.dive_id === bad.id);
+  return slot ? `round_dives round ${slot.round_number}: ${bad.message}` : bad.message;
 }
 
 function hasOwn(obj, key) {
@@ -133,6 +148,9 @@ module.exports = function createEventsRouter({
   isMeetHostAdmin,
   isEventDelegate,
   requireTotpForPrivilegedRoles,
+  // lib/middleware.js. The dive-offs sub-router needs it to record a
+  // result; without it nobody can (it fails closed).
+  scoreAuthority,
 }) {
   if (!pool || !optionalAuth) {
     throw new Error("createEventsRouter requires { pool, optionalAuth, … }");
@@ -294,6 +312,17 @@ module.exports = function createEventsRouter({
         limit = Math.min(n, 500);
       }
 
+      const where = [];
+      const params = [];
+      // can_change_scores: may the caller type in or correct a score here
+      // (the host-org rule in lib/middleware.js, one EXISTS per row). The
+      // Control Room hides its amend controls on false; the server still
+      // checks every write. Anonymous callers get false.
+      let canChangeScores = "FALSE";
+      if (req.user) {
+        params.push(req.user.id, !!req.user.is_system_admin);
+        canChangeScores = `($${params.length}::boolean OR ${scoreAuthoritySql({ userParam: `$${params.length - 1}` })})`;
+      }
       // participating_orgs_count > 0 → international event (the
       // SPA renders a globe chip and the federations modal
       // pre-loads the invited list). Subselect rather than LEFT
@@ -305,13 +334,12 @@ module.exports = function createEventsRouter({
                  (SELECT COUNT(*) FROM event_participating_orgs epo
                    WHERE epo.event_id = e.id),
                  0
-               )::int AS participating_orgs_count
+               )::int AS participating_orgs_count,
+               ${canChangeScores} AS can_change_scores
         FROM events e
         JOIN organisations o ON o.id = e.org_id
         LEFT JOIN meets m ON m.id = e.meet_id
       `;
-      const where = [];
-      const params = [];
       if (req.user?.is_system_admin) {
         // Sysadmin sees every event in every org, no scope clause needed.
       } else if (req.user) {
@@ -407,6 +435,13 @@ module.exports = function createEventsRouter({
     const rdCheck = validateRoundDivesShape(round_dives);
     if (!rdCheck.valid) {
       return res.status(400).json({ error: rdCheck.error });
+    }
+    try {
+      const ddErr = await prescribedDdError(pool, round_dives);
+      if (ddErr) return res.status(400).json({ error: ddErr, code: "dd_out_of_range" });
+    } catch (err) {
+      console.error("[Create Event DD check]", err.message);
+      return res.status(500).json({ error: "Internal server error" });
     }
     const effectiveTotalRounds =
       Array.isArray(round_dives) && round_dives.length
@@ -644,6 +679,13 @@ module.exports = function createEventsRouter({
     const rdShape = validateRoundDivesShape(round_dives);
     if (!rdShape.valid) {
       return res.status(400).json({ error: rdShape.error });
+    }
+    try {
+      const ddErr = await prescribedDdError(pool, round_dives);
+      if (ddErr) return res.status(400).json({ error: ddErr, code: "dd_out_of_range" });
+    } catch (err) {
+      console.error("[Update Event DD check]", err.message);
+      return res.status(500).json({ error: "Internal server error" });
     }
     const effectiveTotalRoundsForRules =
       Array.isArray(round_dives) && round_dives.length
@@ -1598,7 +1640,7 @@ module.exports = function createEventsRouter({
   // sub-router so this file stays scannable. See
   // routes/events/dive-offs.js for the GET / POST / PATCH
   // handlers.
-  router.use(require("./dive-offs")({ pool, requireEventManager }));
+  router.use(require("./dive-offs")({ pool, requireEventManager, scoreAuthority }));
 
   // Super-Final synchro reserve + merged-rankings routes moved
   // into a sub-router. See routes/events/super-final-bridge.js.

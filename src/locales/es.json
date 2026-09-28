@@ -841,7 +841,11 @@
     "col_code": "Código",
     "col_dd": "Grado de dificultad",
     "col_position": "Posición",
-    "col_description": "Descripción"
+    "col_description": "Descripción",
+    "dd_range_hint": "Los saltos oficiales a {height} van de un grado de dificultad de {min} a {max}. Un salto personalizado tiene que quedar dentro de ese rango.",
+    "dd_range_hint_all": "No hay saltos oficiales a {height}, así que un salto personalizado a esa altura tiene que quedar dentro del rango de todos los saltos oficiales: grado de dificultad de {min} a {max}.",
+    "dd_out_of_range": "Grado de dificultad fuera de rango",
+    "dd_out_of_range_tip": "Su grado de dificultad está fuera del rango de los saltos oficiales a esta altura, así que ninguna lista de saltos lo aceptará. Corrige el grado de dificultad o añade una nueva versión del salto."
   },
   "judges_directory": {
     "title": "Registro de jueces",

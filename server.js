@@ -528,6 +528,7 @@ const {
   requireMeetEditorOrClubAdmin,
   isEventDelegate,
   isMeetHostAdmin,
+  scoreAuthority,
   requireClubAdmin,
   requireClubAdminOnly,
   ensureEventOrgGate,
@@ -1097,6 +1098,8 @@ app.use(require("./routes/events")({
   isMeetHostAdmin,
   isEventDelegate,
   requireTotpForPrivilegedRoles,
+  // Who may record a dive-off's scores (the host-org score rule).
+  scoreAuthority,
 }));
 
 // =============================================================
@@ -1164,7 +1167,7 @@ app.use(require("./routes/scoreboard")({
 // =============================================================
 // SCORE CORRECTION + AUDIT LOG
 // [SECTION: ROUTES: SCORE CORRECTION]
-// PUT /api/scores/:id (manager / referee amends a score) and
+// PUT /api/scores/:id (the host's meet manager amends a score) and
 // GET /api/events/:id/score-audit (audit trail) extracted into
 // routes/score-correction.js. The HTTP correction handler also
 // invalidates scoreboardCache and broadcasts a `score_corrected`
@@ -1183,10 +1186,10 @@ app.use(require("./routes/score-correction")({
   pool,
   io,
   scoreboardCache,
-  requireOrgRole,
+  verifyToken,
   requireEventManager,
-  requireRoleOrEventDelegate,
-  isEventDelegate,
+  // Who may change a score by hand: the host's meet managers only.
+  scoreAuthority,
   recomputeRecordKeys,
 }));
 
@@ -1240,8 +1243,7 @@ app.use(require("./routes/event-templates")({ pool, verifyToken, requireTotpForP
 // See routes/conflicts.js and docs/offline-p1-design.md §4.
 // =============================================================
 app.use(require("./routes/conflicts")({
-  pool, io, scoreboardCache, requireOrgRole, requireRoleOrEventDelegate, recomputeRecordKeys,
-  isEventDelegate,
+  pool, io, scoreboardCache, verifyToken, scoreAuthority, recomputeRecordKeys,
 }));
 
 // =============================================================
@@ -1264,7 +1266,7 @@ app.use(require("./routes/late-arrivals")({ pool, requireOrgRole, requireRoleOrE
 // The record check comes from lib/records, built up by the score
 // correction section: manual entry completes dives too.
 app.use(require("./routes/manual-scores")({
-  pool, io, scoreboardCache, requireOrgRole, requireRoleOrEventDelegate,
+  pool, io, scoreboardCache, verifyToken, scoreAuthority,
   checkAndApplyRecords, recomputeRecordKeys,
 }));
 

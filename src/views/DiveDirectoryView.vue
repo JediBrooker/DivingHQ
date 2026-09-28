@@ -18,8 +18,11 @@ import { confirmAction } from '@/composables/useConfirm'
 import { showSuccess, showError } from '@/composables/useNotify'
 import { idbInvalidate } from '@/lib/idbCache'
 import { useDiveDirectory } from '@/composables/useDiveDirectory'
+import { officialDdRanges, ddRangeFor, isOutsideOfficialRange } from '@/lib/ddRange'
+import { useI18n } from 'vue-i18n'
 
 const auth = useAuthStore()
+const { t } = useI18n()
 
 const { dives, reload: reloadDirectory } = useDiveDirectory(auth)
 const loading = ref(false)
@@ -92,6 +95,25 @@ const filteredDives = computed(() => {
     )
   })
 })
+
+// A custom dive's DD has to sit inside the range the official dives at
+// its height use (the server refuses anything else, lib/custom-dive-dd.js).
+// Worked out from the rows already loaded, so the form can say the range
+// before anyone submits, and older custom rows outside it get flagged:
+// they're still listed, but no dive list will take them.
+const ddRanges = computed(() => officialDdRanges(dives.value))
+const createRange = computed(() => (createHeight.value ? ddRangeFor(ddRanges.value, createHeight.value) : null))
+const editRange = computed(() => (editing.value ? ddRangeFor(ddRanges.value, editing.value.height) : null))
+function rangeHint(range, height) {
+  if (!range) return ''
+  const params = { height, min: range.min.toFixed(1), max: range.max.toFixed(1) }
+  return range.fromAllHeights
+    ? t('dive_directory.dd_range_hint_all', params)
+    : t('dive_directory.dd_range_hint', params)
+}
+function outOfRange(d) {
+  return isOutsideOfficialRange(ddRanges.value, d)
+}
 
 const stats = computed(() => ({
   total:  dives.value.length,
@@ -312,8 +334,8 @@ onMounted(loadDives)
     <div v-if="creating" class="create-block">
       <div class="create-head">Add a custom dive</div>
       <p class="create-help">
-        Use this for progression entries (poolside sit-dive, kneel-dive…) or
-        club-specific drills. The combination of code + height + position must
+        Use this for progression entries (poolside dives, kneel-dives…) or
+        club-specific drills. The combination of code + height + position + DD must
         be unique across the whole catalog.
       </p>
       <div class="create-fields">
@@ -341,8 +363,10 @@ onMounted(loadDives)
         <div class="field">
           <label class="label">DD</label>
           <input class="input" type="number" v-model="createDD"
-                 step="0.1" min="0.1" max="9.9" placeholder="e.g. 0.6" required>
+                 step="0.1" :min="createRange ? createRange.min : 0.1" :max="createRange ? createRange.max : 9.9"
+                 :placeholder="createRange ? `e.g. ${createRange.min.toFixed(1)}` : 'e.g. 1.6'" required>
         </div>
+        <p v-if="createRange" class="dd-hint field-wide">{{ rangeHint(createRange, createHeight) }}</p>
         <div class="field field-wide">
           <label class="label">Description</label>
           <input class="input" type="text" v-model="createDesc"
@@ -409,6 +433,10 @@ onMounted(loadDives)
                       v-tip="'Used in a meet — locked to preserve the scoreboard archive'">
                   In use · 🔒
                 </span>
+                <span v-if="outOfRange(d)" class="src-pill src-pill-warn"
+                      v-tip="$t('dive_directory.dd_out_of_range_tip')">
+                  {{ $t('dive_directory.dd_out_of_range') }}
+                </span>
               </td>
               <td class="actions-col">
                 <template v-if="canManage(d)">
@@ -436,7 +464,8 @@ onMounted(loadDives)
               </td>
               <td class="num-col">
                 <input class="input input-sm" type="number" v-model="editing.dd"
-                       step="0.1" min="0.1" max="9.9" style="max-width:90px">
+                       step="0.1" :min="editRange ? editRange.min : 0.1" :max="editRange ? editRange.max : 9.9"
+                       style="max-width:90px">
               </td>
               <td>
                 <input class="input input-sm" type="text" v-model="editing.description"
@@ -452,6 +481,9 @@ onMounted(loadDives)
                   {{ editBusy ? 'Saving…' : 'Save' }}
                 </button>
               </td>
+            </tr>
+            <tr v-if="editing?.id === d.id && editRange" class="hint-row">
+              <td colspan="7" class="dd-hint">{{ rangeHint(editRange, editing.height) }}</td>
             </tr>
             <tr v-if="editing?.id === d.id && editError" class="error-row">
               <td colspan="7" class="form-error">{{ editError }}</td>
@@ -554,6 +586,10 @@ onMounted(loadDives)
                    background: rgba(6, 182, 212, 0.08); }
 .src-pill-locked { color: var(--amber);   border-color: rgba(245, 158, 11, 0.5);
                    background: rgba(245, 158, 11, 0.08); margin-inline-start: 0.4rem; }
+.src-pill-warn   { color: var(--danger-fg); border-color: var(--danger-solid);
+                   background: var(--danger-bg); margin-inline-start: 0.4rem; }
+.dd-hint { margin: -0.3rem 0 0; font-size: 12px; line-height: 1.5; color: var(--text-3); }
+.hint-row td.dd-hint { margin: 0; padding-top: 0.2rem; }
 
 .dim { color: var(--text-3); }
 .empty-state { text-align: center; color: var(--text-3); padding: 2rem; }

@@ -11,11 +11,14 @@
 // Custom rows can only be edited/deleted by a user in the same
 // org that originally created them. Both gates fall through to
 // 403 / 404 so the API doesn't double as an enumeration tool.
+// A custom row's DD has to stay inside the range the official dives
+// at its height use (lib/custom-dive-dd.js), a 400 otherwise.
 //
 // Mounted via:
 //   app.use(require('./routes/dive-directory')({ pool, verifyToken }))
 
 const express = require("express");
+const { customDdError } = require("../lib/custom-dive-dd");
 
 // Whitelist of dive_position enum values. Watch out, this has to
 // match the dive_position enum in init.sql. A typo here would
@@ -35,10 +38,11 @@ function heightToNumber(s) {
   return parseFloat(s.replace(/m$/i, ""));
 }
 
-// Range guard for DD. World Aquatics tariffs sit between 1.0
-// and ~4.8; coaches inventing poolside drills can use lower
-// numbers (0.5 for a sit-dive isn't unreasonable). 0.1 floor is
-// the minimum granularity calc_event_dive_points expects.
+// Shape check for DD: a number, 0.1 to 9.9 (0.1 is the granularity
+// calc_event_dive_points expects). That's only the first pass. A custom
+// row's DD also has to sit inside the range the official dives at its
+// height use (lib/custom-dive-dd.js, decision A7-06), which is checked
+// against the directory once the shape is fine.
 function isValidDD(dd) {
   const n = Number(dd);
   return Number.isFinite(n) && n >= 0.1 && n <= 9.9;
@@ -177,6 +181,12 @@ module.exports = function createDiveDirectoryRouter({ pool, verifyToken, require
       ? description.trim().slice(0, 280)
       : null;
     try {
+      // Inside the official range for this height, or it doesn't go in.
+      const ddErr = await customDdError(pool, {
+        height: heightToNumber(height), dd, code: dive_code, position,
+      });
+      if (ddErr) return res.status(400).json({ error: ddErr, code: "dd_out_of_range" });
+
       // Pre-flight dedup check on the full 4-key (dive_code,
       // position, height, dd). Catches the case the user explicitly
       // asked us to refuse ("this exact dive already exists") and
@@ -304,6 +314,14 @@ module.exports = function createDiveDirectoryRouter({ pool, verifyToken, require
       const newPos    = position  ?? owner.rows[0].position;
       const newHeight = height != null ? heightToNumber(height) : owner.rows[0].height;
       const newDD     = dd != null ? Number(dd) : Number(owner.rows[0].dd);
+
+      // The row as it would be after the edit has to be inside the
+      // official range too. Moving an existing drill to another height
+      // counts, not just a new DD.
+      const ddErr = await customDdError(pool, {
+        height: Number(newHeight), dd: newDD, code: newCode, position: newPos,
+      });
+      if (ddErr) return res.status(400).json({ error: ddErr, code: "dd_out_of_range" });
       const dup = await pool.query(
         `SELECT id, is_custom
          FROM dive_directory

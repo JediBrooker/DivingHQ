@@ -22,6 +22,47 @@
 const express = require("express");
 const { recordAudit, auditFromReq } = require("../../lib/audit");
 const { perDivePointsCte } = require("../../lib/scoring-sql");
+const { scoreAuthorityRefusal } = require("../../lib/middleware");
+
+// A dive-off's two scores and its winner are a result somebody types in,
+// so they follow the host-org rule every other hand-entered score does
+// (scoreAuthority in lib/middleware.js). Setting one up, picking the dives
+// and the notes stay with the event's managers (requireEventManager).
+//
+// resolved_at belongs with them. When a pair dives off more than once the
+// latest resolved run is the one that counts (loadResolvedDiveOffs in
+// lib/super-final-helpers.js), so moving it can swap the winner as surely
+// as editing winner_id. Only PATCH takes it; create stamps its own.
+const RESULT_FIELDS = ["score_a", "score_b", "winner_id", "resolved_at"];
+const CREATE_RESULT_FIELDS = ["score_a", "score_b", "winner_id"];
+
+// Is `next` (off the wire) the value already stored in `prev`? Scores come
+// back from pg as numeric strings and resolved_at as a Date, so compare on
+// what they mean, not their spelling.
+function sameResultValue(k, next, prev) {
+  const n = next === "" ? null : next;
+  if (n == null || prev == null) return (n == null) === (prev == null);
+  if (k === "winner_id") return n === prev;
+  if (k === "resolved_at") return new Date(n).getTime() === new Date(prev).getTime();
+  return Number(n) === Number(prev);
+}
+
+// Does a create carry a result? Any value counts there.
+function createTouchesResult(body) {
+  return CREATE_RESULT_FIELDS.some((k) => k in (body || {}) && body[k] !== "" && body[k] != null);
+}
+
+// On an update, drops the result fields that just repeat what's stored and
+// says whether any are left. Dropping them rather than writing them back
+// matters twice over: the form re-sends the scores and winner on every
+// save, and a winner_id in the update re-stamps resolved_at (see above),
+// so someone fixing the notes would otherwise move which run counts.
+function stripUnchangedResult(updates, existing) {
+  for (const k of RESULT_FIELDS) {
+    if (k in updates && sameResultValue(k, updates[k], existing[k])) delete updates[k];
+  }
+  return RESULT_FIELDS.some((k) => k in updates);
+}
 
 // AUDIT FIX (Strong-6): Appendix 3 §6 says each diver picks one of their
 // previously performed dives for the dive-off. The schema only FKs
@@ -52,11 +93,24 @@ async function validateDiveOffChoice(client, eventId, competitorId, diveId, side
   return null;
 }
 
-module.exports = function createDiveOffsRoutes({ pool, requireEventManager }) {
+module.exports = function createDiveOffsRoutes({ pool, requireEventManager, scoreAuthority }) {
   if (!pool || !requireEventManager) {
     throw new Error("createDiveOffsRoutes requires { pool, requireEventManager }");
   }
   const router = express.Router();
+
+  // Refuses (and rolls back) when the caller can't record a result on this
+  // event. Mounted without scoreAuthority it refuses everyone: failing
+  // open here would hand dive-off results back to any event manager.
+  async function refuseResultWrite(client, res, eventId, user) {
+    const authority = scoreAuthority
+      ? await scoreAuthority(client, eventId, user)
+      : { allowed: false, host: null };
+    if (authority.allowed) return false;
+    await client.query("ROLLBACK");
+    res.status(403).json(scoreAuthorityRefusal(authority.host));
+    return true;
+  }
 
   // GET /api/events/:id/dive-offs: the list. Public readable,
   // since the official record needs to be transparent.
@@ -116,7 +170,8 @@ module.exports = function createDiveOffsRoutes({ pool, requireEventManager }) {
   //                                      both totals differ at
   //                                      query time)
   //
-  // Auth: event manager (event_managers row OR org_admin).
+  // Auth: event manager (event_managers row OR org_admin), and the
+  // host-org score rule too when the body carries scores or a winner.
   router.post(
     "/api/events/:id/dive-offs",
     requireEventManager(),
@@ -154,6 +209,7 @@ module.exports = function createDiveOffsRoutes({ pool, requireEventManager }) {
             error: "Dive-offs are only valid for super_final_h2h or super_final_semi events (Appendix 3 §6 — no dive-off after the Final)",
           });
         }
+        if (createTouchesResult(req.body) && await refuseResultWrite(client, res, eventId, req.user)) return;
 
         // Verify both competitors are on the event roster, AND
         // (for H2H) in the same pair / (for SF) the same group.
@@ -301,7 +357,10 @@ module.exports = function createDiveOffsRoutes({ pool, requireEventManager }) {
 
   // PATCH /api/events/:id/dive-offs/:diveOffId: update or resolve.
   // Setting winner_id (non-null) auto-stamps resolved_at if it's
-  // not already provided. Audits 'event.dive_off_resolved'.
+  // not already provided. Audits 'event.dive_off_resolved'. Changing
+  // a score, the winner or resolved_at needs the host-org score rule
+  // as well; result fields sent back unchanged are dropped first, so
+  // re-sending the stored winner doesn't re-stamp resolved_at.
   router.patch(
     "/api/events/:id/dive-offs/:diveOffId",
     requireEventManager(),
@@ -319,8 +378,12 @@ module.exports = function createDiveOffsRoutes({ pool, requireEventManager }) {
       try {
         await client.query("BEGIN");
 
+        // Locked, so what we compare the body against is still what's
+        // stored when the UPDATE lands. Without it a stale re-send of the
+        // old result could pass as "unchanged" and then overwrite a
+        // result the host recorded in between.
         const exRes = await client.query(
-          "SELECT * FROM tiebreak_dive_offs WHERE id = $1 AND event_id = $2",
+          "SELECT * FROM tiebreak_dive_offs WHERE id = $1 AND event_id = $2 FOR UPDATE",
           [diveOffId, eventId],
         );
         if (!exRes.rows.length) {
@@ -328,6 +391,13 @@ module.exports = function createDiveOffsRoutes({ pool, requireEventManager }) {
           return res.status(404).json({ error: "Dive-off not found" });
         }
         const existing = exRes.rows[0];
+        if (stripUnchangedResult(updates, existing)
+            && await refuseResultWrite(client, res, eventId, req.user)) return;
+        // Everything sent was already stored: nothing to write or audit.
+        if (!Object.keys(updates).length) {
+          await client.query("ROLLBACK");
+          return res.json({ dive_off: existing });
+        }
 
         if (updates.winner_id != null
             && updates.winner_id !== existing.competitor_a_id
@@ -356,8 +426,10 @@ module.exports = function createDiveOffsRoutes({ pool, requireEventManager }) {
         }
 
         // Auto-stamp resolved_at when winner_id is being set and
-        // the caller didn't pass an explicit resolved_at.
-        if (updates.winner_id && !("resolved_at" in updates)) {
+        // the caller didn't pass an explicit resolved_at. Asks the body,
+        // not updates: an explicit value equal to the stored one was
+        // dropped above, and it should still win over "now".
+        if (updates.winner_id && !("resolved_at" in (req.body || {}))) {
           updates.resolved_at = new Date().toISOString();
         }
 

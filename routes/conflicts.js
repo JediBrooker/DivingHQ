@@ -25,11 +25,14 @@
 // calculations. If an operator wants to scrub a score they should
 // use the withdraw flow on the diver, not a delete.
 //
-// Auth: referee, meet_manager, or org_admin (per DEC-05 in
-// docs/offline-inventory.md). Sysadmin always passes via
-// requireOrgRole. Past the role gate it's the same rule as
-// PUT /api/scores/:id: an org admin can settle any event in the org,
-// anyone else has to run this event (isEventDelegate).
+// Auth: whoever may change scores on the event, the same host-org rule
+// as PUT /api/scores/:id and manual entry (scoreAuthority in
+// lib/middleware.js): the host club's, the host region's, or for its own
+// meets the org's admins and meet managers, never another level's.
+// Sysadmin always passes. This used to take any referee, meet_manager or
+// org_admin in the org who ran the event; the product decision on who
+// changes scores narrowed that. Both decisions pick the score that
+// stands, so both go through it.
 //
 // And there has to be a conflict to settle: the row is still a
 // manual entry and a 'rejected_duplicate' audit row says a judge's
@@ -44,27 +47,25 @@
 const express = require("express");
 const { announceRecords } = require("../lib/records");
 const { scoreBodyError, insertScoreAudit } = require("../lib/score-audit");
+const { scoreAuthorityRefusal } = require("../lib/middleware");
+const { isUuid } = require("../lib/uuid");
 
 module.exports = function createConflictsRouter({
-  pool, io, scoreboardCache, requireOrgRole,
+  pool, io, scoreboardCache,
+  verifyToken,
+  scoreAuthority,               // lib/middleware.js, required
   recomputeRecordKeys,          // optional; lib/records.js
-  requireRoleOrEventDelegate,   // optional, migration 087
-  isEventDelegate,              // optional; falls back to the event_managers row
 }) {
-  if (!pool) throw new Error("createConflictsRouter requires { pool, requireOrgRole }");
+  if (!pool || !verifyToken || !scoreAuthority) {
+    throw new Error("createConflictsRouter requires { pool, verifyToken, scoreAuthority }");
+  }
   const router = express.Router();
 
   router.post(
     "/api/conflicts/:conflict_id/resolve",
-    // The conflict id is the score row's id; its event decides whether
-    // a delegate (e.g. the host club's admin) gets in without the role.
-    requireRoleOrEventDelegate
-      ? requireRoleOrEventDelegate(["referee", "meet_manager", "org_admin"], async (req) => {
-          if (!/^[0-9a-f-]{36}$/i.test(String(req.params.conflict_id))) return null;
-          const r = await pool.query("SELECT event_id FROM scores WHERE id = $1", [req.params.conflict_id]);
-          return r.rows[0]?.event_id || null;
-        })
-      : requireOrgRole(["referee", "meet_manager", "org_admin"]),
+    // Signed in; the handler asks the host rule once it has the score
+    // row (the conflict id is that row's id, its event decides).
+    verifyToken,
     async (req, res) => {
       const { conflict_id } = req.params;
       const decision = req.body?.decision;
@@ -76,7 +77,7 @@ module.exports = function createConflictsRouter({
       // UUID validation. The submit_score reconciliation emits the
       // scores.id as conflict_id, which is a UUID (any version), so
       // we accept the broader pattern here, not just v4.
-      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(conflict_id)) {
+      if (!isUuid(conflict_id)) {
         return res.status(400).json({ error: "conflict_id must be a UUID" });
       }
 
@@ -112,27 +113,12 @@ module.exports = function createConflictsRouter({
         }
         const row = r.rows[0];
 
-        // Org guard, heads up: the operator must own the event's org
-        // (sysadmin always passes).
-        if (!req.user.is_system_admin && row.org_id !== req.user.org_id) {
+        // Same rule as a correction: the host's meet managers settle it,
+        // and nobody outside the event's org ever passes.
+        const authority = await scoreAuthority(client, row.event_id, req.user);
+        if (!authority.allowed) {
           await client.query("ROLLBACK");
-          return res.status(403).json({ error: "Cannot resolve conflicts in other organisations" });
-        }
-
-        // Per-event check, mirrored from score-correction.js.
-        const isOrgAdmin = req.user.is_system_admin
-          || (req.user.org_roles || []).includes("org_admin");
-        if (!isOrgAdmin) {
-          const runsEvent = isEventDelegate
-            ? await isEventDelegate(row.event_id, req.user.id)
-            : (await client.query(
-                "SELECT 1 FROM event_managers WHERE event_id = $1 AND user_id = $2",
-                [row.event_id, req.user.id],
-              )).rows.length > 0;
-          if (!runsEvent) {
-            await client.query("ROLLBACK");
-            return res.status(403).json({ error: "You are not a manager of this event" });
-          }
+          return res.status(403).json(scoreAuthorityRefusal(authority.host));
         }
 
         // Is there actually a conflict on this row? The latest rejected

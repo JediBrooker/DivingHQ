@@ -852,7 +852,11 @@
     "col_code": "Code plongeon",
     "col_dd": "CD",
     "col_position": "Position du corps",
-    "col_description": "Descriptif"
+    "col_description": "Descriptif",
+    "dd_range_hint": "Les plongeons officiels à {height} vont d'un CD de {min} à {max}. Un plongeon personnalisé doit rester dans cette plage.",
+    "dd_range_hint_all": "Il n'y a aucun plongeon officiel à {height}, donc un plongeon personnalisé à cette hauteur doit rester dans la plage de tous les plongeons officiels : CD de {min} à {max}.",
+    "dd_out_of_range": "CD hors plage",
+    "dd_out_of_range_tip": "Son CD est hors de la plage des plongeons officiels à cette hauteur, donc aucune liste de plongeons ne l'acceptera. Corrigez le CD ou ajoutez une nouvelle version du plongeon."
   },
   "judges_directory": {
     "title": "Répertoire des juges",

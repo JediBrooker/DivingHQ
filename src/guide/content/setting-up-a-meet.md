@@ -153,7 +153,7 @@ Sometimes the meet manager wants every diver to dive the same thing in the same 
 3. The row now shows the pinned dive (`5132D · DD 3.0`). Click the ↺ button on the row to unpin it back to "diver picks".
 4. Click **+ Add Dive** again for each additional round — one row per round. Leave a row unpinned ("Diver picks") to let divers choose that round freely.
 
-If the dive you need isn't in the directory, click **+ Add a new dive…** in the autocomplete popover. A sub-modal pops with the same fields as `/dive-directory` (code, height, position, DD, description). Submit it — the dive is added to your federation's directory and immediately bound to the row that opened the picker.
+If the dive you need isn't in the directory, click **+ Add a new dive…** in the autocomplete popover. A sub-modal pops with the same fields as `/dive-directory` (code, height, position, DD, description). Submit it — the dive is added to your federation's directory and immediately bound to the row that opened the picker. Its DD has to be inside the range the official dives at that height use, or it's refused with the range in the message (see [DD](/guide/faq#dd-degree-of-difficulty) in the glossary).
 
 For mixed-board events, each row gets an extra **height** selector: leave the dive free but pin the round to a particular board ("round 3 must be a 3m dive, but the diver picks which one").
 

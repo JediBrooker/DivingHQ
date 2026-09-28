@@ -852,7 +852,11 @@
     "col_code": "Kód",
     "col_dd": "NF",
     "col_position": "Helyzet",
-    "col_description": "Leírás"
+    "col_description": "Leírás",
+    "dd_range_hint": "A hivatalos ugrások NF-e {height} magasságon {min} és {max} között van. Az egyéni ugrásnak ezen a tartományon belül kell maradnia.",
+    "dd_range_hint_all": "{height} magasságon nincs hivatalos ugrás, ezért az ottani egyéni ugrásnak az összes hivatalos ugrás tartományán belül kell maradnia: NF {min} és {max} között.",
+    "dd_out_of_range": "NF a tartományon kívül",
+    "dd_out_of_range_tip": "Az NF-e kívül esik az ezen a magasságon végzett hivatalos ugrások tartományán, ezért egyetlen ugráslista sem fogadja el. Javítsa az NF-et, vagy adja hozzá az ugrás új változatát."
   },
   "judges_directory": {
     "title": "Pontozóbíró-jegyzék",

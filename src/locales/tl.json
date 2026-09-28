@@ -841,7 +841,11 @@
     "col_code": "Kodigo",
     "col_dd": "Antas",
     "col_position": "Posisyon",
-    "col_description": "Paglalarawan"
+    "col_description": "Paglalarawan",
+    "dd_range_hint": "Ang mga opisyal na sisid mula sa {height} ay may antas ng hirap na {min} hanggang {max}. Dapat manatili sa saklaw na iyon ang isang custom na sisid.",
+    "dd_range_hint_all": "Walang opisyal na sisid mula sa {height}, kaya dapat manatili ang custom na sisid doon sa saklaw ng lahat ng opisyal na sisid: antas ng hirap na {min} hanggang {max}.",
+    "dd_out_of_range": "Antas ng hirap na labas sa saklaw",
+    "dd_out_of_range_tip": "Nasa labas ng saklaw ng mga opisyal na sisid sa taas na ito ang antas ng hirap nito, kaya walang listahan ng sisid na tatanggap dito. Itama ang antas ng hirap o magdagdag ng bagong bersyon ng sisid."
   },
   "judges_directory": {
     "title": "Direktoryo ng judge",

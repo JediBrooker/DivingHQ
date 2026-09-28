@@ -178,6 +178,21 @@ that's intentional, but they can only listen, never emit. **Don't fall back
 to `data.judge_id`** — that's the spoof the audit closed.
 `docs/socket-events.md` has the per-event gates.
 
+### Hand-entered scores follow the host
+
+Only the meet managers of whoever hosts the meet change a score by hand:
+manual entry, `PUT /api/scores/:id`, conflict resolution and a dive-off's
+scores or winner all ask `scoreAuthority` (`lib/middleware.js`) inside
+their transaction. A club's meet is its club admins plus meet managers and
+event managers who are members of the club; a region's meet is its region
+admins plus meet managers and event managers from its clubs; anything else
+is the org's admins and meet managers plus the event's managers. It does
+not inherit up or down (the federation can't retype a club night's score).
+Judges' own `submit_score` and the referee calls keep their own gates. A
+new path that writes a score value goes through the same helper, not a
+role list, and the Control Room reads `can_change_scores` off
+`/api/events` to hide what the caller can't do.
+
 ### Score validation
 
 Any code path that accepts a score must validate `0 ≤ n ≤ 10` in 0.5
@@ -399,6 +414,7 @@ until the operator has switched maintenance mode on and passed
 | "Does this person run this event?" (event_managers row, or admin of the club / region hosting its meet, or of the host club's region) | `isEventDelegate(eventId, userId)` | `lib/middleware.js` |
 | Would this leave a claimed federation with no live org admin? (locks its admin rows, so call it inside the transaction before a delete, demotion, suspension or transfer; the sysadmin skips it; any new path that takes org_admin away goes through it too) | `orgAdminHold(client, orgId, userId)` + `lastOrgAdminRefusal(hold, { self })` for the 409 | `lib/admin-rows.js` |
 | Role gate that also lets the event's delegates in | `requireRoleOrEventDelegate(roles, eventIdOf)` | `lib/middleware.js` |
+| May this caller change a score by hand on this event? (manual entry, corrections, conflicts, dive-off results: the host club's / region's / org's meet managers, never another level; sysadmin always) | `scoreAuthority(db, eventId, user)` → `{ found, allowed, host }` / `canChangeEventScores(...)`; the 403 body is `scoreAuthorityRefusal(host)`; as a per-row SQL predicate, `scoreAuthoritySql({ userParam })` (the events list's `can_change_scores`) | `lib/middleware.js` |
 | Meet routes open to club admins (then pin with `isMeetHostAdmin`) | `requireMeetEditorOrClubAdmin` / server.js `requireMeetOrClubEditor` | `lib/middleware.js` |
 | Who reviews a role request (federation vs club-first) | `listForOrgAdmin` / `listForDelegate` / `delegateCanReview` / `reviewersFor` | `lib/role-requests.js` |
 | The nearest level with someone live to ask about a member (org admins, else the member's club, its region, then the sysadmin), for any request a club can decide | `nearestReviewers(db, { orgId, memberId, clubCanDecide, except })` | `lib/role-requests.js` |
@@ -406,6 +422,7 @@ until the operator has switched maintenance mode on and passed
 | Narrow a meet screen to a club admin's own meets (pass the org roles the screen admits on its own, e.g. `CONTROL_ROOM_ROLES`, so a referee who also admins a club isn't narrowed) | `useClubScope(screenRoles)` | `src/composables/useClubScope.js` + `club-scope-core.js` |
 | Count-aware UI string (`counts.<base>_zero` … `_other`, one key per CLDR category; locale values can't use vue-i18n's `\|` plurals) | `usePlural().tn(base, n)` | `src/composables/usePlural.js` + `src/lib/plural.js` |
 | "Couldn't load this" + Try again, for a failed fetch that must not read as an empty list or a permission refusal | `<LoadError @retry>` | `src/components/LoadError.vue` |
+| Is a custom dive's DD inside the official range for its height? (min..max DD of the core rows there, or of every core row where a height has none; checked on create/edit and on every dive-list path) | `customDdError(db, { height, dd })` / `customDivesOutOfRange(db, diveIds)`; SPA copy `officialDdRanges` / `ddRangeFor` | `lib/custom-dive-dd.js`, `src/lib/ddRange.js` |
 | ISO country list (server validation + signup picker) | `countryByCode(a3)` / `countryFromStored(dbCode)` / `countries.json` | `lib/countries.js` |
 | What a diver represents in an event (country / state / club code) | `event_rep_code(event_id, user_id, home_country)` SQL function | `migrations/090_representation.sql`, `095_team_rep_code.sql` |
 | Those codes for everyone on an event, one call per person (for lists that repeat a diver per round or per dive) | `eventRepCodesCte()` | `lib/scoring-sql.js` |

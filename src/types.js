@@ -798,6 +798,41 @@
  * @property {'claimed'|'unclaimed'} claim_state  unclaimed = a country account the clubs started (migration 087)
  */
 
+// ---- /api/events -------------------------------------------------
+
+/**
+ * @typedef {Object} EventListRow
+ * GET /api/events. Every events column (e.*) plus the joined names below.
+ * Only the fields the SPA leans on are listed.
+ *
+ * @property {string}      id
+ * @property {string}      org_id
+ * @property {string}      name
+ * @property {'Upcoming'|'Live'|'Completed'|string} status
+ * @property {string}      event_type
+ * @property {string}      height
+ * @property {string|null} [meet_id]
+ * @property {string}      org_name
+ * @property {string|null} [country_code]
+ * @property {string|null} [meet_name]
+ * @property {number}      participating_orgs_count
+ * @property {boolean}     can_change_scores  Whether the caller may type in
+ *   or correct a score here (manual entry, PUT /api/scores/:id, conflict
+ *   resolution, dive-off results): the host's meet managers only, per
+ *   scoreAuthority in lib/middleware.js. Always false for anonymous callers.
+ */
+
+/**
+ * @typedef {Object} ScoreAuthorityRefusal
+ * The 403 body from any hand-entered score write the host-org rule
+ * turned away.
+ *
+ * @property {string} error  Names who can, e.g. "Only the host club's admins
+ *   and meet managers can change scores on this event".
+ * @property {'score_authority'} code
+ * @property {'club'|'region'|'org'} host
+ */
+
 // ---- /api/coach/events ------------------------------------------
 
 /**

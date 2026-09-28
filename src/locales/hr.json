@@ -841,7 +841,11 @@
     "col_code": "Kod",
     "col_dd": "Težina",
     "col_position": "Pozicija",
-    "col_description": "Opis"
+    "col_description": "Opis",
+    "dd_range_hint": "Službeni skokovi s {height} imaju težinu od {min} do {max}. Prilagođeni skok mora ostati u tom rasponu.",
+    "dd_range_hint_all": "S {height} nema službenih skokova, pa prilagođeni skok s te visine mora ostati u rasponu svih službenih skokova: težina od {min} do {max}.",
+    "dd_out_of_range": "Težina izvan raspona",
+    "dd_out_of_range_tip": "Težina je izvan raspona službenih skokova s ove visine, pa ga nijedan popis skokova neće prihvatiti. Ispravite težinu ili dodajte novu verziju skoka."
   },
   "judges_directory": {
     "title": "Registar sudaca",

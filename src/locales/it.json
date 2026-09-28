@@ -852,7 +852,11 @@
     "col_code": "Codice",
     "col_dd": "CD",
     "col_position": "Posizione",
-    "col_description": "Descrizione"
+    "col_description": "Descrizione",
+    "dd_range_hint": "I tuffi ufficiali da {height} hanno un CD da {min} a {max}. Un tuffo personalizzato deve restare in questo intervallo.",
+    "dd_range_hint_all": "Non ci sono tuffi ufficiali da {height}, quindi un tuffo personalizzato a quell'altezza deve restare nell'intervallo di tutti i tuffi ufficiali: CD da {min} a {max}.",
+    "dd_out_of_range": "CD fuori intervallo",
+    "dd_out_of_range_tip": "Il CD è fuori dall'intervallo dei tuffi ufficiali a questa altezza, quindi nessuna lista di tuffi lo accetterà. Correggi il CD o aggiungi una nuova versione del tuffo."
   },
   "judges_directory": {
     "title": "Registro dei giudici",

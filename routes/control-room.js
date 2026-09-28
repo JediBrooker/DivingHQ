@@ -33,6 +33,7 @@ const createIdempotency = require("../lib/idempotency");
 const { perDiveSelect, eventRepCodesCte } = require("../lib/scoring-sql");
 const { PUBLIC_CLUB_JOIN } = require("../lib/club-approvals");
 const { canSeeEvent } = require("../lib/event-visibility");
+const { customDivesOutOfRange } = require("../lib/custom-dive-dd");
 
 const EVENT_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -278,7 +279,7 @@ module.exports = function createControlRoomRouter({
           // and height with a DD of its own, and only the event's org's
           // own custom rows are in play at all.
           const d = await client.query(
-            `SELECT id FROM dive_directory
+            `SELECT id, is_custom FROM dive_directory
              WHERE dive_code = $1 AND position = $2::dive_position
                AND ($3::numeric IS NULL OR height = $3::numeric)
                AND (NOT is_custom OR created_org_id = $4)
@@ -292,6 +293,15 @@ module.exports = function createControlRoomRouter({
               error: `Round ${round}: ${code}${pos} not in directory${heightNumeric ? ` for ${event.height}` : ""}`,
             });
             continue;
+          }
+          // Only a custom match needs the DD range check (core rows are
+          // the range), so the common case costs no extra query.
+          if (d.rows[0].is_custom) {
+            const [bad] = await customDivesOutOfRange(client, [d.rows[0].id]);
+            if (bad) {
+              stats.errors.push({ username, error: `Round ${round}: ${bad.message}` });
+              continue;
+            }
           }
 
           const existing = await client.query(
@@ -1071,6 +1081,12 @@ module.exports = function createControlRoomRouter({
         if (!tm.rows.length) {
           return res.status(400).json({ error: "Team must belong to this organisation" });
         }
+      }
+      // A late entry is still a dive list: a custom dive on it has to
+      // carry a DD inside the official range for its height.
+      const [outOfRange] = await customDivesOutOfRange(pool, [dive_id]);
+      if (outOfRange) {
+        return res.status(400).json({ error: outOfRange.message, code: "dd_out_of_range" });
       }
 
       // xmax=0 on the returning row distinguishes a fresh

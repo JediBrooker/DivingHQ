@@ -350,10 +350,19 @@ function historySynchroGroups(row) {
 // Score correction (#9): clicking a completed dive in the focused pool's
 // History column opens the manager-amend modal. /history rows carry
 // judge_scores + score_ids, but the modal wants `scores`, so map across.
+//
+// Only the meet managers of whoever hosts the meet may change a score
+// (the club, the region or the federation, never another level), and
+// /api/events says so per event as can_change_scores. Everyone else gets
+// a read-only History; the server refuses the PUT regardless.
+const canChangeScores = computed(() => currentEvent.value?.can_change_scores === true)
+function amendable(row) {
+  return canChangeScores.value && !!row?.score_ids?.length
+}
 const correctOpen = ref(false)
 const correctTarget = ref(null)
 function openCorrection(row) {
-  if (!row?.score_ids?.length) return
+  if (!amendable(row)) return
   correctTarget.value = {
     name: row.diverName,
     round: row.round_number,
@@ -928,14 +937,17 @@ function onBeforeUnload(e) {
             </div>
             <div class="cv2-side-body">
               <p v-if="!focusedHistory.length" class="cv2-side-empty">No completed dives yet.</p>
+              <p v-else-if="!canChangeScores" class="cv2-side-note">
+                Read-only. Scores on this event can only be changed by the meet managers of the club, region or federation hosting it.
+              </p>
               <component
-                :is="h.score_ids && h.score_ids.length ? 'button' : 'div'"
+                :is="amendable(h) ? 'button' : 'div'"
                 v-for="(h, i) in focusedHistory"
                 :key="`${h.competitor_id}-${h.round_number}-${i}`"
-                type="button"
+                :type="amendable(h) ? 'button' : null"
                 class="cv2-hcard"
-                :class="{ 'is-clickable': h.score_ids && h.score_ids.length }"
-                v-tip="h.score_ids && h.score_ids.length ? 'Amend a judge score on this dive' : null"
+                :class="{ 'is-clickable': amendable(h) }"
+                v-tip="amendable(h) ? 'Amend a judge score on this dive' : null"
                 @click="openCorrection(h)"
               >
                 <span class="cv2-hcard-round">R{{ h.round_number }}</span>
@@ -1138,6 +1150,7 @@ function onBeforeUnload(e) {
 .cv2-announce:disabled { opacity: 0.45; cursor: not-allowed; }
 .cv2-side-body { padding: 0.6rem; overflow-y: auto; display: flex; flex-direction: column; gap: 0.4rem; }
 .cv2-side-empty { margin: 0.5rem; font-family: var(--font-mono); font-size: 12px; color: var(--text-3); }
+.cv2-side-note { margin: 0.25rem 0.5rem 0.4rem; font-size: 12px; line-height: 1.4; color: var(--text-3); }
 
 .cv2-hcard {
   display: flex; align-items: center; flex-wrap: wrap; gap: 0.4rem 0.5rem; padding: 0.45rem 0.55rem;
