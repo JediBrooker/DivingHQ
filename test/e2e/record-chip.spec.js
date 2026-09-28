@@ -65,25 +65,43 @@ test("a dive that beats a standing record wears a quiet chip, a first mark doesn
       const body = await res.json();
       await route.fulfill({ response: res, json: { ...body, records: [] } });
     });
+    // Room broadcasts the page has heard, straight off its websocket.
+    const heard = [];
+    page.on("websocket", (ws) => ws.on("framereceived", (f) => {
+      const m = /^\d+\["([a-z_]+)"/.exec(String(f.payload));
+      if (m) heard.push(m[1]);
+    }));
     await page.goto(`/scoreboard/${event.id}`);
     const cards = page.locator(".hist-card");
     await expect(cards).toHaveCount(1);
     await expect(cards.first()).toContainText("Malia Opener");
     await expect(page.getByTestId("record-chip")).toHaveCount(0);
 
-    // Sina beats it, then the announcer puts her score up, which is what
-    // makes a spectator's page pull the new history card.
-    await setup.submitPanelScores({
-      baseURL, judges, eventId: event.id, competitorId: second.userId, roundNumber: 1, diveId,
-      scores: [7, 7, 7, 7, 7],
-    });
-    // Wait for the server's ack, and announce again if the card hasn't
-    // come: under a loaded full-suite run the page's socket can still be
-    // joining the event room when the first announcement goes out, and a
-    // fire-and-forget emit then lands on nobody.
+    // The cards come off HTTP, but the page only joins the event room once
+    // its socket is up, and nothing on screen says when that is. If Sina's
+    // dive lands first, record_broken goes to an empty room and the live
+    // chip this test is about never arrives (the announce retry below only
+    // rescues the card). So put Malia's score up again until the page
+    // hears it: then it's in the room.
     const sinaCard = cards.filter({ hasText: "Sina Breaker" });
     const announcer = await setup.openSocket(baseURL, admin.adminToken);
     try {
+      await expect(async () => {
+        const ack = await announcer.timeout(5000).emitWithAck("announce_score", {
+          event_id: event.id, competitor_id: first.userId, round_number: 1,
+        });
+        expect(ack?.ok).toBe(true);
+        await expect.poll(() => heard.includes("final_score_announced"), { timeout: 1000 }).toBe(true);
+      }).toPass({ timeout: 15_000 });
+
+      // Sina beats it, then the announcer puts her score up, which is what
+      // makes a spectator's page pull the new history card.
+      await setup.submitPanelScores({
+        baseURL, judges, eventId: event.id, competitorId: second.userId, roundNumber: 1, diveId,
+        scores: [7, 7, 7, 7, 7],
+      });
+      // Wait for the server's ack, and announce again if the card hasn't
+      // come, in case a fire-and-forget emit still lands on nobody.
       await expect(async () => {
         const ack = await announcer.timeout(5000).emitWithAck("announce_score", {
           event_id: event.id, competitor_id: second.userId, round_number: 1,
