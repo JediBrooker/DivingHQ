@@ -30,7 +30,6 @@
 
 import { ref, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
-import router from '@/router'
 
 // Module-level shared state, survives across component mounts
 const notifications = ref([])
@@ -167,8 +166,14 @@ export function usePush({ socket: sock } = {}) {
       }
       // The tap was meant to take them somewhere. The SW only focuses
       // this tab, so the routing is ours to do.
-      if (m.action_url && m.action_url !== router.currentRoute.value.fullPath) {
-        router.push(m.action_url).catch(() => {})
+      // The router is loaded here rather than at the top: it imports every
+      // view, some of which use this composable, and a static import made
+      // usePush drag the whole router in wherever it went (the unit tests
+      // that load it without a DOM, for one).
+      if (m.action_url) {
+        import('@/router').then(({ default: router }) => {
+          if (m.action_url !== router.currentRoute.value.fullPath) router.push(m.action_url).catch(() => {})
+        }).catch(() => {})
       }
     })
   }
