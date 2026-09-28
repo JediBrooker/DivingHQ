@@ -51,3 +51,20 @@ test("insertScoreAudit: one row, unset fields NULL, committed stamp only on requ
   assert.deepEqual(calls[1].params,
     ["s", "e", "c", "j", 2, "insert", null, 7, null, null, null, "why", "2026-09-28T10:00:00Z", true]);
 });
+
+// Number() turns null, "", false, [] and whitespace into 0, so a buggy or
+// replayed client sending score:null had a judge's mark stored as 0.0
+// (and PUT /api/scores/:id with "" zeroed a score). Only a number, or a
+// string that is one, is a score.
+test("isValidScore / scoreBodyError: blanks and non-numbers aren't a 0", () => {
+  const mw = require("../lib/middleware")({
+    pool: { query: async () => ({ rows: [] }) },
+    JWT_SECRET: "x".repeat(40),
+  });
+  for (const bad of [null, "", "   ", false, true, [], [5], {}, "0x10"]) {
+    assert.equal(isValidScore(bad), false, JSON.stringify(bad));
+    assert.equal(mw.isValidScore(bad), false, `middleware ${JSON.stringify(bad)}`);
+    assert.equal(scoreBodyError(bad, "score"), "score must be between 0 and 10", JSON.stringify(bad));
+  }
+  for (const ok of [0, "0", " 7.5 ", "10"]) assert.equal(isValidScore(ok), true, JSON.stringify(ok));
+});

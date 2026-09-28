@@ -410,3 +410,17 @@ test("referee actions only touch a Live event, and a cap of 0 is reported as 0",
   const corrected = live.broadcasts.find((b) => b.name === "score_corrected");
   assert.equal(corrected.payload.reason, "referee:cap(0)");
 });
+
+// The socket half of the blank-score bug: score:null used to be stored as
+// 0.0 while the room was told null.
+test("submit_score refuses a null or empty score instead of storing 0", async () => {
+  const { isValidScore } = require("../lib/score-audit");
+  const pool = scoringPool();
+  const h = makeHarness({ deps: { pool, isValidScore } });
+  const c = await h.connect("198.51.100.39", judgeToken("judge-null"));
+  for (const score of [null, "", false]) {
+    const reply = await c.ask("submit_score", { event_id: VALID_ID, competitor_id: VALID_ID, round_number: 1, score });
+    assert.equal(reply.error, "bad_score", JSON.stringify(score));
+  }
+  assert.ok(!pool.writes.some((sql) => /INSERT INTO scores/.test(sql)));
+});
