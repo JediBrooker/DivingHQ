@@ -820,7 +820,8 @@
       "club_change": "Paglipat ng club",
       "region_request": "Rehiyon",
       "club_pending": "Bagong club",
-      "club_decision": "Klub"
+      "club_decision": "Klub",
+      "guardian_link": "Link ng guardian"
     }
   },
   "compare": {
@@ -1932,7 +1933,10 @@
     "admins_intro_payments": "Pinapatakbo ng mga admin ng club ang mga paligsahang pinangangasiwaan ng kanilang club at inaasikaso ang mga payout at bayad sa pagsapi nito. Wala silang access sa buong pederasyon.",
     "last_admin_tip": "Kailangan ng club ng kahit isang admin. Magdagdag muna ng isa pang admin bago alisin ang isang ito.",
     "intro_federation": "Ang invite link, code at mga admin ng iyong club. Ang iyong pederasyon ang nagtatalaga ng mga admin at nagsusuri ng mga hiling na role ng iyong mga miyembro.",
-    "requests_federation": "Ang iyong pederasyon ang nagsusuri ng mga hiling na role ng iyong mga miyembro."
+    "requests_federation": "Ang iyong pederasyon ang nagsusuri ng mga hiling na role ng iyong mga miyembro.",
+    "guardian_requests_hint": "May magulang o guardian na humihiling na magbayad para sa isa sa iyong mga miyembro. Aprubahan lang kung alam mong siya talaga ang magulang o guardian ng bata: kapag naka-link na, maaari na niyang bayaran ang mga bayarin ng bata at makita kung ano ang utang ng bata.",
+    "no_guardian_requests_title": "Walang naghihintay na kahilingan ng guardian",
+    "no_guardian_requests_body": "Kapag may magulang na humiling na magbayad para sa isa sa iyong mga batang miyembro, lalabas ito dito."
   },
   "regions": {
     "label": {

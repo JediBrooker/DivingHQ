@@ -831,7 +831,8 @@
       "club_change": "Klubbyte",
       "region_request": "Region",
       "club_pending": "Ny klubb",
-      "club_decision": "Klubb"
+      "club_decision": "Klubb",
+      "guardian_link": "Vårdnadshavarlänk"
     }
   },
   "compare": {
@@ -1932,7 +1933,10 @@
     "admins_intro_payments": "Klubbadministratörer sköter tävlingarna som klubben arrangerar och tar hand om utbetalningar och medlemsavgifter. De får ingen åtkomst på förbundsnivå.",
     "last_admin_tip": "En klubb måste ha minst en administratör. Lägg till en medadministratör innan du tar bort den här.",
     "intro_federation": "Klubbens inbjudningslänk, kod och administratörer. Ditt förbund utser administratörerna och hanterar medlemmarnas rollförfrågningar.",
-    "requests_federation": "Ditt förbund hanterar dina medlemmars rollförfrågningar."
+    "requests_federation": "Ditt förbund hanterar dina medlemmars rollförfrågningar.",
+    "guardian_requests_hint": "En förälder eller vårdnadshavare ber om att få betala för en av dina medlemmar. Godkänn bara om du vet att det verkligen är barnets förälder eller vårdnadshavare: när de är länkade kan de betala barnets avgifter och se vad barnet är skyldigt.",
+    "no_guardian_requests_title": "Inga förfrågningar från vårdnadshavare väntar",
+    "no_guardian_requests_body": "När en förälder ber om att få betala för en av dina unga medlemmar visas det här."
   },
   "regions": {
     "label": {

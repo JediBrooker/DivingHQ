@@ -820,7 +820,8 @@
       "club_change": "Cambio de club",
       "region_request": "Región",
       "club_pending": "Club nuevo",
-      "club_decision": "Club"
+      "club_decision": "Club",
+      "guardian_link": "Vínculo de tutor"
     }
   },
   "compare": {
@@ -1932,7 +1933,10 @@
     "admins_intro_payments": "Los administradores del club dirigen las competiciones que organiza su club y se ocupan de sus pagos y cuotas de afiliación. No tienen acceso a nivel de federación.",
     "last_admin_tip": "Un club necesita al menos un administrador. Añade otro administrador antes de quitar a este.",
     "intro_federation": "El enlace de invitación, el código y los administradores de tu club. Tu federación nombra a los administradores y revisa las solicitudes de rol de tus miembros.",
-    "requests_federation": "Tu federación revisa las solicitudes de rol de tus miembros."
+    "requests_federation": "Tu federación revisa las solicitudes de rol de tus miembros.",
+    "guardian_requests_hint": "Un padre, una madre o un tutor pide pagar por uno de tus miembros. Apruébalo solo si sabes que de verdad es el padre, la madre o el tutor del menor: una vez vinculado, podrá pagar las cuotas del menor y ver lo que debe.",
+    "no_guardian_requests_title": "No hay solicitudes de tutores pendientes",
+    "no_guardian_requests_body": "Cuando un padre o una madre pida pagar por uno de tus miembros jóvenes, aparecerá aquí."
   },
   "regions": {
     "label": {

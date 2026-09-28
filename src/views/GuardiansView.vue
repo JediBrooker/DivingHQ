@@ -31,8 +31,9 @@ async function loadDependents() {
   loading.value = true
   try {
     // Pending ones too, so a request that's gone in shows as waiting
-    // rather than vanishing until an admin gets to it.
-    const data = await auth.apiFetch('/api/guardians/my-dependents?include_pending=1')
+    // rather than vanishing until someone decides it (the federation, or
+    // the child's club where there isn't one yet).
+    const data = await auth.apiFetch('/api/guardians/my-dependents?include=pending')
     dependents.value = Array.isArray(data) ? data : []
   } catch (e) {
     showError(e.message || 'Failed to load dependents')

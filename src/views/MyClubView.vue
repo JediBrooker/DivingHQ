@@ -8,17 +8,20 @@ import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { RouterLink, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useFeaturesStore } from '@/stores/features'
 import { showError, showInfo, showSuccess } from '@/composables/useNotify'
 import { confirmAction } from '@/composables/useConfirm'
 import { usePlural } from '@/composables/usePlural'
 import RoleRequestQueue from '@/components/RoleRequestQueue.vue'
 import JoinRequestQueue from '@/components/JoinRequestQueue.vue'
+import GuardianRequestQueue from '@/components/GuardianRequestQueue.vue'
 import LoadError from '@/components/LoadError.vue'
 import ClubSetupCard from '@/components/ClubSetupCard.vue'
 
 const { t } = useI18n()
 const { tn } = usePlural()
 const auth = useAuthStore()
+const features = useFeaturesStore()
 const router = useRouter()
 
 const busyId = ref(null)
@@ -144,6 +147,12 @@ async function refreshAfterLosingClub(club) {
 // Known from the session, no need to wait for the admins call.
 const reviewsRequests = computed(() => clubs.value.some(c => c.org_claim_state === 'unclaimed'))
 
+// Parents asking to pay for a child in the club (lib/guardian-requests.js).
+// Same rule as role requests, the club only decides where there's no
+// federation. And only while payments is on: paying is the one thing a
+// guardian link is for, and the Dependents page is dark without it.
+const reviewsGuardians = computed(() => features.payments && reviewsRequests.value)
+
 // Join requests are only this page's business where the club runs
 // itself; under a federation the federation approves them. The admins
 // endpoint answering is how we know (403 under a federation).
@@ -248,6 +257,11 @@ onMounted(() => {
     <section v-if="selfRun" class="block">
       <h2 class="block-title">{{ $t('my_club.join_requests') }}</h2>
       <JoinRequestQueue :show-club="clubs.length > 1" @decided="onJoinDecided" />
+    </section>
+
+    <section v-if="reviewsGuardians" class="block" data-testid="club-guardian-requests">
+      <h2 class="block-title">{{ $t('user_manager.guardian_requests_title') }}</h2>
+      <GuardianRequestQueue :show-club="clubs.length > 1" />
     </section>
 
     <section v-for="club in clubs" :key="club.id" class="block">

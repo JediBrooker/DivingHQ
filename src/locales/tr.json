@@ -820,7 +820,8 @@
       "club_change": "Kulüp değişikliği",
       "region_request": "Bölge",
       "club_pending": "Yeni kulüp",
-      "club_decision": "Kulüp"
+      "club_decision": "Kulüp",
+      "guardian_link": "Veli bağlantısı"
     }
   },
   "compare": {
@@ -1932,7 +1933,10 @@
     "admins_intro_payments": "Kulüp yöneticileri kulüplerinin düzenlediği yarışmaları yürütür ve kulübün ödemeleriyle üyelik aidatlarıyla ilgilenir. Federasyon genelinde erişimleri yoktur.",
     "last_admin_tip": "Bir kulübün en az bir yöneticisi olmalıdır. Bunu kaldırmadan önce başka bir yönetici ekleyin.",
     "intro_federation": "Kulübünüzün davet bağlantısı, kodu ve yöneticileri. Yöneticileri federasyonunuz atar ve üyelerinizin rol taleplerini de o inceler.",
-    "requests_federation": "Üyelerinizin rol taleplerini federasyonunuz inceler."
+    "requests_federation": "Üyelerinizin rol taleplerini federasyonunuz inceler.",
+    "guardian_requests_hint": "Bir ebeveyn veya veli, üyelerinizden biri için ödeme yapmak istiyor. Yalnızca gerçekten çocuğun ebeveyni veya velisi olduğunu biliyorsanız onaylayın: bağlandıktan sonra çocuğun ücretlerini ödeyebilir ve çocuğun borçlarını görebilir.",
+    "no_guardian_requests_title": "Bekleyen veli isteği yok",
+    "no_guardian_requests_body": "Bir ebeveyn genç üyelerinizden biri için ödeme yapmak istediğinde burada görünür."
   },
   "regions": {
     "label": {

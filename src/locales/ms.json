@@ -820,7 +820,8 @@
       "club_change": "Tukar kelab",
       "region_request": "Rantau",
       "club_pending": "Kelab baharu",
-      "club_decision": "Kelab"
+      "club_decision": "Kelab",
+      "guardian_link": "Pautan penjaga"
     }
   },
   "compare": {
@@ -1932,7 +1933,10 @@
     "admins_intro_payments": "Pentadbir kelab mengendalikan kejohanan yang dianjurkan kelab mereka dan menguruskan pembayaran serta yuran gabungannya. Mereka tidak mendapat akses peringkat persekutuan.",
     "last_admin_tip": "Kelab memerlukan sekurang-kurangnya seorang pentadbir. Tambah pentadbir lain sebelum mengalih keluar pentadbir ini.",
     "intro_federation": "Pautan jemputan, kod dan pentadbir kelab anda. Persekutuan anda melantik pentadbir dan menyemak permintaan peranan ahli anda.",
-    "requests_federation": "Persekutuan anda menyemak permintaan peranan ahli anda."
+    "requests_federation": "Persekutuan anda menyemak permintaan peranan ahli anda.",
+    "guardian_requests_hint": "Ibu bapa atau penjaga meminta untuk membayar bagi salah seorang ahli anda. Luluskan hanya jika anda tahu dia benar-benar ibu bapa atau penjaga kanak-kanak itu: setelah dipautkan, dia boleh membayar yuran kanak-kanak itu dan melihat jumlah yang perlu dibayar.",
+    "no_guardian_requests_title": "Tiada permintaan penjaga yang menunggu",
+    "no_guardian_requests_body": "Apabila ibu bapa meminta untuk membayar bagi salah seorang ahli muda anda, ia dipaparkan di sini."
   },
   "regions": {
     "label": {

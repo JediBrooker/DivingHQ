@@ -831,7 +831,8 @@
       "club_change": "Changement de club",
       "region_request": "Région",
       "club_pending": "Nouveau club",
-      "club_decision": "Club"
+      "club_decision": "Club",
+      "guardian_link": "Lien de tuteur"
     }
   },
   "compare": {
@@ -1932,7 +1933,10 @@
     "admins_intro_payments": "Les administrateurs du club organisent les compétitions que leur club accueille et gèrent ses versements et ses cotisations d'affiliation. Ils n'ont aucun accès à l'échelle de la fédération.",
     "last_admin_tip": "Un club doit avoir au moins un administrateur. Ajoutez un autre administrateur avant de retirer celui-ci.",
     "intro_federation": "Le lien d'invitation, le code et les administrateurs de votre club. Votre fédération nomme les administrateurs et examine les demandes de rôle de vos membres.",
-    "requests_federation": "Votre fédération examine les demandes de rôle de vos membres."
+    "requests_federation": "Votre fédération examine les demandes de rôle de vos membres.",
+    "guardian_requests_hint": "Un parent ou un tuteur demande à payer pour l'un de vos membres. N'approuvez que si vous savez qu'il s'agit bien du parent ou du tuteur de l'enfant : une fois lié, il pourra payer les frais de l'enfant et voir ce que l'enfant doit.",
+    "no_guardian_requests_title": "Aucune demande de tuteur en attente",
+    "no_guardian_requests_body": "Quand un parent demande à payer pour l'un de vos jeunes membres, la demande apparaît ici."
   },
   "regions": {
     "label": {

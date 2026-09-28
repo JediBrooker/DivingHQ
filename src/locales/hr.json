@@ -820,7 +820,8 @@
       "club_change": "Promjena kluba",
       "region_request": "Regija",
       "club_pending": "Novi klub",
-      "club_decision": "Klub"
+      "club_decision": "Klub",
+      "guardian_link": "Povezivanje skrbnika"
     }
   },
   "compare": {
@@ -1932,7 +1933,10 @@
     "admins_intro_payments": "Administratori kluba vode natjecanja koja njihov klub organizira i brinu o njegovim isplatama i članarinama. Nemaju pristup na razini saveza.",
     "last_admin_tip": "Klub mora imati barem jednog administratora. Dodajte još jednog administratora prije nego što uklonite ovog.",
     "intro_federation": "Poveznica za pozivnicu, oznaka i administratori vašeg kluba. Vaš savez imenuje administratore i obrađuje zahtjeve vaših članova za uloge.",
-    "requests_federation": "Vaš savez obrađuje zahtjeve vaših članova za uloge."
+    "requests_federation": "Vaš savez obrađuje zahtjeve vaših članova za uloge.",
+    "guardian_requests_hint": "Roditelj ili skrbnik traži da plaća za jednog od vaših članova. Odobrite samo ako znate da je to doista roditelj ili skrbnik djeteta: nakon povezivanja može plaćati djetetove naknade i vidjeti što dijete duguje.",
+    "no_guardian_requests_title": "Nema zahtjeva skrbnika na čekanju",
+    "no_guardian_requests_body": "Kad roditelj zatraži da plaća za nekog od vaših mladih članova, pojavit će se ovdje."
   },
   "regions": {
     "label": {

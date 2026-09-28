@@ -820,7 +820,8 @@
       "club_change": "クラブ変更",
       "region_request": "地域",
       "club_pending": "新しいクラブ",
-      "club_decision": "クラブ"
+      "club_decision": "クラブ",
+      "guardian_link": "保護者リンク"
     }
   },
   "compare": {
@@ -1932,7 +1933,10 @@
     "admins_intro_payments": "クラブ管理者は自クラブが主催する大会を運営し、支払いや加盟費を管理します。連盟全体へのアクセス権はありません。",
     "last_admin_tip": "クラブには少なくとも1人の管理者が必要です。この管理者を削除する前に、別の管理者を追加してください。",
     "intro_federation": "クラブの招待リンク、コード、管理者です。管理者は連盟が任命し、メンバーの役割申請も連盟が審査します。",
-    "requests_federation": "メンバーの役割申請は連盟が審査します。"
+    "requests_federation": "メンバーの役割申請は連盟が審査します。",
+    "guardian_requests_hint": "保護者があなたのメンバーの代わりに支払いたいと申請しています。本当にその子の親または保護者だと分かっている場合にのみ承認してください。リンクすると、その子の費用を支払ったり、未払いの内容を確認したりできるようになります。",
+    "no_guardian_requests_title": "保留中の保護者リクエストはありません",
+    "no_guardian_requests_body": "保護者が若いメンバーの代わりに支払いたいと申請すると、ここに表示されます。"
   },
   "regions": {
     "label": {

@@ -820,7 +820,8 @@
       "club_change": "Club change",
       "region_request": "Region",
       "club_pending": "New club",
-      "club_decision": "Club"
+      "club_decision": "Club",
+      "guardian_link": "Guardian link"
     }
   },
   "compare": {
@@ -1932,7 +1933,10 @@
     "admins_intro_payments": "Club admins run the meets their club hosts and look after its payouts and affiliation payments. They get no federation-wide access.",
     "last_admin_tip": "A club needs at least one admin. Add a co-admin before removing this one.",
     "intro_federation": "Your club's invite link, code and admins. Your federation appoints the admins and reviews your members' role requests.",
-    "requests_federation": "Your federation reviews your members' role requests."
+    "requests_federation": "Your federation reviews your members' role requests.",
+    "guardian_requests_hint": "A parent or guardian asking to pay for one of your members. Only approve someone you know is the child's parent or guardian: once linked, they can pay the child's fees and see what the child owes.",
+    "no_guardian_requests_title": "No guardian requests waiting",
+    "no_guardian_requests_body": "When a parent asks to pay for one of your young members, it shows up here."
   },
   "regions": {
     "label": {

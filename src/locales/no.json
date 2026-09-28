@@ -831,7 +831,8 @@
       "club_change": "Klubbytte",
       "region_request": "Region",
       "club_pending": "Ny klubb",
-      "club_decision": "Klubb"
+      "club_decision": "Klubb",
+      "guardian_link": "Foresattkobling"
     }
   },
   "compare": {
@@ -1932,7 +1933,10 @@
     "admins_intro_payments": "Klubbadministratorer står for stevnene klubben arrangerer og tar seg av utbetalinger og medlemskontingenter. De får ingen tilgang på forbundsnivå.",
     "last_admin_tip": "En klubb må ha minst én administrator. Legg til en medadministrator før du fjerner denne.",
     "intro_federation": "Klubbens invitasjonslenke, kode og administratorer. Forbundet ditt utnevner administratorene og behandler medlemmenes rolleforespørsler.",
-    "requests_federation": "Forbundet ditt behandler medlemmenes rolleforespørsler."
+    "requests_federation": "Forbundet ditt behandler medlemmenes rolleforespørsler.",
+    "guardian_requests_hint": "En forelder eller foresatt ber om å betale for et av medlemmene dine. Godkjenn bare hvis du vet at det virkelig er barnets forelder eller foresatte: når de er koblet, kan de betale barnets avgifter og se hva barnet skylder.",
+    "no_guardian_requests_title": "Ingen foresattforespørsler venter",
+    "no_guardian_requests_body": "Når en forelder ber om å betale for et av de unge medlemmene dine, vises det her."
   },
   "regions": {
     "label": {

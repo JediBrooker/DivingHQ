@@ -831,7 +831,8 @@
       "club_change": "Klubváltás",
       "region_request": "Régió",
       "club_pending": "Új klub",
-      "club_decision": "Klub"
+      "club_decision": "Klub",
+      "guardian_link": "Gyámkapcsolat"
     }
   },
   "compare": {
@@ -1932,7 +1933,10 @@
     "admins_intro_payments": "A klubadminok a klubjuk által rendezett versenyeket vezetik, és gondoskodnak a klub kifizetéseiről és tagdíjairól. Szövetségi szintű hozzáférést nem kapnak.",
     "last_admin_tip": "Egy klubnak legalább egy adminisztrátorra van szüksége. Adjon hozzá egy másik adminisztrátort, mielőtt ezt eltávolítja.",
     "intro_federation": "A klub meghívó linkje, kódja és adminisztrátorai. Az adminisztrátorokat a szövetsége nevezi ki, és a tagok szerepkör-kérelmeit is ő bírálja el.",
-    "requests_federation": "A tagok szerepkör-kérelmeit a szövetsége bírálja el."
+    "requests_federation": "A tagok szerepkör-kérelmeit a szövetsége bírálja el.",
+    "guardian_requests_hint": "Egy szülő vagy gyám kéri, hogy fizethessen az egyik tagja helyett. Csak akkor hagyja jóvá, ha tudja, hogy valóban a gyermek szülője vagy gyámja: az összekapcsolás után fizetheti a gyermek díjait, és láthatja, mivel tartozik a gyermek.",
+    "no_guardian_requests_title": "Nincs függőben lévő gyámkérelem",
+    "no_guardian_requests_body": "Ha egy szülő kéri, hogy fizethessen valamelyik fiatal tagja helyett, itt jelenik meg."
   },
   "regions": {
     "label": {

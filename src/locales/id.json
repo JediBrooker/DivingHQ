@@ -820,7 +820,8 @@
       "club_change": "Pindah klub",
       "region_request": "Wilayah",
       "club_pending": "Klub baru",
-      "club_decision": "Klub"
+      "club_decision": "Klub",
+      "guardian_link": "Tautan wali"
     }
   },
   "compare": {
@@ -1932,7 +1933,10 @@
     "admins_intro_payments": "Admin klub menjalankan kompetisi yang diselenggarakan klubnya dan mengurus pembayaran serta iuran afiliasinya. Mereka tidak mendapat akses tingkat federasi.",
     "last_admin_tip": "Klub memerlukan setidaknya satu admin. Tambahkan admin lain sebelum menghapus admin ini.",
     "intro_federation": "Tautan undangan, kode, dan admin klub Anda. Federasi Anda menunjuk admin dan meninjau permintaan peran anggota Anda.",
-    "requests_federation": "Federasi Anda meninjau permintaan peran anggota Anda."
+    "requests_federation": "Federasi Anda meninjau permintaan peran anggota Anda.",
+    "guardian_requests_hint": "Orang tua atau wali meminta untuk membayar bagi salah satu anggota Anda. Setujui hanya jika Anda tahu dia benar-benar orang tua atau wali anak tersebut: setelah ditautkan, dia dapat membayar biaya anak itu dan melihat tagihan anak tersebut.",
+    "no_guardian_requests_title": "Tidak ada permintaan wali yang menunggu",
+    "no_guardian_requests_body": "Saat orang tua meminta untuk membayar bagi salah satu anggota muda Anda, permintaan itu muncul di sini."
   },
   "regions": {
     "label": {
