@@ -1090,7 +1090,9 @@
     "orgs_need_country_title": "Organisationer utan land ({n})",
     "orgs_need_country_hint": "Registreringar hittar sitt förbund efter land, så ingen kan gå med i dessa förrän de har ett.",
     "org_suspended": "Avstängd",
-    "orgs_show_all": "Visa alla {n}"
+    "orgs_show_all": "Visa alla {n}",
+    "guardian_requests_title": "Förfrågningar om vårdnadshavarkoppling",
+    "guardian_request_for": "Vill vara vårdnadshavare för {name}"
   },
   "setup": {
     "title": "Förbundsuppsättning",

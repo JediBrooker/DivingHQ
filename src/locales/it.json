@@ -1090,7 +1090,9 @@
     "orgs_need_country_title": "Organizzazioni senza paese ({n})",
     "orgs_need_country_hint": "Le iscrizioni trovano la propria federazione in base al paese, quindi nessuno può unirsi a queste finché non ne hanno uno.",
     "org_suspended": "Sospesa",
-    "orgs_show_all": "Mostra tutte ({n})"
+    "orgs_show_all": "Mostra tutte ({n})",
+    "guardian_requests_title": "Richieste di collegamento come tutore",
+    "guardian_request_for": "Vuole agire come tutore di {name}"
   },
   "setup": {
     "title": "Configurazione federazione",

@@ -1079,7 +1079,9 @@
     "orgs_need_country_title": "Organizaciones sin país ({n})",
     "orgs_need_country_hint": "Los registros encuentran su federación por país, así que nadie puede unirse a estas hasta que tengan uno.",
     "org_suspended": "Suspendida",
-    "orgs_show_all": "Ver las {n}"
+    "orgs_show_all": "Ver las {n}",
+    "guardian_requests_title": "Solicitudes de vínculo de tutor",
+    "guardian_request_for": "Quiere actuar como tutor de {name}"
   },
   "setup": {
     "title": "Configuración de la federación",

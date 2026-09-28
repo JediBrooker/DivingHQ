@@ -1090,7 +1090,9 @@
     "orgs_need_country_title": "Organisasjoner uten land ({n})",
     "orgs_need_country_hint": "Registreringer finner forbundet sitt etter land, så ingen kan bli med i disse før de har et.",
     "org_suspended": "Suspendert",
-    "orgs_show_all": "Vis alle {n}"
+    "orgs_show_all": "Vis alle {n}",
+    "guardian_requests_title": "Forespørsler om foresattkobling",
+    "guardian_request_for": "Vil være foresatt for {name}"
   },
   "setup": {
     "title": "Forbundsoppsett",

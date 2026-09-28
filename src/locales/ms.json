@@ -1079,7 +1079,9 @@
     "orgs_need_country_title": "Organisasi tanpa negara ({n})",
     "orgs_need_country_hint": "Pendaftar mencari persekutuan mereka mengikut negara, jadi tiada sesiapa boleh menyertai organisasi ini sehingga negaranya ditetapkan.",
     "org_suspended": "Digantung",
-    "orgs_show_all": "Tunjuk semua {n}"
+    "orgs_show_all": "Tunjuk semua {n}",
+    "guardian_requests_title": "Permintaan pautan penjaga",
+    "guardian_request_for": "Mahu bertindak sebagai penjaga untuk {name}"
   },
   "setup": {
     "title": "Penyediaan persekutuan",

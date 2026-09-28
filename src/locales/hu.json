@@ -1090,7 +1090,9 @@
     "orgs_need_country_title": "Ország nélküli szervezetek ({n})",
     "orgs_need_country_hint": "A regisztrálók ország alapján találják meg a szövetségüket, így ezekhez senki sem tud csatlakozni, amíg nincs országuk.",
     "org_suspended": "Felfüggesztve",
-    "orgs_show_all": "Mind a(z) {n} megjelenítése"
+    "orgs_show_all": "Mind a(z) {n} megjelenítése",
+    "guardian_requests_title": "Gondviselői kapcsolási kérelmek",
+    "guardian_request_for": "Gondviselőként szeretne eljárni: {name}"
   },
   "setup": {
     "title": "Szövetség beállítása",

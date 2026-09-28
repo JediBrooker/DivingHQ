@@ -1079,7 +1079,9 @@
     "orgs_need_country_title": "Ülkesi olmayan kuruluşlar ({n})",
     "orgs_need_country_hint": "Kayıt olanlar federasyonlarını ülkeye göre bulur, bu yüzden bir ülke atanana kadar kimse bunlara katılamaz.",
     "org_suspended": "Askıya alındı",
-    "orgs_show_all": "Tümünü göster ({n})"
+    "orgs_show_all": "Tümünü göster ({n})",
+    "guardian_requests_title": "Veli bağlantı talepleri",
+    "guardian_request_for": "{name} için veli olmak istiyor"
   },
   "setup": {
     "title": "Federasyon Kurulumu",

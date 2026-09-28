@@ -1079,7 +1079,9 @@
     "orgs_need_country_title": "Organizacije bez države ({n})",
     "orgs_need_country_hint": "Prijave pronalaze svoj savez prema državi, pa im se nitko ne može pridružiti dok je nemaju.",
     "org_suspended": "Suspendirano",
-    "orgs_show_all": "Prikaži svih {n}"
+    "orgs_show_all": "Prikaži svih {n}",
+    "guardian_requests_title": "Zahtjevi za povezivanje skrbnika",
+    "guardian_request_for": "Želi biti skrbnik za {name}"
   },
   "setup": {
     "title": "Postavljanje federacije",

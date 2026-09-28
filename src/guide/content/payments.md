@@ -69,8 +69,8 @@ Scratch and no-show charges are issued by the event manager during or after the 
 Guardians can pay fees on behalf of minors they are linked to.
 
 1. Visit `/guardians` ("My Dependents").
-2. Search for a minor by name and send a link request.
-3. An administrator approves the request.
+2. Search for the diver by name (it looks within your own federation) and send a link request.
+3. An org admin approves it under **User Manager → Requests → Guardian link requests**.
 4. Once linked, a **Paying for** dropdown appears at the top of the Membership page: *Yourself* or *[Dependent Name (age)]*.
 5. Select the dependent — the price resolves for them (for example, junior-tier membership pricing).
 6. At checkout, the session carries a `subject_user_id` so the server validates the guardian relationship before processing.
