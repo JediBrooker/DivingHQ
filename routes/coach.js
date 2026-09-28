@@ -25,6 +25,7 @@ const express = require("express");
 const { recordAudit } = require("../lib/audit");
 const submitDiveList = require("../lib/dive-list-submit");
 const { perDivePointsCte } = require("../lib/scoring-sql");
+const { uuidParams } = require("../lib/uuid-params");
 
 module.exports = function createCoachRouter({
   pool,
@@ -33,9 +34,13 @@ module.exports = function createCoachRouter({
   bulkWriteLimiter,
   loadEventForEntries,
   push,
+  io = null,
+  scoreboardCache = null,
 }) {
   if (!pool) throw new Error("createCoachRouter requires { pool, … }");
   const router = express.Router();
+  // Malformed path ids fall through to a 404 (lib/uuid-params).
+  uuidParams(router, "event_id", "diver_id", "id");
 
   // Helper: checks that the logged-in coach actually has a
   // coach_diver_links row for the target diver, either within the
@@ -223,15 +228,22 @@ module.exports = function createCoachRouter({
          /* Standings per event so we can attach a current rank.
             We carry round_number through so we can also surface
             the per-round dive total for the "last completed dive"
-            display below. */
+            display below. A team event ranks teams, like its
+            standings, so a member's card shows the team's total and
+            place (unit_id is the team there, the diver otherwise). */
          ${perDivePointsCte({
-           select:      ["s.event_id", "s.competitor_id", "s.round_number"],
+           select:      ["s.event_id", "s.competitor_id", "cdl.team_id", "s.round_number"],
            pointsAlias: "pts",
            where:       "s.event_id IN (SELECT event_id FROM upcoming_raw)",
          })},
          totals AS (
-           SELECT event_id, competitor_id, SUM(pts)::numeric(8,2) AS total
-           FROM per_dive GROUP BY event_id, competitor_id
+           SELECT pd.event_id,
+                  CASE WHEN e.event_type = 'team' THEN pd.team_id ELSE pd.competitor_id END AS unit_id,
+                  SUM(pd.pts)::numeric(8,2) AS total
+           FROM per_dive pd
+           JOIN events e ON e.id = pd.event_id
+           WHERE e.event_type <> 'team' OR pd.team_id IS NOT NULL
+           GROUP BY 1, 2
          ),
          ranked AS (
            SELECT *, RANK() OVER (PARTITION BY event_id ORDER BY total DESC) AS rnk,
@@ -239,7 +251,11 @@ module.exports = function createCoachRouter({
            FROM totals
          )
          SELECT md.id AS diver_id, md.full_name, md.username,
-                md.country_code, md.club_name, md.club_code,
+                /* A card about an event shows the meet's representation
+                   code (migration 090), like the scoreboard does. */
+                CASE WHEN nd.event_id IS NULL THEN md.country_code
+                     ELSE event_rep_code(nd.event_id, md.id, md.country_code) END AS country_code,
+                md.club_name, md.club_code,
                 md.note,
                 nd.event_id, nd.event_name, nd.status AS event_status,
                 nd.event_type, nd.height,
@@ -262,7 +278,13 @@ module.exports = function createCoachRouter({
          FROM my_divers md
          LEFT JOIN next_dive nd ON nd.competitor_id = md.id
          LEFT JOIN ranked r
-           ON r.event_id = nd.event_id AND r.competitor_id = md.id
+           ON r.event_id = nd.event_id
+          AND r.unit_id = CASE WHEN nd.event_type = 'team'
+                THEN (SELECT l.team_id FROM competitor_dive_lists l
+                       WHERE l.event_id = nd.event_id AND l.competitor_id = md.id
+                         AND l.team_id IS NOT NULL
+                       LIMIT 1)
+                ELSE md.id END
          LEFT JOIN last_completed_round lcr
            ON lcr.event_id = nd.event_id AND lcr.competitor_id = md.id
          LEFT JOIN per_dive lpd
@@ -377,7 +399,9 @@ module.exports = function createCoachRouter({
                   cdl.display_order,
                   ap.event_name, ap.event_type, ap.meet_id, ap.meet_name,
                   ap.active_round, ap.active_display_order, ap.slots_in_round,
-                  md.full_name, md.country_code, md.club_name, md.club_code,
+                  md.full_name,
+                  event_rep_code(cdl.event_id, cdl.competitor_id, md.country_code) AS country_code,
+                  md.club_name, md.club_code,
                   d.dive_code, d.position, d.dd, d.description
            FROM competitor_dive_lists cdl
            JOIN my_divers md ON md.id = cdl.competitor_id
@@ -675,7 +699,9 @@ module.exports = function createCoachRouter({
               WHERE cdl.event_id = $2
                 AND cdl.competitor_id IN (SELECT id FROM my_divers)
            )
-           SELECT md.id AS diver_id, md.full_name, md.country_code,
+           SELECT md.id AS diver_id, md.full_name,
+                  /* The meet's representation code (migration 090). */
+                  event_rep_code($2, md.id, md.country_code) AS country_code,
                   md.club_name, md.club_code, md.org_id,
                   md.coach_host_federation,
                   md.coach_invited_federation,
@@ -942,9 +968,11 @@ module.exports = function createCoachRouter({
   //
   // Audit-logged as `coach.withdraw_dive_list` so the operator can
   // see at a glance "Tom was withdrawn by his coach @ 14:32, reason:
-  // shoulder injury". On the live Control Room the operator gets a
-  // meet_held-style banner so they're not blindsided when the diver
-  // disappears from the queue.
+  // shoulder injury". The event's room hears `roster_changed`, so a live
+  // Control Room reloads its queue and tells the operator rather than
+  // leaving them to call a diver who has gone (it used to load the roster
+  // once and never hear about this). Only ids go on the wire: spectators
+  // sit in that room too, and the reason can be medical.
   // -------------------------------------------------------------
   router.post(
     "/api/coach/dive-lists/:event_id/:diver_id/withdraw",
@@ -1050,6 +1078,12 @@ module.exports = function createCoachRouter({
         });
 
         await client.query("COMMIT");
+        // Withdrawn divers keep the dives they already did, but the cached
+        // scoreboard payload still has them queued up next.
+        scoreboardCache?.invalidate(event_id);
+        io?.to(`event:${event_id}`).emit("roster_changed", {
+          event_id, competitor_id: diver_id, change: "withdrawn",
+        });
         if (push && typeof push.sendNotification === "function") {
           try {
             await push.sendNotification([diver_id], {
@@ -1221,10 +1255,16 @@ module.exports = function createCoachRouter({
             .json({ error: "Both users must belong to the target organisation" });
         }
       }
+      // One link per (coach, diver), whichever federation made it. Both
+      // users are in this org (checked above), so a link still pointing
+      // at a federation they've left moves here. Updating only the note
+      // left it there: this org got a 201 for a link it couldn't list,
+      // delete or use (requireCoachLink matches link.org_id).
       const r = await pool.query(
         `INSERT INTO coach_diver_links (coach_id, diver_id, org_id, note)
          VALUES ($1, $2, $3, $4)
-         ON CONFLICT (coach_id, diver_id) DO UPDATE SET note = EXCLUDED.note
+         ON CONFLICT (coach_id, diver_id) DO UPDATE
+           SET note = EXCLUDED.note, org_id = EXCLUDED.org_id
          RETURNING id, coach_id, diver_id, note, created_at`,
         [coach_id, diver_id, req.params.id, note || null],
       );

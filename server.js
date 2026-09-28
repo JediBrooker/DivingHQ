@@ -948,6 +948,10 @@ app.use(require("./routes/coach")({
   bulkWriteLimiter,
   loadEventForEntries,
   push,
+  // A mid-event withdrawal tells the Control Room (roster_changed) and
+  // drops the cached scoreboard.
+  io,
+  scoreboardCache,
 }));
 
 // =============================================================
@@ -1450,7 +1454,7 @@ app.use(limitRoutes(createSearchLimiter(), require("./routes/dr-archive")({ pool
 // the local csvCell / csvRow helpers and the World Aquatics trim
 // annotation used by the score sheet.
 // =============================================================
-app.use(limitRoutes(createExportLimiter(), require("./routes/pdf")({ pool })));
+app.use(limitRoutes(createExportLimiter(), require("./routes/pdf")({ pool, optionalAuth })));
 
 // =============================================================
 // JUDGE RANKING ANALYSIS
@@ -1461,7 +1465,7 @@ app.use(limitRoutes(createExportLimiter(), require("./routes/pdf")({ pool })));
 // + PDF exports for federation reporting. See routes/judge-
 // ranking.js for the rationale (public read; v1 individual only).
 // =============================================================
-app.use(limitRoutes(createExportLimiter(), require("./routes/judge-ranking")({ pool })));
+app.use(limitRoutes(createExportLimiter(), require("./routes/judge-ranking")({ pool, optionalAuth })));
 
 // =============================================================
 // PUBLIC DIVER PROFILE

@@ -38,9 +38,40 @@ const EVENT_DATE_FILTER = `
     AND ($3::date IS NULL OR ${EVENT_DATE} < $3::date + INTERVAL '1 day')`;
 
 // =====================================================================
+// diverDivesWhere: WHERE fragment for "this diver's scored dives".
+//
+// Their own, plus a synchro pair's dives when the roster stored the pair
+// once under the lead (Control Room import, manual add): the scores sit
+// under the lead's competitor_id and cdl.partner_id names this diver.
+// Profiles and analytics only matched s.competitor_id, so a partner's
+// synchro events were missing from their profile altogether. The
+// partner side only counts when the diver has no scores of their own in
+// that event, because the consent flow (lib/dive-list-submit.js) writes a
+// mirror row per partner and then each side is scored on its own.
+//
+// Needs the canonical cdl join (lib/scoring-sql perDiveJoins, or the
+// same ON clause). `param` is the placeholder bound to the diver id. The
+// IN (...) up front lets the planner use the scores competitor index
+// instead of scanning every score for the OR.
+// =====================================================================
+function diverDivesWhere(param = "$1") {
+  return `s.competitor_id IN (
+      SELECT ${param}::uuid
+      UNION
+      SELECT pl.competitor_id FROM competitor_dive_lists pl WHERE pl.partner_id = ${param}
+    )
+    AND (s.competitor_id = ${param}
+      OR (cdl.partner_id = ${param}
+          AND NOT EXISTS (SELECT 1 FROM scores own
+                           WHERE own.event_id = s.event_id AND own.competitor_id = ${param})))`;
+}
+
+// =====================================================================
 // PER_DIVE: one row per dive the diver performed.
 //
-// Filters to a single competitor and (optionally) a date range.
+// Filters to a single diver (diverDivesWhere, so a synchro partner gets
+// the pair's dives) and (optionally) a date range. competitor_id comes
+// back as the diver's own id either way, the callers filter on it.
 // Columns:
 //   event_id, competitor_id, round_number,
 //   dive_code, position, height, dd, description,
@@ -54,13 +85,13 @@ const EVENT_DATE_FILTER = `
 // =====================================================================
 const PER_DIVE = perDiveSelect({
   select: [
-    "s.event_id", "s.competitor_id", "s.round_number",
+    "s.event_id", "$1::uuid AS competitor_id", "s.round_number",
     "d.dive_code", "d.position", "d.height", "d.dd", "d.description",
     "e.event_type::text AS event_type", `${EVENT_DATE} AS created_at`,
   ],
   pointsAlias: "dive_total",
   selectExtra: ["AVG(s.score) AS avg_judge_score"],
-  where: `s.competitor_id = $1
+  where: `${diverDivesWhere("$1")}
     AND COALESCE(e.is_rehearsal, FALSE) = FALSE${EVENT_DATE_FILTER}`,
   groupBy: [
     "s.event_id", "s.competitor_id", "s.round_number",
@@ -72,19 +103,29 @@ const PER_DIVE = perDiveSelect({
 // =====================================================================
 // FULL_FIELD_RANKING: for queries that need the diver's RANK against
 // every competitor in their events (recent_form, placings, streak,
-// year_over_year). Returns a chain of CTEs you splice into a parent
-// WITH clause:
+// year_over_year, the profile trend, the public profile). Returns a
+// chain of CTEs you splice into a parent WITH clause:
 //
 //   WITH ${FULL_FIELD_RANKING}
-//   SELECT … FROM my_events WHERE …
+//   SELECT … FROM ranked r WHERE r.competitor_id = $1
 //
 // CTE chain:
-//   diver_events  : { event_id }   the events the diver competed in
+//   diver_events  : { event_id, scored_as } the events the diver has a
+//                   result in, and whose rows carry it: the diver's own,
+//                   or the lead's for a synchro pair stored under the
+//                   lead (see diverDivesWhere)
 //   all_per_dive  : every dive in those events, by every competitor
-//   event_totals  : per-(event, competitor) sum of dive points
-//   ranked        : event_totals + RANK() by total, plus an
-//                   `is_tied_on_total` flag for the "=" marker and the
-//                   field size.
+//   unit_totals   : per-(event, unit) sum of dive points. The unit is
+//                   what the event ranks: the team in a team event,
+//                   the diver otherwise.
+//   unit_ranked   : unit_totals + RANK() over total, `is_tied_on_total`
+//                   (the "=" marker) and `field_size`
+//   ranked        : the diver's row per event: competitor_id = $1 and
+//                   their unit's total, rank, tie flag and field size
+//
+// Team events: standings rank teams (teamStandingsCte), so a member gets
+// their team's total and place, out of the number of teams. Ranking the
+// members against each other printed a team's gold as a member's bronze.
 //
 // Required params:
 //   $1 = competitor_id (uuid), the diver of interest
@@ -100,36 +141,65 @@ const PER_DIVE = perDiveSelect({
 // and results PDF all had them joint 9th, or cost them a shared bronze
 // in the placings widget. RANK() over the total alone matches those
 // surfaces (routes/scoreboard.js, routes/archive.js).
+//
+// fullFieldRanking({ latest: n }) is the same chain cut down to the
+// diver's n most recent events (created_at, id breaking ties) before
+// anything gets ranked. A place only depends on its own event's field,
+// so the public profile's "last 5 meets" doesn't have to rank a whole
+// career to keep five rows of it. FULL_FIELD_RANKING is the uncut one.
 // =====================================================================
-const FULL_FIELD_RANKING = `
-  diver_events AS (
-    SELECT DISTINCT s.event_id
+function fullFieldRanking({ latest = null } = {}) {
+  const scoredIn = `
+    SELECT DISTINCT s.event_id, s.competitor_id AS scored_as
     FROM scores s
     JOIN events e ON e.id = s.event_id
-    WHERE s.competitor_id = $1
-      AND COALESCE(e.is_rehearsal, FALSE) = FALSE${EVENT_DATE_FILTER}
+    LEFT JOIN competitor_dive_lists cdl
+      ON cdl.event_id = s.event_id
+     AND cdl.competitor_id = s.competitor_id
+     AND cdl.round_number = s.round_number
+    WHERE ${diverDivesWhere("$1")}
+      AND COALESCE(e.is_rehearsal, FALSE) = FALSE${EVENT_DATE_FILTER}`;
+  let diverEvents = scoredIn;
+  if (latest != null) {
+    if (!Number.isInteger(latest) || latest < 1) {
+      throw new Error(`fullFieldRanking: latest must be a positive integer, got ${latest}`);
+    }
+    diverEvents = `
+    SELECT de.event_id, de.scored_as
+    FROM (${scoredIn}
+    ) de
+    JOIN events e ON e.id = de.event_id
+    ORDER BY e.created_at DESC, e.id DESC
+    LIMIT ${latest}`;
+  }
+  return `
+  diver_events AS (${diverEvents}
   ),
   ${perDivePointsCte({
     name:   "all_per_dive",
-    select: ["s.event_id", "s.competitor_id", "s.round_number"],
+    select: ["s.event_id", "s.competitor_id", "cdl.team_id", "s.round_number"],
     where:  "s.event_id IN (SELECT event_id FROM diver_events)",
   })},
-  event_totals AS (
-    SELECT event_id, competitor_id,
-           SUM(dive_points) AS total
-    FROM all_per_dive
-    GROUP BY event_id, competitor_id
+  unit_totals AS (
+    SELECT apd.event_id,
+           CASE WHEN e.event_type = 'team' THEN apd.team_id ELSE apd.competitor_id END AS unit_id,
+           SUM(apd.dive_points) AS total
+    FROM all_per_dive apd
+    JOIN events e ON e.id = apd.event_id
+    /* A team-event dive with no team isn't on the standings either. */
+    WHERE e.event_type <> 'team' OR apd.team_id IS NOT NULL
+    GROUP BY 1, 2
   ),
-  ranked AS (
-    SELECT et.*,
+  unit_ranked AS (
+    SELECT ut.*,
            RANK() OVER (
-             PARTITION BY et.event_id
-             ORDER BY et.total DESC
+             PARTITION BY ut.event_id
+             ORDER BY ut.total DESC
            ) AS rank,
            /* True when 2+ rows in this event share the SAME total, i.e.
               share a place. The UI shows an "=" marker for it. */
            COUNT(*) OVER (
-             PARTITION BY et.event_id, et.total
+             PARTITION BY ut.event_id, ut.total
            ) > 1 AS is_tied_on_total,
            /* field_size precomputed here (not in the outer SELECT)
               because outer queries filter to the diver via
@@ -137,10 +207,26 @@ const FULL_FIELD_RANKING = `
               WHERE so a window in the outer query would see only
               the one row and return 1. Computing it inside the
               CTE lets recent_form and friends just select it. */
-           COUNT(*) OVER (PARTITION BY et.event_id)::int AS field_size
-    FROM event_totals et
+           COUNT(*) OVER (PARTITION BY ut.event_id)::int AS field_size
+    FROM unit_totals ut
+  ),
+  ranked AS (
+    SELECT de.event_id, $1::uuid AS competitor_id, de.scored_as,
+           ur.unit_id, ur.total, ur.rank, ur.is_tied_on_total, ur.field_size
+    FROM diver_events de
+    JOIN events e ON e.id = de.event_id
+    JOIN unit_ranked ur
+      ON ur.event_id = de.event_id
+     AND ur.unit_id = CASE WHEN e.event_type = 'team'
+           THEN (SELECT apd.team_id FROM all_per_dive apd
+                  WHERE apd.event_id = de.event_id AND apd.competitor_id = de.scored_as
+                    AND apd.team_id IS NOT NULL
+                  LIMIT 1)
+           ELSE de.scored_as END
   )
 `;
+}
+const FULL_FIELD_RANKING = fullFieldRanking();
 
 // =====================================================================
 // JUDGE_PER_DIVE: one row per (judge, dive) the judge scored.
@@ -218,7 +304,10 @@ const JUDGE_PER_DIVE = `
        the analysis. */
     cu.org_id                              AS diver_org_id,
     co.country_code                        AS diver_country_code,
-    cu.club_id                             AS diver_club_id,
+    /* From the approved-clubs join, not cu.club_id: the club breakdown
+       is public and a pending club's id and code stay private
+       (migration 096). */
+    cl.id                                  AS diver_club_id,
     cl.short_code                          AS diver_club_code,
     cu.full_name                           AS diver_name,
     /* Panel context: the full panel's scores for THIS dive,
@@ -280,7 +369,7 @@ const JUDGE_PER_DIVE = `
     ON d.id = COALESCE(s.dive_id, cdl.dive_id)
   LEFT JOIN users cu ON cu.id = s.competitor_id
   LEFT JOIN organisations co ON co.id = cu.org_id
-  LEFT JOIN clubs cl ON cl.id = cu.club_id
+  LEFT JOIN clubs cl ON cl.id = cu.club_id AND cl.status = 'active'
   /* Panel-level rollup for the same (event, competitor, round).
        drop_count = 2 for 7-judge, 1 for 5-judge, 3 for 11-judge,
                     2 for 9-judge, 0 otherwise.
@@ -331,4 +420,7 @@ const JUDGE_PER_DIVE = `
     AND COALESCE(e.is_rehearsal, FALSE) = FALSE${EVENT_DATE_FILTER}
 `;
 
-module.exports = { EVENT_DATE, EVENT_DATE_FILTER, PER_DIVE, FULL_FIELD_RANKING, JUDGE_PER_DIVE };
+module.exports = {
+  EVENT_DATE, EVENT_DATE_FILTER, PER_DIVE, FULL_FIELD_RANKING, fullFieldRanking,
+  JUDGE_PER_DIVE, diverDivesWhere,
+};

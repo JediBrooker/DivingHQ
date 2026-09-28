@@ -27,6 +27,10 @@ const {
   compStandingsCte,
   eventRepCodesCte,
   PUBLIC_PANEL_SQL,
+  ownStageScores,
+  carriedStageScores,
+  standingsScoreScope,
+  standingsPerDiveCte,
 } = require("../lib/scoring-sql");
 
 // ---------------------------------------------------------------
@@ -171,41 +175,34 @@ const CALL_SITES = [
     expect: (sql) =>
       assert.ok(sql.includes("GROUP BY e.number_of_judges, e.event_type")),
   },
-  // The scoreboard standings per_dive is a UNION of these two branches
-  // (own stage, then the super-final carry-forward stage). One OR'd
-  // event filter kept the planner from pushing the event id into the
-  // cdl/event_judges joins.
+  // The standings per_dive (standingsPerDiveCte: the scoreboard, the
+  // recap, results.pdf/.csv and the score sheet) is a UNION of these two
+  // branches, the event's own stage and the Super Final carry-forward
+  // stage. One OR'd event filter kept the planner from pushing the event
+  // id into the cdl/event_judges joins.
   {
-    site: "routes/scoreboard.js standings, own-stage branch",
+    site: "standingsPerDiveCte own-stage branch (routes/scoreboard.js standings; routes/pdf.js results.pdf, and the unit standings behind results.csv and the score sheet)",
     sql: () => perDiveSelect({
       select: ["s.competitor_id", "cdl.team_id", "s.event_id", "s.round_number"],
-      where: `s.event_id = $1
-  AND s.competitor_id IN (
-               SELECT competitor_id FROM competitor_dive_lists
-                WHERE event_id = $1
-                  AND withdrawn_at IS NULL
-                  AND is_reserve = FALSE
-             )`,
+      where:  ownStageScores(),
     }),
     pointsAlias: "dive_points",
-    where: "s.event_id = $1\n  AND s.competitor_id IN (",
-    expect: (sql) => assert.ok(sql.includes(
-      "GROUP BY s.competitor_id, cdl.team_id, s.event_id, s.round_number, e.number_of_judges, e.event_type")),
+    where: "WHERE (s.event_id = $1 AND COALESCE(cdl.is_reserve, FALSE) = FALSE)",
+    expect: (sql) => {
+      // A withdrawn diver keeps the dives they did.
+      assert.ok(!sql.includes("withdrawn_at"));
+      assert.ok(sql.includes(
+        "GROUP BY s.competitor_id, cdl.team_id, s.event_id, s.round_number, e.number_of_judges, e.event_type"));
+    },
   },
   {
-    site: "routes/scoreboard.js standings, carry-forward branch",
+    site: "standingsPerDiveCte carry-forward branch",
     sql: () => perDiveSelect({
       select: ["s.competitor_id", "cdl.team_id", "s.event_id", "s.round_number"],
-      where: `s.event_id = (SELECT score_carry_from FROM events WHERE id = $1)
-  AND s.competitor_id IN (
-               SELECT competitor_id FROM competitor_dive_lists
-                WHERE event_id = $1
-                  AND withdrawn_at IS NULL
-                  AND is_reserve = FALSE
-             )`,
+      where:  carriedStageScores(),
     }),
     pointsAlias: "dive_points",
-    where: "s.event_id = (SELECT score_carry_from FROM events WHERE id = $1)",
+    where: "WHERE (s.event_id = (SELECT score_carry_from FROM events WHERE id = $1)",
     expect: (sql) => {
       // No OR left in the filter, each branch pins one event id.
       assert.ok(!/\bOR\b/.test(sql.slice(sql.indexOf("WHERE"))));
@@ -220,13 +217,7 @@ const CALL_SITES = [
       select:      ["s.competitor_id", "0 AS round_number"],
       groupBy:     ["s.competitor_id", "s.round_number"],
       pointsAlias: "round_total",
-      where: `s.event_id = (SELECT score_carry_from FROM events WHERE id = $1)
-             AND s.competitor_id IN (
-               SELECT competitor_id FROM competitor_dive_lists
-                WHERE event_id = $1
-                  AND withdrawn_at IS NULL
-                  AND is_reserve = FALSE
-             )`,
+      where:       carriedStageScores(),
     }),
     pointsAlias: "round_total",
     where: "score_carry_from",
@@ -268,7 +259,8 @@ const CALL_SITES = [
     site: "db/queries.js FULL_FIELD_RANKING all_per_dive",
     sql: () => perDivePointsCte({
       name:   "all_per_dive",
-      select: ["s.event_id", "s.competitor_id", "s.round_number"],
+      // team_id so unit_totals can rank the team in a team event.
+      select: ["s.event_id", "s.competitor_id", "cdl.team_id", "s.round_number"],
       where:  "s.event_id IN (SELECT event_id FROM diver_events)",
     }),
     pointsAlias: "dive_points",
@@ -579,18 +571,6 @@ const CALL_SITES = [
     expect: (sql) => assert.ok(sql.includes("AS judges_json")),
   },
   {
-    site: "routes/pdf.js score-sheet placing + results.csv placings per_dive",
-    sql: () => perDivePointsCte({
-      select:      ["s.competitor_id"],
-      pointsAlias: "pts",
-      groupBy:     ["s.competitor_id", "s.round_number"],
-    }),
-    pointsAlias: "pts",
-    where: "s.event_id = $1",
-    expect: (sql) =>
-      assert.ok(sql.includes("GROUP BY s.competitor_id, s.round_number,")),
-  },
-  {
     site: "routes/pdf.js results.csv dives",
     sql: () => perDiveSelect({
       select: [
@@ -622,15 +602,6 @@ const CALL_SITES = [
     dd: "d.dd",
     where: "s.event_id = $1",
     expect: (sql) => assert.ok(sql.includes("LEFT JOIN teams tm ON tm.id = cdl.team_id")),
-  },
-  {
-    site: "routes/pdf.js results.pdf standings per_dive",
-    sql: () => perDivePointsCte({ select: ["s.competitor_id", "cdl.team_id", "s.round_number"] }),
-    pointsAlias: "dive_points",
-    where: "s.event_id = $1",
-    // teamStandingsCte() reads pd.team_id, so it has to be projected.
-    expect: (sql) => assert.ok(sql.includes(
-      "GROUP BY s.competitor_id, cdl.team_id, s.round_number, e.number_of_judges, e.event_type")),
   },
   {
     site: "routes/pdf.js results.pdf dive results",
@@ -672,16 +643,17 @@ const CALL_SITES = [
     },
   },
   {
-    site: "routes/archive.js results standings per_dive",
-    sql: () => perDivePointsCte({
-      select: ["s.competitor_id", "cdl.team_id", "s.round_number"],
-      where: `s.event_id = $1
-               AND COALESCE(e.is_rehearsal, FALSE) = FALSE`,
+    site: "routes/archive.js recap standings (standingsPerDiveCte own-stage branch + rehearsal filter)",
+    sql: () => perDiveSelect({
+      select: ["s.competitor_id", "cdl.team_id", "s.event_id", "s.round_number"],
+      where: `${ownStageScores()}\n  AND COALESCE(e.is_rehearsal, FALSE) = FALSE`,
     }),
     pointsAlias: "dive_points",
     where: "COALESCE(e.is_rehearsal, FALSE) = FALSE",
+    // The stage is grouped so a carried round 1 can't merge with this
+    // stage's round 1.
     expect: (sql) => assert.ok(sql.includes(
-      "GROUP BY s.competitor_id, cdl.team_id, s.round_number, e.number_of_judges, e.event_type")),
+      "GROUP BY s.competitor_id, cdl.team_id, s.event_id, s.round_number, e.number_of_judges, e.event_type")),
   },
   {
     site: "routes/archive.js results history",
@@ -968,4 +940,45 @@ test("eventRepCodesCte: name, event placeholder and competitor source are the ca
   // Partners always come off the dive list.
   assert.ok(sql.includes("SELECT partner_id FROM competitor_dive_lists"));
   assert.ok(!sql.includes("$1"));
+});
+
+test("standingsScoreScope: own dives (withdrawn included), plus the carried stage for divers in this one", () => {
+  const own = ownStageScores();
+  assert.ok(own.includes("s.event_id = $1"));
+  assert.ok(own.includes("COALESCE(cdl.is_reserve, FALSE) = FALSE"), "reserves don't count");
+  assert.ok(!own.includes("withdrawn_at"), "a withdrawn diver keeps the dives they did");
+  const carried = carriedStageScores({ eventId: "$3" });
+  assert.ok(carried.includes("SELECT score_carry_from FROM events WHERE id = $3"));
+  assert.ok(carried.includes("r.withdrawn_at IS NULL"), "on this stage's active roster");
+  assert.ok(carried.includes("FROM scores sc WHERE sc.event_id = $3"), "or already scored in it");
+  assert.ok(!carried.includes("$1"));
+  const both = standingsScoreScope();
+  assert.ok(both.includes(own) && both.includes(carriedStageScores()));
+  assert.ok(/\)\n OR \(/.test(both));
+});
+
+test("standingsPerDiveCte: the scope as a UNION of the own and carried stages", () => {
+  const select = ["s.competitor_id", "cdl.team_id", "s.event_id", "s.round_number"];
+  const sql = standingsPerDiveCte({ select, and: "COALESCE(e.is_rehearsal, FALSE) = FALSE" });
+  assert.ok(sql.startsWith("per_dive AS (\nSELECT"));
+  assert.ok(sql.endsWith("\n)"));
+  const branches = sql.slice("per_dive AS (\n".length, -2).split("\nUNION\n");
+  assert.equal(branches.length, 2, "plain UNION, two branches");
+  assert.equal(
+    branches[0],
+    perDiveSelect({ select, where: `${ownStageScores()}\n  AND COALESCE(e.is_rehearsal, FALSE) = FALSE` }),
+  );
+  assert.equal(
+    branches[1],
+    perDiveSelect({ select, where: `${carriedStageScores()}\n  AND COALESCE(e.is_rehearsal, FALSE) = FALSE` }),
+  );
+  // Same rows standingsScoreScope picks, minus the OR between the stages.
+  assert.ok(!sql.includes(standingsScoreScope()));
+  // Name and placeholder are the caller's.
+  const named = standingsPerDiveCte({ name: "pd", eventId: "$2", select });
+  assert.ok(named.startsWith("pd AS (\n"));
+  assert.ok(!named.includes("$1"));
+  // Without the stage in the select a carried round and this stage's
+  // round could come out identical and merge in the UNION.
+  assert.throws(() => standingsPerDiveCte({ select: ["s.competitor_id", "s.round_number"] }), /s\.event_id/);
 });

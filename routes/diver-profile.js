@@ -22,9 +22,11 @@
 //   app.use(require('./routes/diver-profile')({ … }))
 
 const express = require("express");
-const { PER_DIVE: SHARED_PER_DIVE, FULL_FIELD_RANKING, EVENT_DATE, EVENT_DATE_FILTER } =
-  require("../db/queries");
+const {
+  PER_DIVE: SHARED_PER_DIVE, FULL_FIELD_RANKING, EVENT_DATE, EVENT_DATE_FILTER, diverDivesWhere,
+} = require("../db/queries");
 const { perDiveSelect, perDivePointsCte } = require("../lib/scoring-sql");
+const { uuidParams } = require("../lib/uuid-params");
 const { PUBLIC_CLUB_JOIN } = require("../lib/club-approvals");
 
 // Catalog of widget IDs the diver can enable on their dashboard.
@@ -144,6 +146,8 @@ module.exports = function createDiverProfileRouter({
   // second they submit a dive list.
   const reads = readPool || pool;
   const router = express.Router();
+  // Malformed path ids fall through to a 404 (lib/uuid-params).
+  uuidParams(router, "id");
 
   // -------------------------------------------------------------
   // GET /api/divers/:id/profile: stats, PBs, per-meet trend
@@ -192,7 +196,9 @@ module.exports = function createDiverProfileRouter({
            select:      ["s.event_id", "s.round_number"],
            pointsAlias: "dive_total",
            selectExtra: ["MAX(d.dd) AS dd"],
-           where: `s.competitor_id = $1
+           // The diver's own dives, or the pair's when they're the
+           // partner on a synchro entry stored under the lead.
+           where: `${diverDivesWhere("$1")}
              AND COALESCE(e.is_rehearsal, FALSE) = FALSE
            ${DATE_FILTER}`,
          })}
@@ -221,7 +227,7 @@ module.exports = function createDiverProfileRouter({
            ],
            dd:          "d.dd",
            pointsAlias: "dive_total",
-           where: `s.competitor_id = $1
+           where: `${diverDivesWhere("$1")}
              AND COALESCE(e.is_rehearsal, FALSE) = FALSE
              AND d.id IS NOT NULL
            ${DATE_FILTER}`,
@@ -249,58 +255,35 @@ module.exports = function createDiverProfileRouter({
       );
 
       // Score trend: per-event total + final placing, oldest first
-      // so a chart can plot it as a line.
+      // so a chart can plot it as a line. Same ranking as the analytics
+      // widgets (FULL_FIELD_RANKING): in a team event that's the team's
+      // total and place, as on the standings.
       const trendQuery = reads.query(
-        `WITH diver_events AS (
-           SELECT DISTINCT s.event_id
-           FROM scores s
-           JOIN events e ON e.id = s.event_id
-           WHERE s.competitor_id = $1
-             AND COALESCE(e.is_rehearsal, FALSE) = FALSE
-           ${DATE_FILTER}
-         ),
-         ${perDivePointsCte({
-           select: ["s.event_id", "s.competitor_id", "s.round_number"],
-           where: `s.event_id IN (SELECT event_id FROM diver_events)
-             AND COALESCE(e.is_rehearsal, FALSE) = FALSE`,
-         })},
-         all_event_totals AS (
-           SELECT event_id, competitor_id, SUM(dive_points) AS total
-           FROM per_dive
-           GROUP BY event_id, competitor_id
-         ),
-         ranked AS (
-           SELECT *, RANK() OVER (PARTITION BY event_id ORDER BY total DESC) AS rnk
-           FROM all_event_totals
-         )
+        `WITH ${FULL_FIELD_RANKING}
          SELECT e.id AS event_id, e.name AS event_name, e.height,
                 e.gender, e.status, ${EVENT_DATE} AS created_at,
                 e.event_type::text AS event_type,
                 ranked.total::numeric(8,2) AS total_score,
-                ranked.rnk::int AS final_rank,
+                ranked.rank::int AS final_rank,
                 partner.full_name AS partner_name,
                 tm.name AS team_name
          FROM ranked
          JOIN events e ON e.id = ranked.event_id
          LEFT JOIN LATERAL (
-           SELECT DISTINCT cdl.partner_id
-           FROM competitor_dive_lists cdl
-           WHERE cdl.event_id = e.id
-             AND cdl.competitor_id = $1
-             AND cdl.partner_id IS NOT NULL
-           LIMIT 1
+           /* When the result came off the lead's rows, the lead is the
+              partner to name. */
+           SELECT COALESCE(
+             NULLIF(ranked.scored_as, $1),
+             (SELECT cdl.partner_id
+                FROM competitor_dive_lists cdl
+               WHERE cdl.event_id = e.id
+                 AND cdl.competitor_id = $1
+                 AND cdl.partner_id IS NOT NULL
+               LIMIT 1)
+           ) AS partner_id
          ) p ON true
          LEFT JOIN users partner ON partner.id = p.partner_id
-         LEFT JOIN LATERAL (
-           SELECT DISTINCT cdl.team_id
-           FROM competitor_dive_lists cdl
-           WHERE cdl.event_id = e.id
-             AND cdl.competitor_id = $1
-             AND cdl.team_id IS NOT NULL
-           LIMIT 1
-         ) tlink ON e.event_type = 'team'
-         LEFT JOIN teams tm ON tm.id = tlink.team_id
-         WHERE ranked.competitor_id = $1
+         LEFT JOIN teams tm ON e.event_type = 'team' AND tm.id = ranked.unit_id
          ORDER BY ${EVENT_DATE} ASC`,
         [req.params.id, fromDate, toDate],
       );
@@ -467,7 +450,11 @@ module.exports = function createDiverProfileRouter({
              COUNT(*)::int                                                  AS total
            FROM scores s
            JOIN events e ON e.id = s.event_id
-           WHERE s.competitor_id = $1
+           LEFT JOIN competitor_dive_lists cdl
+             ON cdl.event_id = s.event_id
+            AND cdl.competitor_id = s.competitor_id
+            AND cdl.round_number = s.round_number
+           WHERE ${diverDivesWhere("$1")}
              AND COALESCE(e.is_rehearsal, FALSE) = FALSE${EVENT_DATE_FILTER}`,
           [id, fromDate, toDate],
         ),
@@ -584,7 +571,7 @@ module.exports = function createDiverProfileRouter({
                     ) ORDER BY ej.judge_number
                   ) AS judges`,
             ],
-            where: `s.competitor_id = $1
+            where: `${diverDivesWhere("$1")}
              AND s.event_id = ANY($2::uuid[])
              AND COALESCE(e.is_rehearsal, FALSE) = FALSE`,
             groupBy: [

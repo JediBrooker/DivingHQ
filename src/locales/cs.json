@@ -1625,7 +1625,8 @@
       "btn_redirecting": "Přesměrování…",
       "btn_coming_soon": "Již brzy",
       "error_load": "Poplatek se nepodařilo načíst",
-      "error_checkout": "Nelze zahájit platbu"
+      "error_checkout": "Nelze zahájit platbu",
+      "btn_renew": "Obnovit"
     },
     "charges_view": {
       "title": "Poplatky",

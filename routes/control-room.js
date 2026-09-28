@@ -389,8 +389,10 @@ module.exports = function createControlRoomRouter({
          )
          SELECT cdl.id AS dive_list_id,
                 cdl.display_order, cdl.withdrawn_at,
-                /* Reserves ride along like withdrawn rows do. The Control
-                   Room and the draw both leave them out of the order, and
+                /* Reserves ride along like withdrawn rows do (sorted last
+                   in their round, no display_order). The Live pool's
+                   nextQueueIndex, the Control Room order and the
+                   randomise preview all leave is_reserve rows out, and
                    without the flag they had to guess from a null
                    round_order. */
                 cdl.is_reserve,
@@ -418,13 +420,13 @@ module.exports = function createControlRoomRouter({
                 e.event_type, e.number_of_judges,
                 /* Payments (Migration 066): is this diver's entry paid?
                    Correlated EXISTS, not a JOIN — the roster is the
-                   scoring queue, so it must never multiply rows. */
+                   scoring queue, so it must never multiply rows. Keyed
+                   on the beneficiary like the one-live indexes (083):
+                   a guardian's payment names the diver as subject. */
                 EXISTS (
                   SELECT 1 FROM payments p
-                   /* Whose entry it is: subject_user_id when a guardian
-                      paid for a dependent (the parent is the payer),
-                      otherwise the diver who paid for themselves. */
                    WHERE COALESCE(p.subject_user_id, p.payer_user_id) = cdl.competitor_id
+                     AND p.payer_user_id IS NOT NULL
                      AND p.subject_type = 'event_entry'
                      AND p.status = 'paid'
                      /* per-event entry OR a meet-level registration

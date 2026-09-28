@@ -9955,3 +9955,870 @@ test("migrate resyncs a drifted schema_meta even when nothing is pending", async
     await pool.query("UPDATE schema_meta SET version = $1 WHERE id = 1", [before]);
   }
 });
+
+// Super Final Appendix 3 §3.1: Head-to-Head scores carry into the Semi
+// Final. The live scoreboard added them; the recap, results.csv and
+// results.pdf didn't, so a finished SF showed different totals and a
+// different order from what spectators had just watched. The same
+// standings also drop a diver who withdrew after diving, then put them
+// back once the event completes; prior dives count everywhere now.
+test("a Super Final stage keeps its carried scores, and a withdrawn diver keeps their dives, live and after", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const dive = await recordKit.threeMetreDive();
+    const dd = Number((await pool.query("SELECT dd FROM dive_directory WHERE id = $1", [dive])).rows[0].dd);
+    const x = await recordKit.diver(st.orgId, null, "female", "Carry Xena");
+    const y = await recordKit.diver(st.orgId, null, "female", "Carry Yara");
+    const w = await recordKit.diver(st.orgId, null, "female", "Carry Wren");
+    const z = await recordKit.diver(st.orgId, null, "female", "Carry Zola");
+    const h2h = await recordKit.event(st.orgId, { gender: "Female" });
+    await recordKit.dive(h2h, x, 1, dive, 9);
+    await recordKit.dive(h2h, y, 1, dive, 5);
+    await recordKit.dive(h2h, w, 1, dive, 4);
+    await recordKit.dive(h2h, z, 1, dive, 7); // lost her H2H, not in the SF
+    const sf = await recordKit.event(st.orgId, { gender: "Female" });
+    await pool.query("UPDATE events SET score_carry_from = $1 WHERE id = $2", [h2h.id, sf.id]);
+    await recordKit.dive(sf, x, 1, dive, 6);
+    await recordKit.dive(sf, y, 1, dive, 7);
+    await recordKit.dive(sf, w, 1, dive, 3);
+    await pool.query(
+      `INSERT INTO competitor_dive_lists (event_id, competitor_id, dive_id, round_number)
+       VALUES ($1, $2, $3, 2), ($1, $4, $3, 2)`,
+      [sf.id, x, dive, y],
+    );
+    // Wren pulls out after her first dive.
+    await pool.query("UPDATE competitor_dive_lists SET withdrawn_at = now() WHERE event_id = $1 AND competitor_id = $2", [sf.id, w]);
+
+    // Five judges, the middle three count: each dive is 3 × score × DD.
+    const pts = (...scores) => (3 * scores.reduce((a, b) => a + b, 0) * dd).toFixed(2);
+    const expected = { "Carry Xena": pts(9, 6), "Carry Yara": pts(5, 7), "Carry Wren": pts(4, 3) };
+    const table = (rows) => Object.fromEntries(rows.map((r) => [r.full_name, Number(r.total).toFixed(2)]));
+
+    const live = await fetchJson("GET", `/api/scoreboard/${sf.id}?cache=skip`);
+    assert.equal(live.status, 200, JSON.stringify(live.body));
+    assert.deepEqual(table(live.body.standings), expected);
+    assert.deepEqual(live.body.standings.map((r) => r.full_name), ["Carry Xena", "Carry Yara", "Carry Wren"]);
+
+    await pool.query("UPDATE events SET status = 'Completed' WHERE id = $1", [sf.id]);
+    const recap = await fetchJson("GET", `/api/archive/${sf.id}/results`);
+    assert.equal(recap.status, 200, JSON.stringify(recap.body));
+    assert.deepEqual(table(recap.body.standings), expected);
+    assert.deepEqual(recap.body.standings.map((r) => r.full_name), ["Carry Xena", "Carry Yara", "Carry Wren"]);
+
+    const csv = await (await fetch(`${baseUrl}/api/events/${sf.id}/results.csv`)).text();
+    const rows = csv.trim().split(/\r?\n/).slice(1).map((l) => l.split(","));
+    const byName = Object.fromEntries(rows.map((r) => [r[0], [Number(r[12]).toFixed(2), r[13]]]));
+    assert.deepEqual(byName, {
+      "Carry Xena": [expected["Carry Xena"], "1"],
+      "Carry Yara": [expected["Carry Yara"], "2"],
+      "Carry Wren": [expected["Carry Wren"], "3"],
+    });
+
+    const pdf = await fetch(`${baseUrl}/api/events/${sf.id}/results.pdf`);
+    const text = pdfText(Buffer.from(await pdf.arrayBuffer())).join("\n");
+    assert.match(text, new RegExp(`1\\.\\s+Carry Xena[^\\n]*\\n${expected["Carry Xena"]}`));
+    assert.ok(!text.includes("Carry Zola"), "the H2H loser isn't in the SF");
+  } finally {
+    await recordKit.cleanup(st.orgId);
+    await teardownFixture(st);
+  }
+});
+
+// WA 2026 CR Art 4.1.5: equal totals tie for the place. The analytics
+// ranking used to split a tie on the highest single dive, so a diver who
+// shared gold on the scoreboard was counted a silver on their dashboard.
+test("diver analytics treat a tie on total as a shared place", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const dive = await recordKit.threeMetreDive();
+    const p = await recordKit.diver(st.orgId, null, "female", "Tie Petra");
+    const q = await recordKit.diver(st.orgId, null, "female", "Tie Quinn");
+    const ev = await recordKit.event(st.orgId, { gender: "Female" });
+    await recordKit.dive(ev, p, 1, dive, 8);
+    await recordKit.dive(ev, p, 2, dive, 6);
+    await recordKit.dive(ev, q, 1, dive, 7);
+    await recordKit.dive(ev, q, 2, dive, 7);
+    for (const id of [p, q]) {
+      const a = await fetchJson("GET", `/api/divers/${id}/analytics`);
+      assert.equal(a.status, 200, JSON.stringify(a.body));
+      assert.equal(Number(a.body.recent_form[0].rank), 1, "both share first");
+      assert.equal(a.body.placings.gold, 1);
+      assert.equal(a.body.year_over_year[0].wins, 1);
+    }
+  } finally {
+    await recordKit.cleanup(st.orgId);
+    await teardownFixture(st);
+  }
+});
+
+// A team event ranks teams (teamStandingsCte). Everything that printed a
+// "place" for a team member used to rank the members against each other
+// instead: the By-Round leaderboard, results.csv, the score sheet, the
+// profile trend, the analytics widgets, the public profile and the coach
+// dashboard. They all give a member their team's total and place now.
+test("team events rank teams everywhere a member's place is shown", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const dive = await recordKit.threeMetreDive();
+    const dd = Number((await pool.query("SELECT dd FROM dive_directory WHERE id = $1", [dive])).rows[0].dd);
+    const a1 = await recordKit.diver(st.orgId, null, "female", "Team Alpha One");
+    const a2 = await recordKit.diver(st.orgId, null, "female", "Team Alpha Two");
+    const b1 = await recordKit.diver(st.orgId, null, "female", "Team Bravo One");
+    const b2 = await recordKit.diver(st.orgId, null, "female", "Team Bravo Two");
+    const ev = await recordKit.event(st.orgId, { gender: "Female", eventType: "team" });
+    const team = async (name, short) => {
+      const id = (await pool.query(
+        "INSERT INTO teams (org_id, name, short_code) VALUES ($1, $2, $3) RETURNING id", [st.orgId, name, short],
+      )).rows[0].id;
+      await pool.query("INSERT INTO event_teams (event_id, team_id) VALUES ($1, $2)", [ev.id, id]);
+      return id;
+    };
+    const alpha = await team("Alpha", "ALP");
+    const bravo = await team("Bravo", "BRV");
+    // Bravo One is the best diver in the pool, Alpha the better team.
+    await recordKit.dive(ev, a1, 1, dive, 8);
+    await recordKit.dive(ev, a2, 2, dive, 8);
+    await recordKit.dive(ev, b1, 1, dive, 9);
+    await recordKit.dive(ev, b2, 2, dive, 5);
+    await pool.query("UPDATE competitor_dive_lists SET team_id = $1 WHERE event_id = $2 AND competitor_id = ANY($3::uuid[])", [alpha, ev.id, [a1, a2]]);
+    await pool.query("UPDATE competitor_dive_lists SET team_id = $1 WHERE event_id = $2 AND competitor_id = ANY($3::uuid[])", [bravo, ev.id, [b1, b2]]);
+    // Bravo One still has a dive to come, so the coach dashboard has a card.
+    await pool.query(
+      "INSERT INTO competitor_dive_lists (event_id, competitor_id, team_id, dive_id, round_number) VALUES ($1, $2, $3, $4, 3)",
+      [ev.id, b1, bravo, dive],
+    );
+    const bravoTotal = (3 * 14 * dd).toFixed(2);
+
+    const lb = await fetchJson("GET", `/api/scoreboard/${ev.id}/leaderboard?cache=skip`);
+    assert.equal(lb.status, 200, JSON.stringify(lb.body));
+    const round = (n) => lb.body.rounds.find((r) => r.round_number === n).rankings
+      .map((r) => [r.full_name, r.rank, r.competitor_id ?? null]);
+    assert.deepEqual(round(1), [["Bravo", 1, null], ["Alpha", 2, null]]);
+    assert.deepEqual(round(2), [["Alpha", 1, null], ["Bravo", 2, null]]);
+
+    const csv = await (await fetch(`${baseUrl}/api/events/${ev.id}/results.csv`)).text();
+    const rows = csv.trim().split(/\r?\n/).slice(1).map((l) => l.split(","));
+    const place = Object.fromEntries(rows.map((r) => [r[0], [Number(r[12]).toFixed(2), r[13]]]));
+    assert.deepEqual(place["Team Bravo One"], [bravoTotal, "2"]);
+    assert.deepEqual(place["Team Alpha Two"], [(3 * 16 * dd).toFixed(2), "1"]);
+
+    const sheet = await fetch(`${baseUrl}/api/events/${ev.id}/divers/${b1}/score-sheet.pdf`);
+    assert.match(pdfText(Buffer.from(await sheet.arrayBuffer())).join("\n"), /2nd of 2/);
+
+    const profile = await fetchJson("GET", `/api/divers/${b1}/profile`);
+    const trend = profile.body.score_trend.find((r) => r.event_id === ev.id);
+    assert.equal(trend.final_rank, 2);
+    assert.equal(Number(trend.total_score).toFixed(2), bravoTotal);
+    assert.equal(trend.team_name, "Bravo");
+
+    const analytics = await fetchJson("GET", `/api/divers/${b1}/analytics`);
+    assert.equal(Number(analytics.body.recent_form[0].rank), 2);
+    assert.equal(analytics.body.recent_form[0].field_size, 2, "two teams, not four divers");
+    assert.equal(analytics.body.placings.silver, 1);
+
+    const slug = crypto.randomBytes(16).toString("hex");
+    await pool.query("UPDATE users SET public_slug = $1 WHERE id = $2", [slug, b1]);
+    const pub = await fetchJson("GET", `/api/public/divers/${slug}`);
+    assert.equal(pub.status, 200, JSON.stringify(pub.body));
+    assert.deepEqual([pub.body.recent_meets[0].rank, pub.body.recent_meets[0].field_size], [2, 2]);
+
+    const coachName = `int-tc-${crypto.randomBytes(3).toString("hex")}`;
+    const coach = await insertUser({ orgId: st.orgId, role: "coach", username: coachName, fullName: "Team Coach" });
+    await pool.query("INSERT INTO coach_diver_links (coach_id, diver_id, org_id) VALUES ($1, $2, $3)", [coach, b1, st.orgId]);
+    const login = await fetchJson("POST", "/api/auth/login", { body: { username: coachName, password: "not-used-here" } });
+    const dash = await fetchJson("GET", "/api/coach/dashboard", { token: login.body.token });
+    assert.equal(dash.status, 200, JSON.stringify(dash.body));
+    const card = dash.body.find((r) => r.diver_id === b1);
+    assert.deepEqual([card.current_rank, card.field_size, Number(card.current_total).toFixed(2)], [2, 2, bravoTotal]);
+  } finally {
+    await pool.query("DELETE FROM coach_diver_links WHERE org_id = $1", [st.orgId]);
+    await recordKit.cleanup(st.orgId);
+    await teardownFixture(st);
+  }
+});
+
+// Synchro pairs entered once (Control Room import, manual add) keep their
+// scores under the lead, partner_id naming the other diver. The partner's
+// profile, analytics, public card and score sheet only ever looked for
+// their own competitor_id, so every synchro event they dived was missing.
+// Pairs entered both ways round (the consent flow's mirror rows) have
+// scores on each side, and mustn't count twice.
+test("a synchro partner's profile, analytics, public card and score sheet show the pair's result", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const dive = await recordKit.threeMetreDive();
+    const lead = await recordKit.diver(st.orgId, null, "female", "Sync Lena Lead");
+    const partner = await recordKit.diver(st.orgId, null, "female", "Sync Pia Partner");
+    const lead2 = await recordKit.diver(st.orgId, null, "female", "Sync Other Lead");
+    const partner2 = await recordKit.diver(st.orgId, null, "female", "Sync Other Partner");
+    const sync = await recordKit.event(st.orgId, { gender: "Female", eventType: "synchro_pair" });
+    await recordKit.dive(sync, lead, 1, dive, 8, { partnerId: partner });
+    await recordKit.dive(sync, lead2, 1, dive, 6, { partnerId: partner2 });
+    // A mirrored pair where both sides were scored.
+    const mirror = await recordKit.event(st.orgId, { gender: "Female", eventType: "synchro_pair" });
+    await recordKit.dive(mirror, lead, 1, dive, 7, { partnerId: partner });
+    await recordKit.dive(mirror, partner, 1, dive, 7, { partnerId: lead });
+
+    const profile = await fetchJson("GET", `/api/divers/${partner}/profile`);
+    assert.equal(profile.status, 200, JSON.stringify(profile.body));
+    assert.equal(profile.body.stats.total_dives, 2, "one per event, the mirror isn't doubled");
+    assert.equal(profile.body.stats.total_meets, 2);
+    const trend = profile.body.score_trend.find((r) => r.event_id === sync.id);
+    assert.ok(trend, "the pair's event is on the partner's trend");
+    assert.equal(trend.final_rank, 1);
+    assert.equal(trend.partner_name, "Sync Lena Lead");
+    assert.ok(profile.body.personal_bests.length >= 1);
+
+    const a = await fetchJson("GET", `/api/divers/${partner}/analytics`);
+    assert.equal(a.status, 200, JSON.stringify(a.body));
+    const recent = a.body.recent_form.find((r) => r.event_id === sync.id);
+    assert.equal(Number(recent.rank), 1);
+    assert.equal(recent.field_size, 2);
+    assert.equal(recent.dives.length, 1, "the expanded card has the pair's dive");
+    assert.equal(a.body.quality_mix.total, 10, "five judges on each of the two dives");
+    assert.equal(a.body.round_stamina[0].dive_count, 2);
+
+    const slug = crypto.randomBytes(16).toString("hex");
+    await pool.query("UPDATE users SET public_slug = $1 WHERE id = $2", [slug, partner]);
+    const pub = await fetchJson("GET", `/api/public/divers/${slug}`);
+    assert.equal(pub.body.stats.total_meets, 2);
+    assert.ok(pub.body.recent_meets.some((m) => m.event_id === sync.id && m.rank === 1));
+
+    const sheet = await fetch(`${baseUrl}/api/events/${sync.id}/divers/${partner}/score-sheet.pdf`);
+    const text = pdfText(Buffer.from(await sheet.arrayBuffer())).join("\n");
+    assert.match(text, /1st of 2/);
+    assert.ok(!/No dives recorded/.test(text));
+    assert.match(text, /Sync Lena Lead/, "the sheet names the pair");
+  } finally {
+    await recordKit.cleanup(st.orgId);
+    await teardownFixture(st);
+  }
+});
+
+// PDFKit's Helvetica only prints WinAnsi. A Russian program.pdf printed
+// its section headers, and any Cyrillic or Polish name, as mojibake. With
+// no Unicode font configured the headers fall back to English and names
+// are transliterated (lib/pdf-document).
+test("program.pdf in Russian prints readable headers and names", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  if (process.env.PDF_FONT_REGULAR) return t.skip("Unicode PDF font configured, text isn't folded");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const meet = (await pool.query(
+      "INSERT INTO meets (org_id, name) VALUES ($1, 'Кубок Łodzi') RETURNING id", [st.orgId],
+    )).rows[0].id;
+    const ev = (await pool.query(
+      `INSERT INTO events (org_id, meet_id, name, gender, height, number_of_judges, total_rounds)
+       VALUES ($1, $2, 'Вышка 10м', 'Female', '10m', 5, 5) RETURNING id`,
+      [st.orgId, meet],
+    )).rows[0].id;
+    const judge = await insertUser({ orgId: st.orgId, role: "judge", username: `int-ru-${st.slug}`, fullName: "Łukasz Иванов" });
+    await pool.query("INSERT INTO event_judges (event_id, judge_id, judge_number) VALUES ($1, $2, 1)", [ev, judge]);
+    const res = await fetch(`${baseUrl}/api/meets/${meet}/program.pdf?include=judges`, {
+      headers: { "accept-language": "ru" },
+    });
+    assert.equal(res.status, 200);
+    const text = pdfText(Buffer.from(await res.arrayBuffer())).join("\n");
+    assert.match(text, /EVENT SCHEDULE/);
+    assert.match(text, /JUDGE PANEL/);
+    assert.match(text, /Lukasz Ivanov/);
+    assert.match(text, /Kubok Lodzi/);
+    assert.match(text, /Vyshka 10m/);
+  } finally {
+    await pool.query("DELETE FROM meets WHERE org_id = $1", [st.orgId]);
+    await teardownFixture(st);
+  }
+});
+
+// The Control Room's "paid" flag looked for payer_user_id = the diver, so
+// an entry a guardian paid for (payer = guardian, subject = diver) showed
+// as unpaid on the roster.
+test("the roster counts an entry a guardian paid for as paid", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture();
+  try {
+    const kid = await insertUser({ orgId: st.orgId, role: "diver", username: `int-gp-k-${st.slug}`, fullName: "Paid Kid" });
+    const parent = await insertUser({ orgId: st.orgId, role: "spectator", username: `int-gp-p-${st.slug}`, fullName: "Paying Parent" });
+    const dive = await recordKit.threeMetreDive();
+    await pool.query(
+      "INSERT INTO competitor_dive_lists (event_id, competitor_id, dive_id, round_number) VALUES ($1, $2, $3, 1)",
+      [st.eventId, kid, dive],
+    );
+    const paid = async () => {
+      const r = await fetchJson("GET", `/api/events/${st.eventId}/roster`, { token: st.adminToken });
+      assert.equal(r.status, 200, JSON.stringify(r.body));
+      const rows = Array.isArray(r.body) ? r.body : r.body.roster || r.body.rows;
+      return rows.find((row) => row.competitor_id === kid).paid_entry;
+    };
+    assert.equal(await paid(), false);
+    await pool.query(
+      `INSERT INTO payments (org_id, payer_user_id, subject_user_id, subject_type, event_id,
+                             amount_cents, platform_fee_cents, currency, status, paid_at)
+       VALUES ($1, $2, $3, 'event_entry', $4, 2000, 300, 'GBP', 'paid', now())`,
+      [st.orgId, parent, kid, st.eventId],
+    );
+    assert.equal(await paid(), true);
+  } finally {
+    await pool.query("DELETE FROM payments WHERE org_id = $1", [st.orgId]);
+    await teardownFixture(st);
+  }
+});
+
+// Migration 096 / club-first §20: a club waiting on its federation stays
+// out of public surfaces (PUBLIC_CLUB_JOIN). The judge ranking analysis,
+// judge analytics' club breakdown and the diver search joined clubs
+// plainly and printed the pending club's name and code.
+test("a pending club's name stays off judge ranking, judge analytics and diver search", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const club = await recordKit.club(st.orgId, "Unvetted Pending Club Zed", "UPZ");
+    await pool.query("UPDATE clubs SET status = 'pending' WHERE id = $1", [club]);
+    const dive = await recordKit.threeMetreDive();
+    const d1 = await recordKit.diver(st.orgId, club, "female", "Pending Zara");
+    const d2 = await recordKit.diver(st.orgId, null, "female", "Open Zoe");
+    const ev = await recordKit.event(st.orgId, { gender: "Female" });
+    await pool.query("UPDATE users SET club_id = $1 WHERE id = $2", [club, ev.judges[0]]);
+    for (const r of [1, 2, 3]) {
+      await recordKit.dive(ev, d1, r, dive, 6 + (r % 2));
+      await recordKit.dive(ev, d2, r, dive, 7);
+    }
+    await pool.query("UPDATE events SET status = 'Completed' WHERE id = $1", [ev.id]);
+
+    const jra = await fetchJson("GET", `/api/events/${ev.id}/judge-ranking-analysis`);
+    assert.equal(jra.status, 200, JSON.stringify(jra.body));
+    assert.ok(!JSON.stringify(jra.body).includes("Unvetted"), "no pending club name anywhere");
+    assert.equal(jra.body.divers.find((d) => d.full_name === "Pending Zara").club_name, null);
+    assert.equal(jra.body.judges.find((j) => j.judge_id === ev.judges[0]).club_code, null);
+
+    const ja = await fetchJson("GET", `/api/judges/${ev.judges[1]}/analytics`);
+    assert.equal(ja.status, 200, JSON.stringify(ja.body));
+    assert.ok(!JSON.stringify(ja.body.club_breakdown).includes("UPZ"));
+    assert.ok(!ja.body.club_breakdown.some((c) => c.club_id === club));
+
+    const search = await fetchJson("GET", "/api/divers/search?q=Pending%20Zara", { token: st.adminToken });
+    assert.equal(search.status, 200);
+    assert.equal(search.body[0].club_name, null);
+    const browse = await fetchJson("GET", `/api/divers?q=Pending%20Zara`, { token: st.adminToken });
+    assert.equal(browse.body.rows[0].club_code, null);
+  } finally {
+    await recordKit.cleanup(st.orgId);
+    await pool.query("UPDATE users SET club_id = NULL WHERE org_id = $1", [st.orgId]);
+    await pool.query("DELETE FROM clubs WHERE org_id = $1", [st.orgId]);
+    await teardownFixture(st);
+  }
+});
+
+// AGENTS.md / migration 090: a diver row in an event context prints the
+// meet's representation code. The judge ranking table and the coach's
+// per-event views printed the federation's country beside a scoreboard
+// showing the club.
+test("judge ranking and the coach's event views print the meet's representation code", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const club = await recordKit.club(st.orgId, "Rep Code Divers", "RPC");
+    const meet = (await pool.query(
+      "INSERT INTO meets (org_id, name, represent_as) VALUES ($1, 'Club Champs', 'club') RETURNING id", [st.orgId],
+    )).rows[0].id;
+    const dive = await recordKit.threeMetreDive();
+    const diver = await recordKit.diver(st.orgId, club, "female", "Rhea Rep");
+    const other = await recordKit.diver(st.orgId, null, "female", "Una Unattached");
+    const ev = await recordKit.event(st.orgId, { gender: "Female" });
+    await pool.query("UPDATE events SET meet_id = $1 WHERE id = $2", [meet, ev.id]);
+    await recordKit.dive(ev, diver, 1, dive, 7);
+    await recordKit.dive(ev, other, 1, dive, 6);
+    await pool.query(
+      "INSERT INTO competitor_dive_lists (event_id, competitor_id, dive_id, round_number) VALUES ($1, $2, $3, 2)",
+      [ev.id, diver, dive],
+    );
+
+    const sb = await fetchJson("GET", `/api/scoreboard/${ev.id}?cache=skip`);
+    assert.equal(sb.body.standings.find((r) => r.full_name === "Rhea Rep").country_code, "RPC");
+    const jra = await fetchJson("GET", `/api/events/${ev.id}/judge-ranking-analysis`);
+    assert.equal(jra.body.divers.find((d) => d.full_name === "Rhea Rep").country_code, "RPC");
+
+    const coachName = `int-rc-${crypto.randomBytes(3).toString("hex")}`;
+    const coach = await insertUser({ orgId: st.orgId, role: "coach", username: coachName, fullName: "Rep Coach" });
+    await pool.query("INSERT INTO coach_diver_links (coach_id, diver_id, org_id) VALUES ($1, $2, $3)", [coach, diver, st.orgId]);
+    const token = (await fetchJson("POST", "/api/auth/login", { body: { username: coachName, password: "not-used-here" } })).body.token;
+    const lists = await fetchJson("GET", `/api/coach/dive-lists/${ev.id}`, { token });
+    assert.equal(lists.status, 200, JSON.stringify(lists.body));
+    assert.equal(lists.body.divers.find((d) => d.diver_id === diver).country_code, "RPC");
+    const dash = await fetchJson("GET", "/api/coach/dashboard", { token });
+    assert.equal(dash.body.find((r) => r.diver_id === diver).country_code, "RPC");
+  } finally {
+    await pool.query("DELETE FROM coach_diver_links WHERE org_id = $1", [st.orgId]);
+    await recordKit.cleanup(st.orgId);
+    await pool.query("DELETE FROM events WHERE org_id = $1", [st.orgId]);
+    await pool.query("DELETE FROM meets WHERE org_id = $1", [st.orgId]);
+    await pool.query("UPDATE users SET club_id = NULL WHERE org_id = $1", [st.orgId]);
+    await pool.query("DELETE FROM clubs WHERE org_id = $1", [st.orgId]);
+    await teardownFixture(st);
+  }
+});
+
+// Program timing: a synchro roster stored one row per pair already counts
+// pairs, so halving it made a 20-dive event look like 10. Pairs entered
+// both ways round (mirror rows) must still count once, and reserves and
+// withdrawn divers don't dive at all.
+test("program timing counts synchro pairs once, however the roster stores them", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const meet = (await pool.query("INSERT INTO meets (org_id, name) VALUES ($1, 'Timing Meet') RETURNING id", [st.orgId])).rows[0].id;
+    const dive = await recordKit.threeMetreDive();
+    const mkEvent = async (name) => (await pool.query(
+      `INSERT INTO events (org_id, meet_id, name, gender, height, number_of_judges, total_rounds, event_type)
+       VALUES ($1, $2, $3, 'Mixed', '3m', 9, 5, 'synchro_pair') RETURNING id`,
+      [st.orgId, meet, name],
+    )).rows[0].id;
+    const people = [];
+    for (let i = 0; i < 10; i++) people.push(await recordKit.diver(st.orgId, null, "female", `Timing Diver ${i}`));
+    const row = (ev, a, b, extra = {}) => pool.query(
+      `INSERT INTO competitor_dive_lists (event_id, competitor_id, partner_id, dive_id, round_number, is_reserve, withdrawn_at)
+       VALUES ($1, $2, $3, $4, 1, $5, $6)`,
+      [ev, a, b, dive, !!extra.reserve, extra.withdrawn ? new Date() : null],
+    );
+    const single = await mkEvent("Single rows");
+    for (let p = 0; p < 4; p++) await row(single, people[2 * p], people[2 * p + 1]);
+    await row(single, people[8], people[9], { reserve: true });
+    const mirrored = await mkEvent("Mirrored rows");
+    for (let p = 0; p < 3; p++) {
+      await row(mirrored, people[2 * p], people[2 * p + 1]);
+      await row(mirrored, people[2 * p + 1], people[2 * p]);
+    }
+    await row(mirrored, people[6], people[7], { withdrawn: true });
+    await row(mirrored, people[7], people[6], { withdrawn: true });
+
+    const csv = await (await fetch(`${baseUrl}/api/meets/${meet}/program.csv?include=timing&seconds_per_dive=60`)).text();
+    const events = Object.fromEntries(csv.trim().split(/\r?\n/).slice(1).map((l) => l.split(","))
+      .filter((c) => c[0] === "event").map((c) => [c[1], [c[10], c[12]]]));
+    assert.deepEqual(events["Single rows"], ["4", String(4 * 5 * 60)]);
+    assert.deepEqual(events["Mirrored rows"], ["3", String(3 * 5 * 60)]);
+  } finally {
+    await pool.query("DELETE FROM events WHERE org_id = $1", [st.orgId]);
+    await pool.query("DELETE FROM meets WHERE org_id = $1", [st.orgId]);
+    await teardownFixture(st);
+  }
+});
+
+// A synchro panel trims within its sub-panels (WA Art 9.1.5.4: execution
+// high and low across both athletes' marks, then the sync group), the way
+// the scoreboard and calc_event_dive_points do. The score sheet bracketed
+// a flat two-high, two-low across all nine judges instead.
+test("the score sheet brackets the synchro sub-panel trim the scoreboard shows", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const dive = await recordKit.threeMetreDive();
+    const lead = await recordKit.diver(st.orgId, null, "female", "Sheet Lead");
+    const partner = await recordKit.diver(st.orgId, null, "female", "Sheet Partner");
+    const ev = (await pool.query(
+      `INSERT INTO events (org_id, name, gender, height, number_of_judges, total_rounds, event_type, status)
+       VALUES ($1, 'Sync sheet', 'Female', '3m', 9, 5, 'synchro_pair', 'Live') RETURNING id`, [st.orgId],
+    )).rows[0].id;
+    await pool.query(
+      "INSERT INTO competitor_dive_lists (event_id, competitor_id, partner_id, dive_id, round_number) VALUES ($1, $2, $3, $4, 1)",
+      [ev, lead, partner, dive],
+    );
+    const scores = [5, 6, 7, 8, 9, 9.5, 9.5, 10, 10];
+    for (let i = 0; i < 9; i++) {
+      const j = await insertUser({ orgId: st.orgId, role: "judge", fullName: `Sync Judge ${i + 1}`, username: `int-sj-${crypto.randomBytes(4).toString("hex")}` });
+      await pool.query("INSERT INTO event_judges (event_id, judge_id, judge_number) VALUES ($1, $2, $3)", [ev, j, i + 1]);
+      await pool.query(
+        "INSERT INTO scores (event_id, competitor_id, judge_id, dive_id, round_number, score) VALUES ($1, $2, $3, $4, 1, $5)",
+        [ev, lead, j, dive, scores[i]],
+      );
+    }
+    const res = await fetch(`${baseUrl}/api/events/${ev}/divers/${lead}/score-sheet.pdf`);
+    assert.equal(res.status, 200);
+    const line = pdfText(Buffer.from(await res.arrayBuffer())).find((l) => l.startsWith("Judges:"));
+    assert.equal(line, "Judges: [5.0]  6.0  7.0  [8.0]  [9.0]  9.5  9.5  10.0  [10.0]");
+  } finally {
+    await teardownFixture(st);
+  }
+});
+
+// A reserve (WA 4.1.12) isn't competing. The start list numbered them as
+// the next diver, dives and all, with nothing to say they're a reserve;
+// the program PDF already lists them under RESERVES.
+test("the start list keeps reserves out of the running order", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture();
+  try {
+    const dive = await recordKit.threeMetreDive();
+    const add = async (name, order, reserve = null) => {
+      const id = await recordKit.diver(st.orgId, null, "female", name);
+      await pool.query(
+        `INSERT INTO competitor_dive_lists (event_id, competitor_id, dive_id, round_number, display_order, is_reserve, reserve_position)
+         VALUES ($1, $2, $3, 1, $4, $5, $6)`,
+        [st.eventId, id, dive, order, reserve != null, reserve],
+      );
+    };
+    await add("Start Ada", 1);
+    await add("Start Bea", 2);
+    await add("Reserve Cleo", null, 1);
+    const res = await fetch(`${baseUrl}/api/events/${st.eventId}/start-list.pdf`);
+    assert.equal(res.status, 200);
+    const lines = pdfText(Buffer.from(await res.arrayBuffer()));
+    const at = (re) => lines.findIndex((l) => re.test(l));
+    assert.ok(!lines.includes("3"), "the reserve isn't diver #3");
+    const header = at(/^RESERVES$/);
+    assert.ok(header > at(/^Start Bea/), "a RESERVES block after the running order");
+    assert.ok(at(/^Reserve Cleo/) > header);
+    assert.equal(lines[at(/^Reserve Cleo/) - 1], "R1");
+  } finally {
+    await teardownFixture(st);
+  }
+});
+
+// The scoreboard hides an Upcoming event from outsiders (ensureScoreboard-
+// Visible), and records treat scores typed into one as Control Room
+// try-outs. The results exports, the score sheet and the judge ranking
+// analysis had no such gate, so anyone could download the practice scores
+// with a "final_rank". They follow the scoreboard's rule now.
+test("results exports, score sheets and judge ranking follow the scoreboard's visibility", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture();
+  try {
+    const dive = await recordKit.threeMetreDive();
+    const diver = await recordKit.diver(st.orgId, null, "female", "Tryout Tess");
+    const judges = [];
+    for (let i = 1; i <= 5; i++) {
+      const j = await insertUser({ orgId: st.orgId, role: "judge", fullName: `Tryout Judge ${i}`, username: `int-vis-${crypto.randomBytes(4).toString("hex")}` });
+      await pool.query("INSERT INTO event_judges (event_id, judge_id, judge_number) VALUES ($1, $2, $3)", [st.eventId, j, i]);
+      judges.push(j);
+    }
+    await recordKit.dive({ id: st.eventId, judges }, diver, 1, dive, 7.5);
+    const status = (await pool.query("SELECT status FROM events WHERE id = $1", [st.eventId])).rows[0].status;
+    assert.equal(status, "Upcoming");
+
+    const paths = [
+      `/api/events/${st.eventId}/results.csv`,
+      `/api/events/${st.eventId}/results.pdf`,
+      `/api/events/${st.eventId}/divers/${diver}/score-sheet.pdf`,
+      `/api/events/${st.eventId}/judge-ranking-analysis`,
+      `/api/events/${st.eventId}/judge-ranking-analysis.csv`,
+      `/api/events/${st.eventId}/judge-ranking-analysis.pdf`,
+    ];
+    for (const p of paths) {
+      assert.equal((await fetch(`${baseUrl}${p}`)).status, 404, `${p}: hidden from the public while Upcoming`);
+      const own = await fetch(`${baseUrl}${p}`, { headers: { authorization: `Bearer ${st.adminToken}` } });
+      assert.equal(own.status, 200, `${p}: the host org can still pull it`);
+    }
+    // The start list is meant to be public before the meet.
+    assert.equal((await fetch(`${baseUrl}/api/events/${st.eventId}/start-list.pdf`)).status, 200);
+
+    await pool.query("UPDATE events SET status = 'Live' WHERE id = $1", [st.eventId]);
+    for (const p of paths) assert.equal((await fetch(`${baseUrl}${p}`)).status, 200, `${p}: public once Live`);
+  } finally {
+    await teardownFixture(st);
+  }
+});
+
+// Ids go straight into uuid comparisons, so a malformed one made Postgres
+// throw 22P02 and every route here answered 500 (and logged an error per
+// crawler hit). Path ids now 404, filter ids 400.
+test("malformed ids get a 404 or 400, never a 500", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture();
+  try {
+    const x = "not-a-uuid";
+    for (const path of [
+      `/api/scoreboard/${x}`, `/api/scoreboard/${x}/leaderboard`, `/api/archive/${x}/results`,
+      `/api/events/${x}/judge-ranking-analysis`, `/api/events/${x}/judge-ranking-analysis.csv`,
+      `/api/divers/${x}/profile`, `/api/divers/${x}/analytics`,
+      `/api/judges/${x}/profile`, `/api/judges/${x}/analytics`,
+      `/api/events/${x}/results.pdf`, `/api/events/${x}/results.csv`, `/api/events/${x}/start-list.pdf`,
+      `/api/events/${st.eventId}/divers/${x}/score-sheet.pdf`,
+      `/api/meets/${x}/program.pdf`, `/api/meets/${x}/fees`, `/api/events/${x}/fee`,
+      `/api/dr-archive/meets/${x}`, `/api/dr-archive/divers/${x}`,
+    ]) {
+      const r = await fetchJson("GET", path);
+      assert.equal(r.status, 404, `${path} → ${r.status}`);
+    }
+    const coach = await fetchJson("GET", `/api/coach/dive-lists/${x}`, { token: st.adminToken });
+    assert.equal(coach.status, 404);
+    assert.equal((await fetchJson("GET", `/api/judges/directory?org_id=${x}`)).status, 400);
+    assert.equal((await fetchJson("GET", `/api/divers?club_id=${x}`, { token: st.adminToken })).status, 400);
+    // A well-formed id that doesn't exist is still a 404, and a real one works.
+    assert.equal((await fetchJson("GET", `/api/scoreboard/${crypto.randomUUID()}`)).status, 404);
+    assert.equal((await fetchJson("GET", `/api/judges/directory?org_id=${st.orgId}`)).status, 200);
+  } finally {
+    await teardownFixture(st);
+  }
+});
+
+// A coach can scratch a diver from a Live event (routes/coach.js), and
+// the route promised the operator a banner. Nothing was sent: the Control
+// Room loads a Live pool's roster once, so the withdrawn diver stayed in
+// the queue until someone reloaded. The route now tells the event's room,
+// with no names or reasons on the wire (spectators sit in that room too),
+// and drops the cached scoreboard.
+test("a coach withdrawing a diver mid-event tells the event room", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const { io: ioClient } = require("socket.io-client");
+  const st = await setupFixture({ withEvent: false });
+  let sock;
+  try {
+    const dive = await recordKit.threeMetreDive();
+    const diver = await recordKit.diver(st.orgId, null, "female", "Scratch Sadie");
+    const ev = await recordKit.event(st.orgId, { gender: "Female" }); // Live
+    await recordKit.dive(ev, diver, 1, dive, 7);
+    await pool.query(
+      "INSERT INTO competitor_dive_lists (event_id, competitor_id, dive_id, round_number) VALUES ($1, $2, $3, 2)",
+      [ev.id, diver, dive],
+    );
+    const coachName = `int-cw-${crypto.randomBytes(3).toString("hex")}`;
+    const coach = await insertUser({ orgId: st.orgId, role: "coach", username: coachName, fullName: "Scratch Coach" });
+    await pool.query("INSERT INTO coach_diver_links (coach_id, diver_id, org_id) VALUES ($1, $2, $3)", [coach, diver, st.orgId]);
+    const token = (await fetchJson("POST", "/api/auth/login", { body: { username: coachName, password: "not-used-here" } })).body.token;
+
+    sock = ioClient(baseUrl, { transports: ["websocket"], forceNew: true });
+    await new Promise((resolve, reject) => { sock.on("connect", resolve); sock.on("connect_error", reject); });
+    sock.emit("subscribe_event", { event_id: ev.id });
+    await new Promise((r) => setTimeout(r, 200));
+    const heard = new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error("no roster_changed")), 3000);
+      sock.on("roster_changed", (msg) => { clearTimeout(timer); resolve(msg); });
+    });
+    const res = await fetchJson("POST", `/api/coach/dive-lists/${ev.id}/${diver}/withdraw`, {
+      token, body: { reason: "sore shoulder" },
+    });
+    assert.equal(res.status, 200, JSON.stringify(res.body));
+    const msg = await heard;
+    assert.deepEqual(msg, { event_id: ev.id, competitor_id: diver, change: "withdrawn" });
+  } finally {
+    sock?.close();
+    await pool.query("DELETE FROM coach_diver_links WHERE org_id = $1", [st.orgId]);
+    await recordKit.cleanup(st.orgId);
+    await teardownFixture(st);
+  }
+});
+
+// coach_diver_links is unique on (coach, diver). Re-linking a pair whose
+// old link belongs to a federation they've both left only updated the
+// note, so the new federation got a 201 for a link it couldn't list,
+// delete or use.
+test("re-linking a coach and diver who changed federation moves the link", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const X = await setupFixture({ withEvent: false });
+  const Y = await setupFixture({ withEvent: false });
+  try {
+    const coach = await insertUser({ orgId: X.orgId, role: "coach", username: `int-cl-c-${X.slug}`, fullName: "Moving Coach" });
+    const diver = await insertUser({ orgId: X.orgId, role: "diver", username: `int-cl-d-${X.slug}`, fullName: "Moving Diver" });
+    const first = await fetchJson("POST", `/api/orgs/${X.orgId}/coach-links`, { token: X.adminToken, body: { coach_id: coach, diver_id: diver } });
+    assert.equal(first.status, 201, JSON.stringify(first.body));
+    // Both transfer to Y.
+    await pool.query("UPDATE users SET org_id = $1 WHERE id = ANY($2::uuid[])", [Y.orgId, [coach, diver]]);
+    await pool.query("UPDATE user_org_roles SET org_id = $1 WHERE user_id = ANY($2::uuid[])", [Y.orgId, [coach, diver]]);
+    const again = await fetchJson("POST", `/api/orgs/${Y.orgId}/coach-links`, { token: Y.adminToken, body: { coach_id: coach, diver_id: diver, note: "new squad" } });
+    assert.equal(again.status, 201, JSON.stringify(again.body));
+    const list = await fetchJson("GET", `/api/orgs/${Y.orgId}/coach-links`, { token: Y.adminToken });
+    assert.deepEqual(list.body.map((l) => [l.coach_id, l.diver_id, l.note]), [[coach, diver, "new squad"]]);
+    assert.deepEqual((await fetchJson("GET", `/api/orgs/${X.orgId}/coach-links`, { token: X.adminToken })).body, []);
+    const del = await fetchJson("DELETE", `/api/coach-links/${list.body[0].id}`, { token: Y.adminToken });
+    assert.equal(del.status, 200);
+  } finally {
+    await pool.query("DELETE FROM coach_diver_links WHERE org_id = ANY($1::uuid[])", [[X.orgId, Y.orgId]]);
+    await teardownFixture(Y);
+    await teardownFixture(X);
+  }
+});
+
+// Migration 035 made score_audit_log.event_id and role_audit_log.org_id
+// nullable so audit rows outlive a deleted event or org. The dashboard
+// feed (and /api/audit/recent's role rows) still INNER JOINed them, so a
+// sysadmin's feed silently dropped exactly those rows.
+test("the sysadmin's activity feeds keep audit rows whose event or org is gone", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const jwt = require("jsonwebtoken");
+  const st = await setupFixture();
+  try {
+    const sys = await insertUser({ orgId: st.orgId, role: "org_admin", username: `int-sa-${st.slug}`, fullName: "Feed Sysadmin" });
+    await pool.query("UPDATE users SET is_system_admin = true WHERE id = $1", [sys]);
+    const token = jwt.sign(
+      { id: sys, username: `int-sa-${st.slug}`, full_name: "Feed Sysadmin", org_id: st.orgId, org_roles: ["org_admin"], is_system_admin: true },
+      process.env.JWT_SECRET, { algorithm: "HS256", expiresIn: "10m" },
+    );
+    // Newest in the feed (a minute ahead), so other suites' rows can't push them out.
+    const scoreRow = (await pool.query(
+      `INSERT INTO score_audit_log (event_id, round_number, action, old_score, new_score, reason, created_at)
+       VALUES ($1, 1, 'update', 6.0, 6.5, 'orphan check', now() + interval '1 minute') RETURNING id`,
+      [st.eventId],
+    )).rows[0].id;
+    const roleRow = (await pool.query(
+      `INSERT INTO role_audit_log (user_id, org_id, role, action, created_at)
+       VALUES ($1, NULL, 'judge', 'granted', now() + interval '1 minute') RETURNING id`,
+      [sys],
+    )).rows[0].id;
+    await pool.query("DELETE FROM events WHERE id = $1", [st.eventId]); // event_id → NULL
+
+    const dash = await fetchJson("GET", "/api/dashboard", { token });
+    assert.equal(dash.status, 200, JSON.stringify(dash.body));
+    const ids = (dash.body.recent_activity || []).map((r) => r.id);
+    assert.ok(ids.includes(scoreRow), "the correction on a deleted event is still in the feed");
+    assert.ok(ids.includes(roleRow), "so is the role change with no org");
+    const recent = await fetchJson("GET", "/api/audit/recent?days=1", { token });
+    assert.equal(recent.status, 200, JSON.stringify(recent.body));
+    assert.ok(recent.body.some((r) => r.id === roleRow));
+    // An org admin's own feed never saw orphans, and still doesn't.
+    const own = await fetchJson("GET", "/api/dashboard", { token: st.adminToken });
+    assert.ok(!(own.body.recent_activity || []).some((r) => r.id === scoreRow || r.id === roleRow));
+  } finally {
+    await pool.query("DELETE FROM score_audit_log WHERE reason = 'orphan check'");
+    await pool.query("DELETE FROM role_audit_log WHERE user_id IN (SELECT id FROM users WHERE org_id = $1)", [st.orgId]);
+    await teardownFixture(st);
+  }
+});
+
+// Reserves (migration 040) come back in the roster rows, sorted last in
+// their round. The Live pool's nextQueueIndex and the randomise preview
+// skip rows flagged is_reserve, but the roster never sent the flag, so
+// Next Diver after the last real diver of a round put the reserve on the
+// stage. The unit tests used a hand-made roster that had the field.
+test("the roster flags reserves, so the Live queue steps over them", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const { nextQueueIndex, competingQueue } = await import("../src/composables/useLivePools.js");
+  const st = await setupFixture();
+  try {
+    const dive = await recordKit.threeMetreDive();
+    const add = async (name, order, reservePos = null) => {
+      const id = await recordKit.diver(st.orgId, null, "female", name);
+      // Two rounds each, like a real dive list.
+      await pool.query(
+        `INSERT INTO competitor_dive_lists (event_id, competitor_id, dive_id, round_number, display_order, is_reserve, reserve_position)
+         SELECT $1::uuid, $2::uuid, $3::uuid, gs.r, $4::int, $5::boolean, $6::int
+           FROM generate_series(1, 2) AS gs(r)`,
+        [st.eventId, id, dive, order, reservePos != null, reservePos],
+      );
+      return id;
+    };
+    const ada = await add("Queue Ada", 1);
+    const bea = await add("Queue Bea", 2);
+    const cleo = await add("Queue Cleo", null, 1);
+    const r = await fetchJson("GET", `/api/events/${st.eventId}/roster`, { token: st.adminToken });
+    assert.equal(r.status, 200, JSON.stringify(r.body));
+    const rows = Array.isArray(r.body) ? r.body : r.body.roster || r.body.rows;
+    assert.deepEqual(
+      rows.map((x) => [x.round_number, x.competitor_id, x.is_reserve]),
+      [[1, ada, false], [1, bea, false], [1, cleo, true], [2, ada, false], [2, bea, false], [2, cleo, true]],
+    );
+    // After Bea in round 1 the next diver is Ada in round 2, not the reserve.
+    assert.equal(nextQueueIndex(rows, 1), 3);
+    assert.equal(nextQueueIndex(rows, 4), -1, "Bea's last dive ends the event");
+    // The pool itself holds only the competing queue, cut from the same rows.
+    assert.deepEqual(
+      competingQueue(rows).map((x) => [x.round_number, x.competitor_id]),
+      [[1, ada], [1, bea], [2, ada], [2, bea]],
+    );
+  } finally {
+    await teardownFixture(st);
+  }
+});
+
+// Where fix/b4 met the query work already on main. The public profile ranks
+// only the diver's five newest events (fullFieldRanking({ latest: 5 })), and
+// that cut has to give the same rows as ranking the whole career and keeping
+// five, team and synchro-partner events included. And a partner's synchro
+// result (b4) is dated by when the event took place (EVENT_DATE, b1), so a
+// pair's January meet set up in December lands in January's range.
+test("the latest-5 ranking cut matches the full ranking, and a partner's synchro result is dated by its meet", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const { FULL_FIELD_RANKING, fullFieldRanking } = require("../db/queries");
+    const dive = await recordKit.threeMetreDive();
+    const me = await recordKit.diver(st.orgId, null, "female", "Cut Mara");
+    const lead = await recordKit.diver(st.orgId, null, "female", "Cut Lead");
+    const rival = await recordKit.diver(st.orgId, null, "female", "Cut Rival");
+    const mate = await recordKit.diver(st.orgId, null, "female", "Cut Mate");
+    const dated = async (ev, createdAt) => {
+      await pool.query("UPDATE events SET status = 'Completed', created_at = $2 WHERE id = $1", [ev.id, createdAt]);
+      return ev;
+    };
+    // Five plain events, two of them created at the same moment.
+    for (let i = 0; i < 5; i++) {
+      const ev = await dated(await recordKit.event(st.orgId, { gender: "Female" }),
+        i < 2 ? "2026-04-01T09:00:00Z" : `2026-0${5 + i}-01T09:00:00Z`);
+      await recordKit.dive(ev, me, 1, dive, 6 + i * 0.5);
+      await recordKit.dive(ev, rival, 1, dive, 7);
+    }
+    // A team event, Mara's team second.
+    const teamEv = await dated(await recordKit.event(st.orgId, { gender: "Female", eventType: "team" }), "2026-09-10T09:00:00Z");
+    const team = async (name) => (await pool.query(
+      "INSERT INTO teams (org_id, name, short_code) VALUES ($1, $2, 'CUT') RETURNING id", [st.orgId, name],
+    )).rows[0].id;
+    const tMe = await team("Cut Team Mara");
+    const tRival = await team("Cut Team Rival");
+    await recordKit.dive(teamEv, me, 1, dive, 9);
+    await recordKit.dive(teamEv, mate, 1, dive, 3);
+    await recordKit.dive(teamEv, rival, 1, dive, 8);
+    await pool.query("UPDATE competitor_dive_lists SET team_id = $2 WHERE event_id = $1 AND competitor_id = ANY($3::uuid[])", [teamEv.id, tMe, [me, mate]]);
+    await pool.query("UPDATE competitor_dive_lists SET team_id = $2 WHERE event_id = $1 AND competitor_id = $3", [teamEv.id, tRival, rival]);
+    // A synchro pair stored under the lead, created in December for a
+    // meet held in January.
+    const meet = (await pool.query(
+      "INSERT INTO meets (org_id, name, start_date, end_date) VALUES ($1, 'Cut Synchro Meet', '2026-01-20', '2026-01-20') RETURNING id",
+      [st.orgId],
+    )).rows[0].id;
+    const sync = await dated(await recordKit.event(st.orgId, { gender: "Female", eventType: "synchro_pair" }), "2025-12-15T09:00:00Z");
+    await pool.query("UPDATE events SET meet_id = $2 WHERE id = $1", [sync.id, meet]);
+    await recordKit.dive(sync, lead, 1, dive, 8, { partnerId: me });
+    await recordKit.dive(sync, rival, 1, dive, 6);
+
+    const cols = (rows) => rows.map((r) => [r.event_id, Number(r.total).toFixed(2), Number(r.rank), r.field_size]);
+    const order = "JOIN events e ON e.id = ranked.event_id ORDER BY e.created_at DESC, e.id DESC";
+    const full = (await pool.query(`WITH ${FULL_FIELD_RANKING} SELECT ranked.* FROM ranked ${order}`, [me, null, null])).rows;
+    const cut = (await pool.query(`WITH ${fullFieldRanking({ latest: 5 })} SELECT ranked.* FROM ranked ${order}`, [me, null, null])).rows;
+    assert.equal(full.length, 7);
+    assert.deepEqual(cols(cut), cols(full.slice(0, 5)));
+    const teamRow = full.find((r) => r.event_id === teamEv.id);
+    assert.deepEqual([Number(teamRow.rank), teamRow.field_size], [1, 2], "the team's place, out of the teams");
+    assert.throws(() => fullFieldRanking({ latest: "5; DROP TABLE x" }), /positive integer/);
+
+    const slug = crypto.randomBytes(16).toString("hex");
+    await pool.query("UPDATE users SET public_slug = $1 WHERE id = $2", [slug, me]);
+    const pub = await fetchJson("GET", `/api/public/divers/${slug}`);
+    assert.equal(pub.status, 200, JSON.stringify(pub.body));
+    assert.deepEqual(pub.body.recent_meets.map((m) => m.event_id), full.slice(0, 5).map((r) => r.event_id));
+
+    const jan = await fetchJson("GET", `/api/divers/${me}/profile?from_date=2026-01-01&to_date=2026-01-31`);
+    assert.equal(jan.status, 200, JSON.stringify(jan.body));
+    assert.deepEqual(jan.body.score_trend.map((r) => [r.event_id, r.final_rank, r.partner_name]), [[sync.id, 1, "Cut Lead"]]);
+    assert.equal(new Date(jan.body.score_trend[0].created_at).getTime(),
+      new Date((await pool.query("SELECT '2026-01-20'::date::timestamptz AS d")).rows[0].d).getTime());
+    const dec = await fetchJson("GET", `/api/divers/${me}/profile?from_date=2025-12-01&to_date=2025-12-31`);
+    assert.deepEqual(dec.body.score_trend, [], "created in December, held in January");
+    const a = await fetchJson("GET", `/api/divers/${me}/analytics`);
+    assert.equal(a.status, 200, JSON.stringify(a.body));
+    assert.deepEqual(a.body.year_over_year.map((y) => [y.year, y.meets]), [[2026, 7]]);
+  } finally {
+    await pool.query("DELETE FROM meets WHERE org_id = $1", [st.orgId]);
+    await recordKit.cleanup(st.orgId);
+    await teardownFixture(st);
+  }
+});

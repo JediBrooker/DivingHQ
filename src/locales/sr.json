@@ -1625,7 +1625,8 @@
       "btn_redirecting": "Преусмеравање…",
       "btn_coming_soon": "Ускоро",
       "error_load": "Није могуће учитати накнаду",
-      "error_checkout": "Није могуће покренути плаћање"
+      "error_checkout": "Није могуће покренути плаћање",
+      "btn_renew": "Обнови"
     },
     "charges_view": {
       "title": "Задужења",

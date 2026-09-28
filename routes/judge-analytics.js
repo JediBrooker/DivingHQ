@@ -56,6 +56,7 @@
 const express = require("express");
 const { JUDGE_PER_DIVE } = require("../db/queries");
 const { PUBLIC_CLUB_JOIN } = require("../lib/club-approvals");
+const { uuidParams, rejectBadUuidQuery } = require("../lib/uuid-params");
 
 // Catalog of widget IDs the judge can enable on their dashboard.
 // Mirrors the frontend JUDGE_WIDGET_CATALOG. Validated against
@@ -434,6 +435,8 @@ module.exports = function createJudgeAnalyticsRouter({
   // the optional read replica when available.
   const reads = readPool || pool;
   const router = express.Router();
+  // Malformed path ids fall through to a 404 (lib/uuid-params).
+  uuidParams(router, "id");
 
   // -------------------------------------------------------------
   // GET /api/judges/:id/profile: header stats + dashboard prefs
@@ -756,6 +759,8 @@ module.exports = function createJudgeAnalyticsRouter({
   // them on distinct paths.
   // -------------------------------------------------------------
   router.get("/api/judges/directory", maybeAuth, async (req, res) => {
+    // A malformed filter id is the caller's mistake: 400, not a 22P02 500.
+    if (rejectBadUuidQuery(req, res, "org_id", "club_id")) return;
     const q           = (req.query.q || "").trim();
     const orgId       = req.query.org_id || null;
     const clubId      = req.query.club_id || null;

@@ -35,6 +35,11 @@ const busy = ref(false)
 // show a confirmed state instead of an actionable Pay button. The flag
 // name varies by endpoint, so we just accept any of them.
 const owned = computed(() => !!(fee.value && (fee.value.already_paid || fee.value.already_member || fee.value.active)))
+// Memberships, club affiliations and accreditations can be bought again in
+// the last 30 days before they run out (the server extends from the current
+// end date). Hiding Pay for every active grant meant people could only
+// renew after it lapsed, and then lost the gap.
+const renewable = computed(() => owned.value && fee.value?.renewable === true)
 const ownedLabel = computed(() => {
   const date = fee.value?.period_end ? String(fee.value.period_end).slice(0, 10) : ''
   if (fee.value?.already_member) return date ? t('payments.fee_card.owned_member_until', { date }) : t('payments.fee_card.owned_member')
@@ -114,9 +119,9 @@ watch(() => props.subjectUserId, load)
       <p v-if="totalDiffers" class="fp-total">{{ t('payments.fee_card.total_with_fee', { amount: money(payerTotal, fee.currency) }) }}</p>
       <p v-if="refundNote" class="fp-refund muted">{{ refundNote }}</p>
       <p v-if="owned" class="fp-owned">{{ ownedLabel }}</p>
-      <template v-else>
+      <template v-if="!owned || renewable">
         <button class="fp-pay" :disabled="!enabled || busy || !checkoutUrl" @click="pay">
-          {{ !enabled ? t('payments.fee_card.btn_coming_soon') : (busy ? t('payments.fee_card.btn_redirecting') : t('payments.fee_card.btn_pay')) }}
+          {{ !enabled ? t('payments.fee_card.btn_coming_soon') : (busy ? t('payments.fee_card.btn_redirecting') : (renewable ? t('payments.fee_card.btn_renew') : t('payments.fee_card.btn_pay'))) }}
         </button>
         <ComingSoonBanner v-if="!enabled" :message="comingSoonMessage" />
       </template>

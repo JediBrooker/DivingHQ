@@ -1625,7 +1625,8 @@
       "btn_redirecting": "Mengalihkan…",
       "btn_coming_soon": "Akan datang",
       "error_load": "Tidak dapat memuatkan yuran",
-      "error_checkout": "Tidak dapat memulakan pembayaran"
+      "error_checkout": "Tidak dapat memulakan pembayaran",
+      "btn_renew": "Perbaharui"
     },
     "charges_view": {
       "title": "Caj",

@@ -1625,7 +1625,8 @@
       "btn_redirecting": "Omdirigerar…",
       "btn_coming_soon": "Kommer snart",
       "error_load": "Kunde inte ladda avgiften",
-      "error_checkout": "Kunde inte starta utcheckning"
+      "error_checkout": "Kunde inte starta utcheckning",
+      "btn_renew": "Förnya"
     },
     "charges_view": {
       "title": "Avgifter",

@@ -292,3 +292,47 @@ test('historyNewestFirst: a dive whose diver left the queue still lands in its r
   assert.deepEqual(out, ['a2', 'a1', 'gone1'])
   assert.deepEqual(historyNewestFirst(null, queue), [])
 })
+
+// A coach can withdraw a diver while their event is Live; the Control Room
+// reloads the roster (roster_changed) and must neither lose its place nor
+// advance onto the withdrawn diver, or onto a reserve.
+test('nextQueueIndex skips withdrawn rows and reserves', async () => {
+  const { nextQueueIndex } = await import('../src/composables/useLivePools.js')
+  const roster = [
+    { competitor_id: 'a', round_number: 1 },
+    { competitor_id: 'b', round_number: 1, withdrawn_at: '2026-09-28T10:00:00Z' },
+    { competitor_id: 'r', round_number: 1, is_reserve: true },
+    { competitor_id: 'c', round_number: 1 },
+  ]
+  assert.equal(nextQueueIndex(roster, -1), 0)
+  assert.equal(nextQueueIndex(roster, 0), 3)
+  assert.equal(nextQueueIndex(roster, 3), -1)
+  assert.equal(nextQueueIndex(null, 0), -1)
+})
+
+test('roster_changed mid-dive: the stage stays on the withdrawn diver, Next goes past them', async () => {
+  // What the Control Room does with it: re-read /roster and rebase the
+  // pool's queue on it (refreshPoolRoster -> rebaseQueue).
+  const { rebaseQueue, nextQueueIndex } = await import('../src/composables/useLivePools.js')
+  const pool = makePoolState()
+  pool.roster = [
+    { competitor_id: 'a', round_number: 2, round_order: 1 },
+    { competitor_id: 'b', round_number: 2, round_order: 2 },
+    { competitor_id: 'c', round_number: 2, round_order: 3 },
+  ]
+  selectDiver(pool, 1, 5)
+  rebaseQueue(pool, [
+    { competitor_id: 'a', round_number: 2, round_order: 1 },
+    { competitor_id: 'b', round_number: 2, round_order: null, withdrawn_at: 'now' },
+    { competitor_id: 'c', round_number: 2, round_order: 2 },
+  ])
+  assert.equal(pool.currentActive.competitor_id, 'b', 'the dive in progress stays up')
+  const next = nextQueueIndex(pool.roster, pool.currentIndex)
+  assert.equal(pool.roster[next].competitor_id, 'c')
+  assert.equal(nextQueueIndex(pool.roster, next), -1)
+
+  const idle = makePoolState()
+  rebaseQueue(idle, [{ competitor_id: 'a', round_number: 1, round_order: 1 }])
+  assert.equal(idle.currentIndex, -1)
+  assert.equal(idle.roster.length, 1)
+})

@@ -148,8 +148,12 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
               ORDER BY lower(o.name), lower(cl.name)`,
           )
         : await pool.query(
+            // Seats only count while the holder is still in the club's
+            // org (lib/middleware CLUB_SEAT_SQL), or a stranded row lists
+            // a club every club route would then refuse.
             `SELECT cl.id, cl.name
                FROM club_admins ca
+               JOIN users u ON u.id = ca.user_id AND u.org_id = ca.org_id
                JOIN clubs cl ON cl.id = ca.club_id
               WHERE ca.user_id = $1
               ORDER BY lower(cl.name)`,
@@ -674,6 +678,11 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
       let accountId = club.stripe_account_id;
       if (!accountId) {
         const country = toAlpha2(club.country_code);
+        if (!country) {
+          return res.status(409).json({
+            error: "Your federation's country isn't set, so payouts can't be set up yet. Stripe opens the payout account in that country, and it can't be changed afterwards.",
+          });
+        }
         // Stripe requires a contact email on the recipient account; the JWT
         // doesn't carry one, so fetch the acting admin's.
         const contactEmail = (await pool.query("SELECT email FROM users WHERE id = $1", [req.user.id])).rows[0]?.email
@@ -750,8 +759,9 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
     try {
       const note = ((req.body || {}).note || "").toString().trim().slice(0, 200) || null;
       // Book the payout under a row lock, then fire the real Stripe transfer
-      // to the club's recipient account: success settles 'paid', any Stripe
-      // error 'failed' (balance auto-restores). No operator step.
+      // to the club's recipient account: success settles 'paid', a refusal
+      // from Stripe 'failed' (balance auto-restores), an uncertain outcome
+      // stays 'pending' for the sweep to settle. No operator step.
       const { payouts, accountId } = await ledger.createWithdrawal(pool, { clubId: req.club.id, note });
       const settled = await ledger.executePayouts(pool, payments, payouts, accountId, { logger: log });
       clubAudit(req, {
@@ -989,11 +999,23 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
             throw e;
           }
           const blocking = (await pool.query(
-            `SELECT id, status, stripe_checkout_session FROM payments
+            `SELECT id, status, stripe_checkout_session, payer_user_id FROM payments
               WHERE class_enrolment_id = $1 AND status IN ('pending', 'paid')
               ORDER BY (status = 'pending') DESC, created_at DESC LIMIT 1`,
             [enr.id],
           )).rows[0];
+          // The diver and their guardian can both pay this enrolment, and
+          // the slot is keyed on the enrolment alone. Resuming someone
+          // else's open session would charge the caller's card on a row
+          // naming the other person as payer, so their attempt is retired
+          // and the caller gets a fresh one (insertPaymentOrResume in
+          // routes/payments.js does the same for fines and entries).
+          if (blocking && blocking.payer_user_id && blocking.payer_user_id !== req.user.id) {
+            const retired = await retirePendingPayment({ pool, payments, logger: log }, blocking);
+            if (retired === "paid") return res.status(409).json({ error: "This enrolment has already been paid for." });
+            if (retired === "unavailable") return res.status(503).json({ error: "Couldn't check the existing payment attempt with Stripe — please try again." });
+            continue; // retired or gone: the slot is free, retry the insert.
+          }
           const outcome = await resumeOrRetireCheckout({ pool, payments, logger: log }, blocking);
           if (outcome.url) return res.json({ url: outcome.url, payment_id: outcome.paymentId, resumed: true });
           if (outcome.paid) return res.status(409).json({ error: "This enrolment has already been paid for." });

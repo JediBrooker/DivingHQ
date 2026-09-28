@@ -299,9 +299,12 @@
  * @property {string}        status        'pending' | 'live' | 'completed'
  * @property {string}        created_at    ISO, when the event took place (see PersonalBest.created_at)
  * @property {string}        event_type    'individual' | 'synchro_pair' | 'team'
- * @property {number}        total_score
- * @property {number}        final_rank
- * @property {string}        [partner_name]
+ * @property {number}        total_score   In a team event, the team's total.
+ * @property {number}        final_rank    Place in the standings: the team's place in a
+ *                                         team event (equal totals share it).
+ * @property {string}        [partner_name]  Synchro partner. When the pair was entered under
+ *                                         the other diver (partner_id = this diver), it's that
+ *                                         diver, and the result is the pair's.
  * @property {string}        [team_name]
  */
 
@@ -329,9 +332,10 @@
  * @property {string}      event_id
  * @property {string}      event_name
  * @property {string}      created_at  when the event took place (see PersonalBest.created_at)
- * @property {number}      total
- * @property {number}      rank        Diver's finishing place in this meet. Equal totals share a place (WA Art 4.1.5).
- * @property {number}      field_size  Total competitors in the meet.
+ * @property {number}      total       In a team event, the team's total.
+ * @property {number}      rank        Place in the event's standings (equal totals share
+ *                                     it, WA Art 4.1.5); the team's place in a team event.
+ * @property {number}      field_size  Entries ranked in the event: teams in a team event.
  * @property {RecentFormDive[]} [dives] Per-dive breakdown for the click-to-expand panel.
  */
 
@@ -473,7 +477,8 @@
  * @property {string}      dive_list_id      cdl.id, target for reorder/withdraw
  * @property {number|null} display_order
  * @property {string|null} withdrawn_at      ISO timestamp or null
- * @property {boolean}     is_reserve        reserve row (migration 040), not in the start order until promoted
+ * @property {boolean}     is_reserve        reserve row (migration 040): listed, but not in the
+ *                                           start order or the diving queue until promoted
  * @property {number|null} round_order       1-based position in its round; null for withdrawn and reserve rows
  * @property {string}      competitor_id
  * @property {string}      full_name
@@ -638,8 +643,8 @@
  * @property {string}       [partner_country]
  * @property {number}       total
  * @property {string}       public_id          See RosterRow.public_id.
- * @property {boolean}      is_tied_on_total   True when 2+ rows share this total
- *                                             but were separated by World Aquatics tie-break.
+ * @property {boolean}      is_tied_on_total   True when 2+ rows share this total, and so
+ *                                             share the place (World Aquatics Art 4.1.5).
  */
 
 /**

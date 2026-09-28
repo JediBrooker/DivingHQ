@@ -24,6 +24,10 @@ function fakeClient() {
     accountLinks: { create: async (p) => { calls.link = p; return { url: "https://onboard" }; } },
     checkout: { sessions: { create: async (p, o) => { calls.session = { p, o }; return { id: "cs_1", url: "https://pay" }; } } },
     refunds: { create: async (p, o) => { calls.refund = { p, o }; return { amount: p.amount }; } },
+    transfers: {
+      create: async (p, o) => { calls.transfer = { p, o }; return { id: "tr_1" }; },
+      list: async (p) => { calls.transferList = p; return { data: p.transfer_group === "known" ? [{ id: "tr_known" }] : [] }; },
+    },
     webhooks: { constructEvent: (raw, sig, secret) => ({ raw, sig, secret }) },
   };
 }
@@ -116,4 +120,41 @@ test("toStripeAmount / fromStripeAmount round-trip per currency class", () => {
   assert.equal(createStripe.toStripeAmount("kwd", 12345), 123450);  // three-decimal ×10
   assert.equal(createStripe.fromStripeAmount("kwd", 123450), 12345);
   assert.throws(() => createStripe.toStripeAmount("jpy", 550), (e) => e.status === 400);
+});
+
+// Recipient accounts are created in the federation's own country, and a
+// Connect account's country can't be changed afterwards. Anything
+// countries.json knows maps; an unknown or missing code is null, never a
+// guess (it used to fall back to 'au' outside a 21-country table).
+test("toAlpha2 maps every known country and refuses to guess", () => {
+  const { toAlpha2 } = createStripe;
+  assert.equal(toAlpha2("BRA"), "br");
+  assert.equal(toAlpha2("POL"), "pl");
+  assert.equal(toAlpha2("KOR"), "kr");
+  assert.equal(toAlpha2("AUS"), "au");
+  assert.equal(toAlpha2("gbr"), "gb");
+  assert.equal(toAlpha2("MEX "), "mx", "char(3) padding is fine");
+  assert.equal(toAlpha2("GB"), "gb", "legacy alpha-2 rows still map");
+  assert.equal(toAlpha2("TST"), null);
+  assert.equal(toAlpha2(null), null);
+  assert.equal(toAlpha2(""), null);
+});
+
+test("createRecipientAccount won't open an account without a country", async () => {
+  const { s, calls } = withFake();
+  await assert.rejects(() => s.createRecipientAccount({ country: null, name: "X" }), (e) => e.status === 409);
+  await s.createRecipientAccount({ country: "br", name: "Fed" });
+  assert.equal(calls().accountCreate.identity.country, "br");
+});
+
+// A payout's transfer carries the payout id as its group, so a request
+// whose response got lost can be looked up instead of sent again.
+test("createTransfer tags the transfer with its payout, findTransfer looks it up", async () => {
+  const { s, calls } = withFake();
+  await s.createTransfer({ accountId: "acct_1", amountCents: 500, currency: "GBP", idempotencyKey: "payout-1" });
+  assert.equal(calls().transfer.p.transfer_group, "payout-1");
+  assert.deepEqual(calls().transfer.o, { idempotencyKey: "payout-1" });
+  assert.deepEqual(await s.findTransfer({ payoutId: "known", accountId: "acct_1" }), { id: "tr_known" });
+  assert.deepEqual(calls().transferList, { transfer_group: "known", destination: "acct_1", limit: 1 });
+  assert.equal(await s.findTransfer({ payoutId: "unknown" }), null);
 });

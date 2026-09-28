@@ -1625,7 +1625,8 @@
       "btn_redirecting": "جارٍ التوجيه…",
       "btn_coming_soon": "قريباً",
       "error_load": "تعذر تحميل الرسوم",
-      "error_checkout": "تعذر بدء عملية الدفع"
+      "error_checkout": "تعذر بدء عملية الدفع",
+      "btn_renew": "تجديد"
     },
     "charges_view": {
       "title": "الرسوم",

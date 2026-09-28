@@ -77,6 +77,21 @@ export function selectDiver(pool, idx, numberOfJudges, diveDescription) {
   return true
 }
 
+// The next roster row to put on the stage after index `from` (-1 for the
+// first). A pool's roster is the competing queue (competingQueue below), but
+// the /roster payload it's cut from keeps withdrawn rows and reserves, and
+// advancing onto one had the operator calling a diver who wasn't there, so
+// this steps over them whatever it's given. -1 when the queue has nothing
+// left. A mid-event withdrawal (roster_changed) goes through rebaseQueue.
+export function nextQueueIndex(roster, from) {
+  if (!Array.isArray(roster)) return -1
+  for (let i = Math.max(-1, from) + 1; i < roster.length; i++) {
+    const r = roster[i]
+    if (r && !r.withdrawn_at && !r.is_reserve) return i
+  }
+  return -1
+}
+
 export function initJudgeTiles(n) {
   const tiles = []
   for (let i = 1; i <= (parseInt(n) || 0); i++) {

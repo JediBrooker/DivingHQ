@@ -1625,7 +1625,8 @@
       "btn_redirecting": "Nire-redirect…",
       "btn_coming_soon": "Malapit na",
       "error_load": "Hindi ma-load ang bayad",
-      "error_checkout": "Hindi masimulan ang checkout"
+      "error_checkout": "Hindi masimulan ang checkout",
+      "btn_renew": "I-renew"
     },
     "charges_view": {
       "title": "Mga Singil",

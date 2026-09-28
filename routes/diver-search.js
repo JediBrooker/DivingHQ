@@ -17,10 +17,15 @@
 
 const express = require("express");
 const { ADMIN_ORG_ID } = require("../lib/admin-org");
+const { rejectBadUuidQuery } = require("../lib/uuid-params");
 
 module.exports = function createDiverSearchRouter({ pool, verifyToken }) {
   const router = express.Router();
 
+  // Both reads here join approved clubs only (cl.status = 'active', the
+  // PUBLIC_CLUB_JOIN rule): any signed-in user can search, and a club
+  // still waiting on its federation keeps its name private (migration 096).
+  //
   // Cross-org diver autocomplete. Min 2 chars, ≤20 results, ranks
   // prefix matches above contains-anywhere. Parameterised, so no SQL
   // injection surface even though the LIKE pattern is built from
@@ -36,7 +41,7 @@ module.exports = function createDiverSearchRouter({ pool, verifyToken }) {
          FROM users u
          JOIN user_org_roles r ON r.user_id = u.id AND r.org_id = u.org_id AND r.role = 'diver'
          JOIN organisations o  ON o.id = u.org_id
-         LEFT JOIN clubs cl    ON cl.id = u.club_id
+         LEFT JOIN clubs cl    ON cl.id = u.club_id AND cl.status = 'active'
          WHERE u.full_name ILIKE $1
            AND u.deleted_at IS NULL
          ORDER BY
@@ -55,6 +60,8 @@ module.exports = function createDiverSearchRouter({ pool, verifyToken }) {
 
   // Browse-all paginated diver list; limit clamped to [1, 100].
   router.get("/api/divers", verifyToken, async (req, res) => {
+    // A malformed filter id is the caller's mistake: 400, not a 22P02 500.
+    if (rejectBadUuidQuery(req, res, "org_id", "club_id")) return;
     const q           = (req.query.q || "").trim();
     const orgId       = req.query.org_id || null;
     const clubId      = req.query.club_id || null;
@@ -70,7 +77,7 @@ module.exports = function createDiverSearchRouter({ pool, verifyToken }) {
          FROM users u
          JOIN user_org_roles r ON r.user_id = u.id AND r.org_id = u.org_id AND r.role = 'diver'
          JOIN organisations o  ON o.id = u.org_id
-         LEFT JOIN clubs cl    ON cl.id = u.club_id
+         LEFT JOIN clubs cl    ON cl.id = u.club_id AND cl.status = 'active'
          WHERE ($1::text IS NULL OR u.full_name ILIKE $1)
            AND ($2::uuid IS NULL OR u.org_id  = $2::uuid)
            AND ($3::uuid IS NULL OR u.club_id = $3::uuid)
