@@ -1,17 +1,12 @@
-// Topic bodies load on demand, one small chunk per topic. Importing them
-// all with ?raw put every topic's markdown (about 300KB) into the chunk you
-// download to read just one of them. Filenames match slugs, which
-// test/guide-anchors.test.js checks.
+// Topic metadata stays in this file and loads with the view, so the sidebar,
+// the pager and "Topic not found." don't wait on anything. The markdown for
+// each topic is its own lazy chunk (loadTopicMarkdown below): all 17 used to
+// be bundled into GuideTopicView, ~300 KB of text to read any one of them.
 //
-// Keep each topic literal on one line with slug before feature:
-// lib/spa-shell.js reads this file as text to find the gated ones.
-const BODIES = import.meta.glob('./content/*.md', { query: '?raw', import: 'default' })
-
-export function loadTopicBody(slug) {
-  const load = BODIES[`./content/${slug}.md`]
-  return load ? load() : Promise.resolve(null)
-}
-
+// lib/spa-shell.js and two tests read this file as plain text, pulling the
+// slug and feature fields out with a regex, so keep each topic's object on
+// one line (and don't write that shape in a comment here either, the regex
+// can't tell).
 export const GUIDE_SECTIONS = [
   {
     label: 'Start here',
@@ -88,4 +83,12 @@ export function getAdjacentTopics(slug, isOn) {
     prev: idx > 0 ? all[idx - 1] : null,
     next: idx >= 0 && idx < all.length - 1 ? all[idx + 1] : null,
   }
+}
+
+const CONTENT = import.meta.glob('./content/*.md', { query: '?raw', import: 'default' })
+
+// Resolves to the topic's markdown, or null for a slug with no content file.
+export function loadTopicMarkdown(slug) {
+  const load = CONTENT[`./content/${slug}.md`]
+  return load ? load() : Promise.resolve(null)
 }

@@ -31,10 +31,7 @@
 .lb-rank.gold { color: #f59e0b; }
 .lb-rank.silver { color: #94a3b8; }
 .lb-rank.bronze { color: #b45309; }
-.lb-medal { font-size: 20px; flex-shrink: 0; }
 .lb-name { font-family: var(--font-display); font-size: 20px; font-weight: 700; color: var(--text); flex: 1; }
-.lb-score { font-family: var(--font-mono); font-size: 22px; font-weight: 500; color: var(--cyan); flex-shrink: 0; }
-.lb-winner { background: linear-gradient(135deg, rgba(245,158,11,0.08), rgba(245,158,11,0.03)); border-radius: var(--radius); padding: 0 0.75rem; margin: 0 -0.75rem; }
 
 @media (max-width: 720px) {
   .lb-modal {
@@ -48,5 +45,4 @@
   .lb-row     { padding: 0.75rem 0; gap: 0.75rem; }
   .lb-rank    { font-size: 22px; width: 32px; }
   .lb-name    { font-size: 16px; }
-  .lb-score   { font-size: 18px; }
 }

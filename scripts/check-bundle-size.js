@@ -1,11 +1,11 @@
 #!/usr/bin/env node
-// Bundle-size gate (P0). After `vite build`, asserts that the entry
-// chunk, the three named vendor chunks, AND the per-route ControlView
-// chunk stay at or under the ceilings frozen in
-// scripts/bundle-size-baseline.json. Ceilings carry ~15% headroom over
-// the size measured when the baseline was written, so ordinary churn
-// passes and only a real weight regression (say a heavy import landing
-// on the live /control route) trips the gate.
+// Bundle-size gate (P0). After `vite build`, asserts that every chunk in
+// CHUNKS below (the entry, the named vendor and English-locale chunks,
+// and the per-route Control Room and guide chunks) stays at or under the
+// ceilings frozen in scripts/bundle-size-baseline.json. Ceilings carry
+// ~15% headroom over the size measured when the baseline was written, so
+// ordinary churn passes and only a real weight regression (say a heavy
+// import landing on the live /control route) trips the gate.
 //
 //   node scripts/check-bundle-size.js            -> check (needs dist/)
 //   node scripts/check-bundle-size.js --update   -> rewrite baseline from dist/
@@ -31,6 +31,10 @@ const CHUNKS = {
   // The per-route Control Room chunk (ControlViewV2, the optional V2
   // suffix also tolerates a future rename back to ControlView).
   control: /^ControlView(V2)?-.*\.js$/,
+  // The guide topic page. Its markdown is lazy, one chunk per topic
+  // (src/guide/topics.js); this ceiling is what notices if a static
+  // import pulls all of it back into the view.
+  guide: /^GuideTopicView-.*\.js$/,
 };
 
 function measure(assetsDir) {

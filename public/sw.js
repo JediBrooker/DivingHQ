@@ -12,16 +12,17 @@
  *     if the network actually fails. This means a fresh deploy
  *     reaches users immediately rather than being shadowed by
  *     a stale cache entry that points at vanished asset hashes.
- *   - Vite-bundled hashed assets (/assets/*): CACHE-FIRST. URLs
- *     are content-hashed, so stale ones are never asked for
- *     again once the new index.html lands.
- *   - Non-hashed static files (/css/app.css, /sw.js, root
- *     /icon.svg, /manifest.webmanifest, etc.): NETWORK-FIRST.
- *     These keep their filenames across deploys, so a cache-first
- *     entry would serve stale CSS/icons forever. We update the
- *     cache copy on the way through so an offline visit still
- *     has something to serve.
- *   - Anything else (API, sockets, PDFs): NETWORK ONLY.
+ *   - Vite-bundled hashed assets (/assets/*, which includes the
+ *     bundled app CSS): CACHE-FIRST. URLs are content-hashed, so
+ *     stale ones are never asked for again once the new
+ *     index.html lands.
+ *   - /api/* and /socket.io/*: never intercepted.
+ *   - Every other same-origin GET (root /icon.svg,
+ *     /manifest.webmanifest, /theme-init.js, guide screenshots,
+ *     etc.): NETWORK-FIRST. These keep their filenames across
+ *     deploys, so a cache-first entry would serve stale files
+ *     forever. We update the cache copy on the way through so an
+ *     offline visit still has something to serve.
  *
  * The cache name is versioned; bumping CACHE drops every prior
  * cached asset on activate. v3 = navigation switched from
@@ -42,8 +43,9 @@
 // cache forces returning PWA users to re-fetch the shell on
 // next visit instead of getting a blank page from stale hashes.
 const CACHE = "divinghq-shell-v7";
+// No "/" here: the offline navigation fallback only ever reads
+// /index.html, so a cached "/" was a wasted request on install.
 const SHELL = [
-  "/",
   "/index.html",
   "/icon.svg",
   "/icon-192.png",
@@ -108,7 +110,7 @@ self.addEventListener("fetch", (event) => {
       caches.match(request).then((cached) => {
         if (cached) return cached;
         return fetch(request).then((res) => {
-          if (res.ok && res.status === 200) {
+          if (res.status === 200) {
             const clone = res.clone();
             caches.open(CACHE).then((c) => c.put(request, clone)).catch(() => {});
           }
@@ -119,8 +121,8 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Everything else same-origin (/css/app.css, /sw.js,
-  // /icon.svg, /manifest.webmanifest, etc.): NETWORK-FIRST.
+  // Everything else same-origin (/icon.svg, /manifest.webmanifest,
+  // /theme-init.js, guide screenshots, etc.): NETWORK-FIRST.
   // These keep stable filenames across deploys, so a cache-first
   // entry would serve stale content forever. Fall back to cache
   // only when the network is actually unreachable so the offline
@@ -128,7 +130,7 @@ self.addEventListener("fetch", (event) => {
   event.respondWith(
     fetch(request)
       .then((res) => {
-        if (res.ok && res.status === 200) {
+        if (res.status === 200) {
           const clone = res.clone();
           caches.open(CACHE).then((c) => c.put(request, clone)).catch(() => {});
         }
