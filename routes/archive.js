@@ -85,6 +85,9 @@ module.exports = function createArchiveRouter({ pool, readPool }) {
         const hit = archiveCacheGet("archive");
         if (hit) return res.json(hit);
       }
+      // Taken before the read, so a status flip that lands while it's in
+      // flight stops this listing being cached (lib/archive-cache.js).
+      const gen = archiveCache.generation();
       // Each event row gains a competitor count, a club count, and
       // the list of distinct club ids that participated. That list
       // is what powers the client-side "filter by club" dropdown
@@ -159,7 +162,7 @@ module.exports = function createArchiveRouter({ pool, readPool }) {
          LIMIT $2`,
         [before, limit],
       );
-      if (cacheable) archiveCacheSet("archive", events.rows);
+      if (cacheable) archiveCacheSet("archive", events.rows, gen);
       res.json(events.rows);
     } catch (err) {
       console.error("[Archive Error]", err.message);
@@ -189,6 +192,7 @@ module.exports = function createArchiveRouter({ pool, readPool }) {
         const hit = archiveCacheGet("clubs");
         if (hit) return res.json(hit);
       }
+      const gen = archiveCache.generation();
       // Approved clubs only: a founder waiting on their federation can
       // dive as an individual, but the club's name isn't public yet.
       const r = await reads.query(
@@ -206,7 +210,7 @@ module.exports = function createArchiveRouter({ pool, readPool }) {
          LIMIT $1`,
         [limit],
       );
-      if (cacheable) archiveCacheSet("clubs", r.rows);
+      if (cacheable) archiveCacheSet("clubs", r.rows, gen);
       res.json(r.rows);
     } catch (err) {
       console.error("[Archive Clubs Error]", err.message);
