@@ -7103,3 +7103,34 @@ test("sitemap.xml lists the payments and classes guides only while they're switc
     await features.set("classes", saved.classes);
   }
 });
+
+// A6-07. node-pg hands DATE back as a JS Date at local midnight, which
+// serialises as an ISO instant ('2006-06-10T14:00:00.000Z' on a UTC+10
+// box). The User Manager drawer can't show that in <input type=date> and
+// PUT /api/users/:id/profile refuses it, so saving a user with a DOB
+// failed. The listing has to send the plain calendar date.
+test("GET /api/users sends date_of_birth as a plain YYYY-MM-DD date", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    await pool.query("UPDATE organisations SET country_code = 'MWI' WHERE id = $1", [st.orgId]);
+    const diverId = await insertUser({ orgId: st.orgId, role: "diver", username: `int-dob-${st.slug}`, fullName: "Chikondi Banda" });
+    await pool.query("UPDATE users SET date_of_birth = '2006-06-11' WHERE id = $1", [diverId]);
+    const r = await fetchJson("GET", "/api/users", { token: st.adminToken });
+    assert.equal(r.status, 200);
+    const row = r.body.find((u) => u.id === diverId);
+    assert.equal(row.date_of_birth, "2006-06-11");
+
+    // And the drawer's round trip: send back what the listing gave us.
+    const put = await fetchJson("PUT", `/api/users/${diverId}/profile`, {
+      token: st.adminToken,
+      body: { full_name: "Chikondi Banda", date_of_birth: row.date_of_birth, gender: null, nationality: null },
+    });
+    assert.equal(put.status, 200, JSON.stringify(put.body));
+    const after = await pool.query("SELECT to_char(date_of_birth, 'YYYY-MM-DD') AS dob FROM users WHERE id = $1", [diverId]);
+    assert.equal(after.rows[0].dob, "2006-06-11");
+  } finally {
+    await teardownFixture(st);
+  }
+});

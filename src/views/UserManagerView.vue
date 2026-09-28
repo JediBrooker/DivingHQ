@@ -285,12 +285,24 @@ async function removeCoachLink(id) {
   }
 }
 
+// <input type=date> only takes YYYY-MM-DD. /api/users sends exactly
+// that now, but an ISO instant from an older server used to land here
+// and blank the field, so anything else is dropped rather than shown.
+function dateInputValue(v) {
+  const m = /^(\d{4}-\d{2}-\d{2})$/.exec(String(v || ''))
+  return m ? m[1] : ''
+}
+// What the DOB field was seeded with, so a save leaves it alone unless
+// the admin actually changed it.
+let drawerDobSeeded = ''
+
 // Seed the editable personal-details form from the open user.
 // Mirrors how loadClubs seeds drawerClubChoice: pulled straight
 // from the cached row so the inputs are populated on open.
 function seedDrawerProfile(u) {
   drawerFullName.value = u?.full_name || ''
-  drawerDob.value = u?.date_of_birth || ''
+  drawerDob.value = dateInputValue(u?.date_of_birth)
+  drawerDobSeeded = drawerDob.value
   drawerGender.value = u?.gender || ''
   drawerNationality.value = u?.nationality || ''
   drawerProfileStatus.value = ''
@@ -328,15 +340,18 @@ async function saveDrawerProfile() {
     const s = (v ?? '').trim()
     return s === '' ? null : s
   }
+  const body = {
+    full_name:     nz(drawerFullName.value),
+    gender:        nz(drawerGender.value),
+    nationality:   nz(drawerNationality.value)?.toUpperCase() ?? null,
+  }
+  // The server leaves date_of_birth alone when it's absent. Fixing a
+  // name shouldn't depend on the DOB round-tripping cleanly.
+  if ((drawerDob.value || '') !== drawerDobSeeded) body.date_of_birth = nz(drawerDob.value)
   try {
     await auth.apiFetch(`/api/users/${drawerUserId.value}/profile`, {
       method: 'PUT',
-      body: JSON.stringify({
-        full_name:     nz(drawerFullName.value),
-        date_of_birth: nz(drawerDob.value),
-        gender:        nz(drawerGender.value),
-        nationality:   nz(drawerNationality.value)?.toUpperCase() ?? null,
-      }),
+      body: JSON.stringify(body),
     })
     // Refresh the source-of-truth list so the table + drawer header
     // reflect the new name / details immediately.
