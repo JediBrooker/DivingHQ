@@ -7733,3 +7733,33 @@ test("clubs let in by a revoked claim don't come live sharing another club's cod
     await teardownFixture(st);
   }
 });
+
+test("asking for 'no club' just clears it, rather than a request nobody in the country can decide", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    await pool.query("UPDATE organisations SET claim_state = 'unclaimed' WHERE id = $1", [st.orgId]);
+    const club = async (name) => (await pool.query(
+      "INSERT INTO clubs (org_id, name) VALUES ($1, $2) RETURNING id", [st.orgId, name],
+    )).rows[0].id;
+    const a = await club("Georgetown Divers");
+    const b = await club("Linden Divers");
+    const uname = `int-b3nc-${st.slug}`;
+    const diver = await insertUser({ orgId: st.orgId, role: "diver", username: uname, fullName: "Leaving Diver" });
+    await pool.query("UPDATE users SET club_id = $1 WHERE id = $2", [a, diver]);
+    const tok = await b3Login(uname);
+
+    const leave = await fetchJson("POST", "/api/club-change-requests", { token: tok, body: { to_club_id: null } });
+    assert.equal(leave.status, 201, JSON.stringify(leave.body));
+    assert.equal(leave.body.finalised, true);
+    assert.equal((await pool.query("SELECT club_id FROM users WHERE id = $1", [diver])).rows[0].club_id, null);
+
+    const join = await fetchJson("POST", "/api/club-change-requests", { token: tok, body: { to_club_id: b } });
+    assert.equal(join.status, 201, `nothing stuck in the way: ${JSON.stringify(join.body)}`);
+    assert.equal(join.body.status, "pending");
+  } finally {
+    await pool.query("DELETE FROM clubs WHERE org_id = $1", [st.orgId]);
+    await teardownFixture(st);
+  }
+});

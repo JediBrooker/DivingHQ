@@ -337,8 +337,14 @@ module.exports = function createClubChangesRouter({ pool, verifyToken, bumpToken
       }
 
       // Seed handshake stamps based on who initiated.
+      // Leaving your club needs nobody's say-so: PUT /api/users/:id/club
+      // already lets a diver clear their own. Filed as a request it sat
+      // waiting, and where there's no federation nobody but the sysadmin
+      // could decide it (club admins only review joins), while it blocked
+      // every later request to join a club. So it applies straight away.
+      const selfLeave = isSelf && kind === "club_change" && !to_club_id;
       const diverConfirmed = isSelf ? "now()" : "NULL";
-      const sourceApproved = !isSelf && isOrgAdminOf(req.user, u.org_id) ? "now()" : "NULL";
+      const sourceApproved = selfLeave || (!isSelf && isOrgAdminOf(req.user, u.org_id)) ? "now()" : "NULL";
       const sourceApprovedBy = sourceApproved === "now()" ? req.user.id : null;
 
       let insRes;

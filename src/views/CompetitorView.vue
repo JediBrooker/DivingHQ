@@ -751,7 +751,7 @@ async function submitClubChange() {
   clubError.value = ''
   clubSubmitting.value = true
   try {
-    await auth.apiFetch('/api/club-change-requests', {
+    const made = await auth.apiFetch('/api/club-change-requests', {
       method: 'POST',
       body: JSON.stringify({
         to_club_id: clubChoice.value || null,
@@ -762,7 +762,8 @@ async function submitClubChange() {
     clubChoice.value = ''
     clubNote.value = ''
     await loadMyClubRequests()
-    showSuccess('Club change requested')
+    // Leaving a club ("No club") applies straight away, joining one waits.
+    showSuccess(made?.finalised ? 'Club updated' : 'Club change requested')
   } catch (err) {
     clubError.value = err.message || 'Failed to submit request'
   } finally {
