@@ -450,10 +450,6 @@ module.exports = function createDiverProfileRouter({
              COUNT(*)::int                                                  AS total
            FROM scores s
            JOIN events e ON e.id = s.event_id
-           LEFT JOIN competitor_dive_lists cdl
-             ON cdl.event_id = s.event_id
-            AND cdl.competitor_id = s.competitor_id
-            AND cdl.round_number = s.round_number
            WHERE ${diverDivesWhere("$1")}
              AND COALESCE(e.is_rehearsal, FALSE) = FALSE${EVENT_DATE_FILTER}`,
           [id, fromDate, toDate],

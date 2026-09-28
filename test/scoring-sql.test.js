@@ -982,3 +982,25 @@ test("standingsPerDiveCte: the scope as a UNION of the own and carried stages", 
   // round could come out identical and merge in the UNION.
   assert.throws(() => standingsPerDiveCte({ select: ["s.competitor_id", "s.round_number"] }), /s\.event_id/);
 });
+
+// db/queries.js diverDivesWhere: the diver's dives plus a lead-stored synchro
+// pair's, keyed on dive-list rows so the planner can estimate it (a row-level
+// OR across scores and cdl came out ~15x slower on a long career).
+test("diverDivesWhere: keyed on the diver's and the lead's dive-list rows, no cdl alias", () => {
+  const { diverDivesWhere, fullFieldRanking, FULL_FIELD_RANKING } = require("../db/queries");
+  const sql = diverDivesWhere("$4");
+  assert.ok(sql.startsWith("(s.event_id, s.competitor_id, s.round_number) IN ("));
+  assert.ok(sql.includes("l.competitor_id = $4"));
+  assert.ok(sql.includes("l.partner_id = $4"));
+  // A mirrored consent-flow pair is scored on both sides: the partner's
+  // own scores win, the lead's aren't added on top.
+  assert.ok(sql.includes("NOT EXISTS (SELECT 1 FROM scores own"));
+  assert.ok(!/\bcdl\./.test(sql), "doesn't need the caller's cdl join");
+  assert.ok(!sql.includes("$1"));
+  // The public profile's cut: newest n events first, then the same chain.
+  assert.equal(FULL_FIELD_RANKING, fullFieldRanking());
+  const cut = fullFieldRanking({ latest: 5 });
+  assert.ok(cut.includes("ORDER BY e.created_at DESC, e.id DESC\n    LIMIT 5"));
+  assert.ok(!FULL_FIELD_RANKING.includes("LIMIT 5"));
+  assert.throws(() => fullFieldRanking({ latest: 0 }), /positive integer/);
+});

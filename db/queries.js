@@ -42,28 +42,34 @@ const EVENT_DATE_FILTER = `
 //
 // Their own, plus a synchro pair's dives when the roster stored the pair
 // once under the lead (Control Room import, manual add): the scores sit
-// under the lead's competitor_id and cdl.partner_id names this diver.
-// Profiles and analytics only matched s.competitor_id, so a partner's
-// synchro events were missing from their profile altogether. The
-// partner side only counts when the diver has no scores of their own in
-// that event, because the consent flow (lib/dive-list-submit.js) writes a
-// mirror row per partner and then each side is scored on its own.
+// under the lead's competitor_id and the lead's dive-list row names this
+// diver as partner_id. Profiles and analytics only matched
+// s.competitor_id, so a partner's synchro events were missing from their
+// profile altogether. The partner side only counts when the diver has no
+// scores of their own in that event, because the consent flow
+// (lib/dive-list-submit.js) writes a mirror row per partner and then each
+// side is scored on its own.
 //
-// Needs the canonical cdl join (lib/scoring-sql perDiveJoins, or the
-// same ON clause). `param` is the placeholder bound to the diver id. The
-// IN (...) up front lets the planner use the scores competitor index
-// instead of scanning every score for the OR.
+// Keyed on the dive-list rows, (event, competitor, round), not a row-level
+// `s.competitor_id = $1 OR cdl.partner_id = $1`. Every score has its
+// dive-list row (scores has a foreign key to it), so it's the same set of
+// dives. But the planner can't estimate an OR that spans two tables: it
+// guessed a few dozen rows for a whole career, nested-looped the dive
+// directory against them, and a long career's personal bests went from
+// ~35ms to ~0.5s. The list here comes off one table through the
+// competitor and partner indexes, so it estimates about as well as the
+// plain `s.competitor_id = $1` did. It doesn't read cdl, so callers don't
+// need the canonical join for it. `param` is the placeholder bound to the
+// diver id.
 // =====================================================================
 function diverDivesWhere(param = "$1") {
-  return `s.competitor_id IN (
-      SELECT ${param}::uuid
-      UNION
-      SELECT pl.competitor_id FROM competitor_dive_lists pl WHERE pl.partner_id = ${param}
-    )
-    AND (s.competitor_id = ${param}
-      OR (cdl.partner_id = ${param}
-          AND NOT EXISTS (SELECT 1 FROM scores own
-                           WHERE own.event_id = s.event_id AND own.competitor_id = ${param})))`;
+  return `(s.event_id, s.competitor_id, s.round_number) IN (
+      SELECT l.event_id, l.competitor_id, l.round_number
+        FROM competitor_dive_lists l
+       WHERE l.competitor_id = ${param}
+          OR (l.partner_id = ${param}
+              AND NOT EXISTS (SELECT 1 FROM scores own
+                               WHERE own.event_id = l.event_id AND own.competitor_id = ${param})))`;
 }
 
 // =====================================================================
@@ -153,10 +159,6 @@ function fullFieldRanking({ latest = null } = {}) {
     SELECT DISTINCT s.event_id, s.competitor_id AS scored_as
     FROM scores s
     JOIN events e ON e.id = s.event_id
-    LEFT JOIN competitor_dive_lists cdl
-      ON cdl.event_id = s.event_id
-     AND cdl.competitor_id = s.competitor_id
-     AND cdl.round_number = s.round_number
     WHERE ${diverDivesWhere("$1")}
       AND COALESCE(e.is_rehearsal, FALSE) = FALSE${EVENT_DATE_FILTER}`;
   let diverEvents = scoredIn;
