@@ -258,3 +258,37 @@ test('applyRedive resets the live dive it names, and only that one', async () =>
   assert.ok(pool.judgeTiles.every((t) => !t.scored))
   assert.equal(pool.rediveSeq, before + 1)
 })
+
+// /history comes back round ASC, name ASC. Reversing it put the
+// reverse-alphabetical diver on top within a round, not the dive that had
+// just finished, so "amend the last dive" opened someone else's.
+test('historyNewestFirst: latest round first, and within it the queue order backwards', async () => {
+  const { historyNewestFirst } = await import('../src/composables/useLivePools.js')
+  const queue = [
+    { competitor_id: 'z', round_number: 1 }, { competitor_id: 'a', round_number: 1 }, { competitor_id: 'm', round_number: 1 },
+    { competitor_id: 'z', round_number: 2 }, { competitor_id: 'a', round_number: 2 },
+  ]
+  // what the server sends: round, then name
+  const history = [
+    { competitor_id: 'a', diverName: 'Ann', round_number: 1 },
+    { competitor_id: 'm', diverName: 'Max', round_number: 1 },
+    { competitor_id: 'z', diverName: 'Zed', round_number: 1 },
+    { competitor_id: 'a', diverName: 'Ann', round_number: 2 },
+    { competitor_id: 'z', diverName: 'Zed', round_number: 2 },
+  ]
+  const out = historyNewestFirst(history, queue).map((h) => `${h.competitor_id}${h.round_number}`)
+  assert.deepEqual(out, ['a2', 'z2', 'm1', 'a1', 'z1'])
+})
+
+test('historyNewestFirst: a dive whose diver left the queue still lands in its round', async () => {
+  const { historyNewestFirst } = await import('../src/composables/useLivePools.js')
+  const queue = [{ competitor_id: 'a', round_number: 1 }]
+  const history = [
+    { competitor_id: 'gone', diverName: 'Gone', round_number: 1 },
+    { competitor_id: 'a', diverName: 'Ann', round_number: 1 },
+    { competitor_id: 'a', diverName: 'Ann', round_number: 2 },
+  ]
+  const out = historyNewestFirst(history, queue).map((h) => `${h.competitor_id}${h.round_number}`)
+  assert.deepEqual(out, ['a2', 'a1', 'gone1'])
+  assert.deepEqual(historyNewestFirst(null, queue), [])
+})

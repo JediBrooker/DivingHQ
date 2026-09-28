@@ -46,3 +46,21 @@ test('orderWorkflowState: any status past Upcoming -> live', () => {
 test('WORKFLOW_STEPS is the canonical pre-meet order', () => {
   assert.deepEqual(WORKFLOW_STEPS, ['check-in', 'random', 'sign-off', 'start'])
 })
+
+// Events created in one transaction share created_at to the microsecond.
+// The tie-break was Number(a.id) - Number(b.id), NaN for a UUID, so ties
+// kept whatever order /api/events happened to return and pool card N,
+// chip N and hotkey N could point at different pools after a reload.
+test('liveEventsInOrder: a created_at tie still sorts the same way every time', async () => {
+  const { liveEventsInOrder, compareByCreation } = await import('../src/composables/useControlStage.js')
+  const t = '2026-09-28T10:00:00.000Z'
+  const a = { id: 'c16a33ae-0000-4000-8000-000000000001', created_at: t, status: 'Live' }
+  const b = { id: '0b9f1e2d-0000-4000-8000-000000000002', created_at: t, status: 'Live' }
+  const c = { id: 'e0000000-0000-4000-8000-000000000003', created_at: '2026-09-28T09:00:00.000Z', status: 'Live' }
+  const one = liveEventsInOrder([a, b, c]).map((e) => e.id)
+  const two = liveEventsInOrder([b, c, a]).map((e) => e.id)
+  assert.deepEqual(one, two)
+  assert.equal(one[0], c.id) // oldest first still wins
+  assert.ok(Number.isFinite(compareByCreation(a, b)))
+  assert.notEqual(compareByCreation(a, b), 0)
+})

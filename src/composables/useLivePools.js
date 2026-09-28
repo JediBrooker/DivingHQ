@@ -143,6 +143,29 @@ export function rebaseQueue(pool, roster) {
   pool.currentIndex = next.length - 1
 }
 
+// A pool's completed dives, most recent first, for the History column.
+// /history is ordered round ASC, name ASC, and just reversing it put the
+// reverse-alphabetical diver on top of each round rather than the dive
+// that had just finished. The pool walks its queue in order, so within a
+// round the later queue position is the later dive. A dive whose diver
+// isn't in the queue any more (withdrawn after diving) goes to the bottom
+// of its round.
+export function historyNewestFirst(rows, queue) {
+  if (!Array.isArray(rows)) return []
+  const key = (r) => `${r?.competitor_id}:${Number(r?.round_number)}`
+  const pos = new Map((Array.isArray(queue) ? queue : []).map((r, i) => [key(r), i]))
+  return rows.slice().sort((a, b) => {
+    const round = Number(b.round_number) - Number(a.round_number)
+    if (round) return round
+    const pa = pos.get(key(a))
+    const pb = pos.get(key(b))
+    if (pa != null && pb != null) return pb - pa
+    if (pa != null) return -1
+    if (pb != null) return 1
+    return String(b.diverName || '').localeCompare(String(a.diverName || ''))
+  })
+}
+
 // Apply a score_received to ONE pool's state. Same matching the old
 // single-pool handler did, minus its focused-event short-circuit. Returns
 // { matched, allScoresIn } so the caller can run the DOM/event side

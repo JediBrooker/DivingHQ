@@ -26,11 +26,17 @@ export function orderWorkflowStateFor(ev) {
 // come and go. The SAME order drives the center pool grid, the top-bar
 // switch chips, AND the number-key focus map, so chip position N, grid
 // card N and the "N" hotkey always point at the same pool.
+// Events created in one go share created_at exactly, so the id breaks the
+// tie. Ids are UUIDs: this used to subtract Number(id)s, which is NaN, so
+// ties kept whatever order /api/events sent and pool N could change places
+// between reloads (or between two operators).
 export function compareByCreation(a, b) {
   const ta = a?.created_at || ''
   const tb = b?.created_at || ''
   if (ta !== tb) return ta < tb ? -1 : 1
-  return Number(a?.id) - Number(b?.id)
+  const ia = String(a?.id ?? '')
+  const ib = String(b?.id ?? '')
+  return ia < ib ? -1 : ia > ib ? 1 : 0
 }
 
 // every Live event in canonical order (a fresh array, never mutates input)

@@ -37,7 +37,7 @@ const ReflowModal = defineAsyncComponent(() => import('@/components/ReflowModal.
 import EmptyState from '@/components/EmptyState.vue'
 import { useSocket } from '@/composables/useSocket'
 import { useSocketEvent } from '@/composables/useSocketEvent'
-import { useLivePools, selectDiver, rosterIndexForActive, competingQueue, rebaseQueue, applyRedive } from '@/composables/useLivePools'
+import { useLivePools, selectDiver, rosterIndexForActive, competingQueue, rebaseQueue, applyRedive, historyNewestFirst } from '@/composables/useLivePools'
 import { annotateJudgeRows } from '@/composables/useScoreTrim'
 import { synchroJudgeGroups } from '@/composables/useScoreCategories'
 import { controlKeyIntent, hotkeyBlocked } from '@/composables/useControlKeymap'
@@ -265,8 +265,9 @@ async function loadPoolPanels(eventId) {
   if (!eventId) return
   await Promise.all([
     auth.apiFetch(`/api/events/${eventId}/history`).then((h) => {
-      // /history comes back round ASC, name ASC; reverse so the latest dive is on top.
-      histories[eventId] = Array.isArray(h) ? h.slice().reverse() : []
+      // /history comes back round ASC, name ASC; put the latest dive on
+      // top by the pool's own queue order (see historyNewestFirst).
+      histories[eventId] = historyNewestFirst(Array.isArray(h) ? h : [], pools[eventId]?.roster)
     }).catch(() => { /* leave prior history in place */ }),
     auth.apiFetch(`/api/scoreboard/${eventId}`).then((sb) => {
       standingsByEvent[eventId] = Array.isArray(sb?.standings) ? sb.standings : []
