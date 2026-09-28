@@ -6575,14 +6575,17 @@ test("heads-ups: new federations and clubs reach the sysadmins, decisions reach 
   if (!serverReady) return t.skip("server didn't boot — see warning above");
   const sysIds = (await pool.query("SELECT id FROM users WHERE is_system_admin = true")).rows.map((r) => r.id).sort();
   if (!sysIds.length) return t.skip("no sysadmin in this DB");
-  // Nothing awaits these, so give them a moment to land.
-  const waitFor = async (sql, params) => {
+  // Nothing awaits these, so give them a moment to land. lib/push writes
+  // one row per recipient, in turn, so with more than one sysadmin the
+  // first poll can catch it halfway. Wait for the whole audience.
+  const waitFor = async (sql, params, want = 1) => {
+    let rows = [];
     for (let i = 0; i < 60; i++) {
-      const rows = (await pool.query(sql, params)).rows;
-      if (rows.length) return rows;
+      rows = (await pool.query(sql, params)).rows;
+      if (rows.length >= want) return rows;
       await new Promise((r) => setTimeout(r, 50));
     }
-    return [];
+    return rows;
   };
   const CODE = "NCL";
   await claimKit.wipe(CODE);
@@ -6590,6 +6593,7 @@ test("heads-ups: new federations and clubs reach the sysadmins, decisions reach 
   try {
     const pending = await waitFor(
       "SELECT user_id, title, action_url FROM notifications WHERE category = 'org_pending' AND data->>'org_id' = $1", [X.orgId],
+      sysIds.length,
     );
     assert.deepEqual(pending.map((n) => n.user_id).sort(), sysIds);
     assert.equal(pending[0].title, `Integration Test ${X.slug} is awaiting approval`);
@@ -6598,6 +6602,7 @@ test("heads-ups: new federations and clubs reach the sysadmins, decisions reach 
     const founder = await claimKit.founder(CODE, "Noumea Divers");
     const created = await waitFor(
       "SELECT user_id, title, body FROM notifications WHERE category = 'club_created' AND data->>'club_name' = 'Noumea Divers'", [],
+      sysIds.length,
     );
     assert.deepEqual(created.map((n) => n.user_id).sort(), sysIds);
     assert.equal(created[0].title, "New club: Noumea Divers");
