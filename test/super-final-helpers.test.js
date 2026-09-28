@@ -60,3 +60,32 @@ test("compareSfFinalists: cumulative desc, dive-off breaks an equal total", () =
   const sorted = [A, B, C].sort((x, y) => compareSfFinalists(x, y, m));
   assert.deepEqual(sorted.map((s) => s.competitor_id), ["b", "a", "c"]);
 });
+
+// H2H carry plus SF total, added up in JS doubles, used to decide the
+// SF cut-off. 100 + 100.65 is 200.65 but 100.13 + 100.52 comes out as
+// 200.64999999999998, so a real tie looked like a win on float noise
+// and the Appendix 3 §6 dive-off was skipped.
+test("loadSfCumulative: equal decimal totals are equal, whatever the float sum says", async () => {
+  const { loadSfCumulative, sameTotal } = require("../lib/super-final-helpers");
+  const client = {
+    async query(sql) {
+      if (/score_carry_from FROM events/.test(sql)) return { rows: [{ id: "sf", score_carry_from: "h2h" }] };
+      if (/carry_total/.test(sql)) return { rows: [{ competitor_id: "a", carry_total: "100.00" }, { competitor_id: "b", carry_total: "100.13" }] };
+      return {
+        rows: [
+          { competitor_id: "a", group_number: 1, display_order: 1, full_name: "A", country_code: "BRN", sf_total: "100.65" },
+          { competitor_id: "b", group_number: 1, display_order: 2, full_name: "B", country_code: "BRN", sf_total: "100.52" },
+        ],
+      };
+    },
+  };
+  const [a, b] = await loadSfCumulative(client, "sf");
+  assert.equal(a.cumulative_total, b.cumulative_total);
+  assert.equal(compareSfFinalists(a, b, new Map()), 0, "a tie, for the caller to refuse");
+  assert.ok(sameTotal(100 + 100.65, 100.13 + 100.52));
+  assert.ok(!sameTotal(200.65, 200.6));
+  // Even rows built elsewhere compare as tied.
+  assert.equal(compareSfFinalists(
+    { competitor_id: "x", cumulative_total: 100 + 100.65 },
+    { competitor_id: "y", cumulative_total: 100.13 + 100.52 }, new Map()), 0);
+});

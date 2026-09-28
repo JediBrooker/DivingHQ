@@ -20,6 +20,7 @@ const {
   loadResolvedDiveOffs,
   compareSfFinalists,
   diveOffPairKey,
+  sameTotal,
 } = require("../../lib/super-final-helpers");
 const { perDivePointsCte } = require("../../lib/scoring-sql");
 const {
@@ -941,7 +942,7 @@ module.exports = function createSuperFinalSeedingRoutes({
             .sort((a, b) => compareSfFinalists(a, b, sfDiveOffs));
           if (
             inGroup.length > 2 &&
-            inGroup[1].cumulative_total === inGroup[2].cumulative_total &&
+            sameTotal(inGroup[1].cumulative_total, inGroup[2].cumulative_total) &&
             !sfDiveOffs.get(diveOffPairKey(inGroup[1].competitor_id, inGroup[2].competitor_id))
           ) {
             unresolvedGroups.push(g);
