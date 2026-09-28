@@ -80,23 +80,32 @@ const meetsFromCache = ref(false)
 // The club filter options and the "N archived" count are list-mode only
 // (MeetsBrowser's props and the list header). Fetch them the first time
 // the view is actually showing the list, not on a deep link or a
-// broadcast pane that never will. Once per mount.
+// broadcast pane that never will. Once per mount. A mount straight onto
+// the list does it inline in onMounted, so the loading state still
+// waits for the clubs exactly like it always has; ensureListData covers
+// arriving at the list later (breadcrumb, Back from a deep link).
 let listDataRequested = false
-function ensureListData() {
-  if (listDataRequested) return
-  listDataRequested = true
-  cachedFetch('/api/archive/clubs', { credentials: 'same-origin' }, {
+function fetchClubs() {
+  return cachedFetch('/api/archive/clubs', { credentials: 'same-origin' }, {
     onUpdate(fresh) { if (Array.isArray(fresh)) clubsList.value = fresh },
-  }).then((cls) => {
-    if (Array.isArray(cls.data)) clubsList.value = cls.data
   })
-  // Headline count of the DiveRecorder results archive for the
-  // header line. Fire-and-forget, a failure just hides the "N
-  // archived" link, it never blocks the live list.
+}
+// Headline count of the DiveRecorder results archive for the
+// header line. Fire-and-forget, a failure just hides the "N
+// archived" link, it never blocks the live list.
+function fetchArchiveStats() {
   fetch('/api/dr-archive/stats', { credentials: 'same-origin' })
     .then(r => (r.ok ? r.json() : null))
     .then(s => { if (s && Number.isFinite(s.events)) archiveTotal.value = s.events })
     .catch(() => {})
+}
+function ensureListData() {
+  if (listDataRequested) return
+  listDataRequested = true
+  fetchClubs().then((cls) => {
+    if (Array.isArray(cls.data)) clubsList.value = cls.data
+  })
+  fetchArchiveStats()
 }
 
 const currentEventId = ref(null)
@@ -1062,7 +1071,8 @@ function parseScores(judgeArray) {
 onMounted(async () => {
   loadingList.value = true
   meetsFromCache.value = false
-  if (!route.params.eventId) ensureListData()
+  const listMode = !route.params.eventId
+  if (listMode) listDataRequested = true
   try {
     // Stale-while-revalidate via IndexedDB. Spectators landing on
     // /scoreboard get an instant render from cache (if they've
@@ -1070,15 +1080,22 @@ onMounted(async () => {
     // it lands. Works offline for browsing past meets too, only live
     // state stays unavailable. Detail mode needs this list too, it's
     // where currentEvent resolves from.
-    const evs = await cachedFetch('/api/archive', { credentials: 'same-origin' }, {
-      onUpdate(fresh) {
-        if (Array.isArray(fresh)) { events.value = fresh; meetsFromCache.value = false }
-      },
-    })
+    const [evs, cls] = await Promise.all([
+      cachedFetch('/api/archive', { credentials: 'same-origin' }, {
+        onUpdate(fresh) {
+          if (Array.isArray(fresh)) { events.value = fresh; meetsFromCache.value = false }
+        },
+      }),
+      listMode ? fetchClubs() : null,
+    ])
     if (Array.isArray(evs.data)) {
       events.value = evs.data
       meetsFromCache.value = evs.fromCache
     }
+    if (Array.isArray(cls?.data)) {
+      clubsList.value = cls.data
+    }
+    if (listMode) fetchArchiveStats()
   } finally {
     loadingList.value = false
   }
