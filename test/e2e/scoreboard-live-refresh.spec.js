@@ -45,3 +45,39 @@ test("standings refresh when a dive's panel completes, and the recap takes over 
   await expect(page.locator(".sb-completed")).toBeVisible({ timeout: 8_000 });
   await setup.deleteOrg(orgId);
 });
+
+// The live pills were the Nth score to arrive in slot N (under judge N's
+// name), trimmed flat, and the synchro dive total skipped the x0.6.
+test("live pills sit under their own judge, and a synchro total uses the WA trim and 0.6", async ({ page, request, baseURL }) => {
+  test.setTimeout(120_000);
+  const { orgId, adminToken } = await setup.createOrgAndAdmin(request, { countryCode: "AUS", orgName: "Scoreboard Synchro" });
+  const { event, diveId, divers, judges } = await liveEvent(request, {
+    orgId, adminToken, name: "Synchro Pills", diverNames: ["AAA Pair"], judges: 9, eventType: "synchro_pair",
+  });
+  expect(await emitAck(baseURL, adminToken, "set_active_diver", {
+    event_id: event.id, competitor_id: divers[0].userId, round_number: 1,
+    full_name: "AAA Pair", diverName: "AAA Pair", dd: 3.0, event_type: "synchro_pair",
+    number_of_judges: 9, status: "ready",
+  })).toMatchObject({ ok: true });
+
+  await page.goto(`/scoreboard/${event.id}`);
+  await expect(page.locator(".sb-label").first()).toContainText("Current Performer", { timeout: 10_000 });
+  await page.waitForLoadState("networkidle");
+  await page.waitForTimeout(1000);
+  const pills = page.locator(".sb-live-judges .j-score");
+  await expect(pills).toHaveCount(9);
+
+  // J3 first: it shows in the third seat, not the first
+  const vals = [7, 8, 6, 9, 7, 7, 8, 8, 9];
+  await setup.submitJudgeScore({ baseURL, token: judges[2].token, eventId: event.id, competitorId: divers[0].userId, roundNumber: 1, diveId, score: vals[2] });
+  await expect(pills.nth(2)).toHaveText("6.0", { timeout: 6_000 });
+  await expect(pills.nth(0)).toHaveText("—");
+
+  for (const i of [0, 1, 3, 4, 5, 6, 7, 8]) {
+    await setup.submitJudgeScore({ baseURL, token: judges[i].token, eventId: event.id, competitorId: divers[0].userId, roundNumber: 1, diveId, score: vals[i] });
+  }
+  await expect(page.locator(".sb-live-total-value")).toHaveText("68.4", { timeout: 6_000 });
+  const dropped = await pills.evaluateAll((els) => els.map((el, i) => (el.classList.contains("j-dropped") ? i + 1 : null)).filter(Boolean));
+  expect(dropped).toEqual([3, 4, 5, 9]);
+  await setup.deleteOrg(orgId);
+});

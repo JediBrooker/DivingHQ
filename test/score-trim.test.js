@@ -195,3 +195,45 @@ test("each row carries its category alongside the dropped flag", () => {
   assert.equal(out[1].category, "satisfactory");
   assert.equal(out[2].category, "very-good");
 });
+
+// ---- Live panel for the spectator scoreboard -------------------------
+// The live pills used to be a flat trim over the scores in arrival order,
+// placed in slot i and labelled as judge i+1, and the dive total skipped
+// the synchro x0.6. livePanel places each score under its own judge and
+// only trims (and totals) once the whole panel is in.
+
+test("livePanel: a score sits under its own judge while the panel fills", async () => {
+  const { livePanel } = await import("../src/composables/useScoreTrim.js");
+  const p = livePanel([{ judge_number: 3, value: 8.5 }], 5, "individual", 2.0);
+  assert.deepEqual(p.slots.map((s) => (s.filled ? s.value : null)), [null, null, 8.5, null, null]);
+  assert.deepEqual(p.slots.map((s) => s.judge_number), [1, 2, 3, 4, 5]);
+  assert.equal(p.slots[2].dropped, false);
+  assert.equal(p.total, null, "no total on a partial panel");
+});
+
+test("livePanel: individual trim and total once the panel is in", async () => {
+  const { livePanel } = await import("../src/composables/useScoreTrim.js");
+  const scores = [7, 7.5, 8, 8.5, 9].map((v, i) => ({ judge_number: i + 1, value: v }));
+  const p = livePanel(scores, 5, "individual", 1.5);
+  assert.deepEqual(p.slots.filter((s) => s.dropped).map((s) => s.judge_number), [1, 5]);
+  assert.equal(p.total.toFixed(2), "36.00");
+});
+
+test("livePanel: 9-judge synchro uses the grouped WA trim and the 0.6 factor", async () => {
+  const { livePanel } = await import("../src/composables/useScoreTrim.js");
+  // Exec A 7, 8 | Exec B 6, 9 | Sync 7, 7, 8, 8, 9, DD 3.0.
+  // calc_synchro_dive_points(ARRAY[1..9], ARRAY[7,8,6,9,7,7,8,8,9], 9, 3.0) = 68.40
+  const vals = [7, 8, 6, 9, 7, 7, 8, 8, 9];
+  const scores = vals.map((v, i) => ({ judge_number: i + 1, value: v }));
+  const p = livePanel(scores, 9, "synchro_pair", 3.0);
+  assert.deepEqual(p.slots.filter((s) => s.dropped).map((s) => s.judge_number), [3, 4, 5, 9]);
+  assert.equal(p.total.toFixed(2), "68.40");
+});
+
+test("livePanel: arrival order doesn't matter, and no DD means no total", async () => {
+  const { livePanel } = await import("../src/composables/useScoreTrim.js");
+  const scores = [5, 1, 4, 2, 3].map((j) => ({ judge_number: j, value: 5 + j * 0.5 }));
+  const p = livePanel(scores, 5, "individual", null);
+  assert.deepEqual(p.slots.map((s) => s.value), [5.5, 6, 6.5, 7, 7.5]);
+  assert.equal(p.total, null);
+});

@@ -13,6 +13,7 @@ import {
   synchroJudgeGroups,
 } from '@/composables/useScoreCategories'
 import { diveDescription } from '@/composables/useDiveLabel'
+import { livePanel } from '@/composables/useScoreTrim'
 import { normaliseActiveDiver } from '@/lib/activeDiver'
 import { cachedFetch, idbInvalidate } from '@/lib/idbCache'
 import { SCOREBOARD_LIVE_TTL_MS, SCOREBOARD_ARCHIVE_TTL_MS } from '@/lib/cache-policy'
@@ -937,58 +938,22 @@ useSocketEvent(socket, 'record_broken', (data) => {
 // rankClass + ordinal imported from @/lib/format, single source of
 // truth for the podium classes and the "Currently Nth" line.
 
-// Per-judge pills for the current active diver, annotated with
-// scoreCategory + dropped-under-trim flag. Reuses the same helper
-// the Completed-Dives panel uses, so the chip styling is identical.
-const liveAnnotatedScores = computed(() => {
-  if (!liveJudgeScores.value.length) return []
-  const csv = liveJudgeScores.value.map(s => s.value).join(',')
-  return annotatedScores(csv, currentEvent.value?.number_of_judges)
-})
-
-// Stable-layout placeholders: generates an array of
-// `number_of_judges` tiles ALWAYS (even when no scores have arrived),
-// so the live-judges row's height stays constant from the moment a
-// diver becomes active. Without this the row started at 0px, then
-// jumped to ~50px the instant the first score landed, shoving the
-// catch-up + Up Next blocks below it down. Each slot either carries
-// a populated score (with World Aquatics category + dropped flag) or
-// renders as a dim placeholder dash, either way the tile dimensions
-// are identical.
-const liveJudgeSlots = computed(() => {
-  const numJudges = Number(currentEvent.value?.number_of_judges) || 5
-  const annotated = liveAnnotatedScores.value
-  const slots = []
-  for (let i = 0; i < numJudges; i++) {
-    const filled = annotated[i]
-    if (filled) {
-      slots.push({
-        filled: true,
-        value: filled.value,
-        category: filled.category,
-        dropped: filled.dropped,
-      })
-    } else {
-      slots.push({ filled: false })
-    }
-  }
-  return slots
-})
-
-// Dive total for the active diver, only populated once the full
-// panel is in (otherwise we'd be flashing partial sums). Computed as
-// (sum of non-dropped scores) × DD.
-const liveDiveTotal = computed(() => {
-  const annotated = liveAnnotatedScores.value
-  const need = Number(currentEvent.value?.number_of_judges) || 5
-  if (annotated.length < need) return null
-  const dd = parseFloat(activeDiver.value?.dd)
-  if (!dd || Number.isNaN(dd)) return null
-  const trimSum = annotated
-    .filter(j => !j.dropped)
-    .reduce((sum, j) => sum + j.value, 0)
-  return trimSum * dd
-})
+// Per-judge pills for the current active diver. livePanel (in
+// useScoreTrim, next to the trim the completed dives use) gives one slot
+// per panel seat, ALWAYS, so the row's height stays put from the moment a
+// diver is up instead of jumping when the first score lands. Each score
+// sits in its own judge's seat (it used to be the Nth arrival in slot N,
+// under judge N's name and link), and the trim and dive total only appear
+// once the whole panel is in, with the grouped synchro trim and x0.6 where
+// that applies.
+const livePanelState = computed(() => livePanel(
+  liveJudgeScores.value,
+  panelSize.value,
+  currentEvent.value?.event_type || activeDiver.value?.event_type,
+  activeDiver.value?.dd,
+))
+const liveJudgeSlots = computed(() => livePanelState.value.slots)
+const liveDiveTotal = computed(() => livePanelState.value.total)
 
 // 1-based rank of the active diver in the current standings, or
 // null if we can't find them (e.g. before the first refresh).
@@ -1481,18 +1446,18 @@ onMounted(async () => {
                eventual appearance doesn't push the catch-up + Up Next
                blocks below it down. -->
           <div v-if="centrePerformer" class="sb-live-judges">
-            <template v-for="(slot, i) in liveJudgeSlots" :key="i">
-              <!-- Live chips: each slot's judge_number is i+1 (the
-                   panel is dense and ordered). Wrap in a RouterLink
-                   when we know who the judge is so spectators can
-                   click through to /judge-profile; fall back to a
-                   non-clickable span before the panel has loaded. -->
-              <RouterLink v-if="panelByNumber.get(i + 1)"
-                    :to="`/judge-profile/${panelByNumber.get(i + 1).judge_id}`"
+            <template v-for="slot in liveJudgeSlots" :key="slot.judge_number">
+              <!-- Live chips: one per panel seat, each carrying its own
+                   judge_number. Wrap in a RouterLink when we know who
+                   the judge is so spectators can click through to
+                   /judge-profile; fall back to a non-clickable span
+                   before the panel has loaded. -->
+              <RouterLink v-if="panelByNumber.get(slot.judge_number)"
+                    :to="`/judge-profile/${panelByNumber.get(slot.judge_number).judge_id}`"
                     :class="['j-score', 'j-link',
                              slot.filled ? `j-${slot.category}` : 'j-empty',
                              slot.dropped ? 'j-dropped' : '']"
-                    v-tip="judgeTooltip(panelByNumber.get(i + 1), { dropped: slot.dropped })">
+                    v-tip="judgeTooltip(panelByNumber.get(slot.judge_number), { dropped: slot.dropped })">
                 {{ slot.filled ? slot.value.toFixed(1) : '—' }}
               </RouterLink>
               <span v-else
