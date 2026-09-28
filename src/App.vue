@@ -54,8 +54,12 @@ useOutboxSync()
 // The Scoreboard's broadcast/kiosk and stream-overlay modes are deliberately
 // chromeless: no shell, and no maintenance banner either, since either would
 // paint over a live scoreboard or broadcast.
+// The Control Room's operator broadcast (/control?broadcast=1) is the
+// same idea for the operator's own screen when it's also the projector.
 const isChromeless = computed(() =>
-  route.params.mode === 'broadcast' || resolveOverlay(route.query).active
+  route.params.mode === 'broadcast'
+  || resolveOverlay(route.query).active
+  || (route.path === '/control' && route.query.broadcast === '1')
 )
 // Shell shows for signed-in users on opted-in routes, but never in the
 // chromeless modes above.

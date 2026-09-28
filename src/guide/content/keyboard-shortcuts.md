@@ -40,4 +40,4 @@ These work in any view, not just DivingHQ, but they pair nicely with specific su
 | **F11** | Full-screen the browser — turns any view into a kiosk |
 | **Cmd-Shift-T / Ctrl-Shift-T** | Reopen the last closed tab — useful if you accidentally close the Control Room mid-meet |
 
-For projector / venue use, **Broadcast mode** (`?broadcast=1` on `/control` or `/scoreboard/<id>`) hides the chrome automatically — F11 isn't needed.
+For projector / venue use, **Broadcast mode** hides the chrome automatically — F11 isn't needed. That's `/scoreboard/<id>/broadcast` for the public scoreboard, and `/control?broadcast=1` (**Tools → Broadcast → Operator broadcast**) when the operator's own screen is the projector: the Control Room drops its top bar, History and buttons, and the hotkeys above keep running the meet. The ✕ in the corner goes back.

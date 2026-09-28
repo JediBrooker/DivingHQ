@@ -87,3 +87,35 @@ test("finalising an event that ran long offers to reschedule what comes after it
   await expect(reflow).toContainText("Medals");
   await setup.deleteOrg(orgId);
 });
+
+// "Operator broadcast (this screen)" linked to /control?broadcast=1, which
+// nothing read after the old Control Room went: the chooser closed and the
+// screen stayed exactly as it was (and lost its ?event= on the way).
+test("Operator broadcast turns this Control Room into a kiosk, and ✕ brings it back", async ({ page, request }) => {
+  test.setTimeout(90_000);
+  const { orgId, username, adminToken } = await setup.createOrgAndAdmin(request, { countryCode: "AUS", orgName: "Tools Kiosk" });
+  const { event } = await liveEvent(request, { orgId, adminToken, name: "Kiosk Stage", diverNames: ["AAA Kiosk"] });
+
+  await signIn(page, username);
+  await page.goto(`/control?event=${event.id}`);
+  await expect(page.locator(".cv2-live-diver")).toContainText("AAA Kiosk", { timeout: 10_000 });
+  await expect(page.locator(".cv2-topbar")).toBeVisible();
+
+  const drawer = await openTool(page, "Broadcast");
+  await drawer.locator(".cv2-drawer-action", { hasText: "Open broadcast chooser" }).click();
+  await page.locator(".broadcast-option", { hasText: /Operator broadcast/i }).click();
+
+  await expect(page).toHaveURL(new RegExp(`broadcast=1`));
+  await expect(page).toHaveURL(new RegExp(`event=${event.id}`));
+  await expect(page.locator(".cv2-live-diver")).toContainText("AAA Kiosk");
+  await expect(page.locator(".cv2-topbar")).toHaveCount(0);
+  await expect(page.locator(".app-shell .sidebar")).toHaveCount(0);
+  await expect(page.locator(".cv2-primary")).toBeHidden();
+  await expect(page.locator(".cv2-ref")).toBeHidden();
+
+  await page.locator(".cv2-kiosk-exit").click();
+  await expect(page).not.toHaveURL(/broadcast=1/);
+  await expect(page.locator(".cv2-topbar")).toBeVisible();
+  await expect(page.locator(".cv2-live-diver")).toContainText("AAA Kiosk");
+  await setup.deleteOrg(orgId);
+});

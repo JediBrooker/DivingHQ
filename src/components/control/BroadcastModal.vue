@@ -185,7 +185,7 @@ defineExpose({ open })
       <div v-if="!broadcastPickerOpen && !obsInstructionsOpen && !daktronicsInstructionsOpen" class="lb-body broadcast-chooser-body">
         <!-- 1. Operator broadcast, inline on this screen. -->
         <RouterLink
-          to="/control?broadcast=1"
+          :to="{ path: '/control', query: { ...(event?.id ? { event: event.id } : {}), broadcast: '1' } }"
           class="broadcast-option"
           @click="broadcastChoiceOpen = false; $emit('close-header-menu')">
           <div class="broadcast-option-glyph">🖥️</div>

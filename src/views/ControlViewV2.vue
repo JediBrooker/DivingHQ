@@ -9,7 +9,7 @@
 // useControlStage derivation. Same /control URL, ?event= deep-link, role
 // gate + AppShell as before.
 import { ref, reactive, computed, watch, onMounted, onUnmounted, nextTick, defineAsyncComponent, provide } from 'vue'
-import { useRoute, onBeforeRouteLeave } from 'vue-router'
+import { useRoute, onBeforeRouteLeave, RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useClubScope, CONTROL_ROOM_ROLES } from '@/composables/useClubScope'
 import { useControlStage, liveEventsInOrder } from '@/composables/useControlStage'
@@ -201,6 +201,20 @@ const { isHeld, holdReason, holdPromptOpen, holdReasonInput, openHoldPrompt, con
 // Off by default so the center always shows the stage mode.
 const recoveryOpen = ref(false)
 const drawerOpen = ref(false)
+
+// Operator broadcast (/control?broadcast=1, "Operator broadcast (this
+// screen)" in the Broadcast chooser): the operator's own screen doubles
+// as the projector. The top bar, History and every control go; the pool
+// cards and Standings stay, and the hotkeys still drive the meet, since
+// the operator is still running it from this keyboard. App.vue drops the
+// app shell for it too. Nothing read the flag after the old Control Room
+// went, so picking it just closed the chooser.
+const kiosk = computed(() => route.query.broadcast === '1')
+const kioskExit = computed(() => ({
+  path: '/control',
+  query: route.query.event ? { event: route.query.event } : {},
+}))
+watch(kiosk, (on) => { if (on) drawerOpen.value = false })
 const centerMode = computed(() => (recoveryOpen.value ? 'recovery' : workflowMode.value))
 
 // Every currently-Live event, paired with its pool -> the multi-pool grid
@@ -793,8 +807,16 @@ function onBeforeUnload(e) {
 </script>
 
 <template>
-  <div class="cv2">
+  <div class="cv2" :class="{ 'cv2-kiosk': kiosk }">
+    <RouterLink
+      v-if="kiosk"
+      :to="kioskExit"
+      class="cv2-kiosk-exit"
+      aria-label="Exit broadcast mode"
+      v-tip="'Exit broadcast mode'"
+    >✕</RouterLink>
     <ControlTopBar
+      v-if="!kiosk"
       :events="events"
       :selected-id="selectedEventId"
       :history-open="historyOpen"
@@ -810,7 +832,7 @@ function onBeforeUnload(e) {
     <section class="cv2-center" aria-label="Current stage">
       <div v-if="isHeld" class="cv2-hold-banner" role="status">
         <span>⏸ Meet held<template v-if="holdReason"> — {{ holdReason }}</template></span>
-        <button type="button" @click="resumeMeet">Resume</button>
+        <button v-if="!kiosk" type="button" @click="resumeMeet">Resume</button>
       </div>
       <p v-if="loadError" class="cv2-msg cv2-error">{{ loadError }}</p>
       <p v-else-if="loading" class="cv2-msg">Loading…</p>
@@ -840,7 +862,7 @@ function onBeforeUnload(e) {
         <section v-else-if="centerMode === 'meet'" class="cv2-live-layout" aria-label="Live">
           <!-- HISTORY (left). One Live event -> a full column; two or more
                -> a collapsed edge drawer the operator can peek per focused pool. -->
-          <aside v-if="historyOpen" class="cv2-side cv2-side-history" aria-label="History">
+          <aside v-if="historyOpen && !kiosk" class="cv2-side cv2-side-history" aria-label="History">
             <div class="cv2-side-head">
               <span class="cv2-side-title">History</span>
               <button type="button" class="cv2-side-collapse" aria-label="Collapse history" @click="historyOpen = false">‹</button>
@@ -897,7 +919,7 @@ function onBeforeUnload(e) {
             </div>
           </aside>
           <button
-            v-else
+            v-else-if="!kiosk"
             type="button"
             class="cv2-side-tab"
             aria-label="Open history drawer"
@@ -924,11 +946,12 @@ function onBeforeUnload(e) {
           </div>
 
           <!-- STANDINGS (right). Same collapse behaviour as History. -->
-          <aside v-if="standingsOpen" class="cv2-side cv2-side-standings" aria-label="Standings">
+          <aside v-if="standingsOpen || kiosk" class="cv2-side cv2-side-standings" aria-label="Standings">
             <div class="cv2-side-head">
-              <button type="button" class="cv2-side-collapse" aria-label="Collapse standings" @click="standingsOpen = false">›</button>
+              <button v-if="!kiosk" type="button" class="cv2-side-collapse" aria-label="Collapse standings" @click="standingsOpen = false">›</button>
               <span class="cv2-side-title">Standings</span>
               <button
+                v-if="!kiosk"
                 type="button"
                 class="cv2-announce"
                 :disabled="!focusedStandings.length"
@@ -1118,4 +1141,27 @@ function onBeforeUnload(e) {
   background: var(--amber); color: var(--bg); font-family: var(--font-display); font-weight: 700; font-size: 13px;
 }
 .cv2-hold-banner button { padding: 0.3rem 0.8rem; border-radius: var(--radius-sm); border: 1px solid var(--bg); background: transparent; color: var(--bg); cursor: pointer; font: inherit; font-weight: 700; }
+
+/* Operator broadcast (kiosk). Controls hidden rather than unmounted, so
+   the cards keep their clocks and hotkeys keep working; type sized for a
+   projector across the room. */
+.cv2-kiosk .cv2-center { padding: 2rem 2.5rem; }
+.cv2-kiosk :deep(.cv2-ref),
+.cv2-kiosk :deep(.cv2-primary-slot),
+.cv2-kiosk :deep(.cv2-pool-hold),
+.cv2-kiosk :deep(.cv2-blockers),
+.cv2-kiosk :deep(.cv2-pool-conflict) { display: none; }
+.cv2-kiosk :deep(.cv2-live-diver) { font-size: clamp(32px, 4.5vw, 72px); }
+.cv2-kiosk :deep(.cv2-live-dive) { font-size: clamp(16px, 1.6vw, 26px); }
+.cv2-kiosk :deep(.cv2-tile) { height: clamp(48px, 6vw, 96px); font-size: clamp(18px, 2.2vw, 34px); }
+.cv2-kiosk .cv2-srow-name,
+.cv2-kiosk .cv2-srow-total { font-size: 16px; }
+.cv2-kiosk-exit {
+  position: fixed; top: 1rem; inset-inline-end: 1rem; z-index: 90;
+  width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
+  border: 1px solid var(--border-2); border-radius: 50%;
+  background: var(--bg-2); color: var(--text-3); text-decoration: none;
+  font-family: var(--font-mono); font-size: 16px; font-weight: 700; opacity: 0.5;
+}
+.cv2-kiosk-exit:hover { opacity: 1; color: var(--cyan); border-color: var(--cyan); }
 </style>
