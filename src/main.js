@@ -20,7 +20,12 @@ app.use(createPinia())
 // index.html's inline script already applied data-theme pre-paint,
 // this just instantiates the store so later toggles stay in sync.
 useUiStore().applyTheme()
-app.use(router)
+// The router goes in further down, once auth and the feature flags have
+// loaded. Installing it starts the first navigation straight away, and
+// doing that here ran the guard with user=null and every flag off: a
+// signed-in reload of /inbox went /inbox -> /login?next= -> /inbox,
+// flashed the login screen, fetched its chunk for nothing and left
+// /login in history for Back to land on.
 app.use(i18n)
 // v-tip: instant tooltip replacement for `title=`. See
 // src/directives/tip.js for the rationale (native title has a
@@ -53,7 +58,10 @@ Promise.all([
   initI18n(),
   useAuthStore().fetchMe(),
   useFeaturesStore().load(),
-]).finally(() => app.mount('#app'))
+]).finally(() => {
+  app.use(router)
+  app.mount('#app')
+})
 
 // Register the service worker only in production builds, FYI the Vite
 // dev server's HMR conflicts with cached assets otherwise. Skips
