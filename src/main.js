@@ -49,11 +49,14 @@ app.component('LegalConsent', defineAsyncComponent(() => import('./components/Le
 //                /payments and /classes would wave through a deep link
 //                to a screen we've turned off.
 // All three are best-effort and never reject, so a failure can't block boot.
+// Once both the locale and the identity are in, a signed-in user whose
+// account has a language gets it here, before first paint.
 Promise.all([
   initI18n(),
   useAuthStore().fetchMe(),
   useFeaturesStore().load(),
-]).finally(() => app.mount('#app'))
+]).then(() => useAuthStore().adoptAccountLocale())
+  .finally(() => app.mount('#app'))
 
 // Register the service worker only in production builds, FYI the Vite
 // dev server's HMR conflicts with cached assets otherwise. Skips

@@ -4,19 +4,28 @@
 // screens via a CSS media query, full mode (flag + label) on wider ones.
 //
 // Drop the component into any header. Persists the choice via
-// setLocale() in src/i18n/index.js (localStorage + <html lang>).
+// setLocale() in src/i18n/index.js (localStorage + <html lang>), and on
+// the account when signed in (auth.saveLocale).
 
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { SUPPORTED_LOCALES, setLocale } from '@/i18n'
+import { useAuthStore } from '@/stores/auth'
 
 const { locale } = useI18n()
+const auth = useAuthStore()
 
 const current = computed(() =>
   SUPPORTED_LOCALES.find(l => l.code === locale.value) || SUPPORTED_LOCALES[0])
 
+// Signed in, the choice goes on the account too, so mail the server
+// sends later is in this language. Signed out (the login page), it's
+// noted so signing in keeps it rather than switching to the account's.
 async function onChange(e) {
-  await setLocale(e.target.value)
+  const code = e.target.value
+  await setLocale(code)
+  if (auth.isLoggedIn) auth.saveLocale(code)
+  else auth.notePickedLocale(code)
 }
 </script>
 

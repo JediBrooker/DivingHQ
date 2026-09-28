@@ -1307,7 +1307,9 @@ module.exports = function createUsersRouter({
       if (target.email_verified_at) return res.status(400).json({ error: "This email is already verified" });
       if (!JWT_SECRET || typeof sendVerifyEmailEmail !== "function")
         return res.status(503).json({ error: "Email is not configured on this server" });
-      sendVerifyEmailEmail(req.params.id, mintVerifyToken(req.params.id), { req }).catch(() => {});
+      // No { req }: that's the admin's browser language. With no options
+      // the mail goes out in the member's own saved locale.
+      sendVerifyEmailEmail(req.params.id, mintVerifyToken(req.params.id), {}).catch(() => {});
       await recordAudit(pool, {
         ...auditFromReq(req), org_id: target.org_id, entity_type: "user",
         entity_id: req.params.id, entity_name: target.full_name, action: "user.verification_resent",
@@ -1322,16 +1324,17 @@ module.exports = function createUsersRouter({
   // Send the user a password-reset link (reuses the forgot-password JWT).
   router.post("/api/users/:id/reset-password", writeLimiter, requireOrgAdmin, async (req, res) => {
     try {
-      const target = await loadEditableTarget(req, res, "org_id, full_name, email, password, deleted_at");
+      const target = await loadEditableTarget(req, res, "org_id, full_name, email, password, deleted_at, locale");
       if (!target) return;
       if (target.deleted_at) return res.status(404).json({ error: "User not found" });
       if (!target.email) return res.status(400).json({ error: "This user has no email on file" });
       if (!JWT_SECRET || typeof sendPasswordResetEmail !== "function" || typeof hashFingerprint !== "function")
         return res.status(503).json({ error: "Email is not configured on this server" });
       const token = mintResetToken(req.params.id, hashFingerprint(target.password));
+      // The member's language, not the admin's (which is what { req } gave).
       sendPasswordResetEmail(
         { id: req.params.id, full_name: target.full_name, email: target.email },
-        token, { req }).catch(() => {});
+        token, { locale: target.locale || undefined }).catch(() => {});
       await recordAudit(pool, {
         ...auditFromReq(req), org_id: target.org_id, entity_type: "user",
         entity_id: req.params.id, entity_name: target.full_name, action: "user.password_reset_sent",

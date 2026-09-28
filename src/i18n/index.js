@@ -141,6 +141,12 @@ export async function setLocale(code) {
   applyHtmlAttrs(code)
 }
 
+// The locale the UI is showing right now. The auth store reads it to
+// save it on an account that has none yet.
+export function currentLocale() {
+  return i18n.global.locale.value
+}
+
 // Awaited by main.js before app.mount(), guarantees the detected
 // locale's messages are in memory at first paint.
 export async function initI18n() {
