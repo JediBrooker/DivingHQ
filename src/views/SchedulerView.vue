@@ -74,11 +74,16 @@ const boards = ref([])
 const meetEvents = ref([])
 
 // The server's answer for this meet (org editors, or the admin of the
-// club hosting it). The role check covers the moment before it arrives.
+// club hosting it). The role check only covers the moment before it
+// arrives: once it has, it's the answer. An org_admin of some OTHER
+// federation holds the role but can't edit this meet, and used to get
+// an Edit toggle whose every save came back 403.
 const serverCanEdit = ref(false)
+const serverAnswered = ref(false)
 const canEditSchedule = computed(() => {
   if (!auth.user) return false
   if (auth.user.is_system_admin || serverCanEdit.value) return true
+  if (serverAnswered.value) return false
   const roles = auth.user.org_roles || []
   return roles.includes('org_admin') || roles.includes('meet_manager')
 })
@@ -177,6 +182,7 @@ async function load() {
     boards.value = Array.isArray(body?.boards) ? body.boards : []
     meetEvents.value = Array.isArray(body?.events) ? body.events : []
     serverCanEdit.value = !!body?.can_edit
+    serverAnswered.value = true
   } catch (err) {
     error.value = err.message || t('scheduler.load_failed')
   } finally {
