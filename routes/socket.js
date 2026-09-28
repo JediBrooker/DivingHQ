@@ -703,7 +703,13 @@ module.exports = function attachSocket({
           // The original room broadcast already fired on the first
           // submission; replaying it would double-broadcast.
           socket.emit("score_received", cached.response_body);
-          safeAck({ ok: true, response: cached.response_body, replay: true });
+          // A sync that lost to a manual entry was acked with
+          // superseded_by up top, so the replay says it the same way.
+          const supersededBy = cached.response_body?.superseded_by;
+          safeAck({
+            ok: true, response: cached.response_body, replay: true,
+            ...(supersededBy ? { superseded_by: supersededBy } : {}),
+          });
           return;
         }
       }

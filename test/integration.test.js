@@ -7766,6 +7766,8 @@ test("sockets: a judge's sync that loses to a manual entry is acked once", async
     await new Promise((r) => setTimeout(r, 300));
     const again = await compKit.ask(js, "submit_score", entry);
     assert.equal(again.ok, true);
+    assert.equal(again.replay, true);
+    assert.equal(again.superseded_by, "manual_entry", "the replay reads like the first answer");
     const rejected = (await pool.query(
       "SELECT COUNT(*)::int AS n FROM score_audit_log WHERE event_id = $1 AND action = 'rejected_duplicate'",
       [eventId])).rows[0].n;
