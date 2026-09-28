@@ -7207,7 +7207,9 @@ const compKit = {
     if (!ids.length) return;
     try {
       await pool.query("DELETE FROM events WHERE org_id = ANY($1::uuid[])", [ids]);
+      await pool.query("DELETE FROM meets WHERE org_id = ANY($1::uuid[])", [ids]);
       await pool.query("DELETE FROM users WHERE org_id = ANY($1::uuid[])", [ids]);
+      await pool.query("DELETE FROM clubs WHERE org_id = ANY($1::uuid[])", [ids]);
       await pool.query("DELETE FROM organisations WHERE id = ANY($1::uuid[])", [ids]);
     } catch (err) {
       console.warn(`[cleanup] BRN orgs: ${err.message}`);
@@ -7769,6 +7771,45 @@ test("sockets: a judge's sync that loses to a manual entry is acked once", async
       [eventId])).rows[0].n;
     assert.equal(rejected, 1);
     assert.equal((await pool.query("SELECT score::float AS s FROM scores WHERE event_id = $1", [eventId])).rows[0].s, 7);
+  } finally {
+    socks.forEach((s) => s.close());
+    await compKit.cleanup(orgId);
+  }
+});
+
+// A meet whose divers represent their club, with one approved club.
+compKit.clubMeet = async function clubMeet(orgId, tag) {
+  const code = `C${crypto.randomBytes(2).toString("hex")}`.toUpperCase();
+  const club = (await pool.query(
+    "INSERT INTO clubs (org_id, name, short_code, status) VALUES ($1, $2, $3, 'active') RETURNING id",
+    [orgId, `${tag} Club`, code],
+  )).rows[0].id;
+  const meet = (await pool.query(
+    "INSERT INTO meets (org_id, name, represent_as) VALUES ($1, $2, 'club') RETURNING id",
+    [orgId, `${tag} Meet`],
+  )).rows[0].id;
+  return { club, code, meet };
+};
+
+test("venue board: the diver on the board carries the meet's representation code", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const orgId = await compKit.org("venue");
+  const socks = [];
+  try {
+    const { club, code, meet } = await compKit.clubMeet(orgId, "Venue");
+    const manager = await compKit.user(orgId, "Venue Manager", ["meet_manager"]);
+    const diver = await compKit.user(orgId, "Venue Diver", ["diver"], { clubId: club });
+    const eventId = await compKit.event(orgId, { status: "Live", meet_id: meet });
+    await compKit.enter(eventId, diver.id, await compKit.dives(3), { display_order: 1 });
+    const ms = await compKit.socket(manager.token);
+    socks.push(ms);
+    const row = (await fetchJson("GET", `/api/events/${eventId}/roster`, { token: manager.token })).body[0];
+    assert.equal(row.country_code, code, "the roster already speaks club");
+    assert.deepEqual(await compKit.ask(ms, "set_active_diver", { ...row, status: "ready" }), { ok: true });
+    const state = await fetchJson("GET", `/api/venue/scoreboard-state/${eventId}`);
+    assert.equal(state.status, 200);
+    assert.equal(state.body.active_diver.country_code, code);
   } finally {
     socks.forEach((s) => s.close());
     await compKit.cleanup(orgId);
