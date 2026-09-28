@@ -22,7 +22,7 @@
 //   app.use(require('./routes/diver-profile')({ … }))
 
 const express = require("express");
-const { PER_DIVE: SHARED_PER_DIVE, FULL_FIELD_RANKING } =
+const { PER_DIVE: SHARED_PER_DIVE, FULL_FIELD_RANKING, EVENT_DATE, EVENT_DATE_FILTER } =
   require("../db/queries");
 const { perDiveSelect, perDivePointsCte } = require("../lib/scoring-sql");
 const { PUBLIC_CLUB_JOIN } = require("../lib/club-approvals");
@@ -151,9 +151,9 @@ module.exports = function createDiverProfileRouter({
 
       // Date-range filter pushed into every aggregate. $2/$3 are nullable;
       // when null the AND clause is a no-op so unfiltered callers still work.
-      const DATE_FILTER = `
-        AND ($2::date IS NULL OR e.created_at >= $2::date)
-        AND ($3::date IS NULL OR e.created_at < $3::date + INTERVAL '1 day')`;
+      // Dates are when the event took place (db/queries.js EVENT_DATE),
+      // and so is every created_at this endpoint returns.
+      const DATE_FILTER = EVENT_DATE_FILTER;
 
       // The three reads below are independent, so they're started
       // together and awaited once before the response.
@@ -201,10 +201,10 @@ module.exports = function createDiverProfileRouter({
            ${DATE_FILTER}`,
          })},
          ranked AS (
-           SELECT dt.*, e.name AS event_name, e.created_at,
+           SELECT dt.*, e.name AS event_name, ${EVENT_DATE} AS created_at,
                   ROW_NUMBER() OVER (
                     PARTITION BY dt.dive_code, dt.position, dt.height
-                    ORDER BY dt.dive_total DESC, e.created_at DESC
+                    ORDER BY dt.dive_total DESC, ${EVENT_DATE} DESC
                   ) AS rn
            FROM dive_totals dt
            JOIN events e ON e.id = dt.event_id
@@ -248,7 +248,7 @@ module.exports = function createDiverProfileRouter({
            FROM all_event_totals
          )
          SELECT e.id AS event_id, e.name AS event_name, e.height,
-                e.gender, e.status, e.created_at,
+                e.gender, e.status, ${EVENT_DATE} AS created_at,
                 e.event_type::text AS event_type,
                 ranked.total::numeric(8,2) AS total_score,
                 ranked.rnk::int AS final_rank,
@@ -275,7 +275,7 @@ module.exports = function createDiverProfileRouter({
          ) tlink ON e.event_type = 'team'
          LEFT JOIN teams tm ON tm.id = tlink.team_id
          WHERE ranked.competitor_id = $1
-         ORDER BY e.created_at ASC`,
+         ORDER BY ${EVENT_DATE} ASC`,
         [req.params.id, fromDate, toDate],
       );
       const [stats, pb, trend] = await Promise.all([statsQuery, pbQuery, trendQuery]);
@@ -366,7 +366,7 @@ module.exports = function createDiverProfileRouter({
         // rebuilt the whole field ranking.
         runQuery("ranked_events",
           `WITH ${FULL_FIELD_RANKING}
-           SELECT e.id AS event_id, e.name AS event_name, e.created_at,
+           SELECT e.id AS event_id, e.name AS event_name, ${EVENT_DATE} AS created_at,
                   r.total, r.rank,
                   /* field_size precomputed inside FULL_FIELD_RANKING.ranked.
                      The outer WHERE clause filters to one diver, so a
@@ -375,7 +375,7 @@ module.exports = function createDiverProfileRouter({
            FROM ranked r
            JOIN events e ON e.id = r.event_id
            WHERE r.competitor_id = $1
-           ORDER BY e.created_at DESC`,
+           ORDER BY ${EVENT_DATE} DESC`,
           [id, fromDate, toDate],
         ),
 
@@ -417,9 +417,7 @@ module.exports = function createDiverProfileRouter({
            FROM scores s
            JOIN events e ON e.id = s.event_id
            WHERE s.competitor_id = $1
-             AND COALESCE(e.is_rehearsal, FALSE) = FALSE
-             AND ($2::date IS NULL OR e.created_at >= $2::date)
-             AND ($3::date IS NULL OR e.created_at < $3::date + INTERVAL '1 day')`,
+             AND COALESCE(e.is_rehearsal, FALSE) = FALSE${EVENT_DATE_FILTER}`,
           [id, fromDate, toDate],
         ),
 
@@ -461,9 +459,7 @@ module.exports = function createDiverProfileRouter({
              extraJoins:  ["JOIN users u ON u.id = s.competitor_id"],
              where: `u.org_id = $4
                AND s.competitor_id <> $1
-               AND COALESCE(e.is_rehearsal, FALSE) = FALSE
-               AND ($2::date IS NULL OR e.created_at >= $2::date)
-               AND ($3::date IS NULL OR e.created_at < $3::date + INTERVAL '1 day')`,
+               AND COALESCE(e.is_rehearsal, FALSE) = FALSE${EVENT_DATE_FILTER}`,
            })}
            SELECT
              (SELECT AVG(dd)::numeric(4,2)         FROM me_dives)   AS my_avg_dd,
@@ -514,7 +510,7 @@ module.exports = function createDiverProfileRouter({
         runQuery("year_over_year",
           `WITH ${FULL_FIELD_RANKING},
            my_events AS (
-             SELECT r.event_id, r.total, r.rank, e.created_at
+             SELECT r.event_id, r.total, r.rank, ${EVENT_DATE} AS created_at
              FROM ranked r
              JOIN events e ON e.id = r.event_id
              WHERE r.competitor_id = $1

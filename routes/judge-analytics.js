@@ -612,7 +612,9 @@ module.exports = function createJudgeAnalyticsRouter({
              SELECT
                p.event_id,
                e.name AS event_name,
-               e.created_at,
+               /* JUDGE_PER_DIVE's created_at is when the event took
+                  place (db/queries.js EVENT_DATE). */
+               p.created_at,
                COUNT(*)::int                                              AS dives,
                AVG(p.my_score - p.panel_kept_mean)::numeric(5,3)          AS signed_deviation,
                AVG(ABS(p.my_score - p.panel_kept_mean))::numeric(5,3)     AS abs_deviation,
@@ -623,8 +625,8 @@ module.exports = function createJudgeAnalyticsRouter({
              JOIN events e ON e.id = p.event_id
              WHERE p.event_type <> 'synchro_pair'
                AND p.panel_kept_mean IS NOT NULL
-             GROUP BY p.event_id, e.name, e.created_at
-             ORDER BY e.created_at DESC
+             GROUP BY p.event_id, e.name, p.created_at
+             ORDER BY p.created_at DESC
              LIMIT 10`,
             baseParams,
           ),
@@ -649,7 +651,7 @@ module.exports = function createJudgeAnalyticsRouter({
           runQuery("panel_deviation_per_event",
             `WITH per_dive AS (${JUDGE_PER_DIVE}),
              per_event AS (
-               SELECT pd.event_id, e.name AS event_name, e.created_at,
+               SELECT pd.event_id, e.name AS event_name, pd.created_at,
                       COUNT(*)::int AS dives,
                       COUNT(*) FILTER (
                         WHERE ABS(pd.my_score - pd.panel_kept_mean) >= 1.0
@@ -662,7 +664,7 @@ module.exports = function createJudgeAnalyticsRouter({
                  FROM per_dive pd
                  JOIN events e ON e.id = pd.event_id
                 WHERE pd.event_type <> 'synchro_pair' AND pd.panel_kept_mean IS NOT NULL
-                GROUP BY pd.event_id, e.name, e.created_at
+                GROUP BY pd.event_id, e.name, pd.created_at
              )
              SELECT *
                FROM per_event

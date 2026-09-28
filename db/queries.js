@@ -17,13 +17,34 @@
 const { perDiveSelect, perDivePointsCte } = require("../lib/scoring-sql");
 
 // =====================================================================
+// EVENT_DATE: when an event took place, for every analytics date range,
+// year bucket and "most recent first" ordering. Needs events aliased `e`.
+//
+// The event's own scheduled time, else its meet's start date, else when
+// the row was created. Everything used to key on events.created_at, but
+// events are set up before entries open, often weeks ahead: a January
+// championship created in December landed in the previous year's
+// year_over_year, fell out of a range for the month it was held, and
+// dropped off a judge's analytics for the month they judged it. Use
+// this one expression everywhere a surface filters, groups or sorts by
+// date, or the widgets stop agreeing with each other. (A correlated
+// lookup rather than a join, so it drops into any query that has `e`.)
+// =====================================================================
+const EVENT_DATE = `COALESCE(e.scheduled_at,
+  (SELECT m.start_date::timestamptz FROM meets m WHERE m.id = e.meet_id),
+  e.created_at)`;
+const EVENT_DATE_FILTER = `
+    AND ($2::date IS NULL OR ${EVENT_DATE} >= $2::date)
+    AND ($3::date IS NULL OR ${EVENT_DATE} < $3::date + INTERVAL '1 day')`;
+
+// =====================================================================
 // PER_DIVE: one row per dive the diver performed.
 //
 // Filters to a single competitor and (optionally) a date range.
 // Columns:
 //   event_id, competitor_id, round_number,
 //   dive_code, position, height, dd, description,
-//   event_type::text AS event_type, created_at,
+//   event_type::text AS event_type, created_at (the EVENT_DATE),
 //   dive_total, avg_judge_score
 //
 // Required params:
@@ -35,19 +56,17 @@ const PER_DIVE = perDiveSelect({
   select: [
     "s.event_id", "s.competitor_id", "s.round_number",
     "d.dive_code", "d.position", "d.height", "d.dd", "d.description",
-    "e.event_type::text AS event_type", "e.created_at",
+    "e.event_type::text AS event_type", `${EVENT_DATE} AS created_at`,
   ],
   pointsAlias: "dive_total",
   selectExtra: ["AVG(s.score) AS avg_judge_score"],
   where: `s.competitor_id = $1
-    AND COALESCE(e.is_rehearsal, FALSE) = FALSE
-    AND ($2::date IS NULL OR e.created_at >= $2::date)
-    AND ($3::date IS NULL OR e.created_at < $3::date + INTERVAL '1 day')`,
+    AND COALESCE(e.is_rehearsal, FALSE) = FALSE${EVENT_DATE_FILTER}`,
   groupBy: [
     "s.event_id", "s.competitor_id", "s.round_number",
     "d.dive_code", "d.position", "d.height", "d.dd", "d.description",
   ],
-  groupByExtra: ["e.created_at"],
+  groupByExtra: ["e.scheduled_at", "e.meet_id", "e.created_at"],
 });
 
 // =====================================================================
@@ -88,9 +107,7 @@ const FULL_FIELD_RANKING = `
     FROM scores s
     JOIN events e ON e.id = s.event_id
     WHERE s.competitor_id = $1
-      AND COALESCE(e.is_rehearsal, FALSE) = FALSE
-      AND ($2::date IS NULL OR e.created_at >= $2::date)
-      AND ($3::date IS NULL OR e.created_at < $3::date + INTERVAL '1 day')
+      AND COALESCE(e.is_rehearsal, FALSE) = FALSE${EVENT_DATE_FILTER}
   ),
   ${perDivePointsCte({
     name:   "all_per_dive",
@@ -184,7 +201,7 @@ const JUDGE_PER_DIVE = `
     s.round_number,
     s.judge_id,
     s.score::numeric                       AS my_score,
-    e.created_at,
+    ${EVENT_DATE}                          AS created_at,
     e.event_type::text                     AS event_type,
     e.number_of_judges                     AS panel_size,
     e.height                               AS event_height,
@@ -311,9 +328,7 @@ const JUDGE_PER_DIVE = `
     ) p
   ) panel ON TRUE
   WHERE s.judge_id = $1
-    AND COALESCE(e.is_rehearsal, FALSE) = FALSE
-    AND ($2::date IS NULL OR e.created_at >= $2::date)
-    AND ($3::date IS NULL OR e.created_at <  $3::date + INTERVAL '1 day')
+    AND COALESCE(e.is_rehearsal, FALSE) = FALSE${EVENT_DATE_FILTER}
 `;
 
-module.exports = { PER_DIVE, FULL_FIELD_RANKING, JUDGE_PER_DIVE };
+module.exports = { EVENT_DATE, EVENT_DATE_FILTER, PER_DIVE, FULL_FIELD_RANKING, JUDGE_PER_DIVE };

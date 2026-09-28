@@ -7658,3 +7658,55 @@ test("judge analytics flags exactly the marks the trim drops, ties included", as
     await teardownFixture(st);
   }
 });
+
+// Events exist weeks before anyone dives in them, so "when" for the
+// analytics is when the event took place (its scheduled time, else its
+// meet's start date), not when the row was created.
+test("analytics date ranges and years follow when the event happened, not when it was created", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const { JUDGE_PER_DIVE } = require("../db/queries");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const dive = await recordKit.threeMetreDive();
+    const diver = await recordKit.diver(st.orgId, null, "female", "Dated Diver");
+    // Created today, held on 1 June 2020.
+    const held = await recordKit.event(st.orgId, { gender: "Female" });
+    await pool.query("UPDATE events SET scheduled_at = '2020-06-01T10:00:00Z' WHERE id = $1", [held.id]);
+    await recordKit.dive(held, diver, 1, dive, 7);
+    // No time of its own, but its meet started on 3 March 2019.
+    const meet = (await pool.query(
+      "INSERT INTO meets (org_id, name, start_date) VALUES ($1, 'Dated Meet', '2019-03-03') RETURNING id", [st.orgId],
+    )).rows[0].id;
+    const inMeet = await recordKit.event(st.orgId, { gender: "Female" });
+    await pool.query("UPDATE events SET meet_id = $2, scheduled_at = NULL WHERE id = $1", [inMeet.id, meet]);
+    await recordKit.dive(inMeet, diver, 1, dive, 6);
+
+    const range = async (from, to) => {
+      const r = await fetchJson("GET", `/api/divers/${diver}/analytics?from_date=${from}&to_date=${to}`, { token: st.adminToken });
+      assert.equal(r.status, 200, JSON.stringify(r.body));
+      return r.body;
+    };
+    const y2020 = await range("2020-01-01", "2020-12-31");
+    assert.deepEqual(y2020.recent_form.map((x) => x.event_id), [held.id]);
+    assert.deepEqual(y2020.year_over_year.map((x) => x.year), [2020]);
+    const y2019 = await range("2019-01-01", "2019-12-31");
+    assert.deepEqual(y2019.recent_form.map((x) => x.event_id), [inMeet.id]);
+    const all = await range("2000-01-01", "2100-01-01");
+    assert.deepEqual(all.year_over_year.map((x) => x.year), [2020, 2019]);
+    const today = new Date().toISOString().slice(0, 10);
+    assert.equal((await range(today, today)).recent_form.length, 0, "created today, but not held today");
+
+    const profile = await fetchJson("GET", `/api/divers/${diver}/profile?from_date=2020-01-01&to_date=2020-12-31`, { token: st.adminToken });
+    assert.equal(profile.status, 200);
+    assert.deepEqual(profile.body.score_trend.map((x) => x.event_id), [held.id]);
+
+    const judged = await pool.query(`SELECT event_id FROM (${JUDGE_PER_DIVE}) x`, [held.judges[0], "2020-01-01", "2020-12-31"]);
+    assert.deepEqual(judged.rows.map((r) => r.event_id), [held.id]);
+  } finally {
+    await recordKit.cleanup(st.orgId);
+    await pool.query("DELETE FROM events WHERE org_id = $1", [st.orgId]);
+    await pool.query("DELETE FROM meets WHERE org_id = $1", [st.orgId]);
+    await teardownFixture(st);
+  }
+});
