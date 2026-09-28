@@ -145,13 +145,17 @@ async function loadMyListStatus() {
     myListStatus.value = { entered: false, is_reserve: false, reserve_position: null, confirmed_at: null, dive_list_locks_at: null }
     return
   }
+  const eventId = currentEvent.value.id
+  let status
   try {
-    myListStatus.value = await auth.apiFetch(
-      `/api/competitor/list-status?event_id=${currentEvent.value.id}`,
-    )
+    status = await auth.apiFetch(`/api/competitor/list-status?event_id=${eventId}`)
   } catch {
-    myListStatus.value = { entered: false, is_reserve: false, reserve_position: null, confirmed_at: null, dive_list_locks_at: null }
+    status = { entered: false, is_reserve: false, reserve_position: null, confirmed_at: null, dive_list_locks_at: null }
   }
+  // A slower answer for an event the diver has since moved off mustn't
+  // land on the one they're looking at now.
+  if (currentEvent.value?.id !== eventId) return
+  myListStatus.value = status
 }
 
 async function confirmInheritedList() {
@@ -454,7 +458,15 @@ const searchResults = useDiveSearch(diveDirectory, {
   limit: 15,
 })
 
+// Each pick bumps this, and every await in onEventChange checks it
+// afterwards. Without that, on slow wifi a pick of A then B could finish
+// A last: the picker showed A's rounds and prescribed dives under B's
+// name in the dropdown, and submitList posted them under event B.
+let eventChangeSeq = 0
+
 async function onEventChange() {
+  const seq = ++eventChangeSeq
+  const stale = () => seq !== eventChangeSeq
   partnerId.value = ''
   partnerSearch.value = ''
   partnerOpen.value = false
@@ -471,8 +483,11 @@ async function onEventChange() {
   // guarantees the diver sees the operator's latest conditions
   // without forcing a page reload.
   try {
-    events.value = await auth.apiFetch('/api/events')
+    const fresh = await auth.apiFetch('/api/events')
+    if (stale()) return
+    events.value = fresh
   } catch { /* fall back to the cached list */ }
+  if (stale()) return
   currentEvent.value = events.value.find(e => e.id == selectedEventId.value) || null
   if (!currentEvent.value) return
   selectedDives.value = Array(currentEvent.value.total_rounds || 6).fill(null)
@@ -482,6 +497,7 @@ async function onEventChange() {
   // locked so openModal() refuses to re-open it.
   try {
     const rows = await auth.apiFetch(`/api/events/${currentEvent.value.id}/round-dives`)
+    if (stale()) return
     if (Array.isArray(rows) && rows.length) {
       // Resize selectedDives to match the prescribed-row count
       // (the operator may have added/removed slots since last
@@ -522,7 +538,9 @@ async function onEventChange() {
   // existing dive list so we can pre-fill the form (e.g. when
   // they advanced from a prior stage and the inherited list
   // should show in the picker rows).
+  if (stale()) return
   await loadMyListStatus()
+  if (stale()) return
   if (Array.isArray(myListStatus.value.dives) && myListStatus.value.dives.length) {
     // Resize selectedDives if needed, the diver-list endpoint
     // is the authoritative source when the operator hasn't
