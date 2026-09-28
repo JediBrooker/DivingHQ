@@ -51,7 +51,10 @@ module.exports = defineConfig({
   forbidOnly: !!process.env.CI,        // bail the build if .only snuck in
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? ciWorkers : undefined,
-  reporter: process.env.CI ? "github" : "list",
+  // CI also writes the HTML report (never opened) so the failure artifact
+  // in ci.yml has a browsable index next to the raw traces and videos in
+  // test-results/.
+  reporter: process.env.CI ? [["github"], ["html", { open: "never" }]] : "list",
   // Long enough for `npm run build` (~1s) plus the server's first
   // boot read of schema_meta + audit purge (~200ms). The
   // `npm start` script serves dist/ statically, so there's no Vite

@@ -303,13 +303,19 @@ jobs:
 
       # Failure artifacts: when an e2e flakes or breaks, this
       # uploads the trace + screenshots + video so we can
-      # diagnose without re-running locally.
+      # diagnose without re-running locally. Those land in
+      # test-results/ (Playwright's outputDir); playwright-report/
+      # is the HTML report the CI reporter list now also writes.
+      # Uploading only the report dir used to ship nothing at all.
       - name: Upload Playwright report on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report
-          path: playwright-report/
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
           retention-days: 7
 
       - name: Upload regenerated snapshots
