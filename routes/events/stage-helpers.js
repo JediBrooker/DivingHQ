@@ -100,14 +100,20 @@ async function insertRoundDives(db, eventId, slots) {
 // stale value left by a prior advance/seed. Runs on the caller's
 // open transaction client. Returns the new lock as an ISO
 // string, or null when cleared.
-async function stampDiveListLock(client, eventId, lockMin) {
-  if (lockMin > 0) {
+//
+// `lockNowAtZero` is for a caller whose window has already run out
+// rather than one asking for no lock: seed-final takes 5 minutes off
+// the operator's figure (Appendix 3 §4.1), so their minimum of 5
+// comes out as 0 and means "lock now". Clearing the lock there let
+// finalists keep changing dives right up to the F.
+async function stampDiveListLock(client, eventId, lockMin, { lockNowAtZero = false } = {}) {
+  if (lockMin > 0 || lockNowAtZero) {
     const lockRes = await client.query(
       `UPDATE events
           SET dive_list_locks_at = NOW() + ($2::int || ' minutes')::interval
         WHERE id = $1
         RETURNING dive_list_locks_at`,
-      [eventId, lockMin],
+      [eventId, Math.max(0, lockMin)],
     );
     return lockRes.rows[0]?.dive_list_locks_at?.toISOString() || null;
   }

@@ -7816,6 +7816,47 @@ test("venue board: the diver on the board carries the meet's representation code
   }
 });
 
+// A Super Final chain, H2H -> SF -> F, all Completed and scored on one
+// round by a 3-judge panel, over 12 divers d0..d11 (Appendix 3 §2):
+// H2H pairs (0,1) (2,3) (4,5) in group 1 and (6,7) (8,9) (10,11) in
+// group 2, evens win; the SF puts d0, d2 through in group 1 and d6, d8
+// in group 2. `final: 'upcoming'` leaves F Upcoming and empty, with a
+// Stop-1 event under the H2H, for seed-final.
+compKit.superFinal = async function superFinal(orgId, tag, { meet = null, clubOf = () => null, final = "scored" } = {}) {
+  const judges = [];
+  for (let i = 0; i < 3; i++) judges.push(await compKit.user(orgId, `${tag} Judge ${i}`, ["judge"]));
+  const d = [];
+  for (let i = 0; i < 12; i++) {
+    d.push(await compKit.user(orgId, `${tag} Diver ${String(i).padStart(2, "0")}`, ["diver"], { clubId: clubOf(i) }));
+  }
+  const [dive] = await compKit.dives(1);
+  const mk = (format, parent, carry, extra = {}) => compKit.event(orgId, {
+    name: `${tag} ${format}`, event_format: format, number_of_judges: 3, total_rounds: 1,
+    status: "Completed", meet_id: meet, parent_event_id: parent, score_carry_from: carry, ...extra,
+  });
+  const stageRows = async (eventId, entries) => {
+    await compKit.panel(eventId, judges);
+    for (const [i, group, order, pts] of entries) {
+      await pool.query(
+        `INSERT INTO competitor_dive_lists (event_id, competitor_id, round_number, dive_id, display_order, group_number)
+         VALUES ($1, $2, 1, $3, $4, $5)`, [eventId, d[i].id, dive, order, group]);
+      for (const j of judges) await compKit.score(eventId, d[i].id, 1, j, pts);
+    }
+  };
+  const stop1 = final === "upcoming" ? await mk("final", null, null) : null;
+  const h2h = await mk("super_final_h2h", stop1, null);
+  await stageRows(h2h, d.map((_, i) => [i, i < 6 ? 1 : 2, (i % 6) + 1, i % 2 === 0 ? 8 : 5]));
+  const sf = await mk("super_final_semi", h2h, h2h);
+  await stageRows(sf, [[0, 1, 1, 9], [2, 1, 2, 8], [4, 1, 3, 7], [6, 2, 1, 9], [8, 2, 2, 8], [10, 2, 3, 7]]);
+  if (final === "upcoming") {
+    const fin = await mk("super_final_final", sf, null, { status: "Upcoming", total_rounds: 5 });
+    return { d, h2h, sf, fin, stop1 };
+  }
+  const fin = await mk("super_final_final", sf, null);
+  await stageRows(fin, [[0, null, 1, 9], [2, null, 2, 8], [6, null, 3, 7], [8, null, 4, 6]]);
+  return { d, h2h, sf, fin };
+};
+
 test("Super Final rankings: representation codes, and no pending club names in public", async (t) => {
   if (!dbReachable) return t.skip("DB not reachable");
   if (!serverReady) return t.skip("server didn't boot — see warning above");
@@ -7826,36 +7867,11 @@ test("Super Final rankings: representation codes, and no pending club names in p
       "INSERT INTO clubs (org_id, name, short_code, status) VALUES ($1, 'Unvetted Club', $2, 'pending') RETURNING id",
       [orgId, `P${crypto.randomBytes(2).toString("hex")}`.toUpperCase()],
     )).rows[0].id;
-    const judges = [];
-    for (let i = 0; i < 3; i++) judges.push(await compKit.user(orgId, `SfRank Judge ${i}`, ["judge"]));
-    const d = [];
-    for (let i = 0; i < 12; i++) {
+    const { d, fin } = await compKit.superFinal(orgId, "SfRank", {
+      meet,
       // d0 in the approved club; d2 and d1 (an H2H loser) in the pending one.
-      const clubId = i === 0 ? club : (i === 1 || i === 2) ? pending : null;
-      d.push(await compKit.user(orgId, `SfRank Diver ${String(i).padStart(2, "0")}`, ["diver"], { clubId }));
-    }
-    const [dive] = await compKit.dives(1);
-    const mk = (format, parent, carry) => compKit.event(orgId, {
-      name: `SfRank ${format}`, event_format: format, number_of_judges: 3, total_rounds: 1,
-      status: "Completed", meet_id: meet, parent_event_id: parent, score_carry_from: carry,
+      clubOf: (i) => (i === 0 ? club : (i === 1 || i === 2) ? pending : null),
     });
-    const stageRows = async (eventId, entries) => {
-      await compKit.panel(eventId, judges);
-      for (const [i, group, order, pts] of entries) {
-        await pool.query(
-          `INSERT INTO competitor_dive_lists (event_id, competitor_id, round_number, dive_id, display_order, group_number)
-           VALUES ($1, $2, 1, $3, $4, $5)`, [eventId, d[i].id, dive, order, group]);
-        for (const j of judges) await compKit.score(eventId, d[i].id, 1, j, pts);
-      }
-    };
-    const h2h = await mk("super_final_h2h", null, null);
-    // Pairs (0,1) (2,3) (4,5) in group 1 and (6,7) (8,9) (10,11) in group 2; evens win.
-    await stageRows(h2h, d.map((_, i) => [i, i < 6 ? 1 : 2, (i % 6) + 1, i % 2 === 0 ? 8 : 5]));
-    const sf = await mk("super_final_semi", h2h, h2h);
-    await stageRows(sf, [[0, 1, 1, 9], [2, 1, 2, 8], [4, 1, 3, 7], [6, 2, 1, 9], [8, 2, 2, 8], [10, 2, 3, 7]]);
-    const fin = await mk("super_final_final", sf, null);
-    await stageRows(fin, [[0, null, 1, 9], [2, null, 2, 8], [6, null, 3, 7], [8, null, 4, 6]]);
-
     const r = await fetchJson("GET", `/api/events/${fin}/super-final/rankings`);
     assert.equal(r.status, 200, JSON.stringify(r.body));
     const by = Object.fromEntries(r.body.rankings.map((row) => [row.competitor_id, row]));
@@ -8003,5 +8019,30 @@ test("synchro reserve swap takes either diver of a pair, never the other gender'
     assert.deepEqual(inH2h.map((r) => r.competitor_id), [partner.id]);
   } finally {
     await compKit.cleanup(orgId, guestOrg);
+  }
+});
+
+test("seed-final with the minimum lock window locks the lists now, not never", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const orgId = await compKit.org("flock");
+  try {
+    const admin = await compKit.user(orgId, "Flock Admin", ["org_admin"]);
+    const { fin } = await compKit.superFinal(orgId, "Flock", { final: "upcoming" });
+    const lock = async () => (await pool.query(
+      `SELECT dive_list_locks_at IS NOT NULL AS locked,
+              dive_list_locks_at <= now() + interval '1 minute' AS soon
+         FROM events WHERE id = $1`, [fin])).rows[0];
+    // The F starts in 5 minutes: change of dives closes 5 minutes before
+    // it (Appendix 3 §4.1), which is right now.
+    const r = await fetchJson("POST", `/api/events/${fin}/seed-final`, { token: admin.token, body: { lock_minutes: 5 } });
+    assert.equal(r.status, 200, JSON.stringify(r.body));
+    assert.deepEqual(await lock(), { locked: true, soon: true });
+    // A longer window still lands 5 minutes before the F.
+    const r2 = await fetchJson("POST", `/api/events/${fin}/seed-final`, { token: admin.token, body: { lock_minutes: 15 } });
+    assert.equal(r2.status, 200, JSON.stringify(r2.body));
+    assert.deepEqual(await lock(), { locked: true, soon: false });
+  } finally {
+    await compKit.cleanup(orgId);
   }
 });

@@ -1015,7 +1015,9 @@ module.exports = function createSuperFinalSeedingRoutes({
         // SF and F, change-of-dives must be made up to "5
         // minutes before the Final" → effective lock = NOW() +
         // (lock_minutes - 5), already folded into lockMin above.
-        const lockAtIso = await stampDiveListLock(client, ev.id, lockMin);
+        // The body's minimum is 5, so 0 here means the window has
+        // already closed: lock now, don't clear it.
+        const lockAtIso = await stampDiveListLock(client, ev.id, lockMin, { lockNowAtZero: true });
 
         await recordAudit(client, {
           ...auditFromReq(req),
