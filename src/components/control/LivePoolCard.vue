@@ -145,7 +145,7 @@ function onPrimary() {
   emit('advance')
 }
 
-// Referee calls for THIS pool's active diver (ControlView.vue:2330-2345).
+// Referee calls for THIS pool's active diver.
 // A referee action means the dive needs review, so it kills the in-flight
 // auto-advance so the operator isn't racing the timer.
 function refAction(type) {

@@ -1,6 +1,6 @@
 <script setup>
 /* ScoreCorrectionModal, manager-amend on a finalised dive,
- * extracted from ControlView.vue. Judge picker + new-score input
+ * extracted from the old all-in-one ControlView. Judge picker + new-score input
  * with a live trim-sum / dive-points preview; the PUT routes
  * through the HTTP outbox so a network blip can't lose the edit.
  *
@@ -12,7 +12,7 @@
  * State boundary: draft fields + preview are OWNED here. On save
  * the clicked history card (the `card` prop) is mutated in place,
  * same object the parent's history list renders, and `saved`
- * tells the parent to refresh its audit strip.
+ * tells the parent to reload that pool's history + standings.
  */
 import { ref, computed } from 'vue'
 import { useHttpOutbox } from '@/composables/useHttpOutbox'
@@ -227,9 +227,8 @@ async function submitCorrection() {
 </template>
 
 <style scoped>
-/* Correction styles MOVED from ControlView.css (exclusive to
-   this modal). The modal's 520px max-width now rides the
-   BaseModal max-width prop (was .correct-modal). */
+/* Correction styles, only used by this modal. The 520px
+   max-width rides BaseModal's max-width prop. */
 
 /* Score-correction live preview, refreshes on every keystroke
    so the operator can see the impact of the edit (trim-sum
@@ -304,6 +303,6 @@ async function submitCorrection() {
 }
 
 /* The lb-* modal frame (.lb-backdrop/.lb-modal/.lb-header/.lb-title/.lb-event/.lb-body
-   + their 720px counterparts) now lives in BaseModal.vue (frame) + the global
-   lb-header/lb-title/lb-event/lb-body in ControlView.css. */
+   + their 720px counterparts) comes from BaseModal.vue plus the global
+   src/styles/lb-modal.css. */
 </style>

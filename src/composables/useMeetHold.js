@@ -1,16 +1,14 @@
-// Meet hold / resume: extracted from ControlView.vue. Broadcasts
-// pause state to judges + the spectator scoreboard (meet_hold /
-// meet_resume) and mirrors server-pushed hold state for
-// multi-operator setups + late-joining Control Room sessions
-// (the server replays meet_held when the view emits
-// get_meet_hold on event switch, that emit stays with the
-// caller's onEventChange).
+// Meet hold / resume, lifted out of the old all-in-one ControlView.
+// Broadcasts pause state to judges + the spectator scoreboard
+// (meet_hold / meet_resume) and mirrors server-pushed hold state for
+// multi-operator setups. The server only replays an existing hold to a
+// socket that asks with get_meet_hold, and asking is the caller's job:
+// the judge screen and the scoreboard do, the Control Room doesn't yet.
 //
 // Must be called synchronously during component setup: the
 // meet_held / meet_resumed listeners register via useSocketEvent,
 // which relies on the active effect scope (onScopeDispose) for
-// auto-cleanup, the same leak-fix property ControlViews listeners
-// were migrated to.
+// auto-cleanup.
 //
 // Options:
 //   socket            : the pooled socket from useSocket(), only used

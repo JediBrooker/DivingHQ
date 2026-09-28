@@ -281,7 +281,7 @@ function closeCorrection() {
 }
 
 // Announce (#9): push the focused pool's standings to the spectator
-// scoreboard ("say it on screen"). Reproduces the V1 announce_score emit.
+// scoreboard ("say it on screen") via announce_score.
 function announceFocused() {
   const ev = currentEvent.value
   if (!ev || !focusedStandings.value.length) return
@@ -289,8 +289,8 @@ function announceFocused() {
   showSuccess(`Announced "${ev.name}" standings on the scoreboard.`)
 }
 
-// The nextDiver funnel (ControlView.vue:2347-2378), generalized to ANY
-// pool so each card's primary button advances its OWN event: partial-score
+// The old single-pool nextDiver funnel, generalized to ANY pool so each
+// card's primary button advances its OWN event: partial-score
 // confirm, then advance that pool's cursor or finalise. Per-pool shot
 // clock + auto-advance live in each card, which re-arms its clock when its
 // active diver changes here.
@@ -361,10 +361,10 @@ function onKeydown(e) {
   else if (intent.action === 'ref') refActionFocused(intent.arg)
 }
 
-// finaliseEvent (ControlView.vue:2470-2545), per pool: same
-// consequences/confirm/PUT/undo. (The reflow modal is drawer plumbing,
-// deferred to P8, since an event with no long-run candidates, which is the
-// common case, never opens it.)
+// Finalise one pool: consequences confirm, PUT Completed, then an undo
+// toast. The old single-pool finalise could also open the schedule
+// reflow modal; that never came across, so nothing opens it today (an
+// event with no long-run candidates, the common case, never needed it).
 async function finalisePool(ev) {
   if (!ev) return
   const p = pools[ev.id]
@@ -510,7 +510,7 @@ async function loadEvents() {
 const wiredPools = new Set()
 
 function bringUpPools() {
-  // Honour /control?event=<id> (same deep-link contract as V1).
+  // Honour /control?event=<id>, the Control Room's deep link.
   const q = route.query.event
   if (q != null && events.value.some((e) => String(e.id) === String(q))) {
     selectedEventId.value = String(q)

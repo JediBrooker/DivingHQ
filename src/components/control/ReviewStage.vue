@@ -1,6 +1,6 @@
 <script setup>
 // ReviewStage (P8): a Completed event's final standings + recap, read
-// from /api/scoreboard/:id (the same source V1's leaderboard uses). The
+// from /api/scoreboard/:id (the same source the public scoreboard uses). The
 // operator's deeper review stays on the public scoreboard (linked).
 // Drawer's broadcast/exports relocation is a later slice.
 import { ref, watch, computed } from 'vue'

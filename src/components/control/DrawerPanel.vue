@@ -3,9 +3,9 @@
 // whole panel is v-if-gated there), so a resting Live canvas carries none
 // of this markup, that's the #9 subtraction. Within the drawer only one
 // section is open at a time, and each section's heavy child/fetch is
-// deferred until its first open. Reserves/audit reuse the same endpoints
-// ControlView.vue hits (loadReserves 1737, audit-recent 272); broadcast
-// reuses the intact BroadcastModal; sponsor reuses SponsorLogosManager.
+// deferred until its first open. Reserves/audit use the same endpoints
+// the old single-pool Control Room did (/reserves, /audit-recent);
+// broadcast reuses BroadcastModal; sponsor reuses SponsorLogosManager.
 // No new business rule here, just moving where the markup lives.
 import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useAuthStore } from '@/stores/auth'

@@ -1,6 +1,6 @@
 <script setup>
 /* SignoffModal, referee dive-order sign-off, extracted from
- * ControlView.vue (Cut 2 + Cut 3). Four paths: push to the
+ * the old all-in-one ControlView (Cut 2 + Cut 3). Four paths: push to the
  * referee's device, 6-digit handoff code (+ QR), referee
  * credentials at this device, and the manager-attests fallback
  * (hidden and refused server-side when enforce_referee_signoff).
@@ -16,7 +16,7 @@
  *
  * State boundary: everything about the in-flight sign-off is
  * OWNED here. A successful sign-off emits `signed-off` with the
- * event-row patch, the parent applies it via patchCurrentEvent.
+ * event-row patch, and SetupStage merges it into the event.
  */
 import { ref, computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
@@ -444,7 +444,7 @@ async function managerAttestSignoff() {
     animation-iteration-count: 1 !important;
   }
 }
-/* Sign-off styles MOVED from ControlView.css (exclusive to this modal). */
+/* Sign-off styles, only used by this modal. */
 .signoff-tabs {
   display: flex; gap: 0.4rem; margin-bottom: 1rem;
   border-bottom: 1px solid var(--border);
@@ -549,6 +549,6 @@ async function managerAttestSignoff() {
   50%      { opacity: 1;   transform: scale(1.15); }
 }
 
-/* The lb-* modal frame now lives in BaseModal.vue (frame) + the global
-   lb-header/lb-title/lb-event/lb-body in ControlView.css. */
+/* The lb-* modal frame comes from BaseModal.vue plus the global
+   lb-header/lb-title/lb-event/lb-body in src/styles/lb-modal.css. */
 </style>

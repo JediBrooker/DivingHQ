@@ -1,14 +1,13 @@
 // Shared meet-day stage derivation (P5 of the redesign).
 //
-// The SAME workflowMode / orderWorkflowState ControlView.vue derives
-// inline (ControlView.vue:835-850), copied here rather than extracted:
-// the original SFC stays byte-identical as the V2 rollback. This copy
-// is pinned by test/use-control-stage.test.js against the exact same
-// transitions the ControlView e2e specs lock, so V1 and V2 cannot
-// drift. Pure functions of an event object, no scoring or business rules.
+// workflowMode / orderWorkflowState for the Control Room. These started
+// life inline in the old all-in-one ControlView and moved here when the
+// Stage-Rail rebuild needed them from several components.
+// test/use-control-stage.test.js pins every transition. Pure functions of
+// an event object, no scoring or business rules.
 import { computed, unref } from 'vue'
 
-// Pre-meet stepper order (ControlView.vue:857).
+// Pre-meet stepper order.
 export const WORKFLOW_STEPS = ['check-in', 'random', 'sign-off', 'start']
 
 // null (no event) -> check-in -> random -> sign-off -> start (all

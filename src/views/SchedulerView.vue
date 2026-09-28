@@ -44,12 +44,12 @@
 //     and schedule:session_duplicated so multi-tab edits propagate.
 //
 // Phase 4 (this revision): subscribes to `schedule:shifted` and
-// refetches /sessions on receipt. The live re-flow UI itself
-// (the "Reschedule downstream" modal) lives in the Control Room,
-// since the operator who marked the event Complete shouldn't have
-// to leave that view to confirm shifts. See
-// src/components/ReflowModal.vue + the finaliseEvent flow in
-// ControlView.vue.
+// refetches /sessions on receipt. The re-flow UI itself (the
+// "Reschedule downstream" modal, src/components/ReflowModal.vue)
+// was opened from the old Control Room's finalise flow. The
+// Stage-Rail Control Room doesn't open it, so today nothing does,
+// and schedule:shifted only fires if something POSTs
+// /api/blocks/reflow directly.
 
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
@@ -246,10 +246,11 @@ socket.on('schedule:conflict_dismissed', onConflictDismissed)
 socket.on('schedule:block_updated', onScheduleChanged)
 socket.on('schedule:block_deleted', onScheduleChanged)
 socket.on('schedule:session_duplicated', onScheduleChanged)
-// Phase 4: live re-flow. The Control Room's reflow modal POSTs
-// to /api/blocks/reflow which emits this event; every connected
-// timeline (including public-schedule viewers) refetches so the
-// new windows appear within a socket round-trip.
+// Phase 4: live re-flow. POST /api/blocks/reflow emits this (the
+// modal that used to call it isn't mounted anywhere right now, see
+// the header); every connected timeline, public-schedule viewers
+// included, refetches so the new windows appear within a socket
+// round-trip.
 socket.on('schedule:shifted', onScheduleChanged)
 onUnmounted(() => {
   socket.off('schedule:conflict_dismissed', onConflictDismissed)

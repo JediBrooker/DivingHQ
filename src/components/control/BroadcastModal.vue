@@ -1,6 +1,6 @@
 <script setup>
 /* BroadcastModal: the Control Room broadcast chooser, extracted
- * from ControlView.vue. Covers the five operator scenarios,
+ * from the old all-in-one ControlView. Covers the five operator scenarios,
  * operator broadcast (this screen), single-event audience window,
  * multi-event picker, OBS/streaming overlay instructions, and
  * the Daktronics venue-bridge command panel.
@@ -8,10 +8,11 @@
  * State boundary: chooser/picker state comes from
  * @/composables/useBroadcastChooser (called HERE now, not in the
  * view). The OBS overlay-URL + venue-bridge command state is
- * owned here. The parent opens the modal imperatively via the
- * exposed open(), it has no other coupling besides the `event`
- * prop and the close-header-menu emit (legacy ⋯-menu cleanup the
- * chooser fires when the operator commits to a broadcast window).
+ * owned here. DrawerPanel opens the modal imperatively via the
+ * exposed open(), there's no other coupling besides the `event`
+ * prop and the close-header-menu emit, which the chooser fires when
+ * the operator commits to a broadcast window. Nothing listens for
+ * that emit now, it was for the old ⋯ header menu.
  *
  * Body-scroll lock: registered here for the chooser + venue
  * panel. The composable refcounts, so the lock composes with the
@@ -558,10 +559,8 @@ defineExpose({ open })
 </template>
 
 <style scoped>
-/* Broadcast / OBS / venue-bridge styles MOVED from
-   ControlView.css (exclusive to this modal). The .lb-* modal
-   frame at the bottom is COPIED, since the pattern is shared by
-   the modals that remain in ControlView. */
+/* Broadcast / OBS / venue-bridge styles, only used by this
+   modal. */
 
 /* Broadcast chooser modal: big tappable rows so the operator
    picks the right destination at a glance. The modal width
@@ -911,6 +910,6 @@ defineExpose({ open })
   .venue-command-head { grid-template-columns: 1fr; }
 }
 
-/* The lb-* modal frame now lives in BaseModal.vue (frame) + the global
-   lb-header/lb-title/lb-event/lb-body in ControlView.css (P2). */
+/* The lb-* modal frame comes from BaseModal.vue plus the global
+   lb-header/lb-title/lb-event/lb-body in src/styles/lb-modal.css. */
 </style>

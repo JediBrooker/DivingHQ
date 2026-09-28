@@ -1,6 +1,6 @@
 <script setup>
-/* CheckInModal: pre-meet door-pass list, extracted from
- * ControlView.vue (#2 from the feature roadmap). Each unique
+/* CheckInModal: pre-meet door-pass list, extracted from the
+ * old all-in-one ControlView (#2 from the feature roadmap). Each unique
  * diver gets a Present / Late / DNS chip. When the pre-meet
  * workflow is still on state 1 the footer carries the
  * "Check-in Complete / Continue" confirm that stamps
@@ -11,8 +11,8 @@
  *
  * State boundary: rows / loading / error are OWNED here. The
  * confirm step emits `confirmed` with the optimistic
- * check_in_done_at patch, the parent applies it via
- * patchCurrentEvent, same as the inline version did.
+ * check_in_done_at patch, and SetupStage merges it into the
+ * event.
  */
 import { ref, computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
@@ -189,11 +189,9 @@ async function confirmCheckInComplete() {
 </template>
 
 <style scoped>
-/* Check-in styles MOVED from ControlView.css (exclusive to this
-   modal, .lb-footer included, this was its only user). The
-   .wf-btn rules and the .lb-* modal frame are COPIED from
-   ControlView.css (shared with the pre-meet workflow buttons /
-   remaining modals there). */
+/* Check-in styles, only used by this modal (.lb-footer included,
+   it's the only user). The .wf-btn rules further down are a local
+   copy of the old workflow-button look. */
 /* =========================================================
    Check-in modal, pre-meet door pass list. Each row has the
    diver's name + chip group. Chip colour leans on the status
@@ -273,8 +271,8 @@ async function confirmCheckInComplete() {
   .checkin-chips { justify-content: space-between; }
 }
 
-/* COPIED, footer confirm button reuses the workflow-button
-   look (see ControlView.css .wf-btn). */
+/* Footer confirm button, the old pre-meet workflow-button look.
+   Nothing else in the app uses .wf-btn any more. */
 .wf-btn {
   font-family: var(--font-sans); font-weight: 600; font-style: normal;
   letter-spacing: 0; text-transform: none;
@@ -286,6 +284,6 @@ async function confirmCheckInComplete() {
 .wf-btn:disabled { opacity: 0.55; cursor: not-allowed; }
 .wf-btn-red    { background: var(--red);   border-color: var(--red); }
 
-/* The lb-* modal frame now lives in BaseModal.vue (frame) + the global
-   lb-header/lb-title/lb-event/lb-body in ControlView.css (P2). */
+/* The lb-* modal frame comes from BaseModal.vue plus the global
+   lb-header/lb-title/lb-event/lb-body in src/styles/lb-modal.css. */
 </style>

@@ -1,13 +1,12 @@
 // Per-event live-state map (P5 of the redesign), the concurrent-pool
 // engine for ControlViewV2.
 //
-// Heads up: V1's ControlView keeps a SINGLE currentActive / scoresThisRound /
-// judgeTiles for the focused event and DROPS any socket result whose
-// event_id != currentActive.event_id (ControlView.vue:2094-2095). That's
-// correct for one pool, but the V2 rail can show two simultaneously-
-// Live pools, so a score for a NON-focused pool must still update THAT
-// pool's tiles and arm its advance, without touching the focused
-// pool or stealing the operator's center.
+// Heads up: the old single-pool Control Room kept ONE currentActive /
+// scoresThisRound / judgeTiles for the focused event and dropped any socket
+// result whose event_id didn't match it. Fine for one pool, but the rail
+// can show two Live pools at once, so a score for a NON-focused pool still
+// has to update THAT pool's tiles and arm its advance, without touching
+// the focused pool or stealing the operator's center.
 //
 // This composable keys live state by event_id and routes each
 // score_received / judge_signal to the matching pool. The frozen
@@ -30,10 +29,9 @@ export function makePoolState() {
   }
 }
 
-// The stage-header display object setActive builds in V1
-// (ControlView.vue:2260-2275). Pure rename/copy; diveDescription (frozen
-// seam #2, src/composables/useDiveLabel.js) is passed in by the caller so
-// this stays dependency-free + unit-testable.
+// The flat display object behind a pool's stage header. diveDescription
+// (frozen seam #2, src/composables/useDiveLabel.js) is passed in by the
+// caller so this stays dependency-free and unit-testable.
 export function buildActiveInfo(row, diveDescription) {
   if (!row) return null
   return {
@@ -52,9 +50,9 @@ export function buildActiveInfo(row, diveDescription) {
   }
 }
 
-// The READY/JUDGING/DIVING precedence ladder, lifted verbatim from
-// ControlView.vue:78-88 (JUDGING wins over DIVING wins over READY). Pure
-// helper so V1's inline computed and V2's per-pool computed can't drift.
+// The READY/JUDGING/DIVING precedence ladder (JUDGING wins over DIVING
+// wins over READY), unchanged from the old single-pool screen. Kept as a
+// pure helper so each LivePoolCard's status computed is unit-testable.
 export function deriveStatus({ hasActive, scoresInCount, clockExpired }) {
   if (!hasActive) return 'ready'
   if (scoresInCount > 0) return 'judging'
@@ -62,10 +60,10 @@ export function deriveStatus({ hasActive, scoresInCount, clockExpired }) {
   return 'ready'
 }
 
-// Move a pool's cursor to roster[idx]: the pure part of V1's setActive
-// funnel (ControlView.vue:2246-2309). Sets the cursor, resolves the
-// active row, clears scores, re-inits tiles, builds the header info. The
-// SIDE-EFFECTS (set_active_diver emit, shot clock) stay in the caller.
+// Move a pool's cursor to roster[idx]: the pure half of "put this diver
+// up". Sets the cursor, resolves the active row, clears scores, re-inits
+// tiles, builds the header info. The side effects (set_active_diver emit,
+// shot clock) stay with the caller.
 export function selectDiver(pool, idx, numberOfJudges, diveDescription) {
   if (!pool || !Array.isArray(pool.roster)) return false
   if (idx < 0 || idx >= pool.roster.length) return false
@@ -104,10 +102,10 @@ export function rosterIndexForActive(roster, active) {
   )
 }
 
-// Apply a score_received to ONE pool's state. Mirrors the V1 handler
-// (ControlView.vue:2098-2115) exactly, minus the focused-event
-// short-circuit. Returns { matched, allScoresIn } so the caller can run
-// the DOM/event side-effects (history card, shot clock, auto-advance).
+// Apply a score_received to ONE pool's state. Same matching the old
+// single-pool handler did, minus its focused-event short-circuit. Returns
+// { matched, allScoresIn } so the caller can run the DOM/event side
+// effects (history card, shot clock, auto-advance).
 export function applyScore(pool, data, numberOfJudges) {
   const a = pool && pool.currentActive
   if (!a) return { matched: false, allScoresIn: false }
@@ -135,7 +133,7 @@ export function applyScore(pool, data, numberOfJudges) {
   return { matched: true, allScoresIn }
 }
 
-// Apply a judge_signal to ONE pool's tile (ControlView.vue:2165-2172).
+// Apply a judge_signal (a judge flagging the referee) to ONE pool's tile.
 export function applyJudgeSignal(pool, data) {
   const a = pool && pool.currentActive
   if (!a) return false
