@@ -7483,6 +7483,8 @@ test("no request is served before the feature flags have loaded", { timeout: 600
 test("an unwritable AUDIT_SNAPSHOT_DIR only logs a warning, the server stays up", { timeout: 60000 }, async (t) => {
   if (!dbReachable) return t.skip("DB not reachable");
   if (!serverReady) return t.skip("server didn't boot — see warning above");
+  // root writes through a 0555 directory, so there'd be no failure to see.
+  if (process.getuid?.() === 0) return t.skip("running as root, permissions don't bite");
   const fs = require("node:fs");
   const os = require("node:os");
   const dir = fs.mkdtempSync(b1Boot.path.join(os.tmpdir(), "b1-snap-"));
@@ -7804,7 +7806,10 @@ test("event live and results emails skip withdrawn divers and reserves", async (
   if (!dbReachable) return t.skip("DB not reachable");
   if (!serverReady) return t.skip("server didn't boot — see warning above");
   const st = await setupFixture({ withEvent: false });
-  const saved = { fetch: global.fetch, env: { ...process.env } };
+  // Put back just the keys we set. Swapping process.env for a plain copy
+  // would drop its string coercion for every later test in this file.
+  const mailEnv = ["CF_ACCOUNT_ID", "CF_EMAIL_TOKEN", "EMAIL_FROM"];
+  const saved = { fetch: global.fetch, env: Object.fromEntries(mailEnv.map((k) => [k, process.env[k]])) };
   try {
     const dive = await recordKit.threeMetreDive();
     const ev = await recordKit.event(st.orgId, { gender: "Female" });
@@ -7827,7 +7832,9 @@ test("event live and results emails skip withdrawn divers and reserves", async (
     assert.deepEqual(sent, [`diving-${st.slug}@example.test`, `diving-${st.slug}@example.test`]);
   } finally {
     global.fetch = saved.fetch;
-    process.env = saved.env;
+    for (const [k, v] of Object.entries(saved.env)) {
+      if (v === undefined) delete process.env[k]; else process.env[k] = v;
+    }
     await recordKit.cleanup(st.orgId);
     await teardownFixture(st);
   }
