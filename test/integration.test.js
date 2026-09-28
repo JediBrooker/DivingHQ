@@ -7635,3 +7635,48 @@ test("the start list keeps reserves out of the running order", async (t) => {
     await teardownFixture(st);
   }
 });
+
+// The scoreboard hides an Upcoming event from outsiders (ensureScoreboard-
+// Visible), and records treat scores typed into one as Control Room
+// try-outs. The results exports, the score sheet and the judge ranking
+// analysis had no such gate, so anyone could download the practice scores
+// with a "final_rank". They follow the scoreboard's rule now.
+test("results exports, score sheets and judge ranking follow the scoreboard's visibility", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture();
+  try {
+    const dive = await recordKit.threeMetreDive();
+    const diver = await recordKit.diver(st.orgId, null, "female", "Tryout Tess");
+    const judges = [];
+    for (let i = 1; i <= 5; i++) {
+      const j = await insertUser({ orgId: st.orgId, role: "judge", fullName: `Tryout Judge ${i}`, username: `int-vis-${crypto.randomBytes(4).toString("hex")}` });
+      await pool.query("INSERT INTO event_judges (event_id, judge_id, judge_number) VALUES ($1, $2, $3)", [st.eventId, j, i]);
+      judges.push(j);
+    }
+    await recordKit.dive({ id: st.eventId, judges }, diver, 1, dive, 7.5);
+    const status = (await pool.query("SELECT status FROM events WHERE id = $1", [st.eventId])).rows[0].status;
+    assert.equal(status, "Upcoming");
+
+    const paths = [
+      `/api/events/${st.eventId}/results.csv`,
+      `/api/events/${st.eventId}/results.pdf`,
+      `/api/events/${st.eventId}/divers/${diver}/score-sheet.pdf`,
+      `/api/events/${st.eventId}/judge-ranking-analysis`,
+      `/api/events/${st.eventId}/judge-ranking-analysis.csv`,
+      `/api/events/${st.eventId}/judge-ranking-analysis.pdf`,
+    ];
+    for (const p of paths) {
+      assert.equal((await fetch(`${baseUrl}${p}`)).status, 404, `${p}: hidden from the public while Upcoming`);
+      const own = await fetch(`${baseUrl}${p}`, { headers: { authorization: `Bearer ${st.adminToken}` } });
+      assert.equal(own.status, 200, `${p}: the host org can still pull it`);
+    }
+    // The start list is meant to be public before the meet.
+    assert.equal((await fetch(`${baseUrl}/api/events/${st.eventId}/start-list.pdf`)).status, 200);
+
+    await pool.query("UPDATE events SET status = 'Live' WHERE id = $1", [st.eventId]);
+    for (const p of paths) assert.equal((await fetch(`${baseUrl}${p}`)).status, 200, `${p}: public once Live`);
+  } finally {
+    await teardownFixture(st);
+  }
+});

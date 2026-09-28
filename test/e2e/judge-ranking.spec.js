@@ -117,8 +117,13 @@ test("judge-ranking-analysis: math + CSV + PDF + synchro pair-shape", async ({ r
     }
   }
 
+  // The event is still Upcoming, so only its own org can see the
+  // analysis (the scoreboard's rule, lib/event-visibility).
+  const asAdmin = { headers: { authorization: `Bearer ${adminToken}` } };
+  expect((await request.get(`/api/events/${event.id}/judge-ranking-analysis`)).status()).toBe(404);
+
   // ---- JSON ----
-  const res = await request.get(`/api/events/${event.id}/judge-ranking-analysis`);
+  const res = await request.get(`/api/events/${event.id}/judge-ranking-analysis`, asAdmin);
   expect(res.status()).toBe(200);
   const body = await res.json();
 
@@ -178,7 +183,7 @@ test("judge-ranking-analysis: math + CSV + PDF + synchro pair-shape", async ({ r
   expect(Number(body.per_dive_ranks[probeKey].judge_dive_points)).toBeCloseTo(13.5, 2);
 
   // ---- CSV export ----
-  const csv = await request.get(`/api/events/${event.id}/judge-ranking-analysis.csv`);
+  const csv = await request.get(`/api/events/${event.id}/judge-ranking-analysis.csv`, asAdmin);
   expect(csv.status()).toBe(200);
   expect(csv.headers()["content-type"]).toMatch(/text\/csv/);
   const csvText = await csv.text();
@@ -192,7 +197,7 @@ test("judge-ranking-analysis: math + CSV + PDF + synchro pair-shape", async ({ r
   expect(lines[0]).toContain("J5_total");
 
   // ---- PDF export ----
-  const pdf = await request.get(`/api/events/${event.id}/judge-ranking-analysis.pdf`);
+  const pdf = await request.get(`/api/events/${event.id}/judge-ranking-analysis.pdf`, asAdmin);
   expect(pdf.status()).toBe(200);
   expect(pdf.headers()["content-type"]).toMatch(/application\/pdf/);
   const pdfBuf = await pdf.body();
@@ -216,7 +221,7 @@ test("judge-ranking-analysis: math + CSV + PDF + synchro pair-shape", async ({ r
     event_type: "synchro_pair",
   });
   const synchroRes = await request.get(
-    `/api/events/${synchroEvent.id}/judge-ranking-analysis`,
+    `/api/events/${synchroEvent.id}/judge-ranking-analysis`, asAdmin,
   );
   expect(synchroRes.status()).toBe(200);
   const synchroBody = await synchroRes.json();

@@ -1,6 +1,8 @@
 // PDF + CSV exports: printable artefacts for officials and
-// federations. Six public endpoints (data is already exposed via
-// the live scoreboard / archive, no auth gate):
+// federations. Six public endpoints (the same data the live
+// scoreboard and archive show). The ones with scores in them follow
+// the scoreboard's visibility rule (lib/event-visibility): public once
+// an event is Live or Completed, host and participating orgs before.
 //
 //   GET /api/meets/:id/program.pdf                       meet program (PDF)
 //   GET /api/meets/:id/program.csv                       meet program (CSV)
@@ -34,6 +36,7 @@ const { PUBLIC_CLUB_JOIN } = require("../lib/club-approvals");
 // RFC 4180 quoting plus the spreadsheet formula-injection guard, see
 // lib/csv.js.
 const { csvRow, slugify } = require("../lib/csv");
+const { ensureEventVisible } = require("../lib/event-visibility");
 
 // The trim that marks judges' scores kept or dropped lives in the SPA
 // (src/composables/useScoreTrim.js, ESM) and AGENTS.md wants one copy of
@@ -45,9 +48,13 @@ function loadScoreTrim() {
   return scoreTrim;
 }
 
-module.exports = function createPdfRouter({ pool }) {
+module.exports = function createPdfRouter({ pool, optionalAuth }) {
   if (!pool) throw new Error("createPdfRouter requires { pool }");
   const router = express.Router();
+  // Anything with scores in it (results, score sheets) follows the
+  // scoreboard's visibility rule, which needs to know who's asking. The
+  // program and the start list stay open to everyone.
+  const maybeAuth = optionalAuth || ((_req, _res, next) => next());
 
   // Final standings by what the event ranks: the team in a team event,
   // otherwise the diver (a synchro pair sits under its lead). One row per
@@ -907,10 +914,11 @@ module.exports = function createPdfRouter({ pool }) {
   // judge's raw score (with the dropped scores marked under World Aquatics
   // trim rules, the same way the live scoreboard renders them).
   // -------------------------------------------------------------
-  router.get("/api/events/:id/divers/:diverId/score-sheet.pdf", async (req, res) => {
+  router.get("/api/events/:id/divers/:diverId/score-sheet.pdf", maybeAuth, async (req, res) => {
     try {
       const eventId = req.params.id;
       const diverId = req.params.diverId;
+      if (!(await ensureEventVisible(pool, req, res, eventId))) return;
 
       // Whose rows carry this diver's dives. Their own, unless they're the
       // partner on a synchro pair stored once under the lead, where the
@@ -1124,8 +1132,9 @@ module.exports = function createPdfRouter({ pool }) {
   // results PDF, formatted as a single CSV with one row per dive
   // so downstream pivot tables work cleanly.
   // -------------------------------------------------------------
-  router.get("/api/events/:id/results.csv", async (req, res) => {
+  router.get("/api/events/:id/results.csv", maybeAuth, async (req, res) => {
     try {
+      if (!(await ensureEventVisible(pool, req, res, req.params.id))) return;
       const [evRes, divesRes, totalsRes] = await Promise.all([
         pool.query(
           "SELECT e.name, e.gender, e.height, e.event_type, o.name AS org_name FROM events e JOIN organisations o ON o.id = e.org_id WHERE e.id = $1",
@@ -1214,8 +1223,9 @@ module.exports = function createPdfRouter({ pool }) {
   // layout the audience saw. Team events rank and group by team,
   // same as the scoreboard and recap.
   // -------------------------------------------------------------
-  router.get("/api/events/:id/results.pdf", async (req, res) => {
+  router.get("/api/events/:id/results.pdf", maybeAuth, async (req, res) => {
     try {
+      if (!(await ensureEventVisible(pool, req, res, req.params.id))) return;
       const [ev, standings, dives] = await Promise.all([
         pool.query(
           "SELECT e.name, e.gender, e.height, e.total_rounds, e.number_of_judges, e.event_type, o.name AS org_name FROM events e JOIN organisations o ON e.org_id = o.id WHERE e.id = $1",

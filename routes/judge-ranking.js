@@ -20,10 +20,11 @@
 // for each judge) so the score-chip tooltip on the scoreboard can
 // say "J3 ranked this diver 2nd of 12 in round 1".
 //
-// Permission: PUBLIC read. Every input (per-judge per-dive score)
-// is already visible on the existing scoreboard, archive, and judge
-// profile pages. Re-aggregating into a hypothetical ranking surfaces
-// no new private data, it just visualises a pattern that was
+// Permission: PUBLIC read once the event is Live or Completed, the same
+// rule as the scoreboard (lib/event-visibility). Every input (per-judge
+// per-dive score) is already visible on the scoreboard, archive, and
+// judge profile pages by then. Re-aggregating into a hypothetical ranking
+// surfaces no new private data, it just visualises a pattern that was
 // already in plain sight.
 //
 // Event-type handling: all three types (individual / synchro_pair
@@ -64,6 +65,7 @@ const { perDivePointsCte } = require("../lib/scoring-sql");
 // Approved clubs only: this is a public read, and a club still waiting on
 // its federation keeps its name private (migration 096).
 const { PUBLIC_CLUB_JOIN } = require("../lib/club-approvals");
+const { ensureEventVisible } = require("../lib/event-visibility");
 // Unicode names print readably, see lib/pdf-document.
 const { createPdfDocument } = require("../lib/pdf-document");
 // CSV escaping + formula-injection guard, and the filename slug the
@@ -384,16 +386,23 @@ async function buildAnalysis(pool, eventId) {
   };
 }
 
-module.exports = function createJudgeRankingRouter({ pool }) {
+module.exports = function createJudgeRankingRouter({ pool, optionalAuth }) {
   if (!pool) throw new Error("createJudgeRankingRouter requires { pool }");
   const router = express.Router();
+  // Public once the event is Live or Completed; before that it's the host
+  // and participating orgs only, same as the scoreboard
+  // (lib/event-visibility). Scores typed into an Upcoming event are
+  // Control Room try-outs, not something to rank judges on in public.
+  const maybeAuth = optionalAuth || ((_req, _res, next) => next());
+  const visible = (req, res) => ensureEventVisible(pool, req, res, req.params.id);
 
   // -------------------------------------------------------------
   // JSON payload, drives the in-page JudgeRankingTable + the
   // scoreboard's chip-tooltip enhancement (per_dive_ranks).
   // -------------------------------------------------------------
-  router.get("/api/events/:id/judge-ranking-analysis", async (req, res) => {
+  router.get("/api/events/:id/judge-ranking-analysis", maybeAuth, async (req, res) => {
     try {
+      if (!(await visible(req, res))) return;
       const result = await buildAnalysis(pool, req.params.id);
       if (result.notFound) return res.status(404).json({ error: "Event not found" });
       res.json(result);
@@ -409,8 +418,9 @@ module.exports = function createJudgeRankingRouter({ pool }) {
   // this into central record-keeping systems, so the formula-injection
   // guard (csvCell) is essential.
   // -------------------------------------------------------------
-  router.get("/api/events/:id/judge-ranking-analysis.csv", async (req, res) => {
+  router.get("/api/events/:id/judge-ranking-analysis.csv", maybeAuth, async (req, res) => {
     try {
+      if (!(await visible(req, res))) return;
       const result = await buildAnalysis(pool, req.params.id);
       if (result.notFound) return res.status(404).json({ error: "Event not found" });
       const { event, judges, divers } = result;
@@ -453,8 +463,9 @@ module.exports = function createJudgeRankingRouter({ pool }) {
   // -------------------------------------------------------------
   // PDF export, landscape A4 table, mirrors the on-screen layout.
   // -------------------------------------------------------------
-  router.get("/api/events/:id/judge-ranking-analysis.pdf", async (req, res) => {
+  router.get("/api/events/:id/judge-ranking-analysis.pdf", maybeAuth, async (req, res) => {
     try {
+      if (!(await visible(req, res))) return;
       const result = await buildAnalysis(pool, req.params.id);
       if (result.notFound) return res.status(404).json({ error: "Event not found" });
       const { event, judges, divers } = result;

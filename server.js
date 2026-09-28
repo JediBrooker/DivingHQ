@@ -1357,7 +1357,7 @@ app.use(limitRoutes(createSearchLimiter(), require("./routes/dr-archive")({ pool
 // the local csvCell / csvRow helpers and the World Aquatics trim
 // annotation used by the score sheet.
 // =============================================================
-app.use(limitRoutes(exportLimiter, require("./routes/pdf")({ pool })));
+app.use(limitRoutes(exportLimiter, require("./routes/pdf")({ pool, optionalAuth })));
 
 // =============================================================
 // JUDGE RANKING ANALYSIS
@@ -1368,7 +1368,7 @@ app.use(limitRoutes(exportLimiter, require("./routes/pdf")({ pool })));
 // + PDF exports for federation reporting. See routes/judge-
 // ranking.js for the rationale (public read; v1 individual only).
 // =============================================================
-app.use(limitRoutes(exportLimiter, require("./routes/judge-ranking")({ pool })));
+app.use(limitRoutes(exportLimiter, require("./routes/judge-ranking")({ pool, optionalAuth })));
 
 // =============================================================
 // PUBLIC DIVER PROFILE
