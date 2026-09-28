@@ -37,7 +37,7 @@ import { useSocketEvent } from '@/composables/useSocketEvent'
 import { useLivePools, selectDiver, rosterIndexForActive, competingQueue, rebaseQueue } from '@/composables/useLivePools'
 import { annotateJudgeRows } from '@/composables/useScoreTrim'
 import { synchroJudgeGroups } from '@/composables/useScoreCategories'
-import { controlKeyIntent, isTypingTarget } from '@/composables/useControlKeymap'
+import { controlKeyIntent, hotkeyBlocked } from '@/composables/useControlKeymap'
 import { diveDescription } from '@/composables/useDiveLabel'
 import { idbInvalidate } from '@/lib/idbCache'
 import { activeDiverPayload } from '@/lib/activeDiver'
@@ -378,10 +378,11 @@ function refActionFocused(type) {
 }
 
 // Per-pool keyboard control. One window listener: controlKeyIntent
-// maps the key, isTypingTarget keeps it out of inputs/modals, and every
-// action resolves through the FOCUSED pool (number keys only switch focus).
+// maps the key, hotkeyBlocked keeps it out of inputs, dialogs and the
+// buttons Space already presses, and every action resolves through the
+// FOCUSED pool (number keys only switch focus).
 function onKeydown(e) {
-  if (isTypingTarget(e.target)) return
+  if (hotkeyBlocked(e, { modalOpen: !!document.querySelector('[aria-modal="true"]') })) return
   const intent = controlKeyIntent(e, livePools.value.length)
   if (!intent) return
   if (intent.action === 'focus') {

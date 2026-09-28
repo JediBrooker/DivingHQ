@@ -47,3 +47,49 @@ test('isTypingTarget guards inputs / textareas / selects / contenteditable', () 
   assert.equal(isTypingTarget({ tagName: 'BUTTON' }), false)
   assert.equal(isTypingTarget(null), false)
 })
+
+// A fake element with just enough of closest() for the guard: it answers
+// from a list of selectors the element (or an ancestor) is said to match.
+function el(tagName, matches = []) {
+  return {
+    tagName,
+    closest: (sel) => (sel.split(',').map((s) => s.trim()).some((s) => matches.includes(s)) ? {} : null),
+  }
+}
+
+test('hotkeyBlocked: nothing fires while a modal dialog is open', async () => {
+  const { hotkeyBlocked } = await import('../src/composables/useControlKeymap.js')
+  // Space on the confirm's own "Move on" button used to queue a second
+  // stale confirm, and f/r/c/h acted on the pool behind a dialog.
+  for (const key of [' ', 'f', 'r', 'c', 'h', 'l', '1', 'ArrowRight']) {
+    assert.equal(hotkeyBlocked({ key, target: el('BODY') }, { modalOpen: true }), true, `key ${key}`)
+  }
+})
+
+test('hotkeyBlocked: keys pressed inside a non-modal dialog (the Tools drawer) stay there', async () => {
+  const { hotkeyBlocked } = await import('../src/composables/useControlKeymap.js')
+  assert.equal(hotkeyBlocked({ key: 'f', target: el('ASIDE', ['[role="dialog"]']) }), true)
+})
+
+test('hotkeyBlocked: Space on a focused button presses the button, not Next', async () => {
+  const { hotkeyBlocked } = await import('../src/composables/useControlKeymap.js')
+  assert.equal(hotkeyBlocked({ key: ' ', target: el('BUTTON', ['button']) }), true)
+  assert.equal(hotkeyBlocked({ key: ' ', target: el('A', ['a[href]']) }), true)
+  assert.equal(hotkeyBlocked({ key: ' ', target: el('DIV', ['[role="button"]']) }), true)
+  // a letter hotkey on a focused button still works, a button does
+  // nothing with an 'f'
+  assert.equal(hotkeyBlocked({ key: 'f', target: el('BUTTON', ['button']) }), false)
+})
+
+test('hotkeyBlocked: arrow keys inside a menu move through the menu', async () => {
+  const { hotkeyBlocked } = await import('../src/composables/useControlKeymap.js')
+  assert.equal(hotkeyBlocked({ key: 'ArrowRight', target: el('BUTTON', ['button', '[role^="menuitem"]']) }), true)
+})
+
+test('hotkeyBlocked: plain page focus and typing', async () => {
+  const { hotkeyBlocked } = await import('../src/composables/useControlKeymap.js')
+  assert.equal(hotkeyBlocked({ key: ' ', target: el('BODY') }), false)
+  assert.equal(hotkeyBlocked({ key: ' ', target: el('H1') }), false)
+  assert.equal(hotkeyBlocked({ key: ' ', target: el('INPUT') }), true)
+  assert.equal(hotkeyBlocked({ key: 'f', target: null }), false)
+})

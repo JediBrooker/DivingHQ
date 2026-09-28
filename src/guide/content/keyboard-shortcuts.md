@@ -21,6 +21,8 @@ Two pools running side by side. Pressing `1` focuses the left card, `2` the righ
 **Notes**
 
 - Hotkeys are ignored while you're typing in a text field, a `<select>`, or the command palette — so typing a diver's name or a search query never advances a pool.
+- They're also ignored while a dialog is open (a confirm, score correction, the Tools drawer): the keyboard belongs to the dialog until it closes.
+- **Space** on a focused button presses that button, as it does anywhere else. So Space on the "Skip ahead?" confirm answers it, and Space on a card's **⏸ Hold** holds. To advance with Space, click an empty part of the board first (or use **→**).
 - Modifier combos (Cmd/Ctrl/Alt) are left alone for the browser and the command palette (e.g. **Cmd-K / Ctrl-K**).
 - Every hotkey has an on-screen equivalent too, so you can mix keyboard and mouse: the **Next Diver → / Finalise** button (and the **Auto-next** `▾` aside) on each pool card, the **Failed · Cap 2.0 · Re-dive** row, the **⏸ Hold** button, the **Announce** button in the Standings column, and the event **chips** (or **All events** dropdown) in the top bar.
 

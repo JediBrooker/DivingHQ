@@ -2,6 +2,7 @@
 // number keys switch which pool is focused. Flag-on only (V2 surface).
 const { test, expect } = require("@playwright/test");
 const setup = require("./_setup");
+const { roomWatcher } = require("./_meetday");
 
 test.describe.configure({ mode: "serial" });
 
@@ -89,4 +90,49 @@ test("hotkeys do not fire while typing in a field", async ({ request, page, base
   await expect(page.locator(".cmdk-input")).toBeVisible({ timeout: 5_000 });
   await page.locator(".cmdk-input").type("a b");
   await expect(cardA.locator(".cv2-live-diver")).toContainText("AAA A"); // still hasn't moved
+});
+
+// The window listener used to take Space from whatever had focus: a
+// focused Hold button advanced the diver instead, and Space on the
+// partial-panel confirm's own "Move on" button queued a second confirm,
+// so accepting both skipped a diver who never dived.
+test("Space presses the focused button and answers the confirm, it doesn't advance again", async ({ request, page, baseURL }) => {
+  test.setTimeout(120_000);
+  const { orgId, username, adminToken } = await setup.createOrgAndAdmin(request, { countryCode: "AUS", orgName: "Keyboard Space Diving" });
+  const A = await liveEvent(request, { orgId, adminToken, name: "Space Pool", diverNames: ["AAA S", "BBB S", "CCC S", "DDD S"] });
+
+  const room = await roomWatcher(baseURL, A.event.id);
+
+  await signIn(page, username);
+  await page.goto(`/control?event=${A.event.id}`);
+  const cardA = page.locator(`.cv2-pool[data-event-id="${A.event.id}"]`);
+  await expect(cardA.locator(".cv2-live-diver")).toContainText("AAA S", { timeout: 10_000 });
+  // The page's announce reaching the room means its socket is in there too
+  await expect.poll(() => room.seen.state.length, { timeout: 8_000 }).toBeGreaterThan(0);
+  room.close();
+
+  // Two of five judges in, then Space from the page: one confirm, with
+  // focus on its Move on button.
+  await setup.submitPanelScores({
+    baseURL, judges: A.judges.slice(0, 2), eventId: A.event.id,
+    competitorId: A.divers[0].userId, roundNumber: 1, diveId: A.diveId,
+  });
+  await expect(cardA.locator(".cv2-tile.scored")).toHaveCount(2, { timeout: 6_000 });
+  await cardA.locator(".cv2-live-diver").click();
+  await page.keyboard.press("Space");
+  const confirm = page.locator('.confirm-backdrop[aria-modal="true"]');
+  await expect(confirm).toHaveCount(1);
+  // Space again answers it, the way Space answers any focused button
+  await page.keyboard.press("Space");
+  await expect(confirm).toHaveCount(0);
+  await expect(cardA.locator(".cv2-live-diver")).toContainText("BBB S");
+  await page.waitForTimeout(500);
+  await expect(cardA.locator(".cv2-live-diver")).toContainText("BBB S");
+
+  // Tab onto the card's Hold button: Space holds, the diver stays put
+  await cardA.locator(".cv2-pool-hold").focus();
+  await page.keyboard.press("Space");
+  await expect(cardA.locator(".cv2-pool-heldbar")).toBeVisible();
+  await expect(cardA.locator(".cv2-live-diver")).toContainText("BBB S");
+  await setup.deleteOrg(orgId);
 });
