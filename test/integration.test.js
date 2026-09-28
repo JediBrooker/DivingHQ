@@ -11967,3 +11967,55 @@ test("an org transfer can't take a federation's last live org admin, unless the 
     await compKit.cleanup(from, to);
   }
 });
+
+// The lock in orgAdminHold, with no HTTP timing in the way. Two requests
+// racing through the server only sometimes overlap (the concurrent role
+// edits above got through with the lock taken out), so this drives two
+// connections by hand the way two admins' transactions would go: the
+// first checks, takes itself out and hasn't committed yet. The second
+// has to wait for it, and once it commits, see nobody else is left. Both
+// ways out an admin can take without touching the other's rows: the role
+// row going (needs the lock on the role rows) and the account being
+// suspended (needs the one on the users rows).
+test("orgAdminHold makes a second admin wait for the first one's transaction, then counts them out", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  const { orgAdminHold } = require("../lib/admin-rows");
+  const tag = crypto.randomBytes(3).toString("hex");
+  const fed = await lastAdminKit.org("lock", tag);
+  const c1 = await pool.connect();
+  const c2 = await pool.connect();
+  try {
+    const a = await insertUser({ orgId: fed, role: "org_admin", username: `int-lk-a-${tag}`, fullName: "Lock A" });
+    const b = await insertUser({ orgId: fed, role: "org_admin", username: `int-lk-b-${tag}`, fullName: "Lock B" });
+    const ways = {
+      "drops the role": (c) => c.query(
+        "DELETE FROM user_org_roles WHERE user_id = $1 AND org_id = $2 AND role = 'org_admin'", [a, fed]),
+      "is suspended": (c) => c.query("UPDATE users SET suspended_at = now() WHERE id = $1", [a]),
+    };
+    for (const [how, leave] of Object.entries(ways)) {
+      await c1.query("BEGIN");
+      assert.equal(await orgAdminHold(c1, fed, a), null, `${how}: B is still there for A`);
+      await leave(c1);
+      await c2.query("BEGIN");
+      let settled = false;
+      const second = orgAdminHold(c2, fed, b).then((v) => { settled = true; return v; });
+      await new Promise((r) => setTimeout(r, 300));
+      assert.equal(settled, false, `${how}: B's check waits on A's open transaction`);
+      await c1.query("COMMIT");
+      const hold = await second;
+      assert.equal(hold?.org_id, fed, `${how}: and then sees B is the last one`);
+      await c2.query("ROLLBACK");
+      // A back as a live admin for the next round.
+      await pool.query("UPDATE users SET suspended_at = NULL WHERE id = $1", [a]);
+      await pool.query(
+        "INSERT INTO user_org_roles (user_id, org_id, role) VALUES ($1, $2, 'org_admin') ON CONFLICT DO NOTHING", [a, fed]);
+    }
+  } finally {
+    // c1 first: if an assertion failed while c2 was still waiting on it.
+    await c1.query("ROLLBACK").catch(() => {});
+    await c2.query("ROLLBACK").catch(() => {});
+    c1.release();
+    c2.release();
+    await compKit.cleanup(fed);
+  }
+});
