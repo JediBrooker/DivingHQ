@@ -7322,3 +7322,93 @@ test("an audit insert that fails inside a transaction doesn't roll the caller's 
     await teardownFixture(st);
   }
 });
+
+// A real `node server.js` in a child process, for the paths that only run
+// when server.js is the entry point (boot order, shutdown, env parsing).
+const b1Boot = {
+  path: require("node:path"),
+  async freePort() {
+    const net = require("node:net");
+    return new Promise((resolve, reject) => {
+      const srv = net.createServer();
+      srv.once("error", reject);
+      srv.listen(0, "127.0.0.1", () => { const { port } = srv.address(); srv.close(() => resolve(port)); });
+    });
+  },
+  async spawn(env = {}) {
+    const { spawn } = require("node:child_process");
+    const port = await b1Boot.freePort();
+    const childEnv = { ...process.env, PORT: String(port), DR_IMPORT_SYNC_HOURS: "0", AUDIT_SNAPSHOT_DIR: "" };
+    for (const [k, v] of Object.entries(env)) {
+      if (v === null) delete childEnv[k]; else childEnv[k] = String(v);
+    }
+    const root = b1Boot.path.join(__dirname, "..");
+    const child = spawn(process.execPath, [b1Boot.path.join(root, "server.js")], {
+      cwd: root, env: childEnv, stdio: ["ignore", "pipe", "pipe"],
+    });
+    let log = "";
+    child.stdout.on("data", (d) => { log += d; });
+    child.stderr.on("data", (d) => { log += d; });
+    const exited = new Promise((resolve) => child.on("exit", (code, signal) => resolve({ code, signal })));
+    let gone = false;
+    exited.then(() => { gone = true; });
+    return {
+      child, port, url: `http://127.0.0.1:${port}`, exited,
+      log: () => log,
+      get gone() { return gone; },
+      async stop() { if (!gone) { child.kill("SIGKILL"); await exited; } },
+    };
+  },
+  // GET against a spawned server. Resolves { status, body } or null when
+  // nothing is listening (yet).
+  get(url, path) {
+    return new Promise((resolve) => {
+      const req = http.get(url + path, (res) => {
+        const chunks = [];
+        res.on("data", (c) => chunks.push(c));
+        res.on("end", () => {
+          const text = Buffer.concat(chunks).toString("utf8");
+          let body = text;
+          try { body = JSON.parse(text); } catch { /* not json */ }
+          resolve({ status: res.statusCode, body });
+        });
+      });
+      req.on("error", () => resolve(null));
+      req.setTimeout(3000, () => { req.destroy(); resolve(null); });
+    });
+  },
+  async waitHealthy(srv, ms = 15000) {
+    const until = Date.now() + ms;
+    while (Date.now() < until) {
+      if (srv.gone) throw new Error(`server exited during boot:\n${srv.log()}`);
+      const r = await b1Boot.get(srv.url, "/api/health");
+      if (r && r.status === 200) return;
+      await new Promise((res) => setTimeout(res, 50));
+    }
+    throw new Error(`server never became healthy:\n${srv.log()}`);
+  },
+};
+
+test("SIGTERM with a socket connected shuts down cleanly and quickly", { timeout: 60000 }, async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const srv = await b1Boot.spawn();
+  let sock;
+  try {
+    await b1Boot.waitHealthy(srv);
+    sock = b1Kit.io(srv.url, { transports: ["websocket"], reconnection: false });
+    await new Promise((resolve, reject) => { sock.on("connect", resolve); sock.on("connect_error", reject); });
+    const started = Date.now();
+    srv.child.kill("SIGTERM");
+    const out = await Promise.race([srv.exited, new Promise((r) => setTimeout(() => r(null), 30000))]);
+    const took = Date.now() - started;
+    assert.ok(out, `still running 30s after SIGTERM:\n${srv.log()}`);
+    assert.equal(out.code, 0, srv.log());
+    // PM2's kill_timeout is 5s; anything slower gets SIGKILLed mid-drain.
+    assert.ok(took < 5000, `took ${took}ms`);
+    assert.match(srv.log(), /pg pool drained/);
+  } finally {
+    sock?.close();
+    await srv.stop();
+  }
+});

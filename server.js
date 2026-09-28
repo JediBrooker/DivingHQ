@@ -1632,24 +1632,28 @@ if (require.main === module) {
   });
 
   // -------- Graceful shutdown --------
-  // SIGTERM (deploy script / Docker / pm2 reload) and SIGINT
+  // SIGTERM (deploy script / Docker / pm2 restart) and SIGINT
   // (Ctrl-C in dev) drop us here. Without trapping these, Node
   // exits the process while in-flight HTTP requests are still
   // running, sockets get yanked without a `disconnect` event,
   // and the pg pool's open connections become Postgres zombies
   // for a few seconds. With this handler:
   //
-  //   1. Stop accepting new connections (server.close stops
-  //      .listen but lets active requests finish).
-  //   2. Close all socket.io connections (io.close drains).
-  //   3. Drain the pg pool (pool.end waits for queries in
-  //      flight).
-  //   4. Exit 0.
+  //   1. io.close() disconnects every socket.io client and then
+  //      closes the HTTP server it's attached to, which stops new
+  //      connections and waits for requests already in flight.
+  //   2. Drain the pg pools (pool.end waits for queries in flight).
+  //   3. Exit 0.
   //
-  // Worth flagging: the 25-second deadline forces an exit if any
-  // of the above hangs, better to bounce loudly than to leave a
-  // half-dead process holding a port. The deploy environment's grace
-  // period (pm2 default 30s, Kubernetes default 30s) matches.
+  // The order matters. This used to await server.close() first, but an
+  // upgraded WebSocket (or a pending long-poll) keeps the HTTP server
+  // open, and during a meet there's always a spectator connected. The
+  // close never finished, the pools were never drained, and the process
+  // sat there until the deadline.
+  //
+  // The deadline sits under ecosystem.config.js's kill_timeout (5s): past
+  // that PM2 SIGKILLs anyway, and it's better we exit on our own terms.
+  const SHUTDOWN_DEADLINE_MS = 4_500;
   let shuttingDown = false;
   async function gracefulShutdown(signal) {
     if (shuttingDown) return;
@@ -1659,30 +1663,28 @@ if (require.main === module) {
     const deadline = setTimeout(() => {
       logger.error("graceful shutdown deadline hit — forcing exit");
       process.exit(1);
-    }, 25_000);
+    }, SHUTDOWN_DEADLINE_MS);
     deadline.unref();
 
     try {
-      // Stop accepting new HTTP, promisified so we await the close.
-      await new Promise((resolve, reject) =>
-        server.close((err) => (err ? reject(err) : resolve())),
-      );
-      logger.info("http server closed");
-      // Detach all socket clients.
-      try {
-        io.close();
-        logger.info("socket.io server closed");
-      } catch (err) {
-        logger.warn({ err: err.message }, "io.close threw; continuing");
+      // Also fine if a signal lands during boot, before listen(): the
+      // server-not-running error is just logged.
+      await new Promise((resolve) => io.close((err) => {
+        if (err) logger.warn({ err: err.message }, "http server close reported an error; continuing");
+        resolve();
+      }));
+      logger.info("socket.io and http server closed");
+      // Drain the pg pools. New queries on them reject immediately after
+      // end() is called. readPool is the same object as pool unless a
+      // replica is configured.
+      for (const p of readPool === pool ? [pool] : [pool, readPool]) {
+        try {
+          await p.end();
+        } catch (err) {
+          logger.warn({ err: err.message }, "pool.end threw; continuing");
+        }
       }
-      // Drain the pg pool. New queries on this pool will reject
-      // immediately after end() is called.
-      try {
-        await pool.end();
-        logger.info("pg pool drained");
-      } catch (err) {
-        logger.warn({ err: err.message }, "pool.end threw; continuing");
-      }
+      logger.info("pg pool drained");
       logger.info("graceful shutdown complete");
       clearTimeout(deadline);
       process.exit(0);
