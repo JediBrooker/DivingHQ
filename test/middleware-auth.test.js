@@ -329,3 +329,25 @@ test("socketCanManageEvent: a DB error answers false instead of rejecting", asyn
   assert.equal(await mw.socketCanManageEvent(s, EVENT_ID), false);
   assert.equal(s.emits.at(-1).payload.reason, "server_error");
 });
+
+test("socketCanManageEvent: maintenance mode refuses a non-admin, lets a sysadmin through", async () => {
+  const pool = {
+    async query(sql) {
+      if (/FROM users u\s+LEFT JOIN organisations o/.test(sql)) {
+        return { rows: [{ token_version: 1, org_status: "active", is_system_admin: false }] };
+      }
+      if (/FROM events WHERE id/.test(sql)) return { rows: [{ org_id: "org-1" }] };
+      return { rows: [] };
+    },
+  };
+  let on = true;
+  const mw = createMiddleware({ pool, JWT_SECRET, isMaintenance: () => on });
+  const s = controlSocket();
+  assert.equal(await mw.socketCanManageEvent(s, EVENT_ID), false);
+  assert.equal(s.emits.at(-1).payload.reason, "maintenance");
+  assert.equal(await mw.socketCanManageEvent(controlSocket({ userIsSystemAdmin: true }), EVENT_ID), true);
+  assert.equal(mw.socketMaintenanceBlocked(s), true);
+  on = false;
+  assert.equal(await mw.socketCanManageEvent(s, EVENT_ID), true);
+  assert.equal(mw.socketMaintenanceBlocked(s), false);
+});

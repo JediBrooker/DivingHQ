@@ -7182,3 +7182,37 @@ test("Control Room socket events refuse a non-UUID event_id instead of crashing 
     await teardownFixture(st);
   }
 });
+
+test("maintenance mode refuses socket score submits and Control Room actions from non-admins", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const { features } = require("../server.js");
+  const st = await setupFixture({ withEvent: false });
+  const ev = await recordKit.event(st.orgId, { gender: "Female" });
+  const diver = await recordKit.diver(st.orgId, null, "female", "Maintenance Diver");
+  await b1Kit.enter(ev, diver);
+  const judgeName = (await pool.query("SELECT username FROM users WHERE id = $1", [ev.judges[0]])).rows[0].username;
+  const judge = await b1Kit.connect({ token: await b1Kit.login(judgeName) });
+  const admin = await b1Kit.connect({ token: st.adminToken });
+  try {
+    await features.set("maintenance", true);
+    const sub = await b1Kit.ack(judge, "submit_score", { event_id: ev.id, competitor_id: diver, round_number: 1, score: 7 });
+    assert.equal(sub.ok, false);
+    assert.equal(sub.error, "maintenance");
+    const held = await b1Kit.ack(admin, "meet_hold", { event_id: ev.id, reason: "x" });
+    assert.equal(held.ok, false);
+    const stored = await pool.query("SELECT 1 FROM scores WHERE event_id = $1", [ev.id]);
+    assert.equal(stored.rows.length, 0, "nothing reached the scores table");
+
+    // Off again, the same submit goes through.
+    await features.set("maintenance", false);
+    const again = await b1Kit.ack(judge, "submit_score", { event_id: ev.id, competitor_id: diver, round_number: 1, score: 7 });
+    assert.equal(again.ok, true, JSON.stringify(again));
+  } finally {
+    await features.set("maintenance", false);
+    judge.close();
+    admin.close();
+    await recordKit.cleanup(st.orgId);
+    await teardownFixture(st);
+  }
+});

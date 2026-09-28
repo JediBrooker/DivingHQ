@@ -461,6 +461,7 @@ const {
   isInSameOrg,
   socketRequireRole,
   socketCanManageEvent,
+  socketMaintenanceBlocked,
   isValidScore,
   parseDateRange,
   bumpTokenVersion,
@@ -502,7 +503,9 @@ const requireMeetOrClubEditor = [
 // Global read-only lockdown. While the flag is on, any state-changing
 // request from a non-sysadmin is refused, but reads, the scoreboard, admin
 // sign-in, and the Stripe webhook stay live. Mounted here so it fronts every
-// router below; the socket side is gated in socketRequireRole (lib/middleware).
+// router below; the socket side is gated in lib/middleware too
+// (socketMaintenanceBlocked, which socketCanManageEvent and the judge's
+// submit_score both ask).
 //
 // Reads are the overwhelming majority of traffic, so the fast path is a
 // method + flag check before we spend anything decoding a token.
@@ -1281,6 +1284,7 @@ require("./routes/socket")({
   JWT_SECRET,
   socketRequireRole,
   socketCanManageEvent,
+  socketMaintenanceBlocked,
   isValidScore,
   isTokenVersionCurrent,
   checkAndApplyRecords,

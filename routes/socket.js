@@ -68,12 +68,14 @@ module.exports = function attachSocket({
   pool,
   JWT_SECRET,
   // From lib/middleware. socketRequireRole is passed in but nothing
-  // here calls it: submit_score does its own role check and the
-  // Control Room events go through socketCanManageEvent. Heads up,
-  // that means the maintenance-mode check that lives in
-  // socketRequireRole doesn't run for any socket write today.
+  // here calls it: submit_score and judge_signal do their own role
+  // checks and the Control Room events go through socketCanManageEvent.
+  // Maintenance mode still covers all of them: socketCanManageEvent
+  // checks it, and the two with their own checks ask
+  // socketMaintenanceBlocked directly.
   socketRequireRole,
   socketCanManageEvent,
+  socketMaintenanceBlocked = () => false,
   isValidScore,
   isTokenVersionCurrent,
   // From lib/records:
@@ -540,6 +542,13 @@ module.exports = function attachSocket({
         reject("insufficient_role");
         return;
       }
+      // Maintenance mode is a read-only lockdown, scores included. The
+      // outbox treats this like any other refused send and retries, so
+      // the judge's mark lands once the flag is off again.
+      if (socketMaintenanceBlocked(socket)) {
+        reject("maintenance", { message: "DivingHQ is in maintenance mode. Your score will be sent again once it's over." });
+        return;
+      }
       // Re-check revocation on this long-lived socket. The handshake
       // ran once, but a judge whose account is suspended or whose
       // token_version is bumped mid-meet (while still seated on the
@@ -860,6 +869,7 @@ module.exports = function attachSocket({
     // -----------------------------------------------------------
     socket.on("judge_signal", async (data) => {
       if (!socket.userId) return;
+      if (socketMaintenanceBlocked(socket)) return;
       if (socketActionRateLimited("judge_signal", socket.userId)) return;
       if (typeof socket.userTokenVersion === "number"
           && !(await isTokenVersionCurrent(socket.userId, socket.userTokenVersion))) {
