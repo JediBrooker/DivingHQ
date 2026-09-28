@@ -288,18 +288,31 @@ onBeforeUnmount(() => {
 // since judges shouldn't accidentally submit during a video review.
 const isHeld = ref(false)
 const holdReason = ref('')
+
+// Which event this screen is judging: the ?event= id when there is one,
+// else whatever the active diver belongs to. Every broadcast below is
+// checked against it. The server replays state_update for EVERY live
+// event on the platform to a socket that (re)connects, and taking the
+// last one in put another org's diver on a waiting judge's screen, with
+// Submit enabled.
+function isMyEvent(eventId) {
+  const mine = eventIdFromUrl.value || activeDiver.value?.event_id
+  return !mine || String(eventId) === String(mine)
+}
+
 useSocketEvent(socket, 'meet_held', (data) => {
-  if (activeDiver.value && data.event_id !== activeDiver.value.event_id) return
+  if (!isMyEvent(data?.event_id)) return
   isHeld.value = true
   holdReason.value = data.reason || ''
 })
 useSocketEvent(socket, 'meet_resumed', (data) => {
-  if (activeDiver.value && data.event_id !== activeDiver.value.event_id) return
+  if (!isMyEvent(data?.event_id)) return
   isHeld.value = false
   holdReason.value = ''
 })
 
 useSocketEvent(socket, 'state_update', async (data) => {
+  if (!data || !isMyEvent(data.event_id)) return
   // Replayed payloads from before the Control Room sent diverName /
   // diveCode still need to render, so fill them from the raw row.
   activeDiver.value = normaliseActiveDiver(data)
@@ -316,6 +329,9 @@ useSocketEvent(socket, 'state_update', async (data) => {
       // auth.apiFetch rather than a raw fetch: same headers, plus
       // the store's expired-session (401 → /login) handling.
       const { judge_number } = await auth.apiFetch(`/api/events/${data.event_id}/my-judge-number`)
+      // Another state_update may have landed while this was in flight;
+      // only stamp the number onto the diver it was fetched for.
+      if (String(activeDiver.value?.event_id) !== String(data.event_id)) return
       judgeNumber.value = judge_number
       activeDiver.value = { ...activeDiver.value, judge_number }
       judgeLabel.value = `${user?.full_name} — J${judge_number}`
