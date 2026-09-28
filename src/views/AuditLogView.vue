@@ -57,10 +57,6 @@ const scoreFilters = ref({
   from:   '',
   to:     '',
 })
-const scoreRows = ref([])
-const scoreBusy = ref(false)
-const scoreOffset = ref(0)
-const scoreHasMore = ref(false)
 const PAGE = 100
 
 // ----- Role audit tab state -----
@@ -70,10 +66,6 @@ const roleFilters = ref({
   from:   '',
   to:     '',
 })
-const roleRows = ref([])
-const roleBusy = ref(false)
-const roleOffset = ref(0)
-const roleHasMore = ref(false)
 
 const ORG_ROLES = ['org_admin', 'meet_manager', 'referee', 'judge', 'coach', 'diver']
 
@@ -83,10 +75,6 @@ const activityFilters = ref({
   from:          '',
   to:            '',
 })
-const activityRows = ref([])
-const activityBusy = ref(false)
-const activityOffset = ref(0)
-const activityHasMore = ref(false)
 const ACTIVITY_PREFIXES = [
   { value: 'all',    labelKey: 'audit.activity.prefix_all' },
   { value: 'event',  labelKey: 'audit.activity.prefix_event' },
@@ -122,88 +110,66 @@ async function loadRecent() {
   }
 }
 
-async function loadScores({ append = false } = {}) {
-  scoreBusy.value = true
-  try {
-    const f = scoreFilters.value
-    const params = new URLSearchParams()
-    if (f.action !== 'all') params.set('action', f.action)
-    if (f.q.trim())         params.set('q',      f.q.trim())
-    if (f.from)             params.set('from',   f.from)
-    if (f.to)               params.set('to',     f.to)
-    params.set('limit',  PAGE)
-    params.set('offset', append ? scoreOffset.value : 0)
-    if (isSysAdmin.value && orgFilter.value) params.set('org_id', orgFilter.value)
-    const rows = await auth.apiFetch(`/api/audit/scores?${params.toString()}`)
-    if (append) {
-      scoreRows.value = [...scoreRows.value, ...rows]
-    } else {
-      scoreRows.value = rows
-      scoreOffset.value = 0
+// The three filtered tabs page the same way: the tab's filters become
+// query params, 100 rows at a time, and Show more appends from where
+// the last page stopped. setFilterParams(f, params) adds the tab's own
+// filters; the sysadmin org filter, limit and offset are common.
+function pagedAudit(endpoint, what, filters, setFilterParams) {
+  const rows = ref([])
+  const busy = ref(false)
+  const hasMore = ref(false)
+  let offset = 0
+  async function load({ append = false } = {}) {
+    busy.value = true
+    try {
+      const params = new URLSearchParams()
+      setFilterParams(filters.value, params)
+      params.set('limit',  PAGE)
+      params.set('offset', append ? offset : 0)
+      if (isSysAdmin.value && orgFilter.value) params.set('org_id', orgFilter.value)
+      const page = await auth.apiFetch(`${endpoint}?${params.toString()}`)
+      if (append) {
+        rows.value = [...rows.value, ...page]
+      } else {
+        rows.value = page
+        offset = 0
+      }
+      offset += page.length
+      hasMore.value = page.length === PAGE
+    } catch (err) {
+      showError(`Failed to load ${what}: ${err.message}`)
+    } finally {
+      busy.value = false
     }
-    scoreOffset.value += rows.length
-    scoreHasMore.value = rows.length === PAGE
-  } catch (err) {
-    showError(`Failed to load score audit: ${err.message}`)
-  } finally {
-    scoreBusy.value = false
   }
+  return { rows, busy, hasMore, load }
 }
 
-async function loadRoles({ append = false } = {}) {
-  roleBusy.value = true
-  try {
-    const f = roleFilters.value
-    const params = new URLSearchParams()
-    if (f.action !== 'all') params.set('action', f.action)
-    if (f.role !== 'all')   params.set('role',   f.role)
-    if (f.from)             params.set('from',   f.from)
-    if (f.to)               params.set('to',     f.to)
-    params.set('limit',  PAGE)
-    params.set('offset', append ? roleOffset.value : 0)
-    if (isSysAdmin.value && orgFilter.value) params.set('org_id', orgFilter.value)
-    const rows = await auth.apiFetch(`/api/audit/roles?${params.toString()}`)
-    if (append) {
-      roleRows.value = [...roleRows.value, ...rows]
-    } else {
-      roleRows.value = rows
-      roleOffset.value = 0
-    }
-    roleOffset.value += rows.length
-    roleHasMore.value = rows.length === PAGE
-  } catch (err) {
-    showError(`Failed to load role audit: ${err.message}`)
-  } finally {
-    roleBusy.value = false
-  }
-}
+const {
+  rows: scoreRows, busy: scoreBusy, hasMore: scoreHasMore, load: loadScores,
+} = pagedAudit('/api/audit/scores', 'score audit', scoreFilters, (f, params) => {
+  if (f.action !== 'all') params.set('action', f.action)
+  if (f.q.trim())         params.set('q',      f.q.trim())
+  if (f.from)             params.set('from',   f.from)
+  if (f.to)               params.set('to',     f.to)
+})
 
-async function loadActivity({ append = false } = {}) {
-  activityBusy.value = true
-  try {
-    const f = activityFilters.value
-    const params = new URLSearchParams()
-    if (f.action_prefix !== 'all') params.set('action_prefix', f.action_prefix)
-    if (f.from)                    params.set('from',          f.from)
-    if (f.to)                      params.set('to',            f.to)
-    params.set('limit',  PAGE)
-    params.set('offset', append ? activityOffset.value : 0)
-    if (isSysAdmin.value && orgFilter.value) params.set('org_id', orgFilter.value)
-    const rows = await auth.apiFetch(`/api/audit/activity?${params.toString()}`)
-    if (append) {
-      activityRows.value = [...activityRows.value, ...rows]
-    } else {
-      activityRows.value = rows
-      activityOffset.value = 0
-    }
-    activityOffset.value += rows.length
-    activityHasMore.value = rows.length === PAGE
-  } catch (err) {
-    showError(`Failed to load activity audit: ${err.message}`)
-  } finally {
-    activityBusy.value = false
-  }
-}
+const {
+  rows: roleRows, busy: roleBusy, hasMore: roleHasMore, load: loadRoles,
+} = pagedAudit('/api/audit/roles', 'role audit', roleFilters, (f, params) => {
+  if (f.action !== 'all') params.set('action', f.action)
+  if (f.role !== 'all')   params.set('role',   f.role)
+  if (f.from)             params.set('from',   f.from)
+  if (f.to)               params.set('to',     f.to)
+})
+
+const {
+  rows: activityRows, busy: activityBusy, hasMore: activityHasMore, load: loadActivity,
+} = pagedAudit('/api/audit/activity', 'activity audit', activityFilters, (f, params) => {
+  if (f.action_prefix !== 'all') params.set('action_prefix', f.action_prefix)
+  if (f.from)                    params.set('from',          f.from)
+  if (f.to)                      params.set('to',            f.to)
+})
 
 // Re-load whichever tab is active when its filters change. Each
 // filter watcher hits its own loader so switching between tabs
