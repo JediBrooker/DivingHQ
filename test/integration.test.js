@@ -11001,3 +11001,63 @@ test("profile and analytics places match the standings: reserves out, Super Fina
     await teardownFixture(st);
   }
 });
+
+// The coach dashboard's current place is the scoreboard's: its ranking reads
+// the standings' dives (standingsPerDiveForEventsCte), so a live Super Final
+// semi counts the H2H carry and a reserve's scored try-out isn't in the field.
+test("the coach dashboard's live place matches the scoreboard in a Super Final semi", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const dive = await recordKit.threeMetreDive();
+    const x = await recordKit.diver(st.orgId, null, "female", "Coach Xena");
+    const y = await recordKit.diver(st.orgId, null, "female", "Coach Yara");
+    const r = await recordKit.diver(st.orgId, null, "female", "Coach Rhea");
+    const h2h = await recordKit.event(st.orgId, { gender: "Female" });
+    await recordKit.dive(h2h, x, 1, dive, 9);
+    await recordKit.dive(h2h, y, 1, dive, 5);
+    await recordKit.dive(h2h, r, 1, dive, 9.5);
+    await pool.query("UPDATE events SET status = 'Completed' WHERE id = $1", [h2h.id]);
+    const sf = await recordKit.event(st.orgId, { gender: "Female" }); // Live
+    await pool.query("UPDATE events SET score_carry_from = $1 WHERE id = $2", [h2h.id, sf.id]);
+    await recordKit.dive(sf, x, 1, dive, 6);
+    await recordKit.dive(sf, y, 1, dive, 7);
+    await recordKit.dive(sf, r, 1, dive, 10);
+    await pool.query(
+      "UPDATE competitor_dive_lists SET is_reserve = TRUE, reserve_position = 1 WHERE event_id = $1 AND competitor_id = $2",
+      [sf.id, r],
+    );
+    // Round 2 still to dive, so both have a card on the dashboard.
+    await pool.query(
+      `INSERT INTO competitor_dive_lists (event_id, competitor_id, dive_id, round_number)
+       VALUES ($1, $2, $3, 2), ($1, $4, $3, 2)`,
+      [sf.id, x, dive, y],
+    );
+
+    const board = await fetchJson("GET", `/api/scoreboard/${sf.id}?cache=skip`);
+    const standing = Object.fromEntries(board.body.standings.map((row) =>
+      [row.competitor_id, [Number(row.rank), board.body.standings.length, Number(row.total).toFixed(2)]]));
+    const coachName = `int-cs-${crypto.randomBytes(3).toString("hex")}`;
+    const coach = await insertUser({ orgId: st.orgId, role: "coach", username: coachName, fullName: "Semi Coach" });
+    await pool.query(
+      "INSERT INTO coach_diver_links (coach_id, diver_id, org_id) VALUES ($1, $2, $4), ($1, $3, $4)",
+      [coach, x, y, st.orgId],
+    );
+    const login = await fetchJson("POST", "/api/auth/login", { body: { username: coachName, password: "not-used-here" } });
+    const dash = await fetchJson("GET", "/api/coach/dashboard", { token: login.body.token });
+    assert.equal(dash.status, 200, JSON.stringify(dash.body));
+    for (const who of [x, y]) {
+      const card = dash.body.find((row) => row.diver_id === who && row.event_id === sf.id);
+      assert.deepEqual([card.current_rank, card.field_size, Number(card.current_total).toFixed(2)], standing[who]);
+      // The last dive is still this stage's round 1, not a carried one.
+      assert.equal(card.last_dive_round, 1);
+    }
+    assert.equal(standing[x][0], 1, "Xena leads on her H2H carry");
+    assert.equal(dash.body.filter((row) => row.event_id === sf.id).length, 2, "one card each");
+  } finally {
+    await pool.query("DELETE FROM coach_diver_links WHERE org_id = $1", [st.orgId]);
+    await recordKit.cleanup(st.orgId);
+    await teardownFixture(st);
+  }
+});

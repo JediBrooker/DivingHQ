@@ -24,7 +24,7 @@
 const express = require("express");
 const { recordAudit } = require("../lib/audit");
 const submitDiveList = require("../lib/dive-list-submit");
-const { perDivePointsCte } = require("../lib/scoring-sql");
+const { perDivePointsCte, standingsPerDiveForEventsCte } = require("../lib/scoring-sql");
 const { uuidParams } = require("../lib/uuid-params");
 
 module.exports = function createCoachRouter({
@@ -225,22 +225,30 @@ module.exports = function createCoachRouter({
            WHERE judges_pending = 0
            ORDER BY competitor_id, event_id, round_number DESC
          ),
-         /* Standings per event so we can attach a current rank.
-            We carry round_number through so we can also surface
-            the per-round dive total for the "last completed dive"
-            display below. A team event ranks teams, like its
-            standings, so a member's card shows the team's total and
-            place (unit_id is the team there, the diver otherwise). */
+         /* Every dive scored in these events, for the per-round dive
+            total on the "last completed dive" display below. */
          ${perDivePointsCte({
-           select:      ["s.event_id", "s.competitor_id", "cdl.team_id", "s.round_number"],
+           select:      ["s.event_id", "s.competitor_id", "s.round_number"],
            pointsAlias: "pts",
            where:       "s.event_id IN (SELECT event_id FROM upcoming_raw)",
+         })},
+         /* Standings per event so we can attach a current rank, from the
+            dives the scoreboard counts (standingsPerDiveForEventsCte): no
+            reserve try-outs, and a Super Final semi's H2H carry, or a
+            coach watching an SF saw a different place from the board.
+            A team event ranks teams, like its standings, so a member's
+            card shows the team's total and place (unit_id is the team
+            there, the diver otherwise). */
+         ${standingsPerDiveForEventsCte({
+           name:        "standing_dives",
+           events:      "SELECT event_id FROM upcoming_raw",
+           pointsAlias: "pts",
          })},
          totals AS (
            SELECT pd.event_id,
                   CASE WHEN e.event_type = 'team' THEN pd.team_id ELSE pd.competitor_id END AS unit_id,
                   SUM(pd.pts)::numeric(8,2) AS total
-           FROM per_dive pd
+           FROM standing_dives pd
            JOIN events e ON e.id = pd.event_id
            WHERE e.event_type <> 'team' OR pd.team_id IS NOT NULL
            GROUP BY 1, 2
