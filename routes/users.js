@@ -1082,6 +1082,35 @@ module.exports = function createUsersRouter({
           await client.query(`UPDATE ${tbl} SET holder_id = $2 WHERE holder_id = $1`, [oldId, me.id]);
         }
 
+        // Money, teams and memberships. payments.payer_user_id is ON
+        // DELETE RESTRICT, so an old account that had ever paid for
+        // anything made the delete below throw and the whole claim came
+        // back a 500, forever. The rest cascade: team places,
+        // memberships, accreditations, fines still owed, entry charges
+        // and class enrolments all vanished with the shell row. They're
+        // this person's record as much as their dives are, so they move.
+        // A team the new account is already on keeps that row, and the
+        // old duplicate goes with the delete.
+        await client.query(
+          `UPDATE payments
+              SET payer_user_id   = CASE WHEN payer_user_id   = $1 THEN $2 ELSE payer_user_id END,
+                  subject_user_id = CASE WHEN subject_user_id = $1 THEN $2 ELSE subject_user_id END,
+                  liable_user_id  = CASE WHEN liable_user_id  = $1 THEN $2 ELSE liable_user_id END
+            WHERE payer_user_id = $1 OR subject_user_id = $1 OR liable_user_id = $1`,
+          [oldId, me.id],
+        );
+        await client.query(
+          `UPDATE team_members t SET user_id = $2
+            WHERE t.user_id = $1
+              AND NOT EXISTS (SELECT 1 FROM team_members n WHERE n.team_id = t.team_id AND n.user_id = $2)`,
+          [oldId, me.id],
+        );
+        await client.query("UPDATE memberships SET user_id = $2 WHERE user_id = $1", [oldId, me.id]);
+        await client.query("UPDATE official_accreditations SET user_id = $2 WHERE user_id = $1", [oldId, me.id]);
+        await client.query("UPDATE fines SET liable_user_id = $2 WHERE liable_user_id = $1", [oldId, me.id]);
+        await client.query("UPDATE entry_charges SET entrant_user_id = $2 WHERE entrant_user_id = $1", [oldId, me.id]);
+        await client.query("UPDATE class_enrolments SET diver_user_id = $2 WHERE diver_user_id = $1", [oldId, me.id]);
+
         // The shell row is now disconnected from every
         // sporting-record FK we care about, safe to hard-delete.
         // Everything that ON DELETE CASCADEs from here (e.g.
@@ -1119,6 +1148,17 @@ module.exports = function createUsersRouter({
     } catch (err) {
       await client.query("ROLLBACK").catch(() => {});
       console.error("[User Claim Error]", err.message);
+      // Both accounts holding the same live thing (one paid entry per
+      // event, one live enrolment per class, and so on), or a reference
+      // to the old account nothing above moves. Either way it's a merge
+      // for a person to look at, not a server fault.
+      if (err.code === "23505" || err.code === "23503") {
+        return res.status(409).json({
+          error: `Cannot merge these accounts automatically: they overlap in ${err.table || "a record"}. `
+            + `Untick that one, or contact ${supportContact()} to merge them by hand.`,
+          code: "claim_conflict",
+        });
+      }
       res.status(500).json({ error: "Claim failed" });
     } finally {
       client.release();

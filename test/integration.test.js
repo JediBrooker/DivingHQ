@@ -7368,3 +7368,85 @@ test("deleting a club closes requests to join it instead of turning them into 'l
     await teardownFixture(st);
   }
 });
+
+test("claiming a deleted account brings its payments, team places, memberships, fines and enrolments along", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: true });
+  try {
+    const name = `Returning Diver ${st.slug}`;
+    const oldName = `int-b3old-${st.slug}`;
+    const old = await insertUser({ orgId: st.orgId, role: "diver", username: oldName, fullName: name });
+    const clubId = (await pool.query("INSERT INTO clubs (org_id, name) VALUES ($1, 'Claim Club') RETURNING id", [st.orgId])).rows[0].id;
+    const team = (await pool.query("INSERT INTO teams (org_id, name) VALUES ($1, 'Claim Team') RETURNING id", [st.orgId])).rows[0].id;
+    await pool.query("INSERT INTO team_members (team_id, user_id) VALUES ($1, $2)", [team, old]);
+    await pool.query(
+      `INSERT INTO payments (org_id, subject_type, amount_cents, currency, payer_user_id, status)
+       VALUES ($1, 'donation', 500, 'aud', $2, 'paid')`, [st.orgId, old]);
+    await pool.query(
+      "INSERT INTO memberships (org_id, user_id, period_start, period_end) VALUES ($1, $2, '2025-01-01', '2026-01-01')", [st.orgId, old]);
+    await pool.query("INSERT INTO official_accreditations (org_id, user_id, role_type) VALUES ($1, $2, 'judge')", [st.orgId, old]);
+    await pool.query("INSERT INTO fines (org_id, liable_user_id, amount_cents, currency) VALUES ($1, $2, 2500, 'aud')", [st.orgId, old]);
+    await pool.query(
+      "INSERT INTO entry_charges (org_id, event_id, entrant_user_id, kind, amount_cents) VALUES ($1, $2, $3, 'scratch', 1000)",
+      [st.orgId, st.eventId, old]);
+    const cls = (await pool.query(
+      "INSERT INTO classes (club_id, org_id, name) VALUES ($1, $2, 'Squad') RETURNING id", [clubId, st.orgId])).rows[0].id;
+    await pool.query(
+      "INSERT INTO class_enrolments (class_id, diver_user_id, club_id, org_id) VALUES ($1, $2, $3, $4)", [cls, old, clubId, st.orgId]);
+
+    const gone = await fetchJson("POST", "/api/users/me/delete", { token: await b3Login(oldName), body: { password: "not-used-here" } });
+    assert.equal(gone.status, 200, JSON.stringify(gone.body));
+
+    const newName = `int-b3new-${st.slug}`;
+    const me = await insertUser({ orgId: st.orgId, role: "diver", username: newName, fullName: name });
+    const claim = await fetchJson("POST", "/api/users/me/claim", {
+      token: await b3Login(newName), body: { old_user_ids: [old], password: "not-used-here" },
+    });
+    assert.equal(claim.status, 200, JSON.stringify(claim.body));
+    assert.deepEqual(claim.body.claimed, [old]);
+
+    const owner = async (sql) => (await pool.query(sql, [me])).rows[0].n;
+    assert.equal(await owner("SELECT count(*)::int AS n FROM team_members WHERE user_id = $1"), 1, "still on the team");
+    assert.equal(await owner("SELECT count(*)::int AS n FROM payments WHERE payer_user_id = $1"), 1);
+    assert.equal(await owner("SELECT count(*)::int AS n FROM memberships WHERE user_id = $1"), 1);
+    assert.equal(await owner("SELECT count(*)::int AS n FROM official_accreditations WHERE user_id = $1"), 1);
+    assert.equal(await owner("SELECT count(*)::int AS n FROM fines WHERE liable_user_id = $1"), 1, "a fine still owed stays owed");
+    assert.equal(await owner("SELECT count(*)::int AS n FROM entry_charges WHERE entrant_user_id = $1"), 1);
+    assert.equal(await owner("SELECT count(*)::int AS n FROM class_enrolments WHERE diver_user_id = $1"), 1);
+  } finally {
+    for (const tbl of ["payments", "memberships", "official_accreditations", "fines", "entry_charges", "class_enrolments", "classes", "teams"]) {
+      await pool.query(`DELETE FROM ${tbl} WHERE org_id = $1`, [st.orgId]).catch(() => {});
+    }
+    await pool.query("DELETE FROM clubs WHERE org_id = $1", [st.orgId]);
+    await teardownFixture(st);
+  }
+});
+
+test("claiming an account that overlaps the new one on a live charge is a 409, not a 500", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: true });
+  try {
+    const name = `Twice Charged ${st.slug}`;
+    const oldName = `int-b3old2-${st.slug}`;
+    const old = await insertUser({ orgId: st.orgId, role: "diver", username: oldName, fullName: name });
+    const newName = `int-b3new2-${st.slug}`;
+    const me = await insertUser({ orgId: st.orgId, role: "diver", username: newName, fullName: name });
+    for (const who of [old, me]) {
+      await pool.query(
+        "INSERT INTO entry_charges (org_id, event_id, entrant_user_id, kind, amount_cents) VALUES ($1, $2, $3, 'scratch', 1000)",
+        [st.orgId, st.eventId, who]);
+    }
+    assert.equal((await fetchJson("POST", "/api/users/me/delete", { token: await b3Login(oldName), body: { password: "not-used-here" } })).status, 200);
+    const claim = await fetchJson("POST", "/api/users/me/claim", {
+      token: await b3Login(newName), body: { old_user_ids: [old], password: "not-used-here" },
+    });
+    assert.equal(claim.status, 409, JSON.stringify(claim.body));
+    assert.equal(claim.body.code, "claim_conflict");
+    assert.equal((await pool.query("SELECT count(*)::int AS n FROM users WHERE id = $1", [old])).rows[0].n, 1, "nothing half-merged");
+  } finally {
+    await pool.query("DELETE FROM entry_charges WHERE org_id = $1", [st.orgId]).catch(() => {});
+    await teardownFixture(st);
+  }
+});

@@ -190,7 +190,7 @@ You can delete your account from **Profile → Delete account**. We ask for your
 
 **Coming back later: claim your old results.**
 
-If you create a new account in the future with the same name, we check whether any historical entries in your organisation match. At sign-in we show you past meets that look like yours; you pick the ones that are, and we link them to your new profile. You can also do this from **Profile → Claim past competition entries**. We ask you to confirm rather than matching automatically, because two divers can share a name.
+If you create a new account in the future with the same name, we check whether any historical entries in your organisation match. At sign-in we show you past meets that look like yours; you pick the ones that are, and we link them to your new profile. You can also do this from **Profile → Claim past competition entries**. We ask you to confirm rather than matching automatically, because two divers can share a name. Team places, memberships, accreditations and payment records on the old account come across with them.
 
 **If a result needs removing completely** (safeguarding, child protection, a court order, mistaken identity), contact the club or federation that ran the event, and us at [support@divinghq.app](mailto:support@divinghq.app). We'll work with the organisation that ran it.
 
