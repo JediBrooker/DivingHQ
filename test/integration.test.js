@@ -7535,3 +7535,34 @@ test("event history follows the scoreboard's visibility rule", async (t) => {
     await teardownFixture(other);
   }
 });
+
+// A non-UUID in a path went straight into `WHERE id = $1`, pg threw
+// 22P02 and the route said 500: a mistyped link or a crawler looked like
+// an outage in the 5xx metrics. The shared gates and the busiest public
+// routes answer 404 now.
+test("a malformed id in the path is a 404, not a 500", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const bad = "not-a-uuid";
+    const anon = [
+      `/api/scoreboard/${bad}`, `/api/scoreboard/${bad}/leaderboard`, `/api/events/${bad}/history`,
+      `/api/venue/scoreboard-state/${bad}`, `/api/archive/${bad}/results`,
+      `/api/meets/${bad}/program.pdf`, `/api/meets/${bad}/program.csv`, `/api/events/${bad}/start-list.pdf`,
+      `/api/events/${bad}/results.csv`, `/api/events/${bad}/results.pdf`,
+      `/api/events/${bad}/judge-ranking-analysis`, `/api/events/${bad}/judge-ranking-analysis.csv`,
+    ];
+    const admin = [
+      `/api/events/${bad}/managers`, `/api/events/${bad}/judges`, `/api/events/${bad}/score-audit`,
+      `/api/events/${bad}/referees`, `/api/events/${bad}/teams`, `/api/users/${bad}/role-audit`,
+      `/api/clubs/${bad}/affiliation`,
+    ];
+    const got = [];
+    for (const p of anon) got.push([p, (await fetchJson("GET", p)).status]);
+    for (const p of admin) got.push([p, (await fetchJson("GET", p, { token: st.adminToken })).status]);
+    assert.deepEqual(got.filter(([, s]) => s !== 404), []);
+  } finally {
+    await teardownFixture(st);
+  }
+});

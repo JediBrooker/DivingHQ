@@ -60,6 +60,7 @@
 //     CSV export uses.
 
 const express = require("express");
+const { uuidParams } = require("../lib/uuid-param");
 const PDFDocument = require("pdfkit");
 const { perDivePointsCte } = require("../lib/scoring-sql");
 // CSV escaping + formula-injection guard, and the filename slug the
@@ -381,6 +382,7 @@ async function buildAnalysis(pool, eventId) {
 module.exports = function createJudgeRankingRouter({ pool }) {
   if (!pool) throw new Error("createJudgeRankingRouter requires { pool }");
   const router = express.Router();
+  uuidParams(router, "id");   // an event id, see lib/uuid-param.js
 
   // -------------------------------------------------------------
   // JSON payload, drives the in-page JudgeRankingTable + the

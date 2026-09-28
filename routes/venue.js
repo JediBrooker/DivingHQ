@@ -17,11 +17,14 @@
 //   app.use(require('./routes/venue')({ pool }))
 
 const express = require("express");
+const { uuidParams } = require("../lib/uuid-param");
 const { buildScoreboardState } = require("../lib/venue-state");
 
 module.exports = function createVenueRouter({ pool }) {
   if (!pool) throw new Error("createVenueRouter requires { pool }");
   const router = express.Router();
+  // A junk id used to 500 (and index the live-state maps with it).
+  uuidParams(router, "event_id");
 
   // Load the in-memory live state at request time so the snapshot
   // reflects the current active diver + hold reason. lib/live-state

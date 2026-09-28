@@ -546,6 +546,7 @@ module.exports = function createUsersRouter({
   // Per-user role audit history. Visible to org_admin within the
   // user's own org, or system_admin across all orgs.
   router.get("/api/users/:id/role-audit", requireOrgAdmin, async (req, res) => {
+    if (!UUID_RE.test(String(req.params.id))) return res.status(404).json({ error: "User not found" });
     try {
       const target = await pool.query(
         "SELECT org_id FROM users WHERE id = $1",

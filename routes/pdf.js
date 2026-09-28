@@ -23,6 +23,7 @@
 //   app.use(require('./routes/pdf')({ pool }))
 
 const express = require("express");
+const { uuidParams } = require("../lib/uuid-param");
 const PDFDocument = require("pdfkit");
 const { t: serverTranslate } = require("../lib/server-i18n");
 const { perDiveSelect, perDivePointsCte, teamStandingsCte, compStandingsCte } = require("../lib/scoring-sql");
@@ -34,6 +35,8 @@ const { csvRow, slugify } = require("../lib/csv");
 module.exports = function createPdfRouter({ pool }) {
   if (!pool) throw new Error("createPdfRouter requires { pool }");
   const router = express.Router();
+  // Every :id / :diverId here is an event, meet or user UUID.
+  uuidParams(router, "id", "diverId");
 
   // ===============================================================
   // Meet program export options: parses the ?include= + ?seconds_per_dive

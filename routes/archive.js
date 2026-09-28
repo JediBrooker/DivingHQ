@@ -16,6 +16,7 @@
 //   app.use(require('./routes/archive')({ pool }))
 
 const express = require("express");
+const { uuidParams } = require("../lib/uuid-param");
 const {
   perDiveSelect, perDivePointsCte, teamStandingsCte, compStandingsCte, PUBLIC_PANEL_SQL,
 } = require("../lib/scoring-sql");
@@ -42,6 +43,7 @@ module.exports = function createArchiveRouter({ pool, readPool }) {
   // when no replica is configured, just in case.
   const reads = readPool || pool;
   const router = express.Router();
+  uuidParams(router, "eventId");   // see lib/uuid-param.js
 
   // -------------------------------------------------------------
   // GET /api/archive: every Live or Completed event with the
