@@ -1237,6 +1237,7 @@ app.use(require("./routes/event-templates")({ pool, requireMeetEditor }));
 // =============================================================
 app.use(require("./routes/conflicts")({
   pool, io, scoreboardCache, requireOrgRole, requireRoleOrEventDelegate, recomputeRecordKeys,
+  isEventDelegate,
 }));
 
 // =============================================================
@@ -1384,6 +1385,7 @@ require("./routes/socket")({
   scoreboardCache,
   metrics,
   push,
+  trustProxy: app.get("trust proxy fn"),
 });
 
 // =============================================================

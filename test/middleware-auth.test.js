@@ -394,3 +394,51 @@ test("parseDateRange: impossible calendar dates are a 400, real ones pass", () =
   assert.deepEqual(parseDateRange({ from_date: "2024-02-29", to_date: "2026-12-31" }), { from: "2024-02-29", to: "2026-12-31" });
   assert.deepEqual(parseDateRange({}), { from: null, to: null });
 });
+
+// A non-UUID event id on a Control Room socket event used to go straight
+// into `WHERE id = $1`, pg threw 22P02, and nothing up the (un-awaited)
+// socket handler chain caught it. Any signed-in account could crash the
+// server that way.
+test("socketCanManageEvent: a non-UUID event id is refused without touching the DB", async () => {
+  const pool = {
+    async query(sql) {
+      if (/FROM events/.test(sql)) throw Object.assign(new Error("invalid input syntax for type uuid"), { code: "22P02" });
+      return { rows: [] };
+    },
+  };
+  const { socketCanManageEvent } = createMiddleware({ pool, JWT_SECRET });
+  // An array holding one real UUID stringifies to that UUID, so only a
+  // typeof check keeps it out of the handler's own queries.
+  for (const bad of ["not-a-uuid", 42, { $gt: "" }, ["a"], `${USER_ID}x`, [USER_ID]]) {
+    const socket = fakeSocket();
+    socket.userOrgId = "org-1";
+    assert.equal(await socketCanManageEvent(socket, bad, ["judge"]), false, String(bad));
+    assert.equal(socket.emits.at(-1).payload.reason, "bad_event_id");
+  }
+});
+
+// Every JWT the app mints shares JWT_SECRET: sessions, but also the
+// 2FA step-up token (handed out for the password alone), password-reset
+// and email-verify links. Those carry `sub` and `type`, no `id`, and
+// verifyToken took any of them as a session with no identity, so a
+// password without the second factor opened the verifyToken reads.
+test("verifyToken / optionalAuth: purpose tokens and unknown users aren't sessions", async () => {
+  const { verifyToken, optionalAuth } = build({ token_version: 1 });
+  for (const payload of [
+    { sub: USER_ID, type: "totp_pending" },
+    { sub: USER_ID, type: "password_reset", fp: "x" },
+    { sub: USER_ID, type: "email_verify" },
+    { id: USER_ID, type: "totp_pending", tv: 1 },
+  ]) {
+    const out = await runVerify(verifyToken, sign(payload));
+    assert.equal(out.statusCode, 401, JSON.stringify(payload));
+    const guest = await runVerify(optionalAuth, sign(payload));
+    assert.equal(guest.type, "next");
+    assert.equal(guest.req.user, undefined, JSON.stringify(payload));
+  }
+  // A real session still gets in.
+  assert.equal((await runVerify(verifyToken, sign({ id: USER_ID, tv: 1 }))).type, "next");
+  // A session for a user row that's gone (hard-deleted) is revoked too.
+  const gone = createMiddleware({ pool: { async query() { return { rows: [] }; } }, JWT_SECRET });
+  assert.equal((await runVerify(gone.verifyToken, sign({ id: USER_ID, tv: 1 }))).statusCode, 401);
+});

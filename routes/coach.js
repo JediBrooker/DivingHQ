@@ -1285,9 +1285,11 @@ module.exports = function createCoachRouter({
 
   router.delete("/api/coach-links/:id", requireOrgAdmin, async (req, res) => {
     try {
+      // The usual sysadmin bypass: the create route lets a sysadmin add a
+      // link in any org, so they have to be able to take one out too.
       const r = await pool.query(
-        "DELETE FROM coach_diver_links WHERE id = $1 AND org_id = $2 RETURNING id",
-        [req.params.id, req.user.org_id],
+        "DELETE FROM coach_diver_links WHERE id = $1 AND ($2::boolean OR org_id = $3) RETURNING id",
+        [req.params.id, !!req.user.is_system_admin, req.user.org_id],
       );
       if (!r.rows.length) return res.status(404).json({ error: "Link not found" });
       res.json({ ok: true });

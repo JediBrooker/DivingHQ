@@ -1,6 +1,6 @@
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
-import { useRoute, RouterLink, onBeforeRouteLeave } from 'vue-router'
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
+import { useRoute, useRouter, RouterLink, onBeforeRouteLeave } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useSocket } from '@/composables/useSocket'
@@ -50,6 +50,7 @@ function buzz(pattern) {
 }
 
 const route = useRoute()
+const router = useRouter()
 const auth = useAuthStore()
 const socket = useSocket()
 
@@ -245,6 +246,34 @@ function joinEventRoom() {
   socket.emit('get_meet_hold',    { event_id: evId })
 }
 
+// Opened without ?event= (the side-nav Judge Terminal link, the guide
+// card). The connect replay only covers events this judge sits on, and
+// it shows their diver once without joining the room, so the next diver
+// never arrived and the keypad sat on the old one (or on "waiting") all
+// meet. Take the judge's own Live panel instead: the newest one, since
+// my-events comes back newest first. No Live panel just leaves it
+// waiting, same as before.
+async function adoptOwnLiveEvent() {
+  if (eventIdFromUrl.value) return
+  try {
+    const mine = await auth.apiFetch('/api/judge/my-events')
+    const live = Array.isArray(mine) ? mine.find((e) => e.status === 'Live') : null
+    if (live && !eventIdFromUrl.value) {
+      router.replace({ query: { ...route.query, event: live.id } })
+    }
+  } catch { /* stays on the waiting screen */ }
+}
+// The URL picking up an event (the adopt above, or a link while this
+// view is open) has to join that room. On a later reconnect the
+// connect handler below does it. A diver that came in for some other
+// event while the URL named none (the pooled socket can still sit in a
+// scoreboard's room) goes, so the keypad can't score the wrong dive.
+watch(eventIdFromUrl, (id) => {
+  if (!id) return
+  if (activeDiver.value && activeDiver.value.event_id !== id) activeDiver.value = null
+  if (socket.connected) joinEventRoom()
+})
+
 // Heads up: all socket listeners go through useSocketEvent. The
 // pooled socket outlives this view, so bare socket.on registrations
 // would stack a duplicate panel/keypad handler every time the
@@ -273,6 +302,7 @@ onBeforeRouteLeave(() => {
 
 onMounted(() => {
   if (socket.connected) joinEventRoom()
+  adoptOwnLiveEvent()
   acquireWakeLock()
   document.addEventListener('visibilitychange', onVisibilityChange)
   window.addEventListener('beforeunload', onJudgeBeforeUnload)
@@ -293,9 +323,10 @@ const holdReason = ref('')
 
 // Which event this screen is judging: the ?event= id when there is one,
 // else whatever the active diver belongs to. Every broadcast below is
-// checked against it. The server replays state_update for EVERY live
-// event on the platform to a socket that (re)connects, and taking the
-// last one in put another org's diver on a waiting judge's screen, with
+// checked against it. The pooled socket can still sit in another
+// event's room (a scoreboard opened earlier in this tab), and the
+// connect replay covers every event this judge is on; taking the last
+// one in put some other event's diver on a waiting judge's screen, with
 // Submit enabled.
 function isMyEvent(eventId) {
   const mine = eventIdFromUrl.value || activeDiver.value?.event_id

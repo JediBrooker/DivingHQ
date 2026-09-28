@@ -390,6 +390,25 @@ test("POST /api/scores/manual-entry rejects when judge is not on panel", async (
 
 // ---- Conflict resolve endpoint --------------------------------
 
+// What the socket's P5 reconciliation leaves behind when a judge's late
+// sync disagrees with a manual entry: a 'rejected_duplicate' audit row
+// carrying the judge's value. The resolve endpoint only acts on a row
+// with one. The referee in these tests runs the event (event_managers),
+// which is the other thing it checks now.
+async function openConflict(scoreId, manualScore, judgeScore) {
+  const { insertScoreAudit } = require("../lib/score-audit");
+  await insertScoreAudit(pool, {
+    scoreId, eventId: testEventId, competitorId: testCompetitorId, judgeId: testJudgeId,
+    round: 1, action: "rejected_duplicate", oldScore: manualScore, newScore: judgeScore,
+  });
+  await pool.query(
+    `INSERT INTO event_managers (event_id, user_id)
+     SELECT $1, $2 WHERE NOT EXISTS
+       (SELECT 1 FROM event_managers WHERE event_id = $1 AND user_id = $2)`,
+    [testEventId, testOperatorId],
+  );
+}
+
 test("POST /api/conflicts/:id/resolve keep_existing flips source", async (t) => {
   if (!dbReachable || !migrationsApplied) { t.skip(); return; }
   // Set up a fresh manual-entry row.
@@ -402,6 +421,7 @@ test("POST /api/conflicts/:id/resolve keep_existing flips source", async (t) => 
     { userId: testOperatorId, roles: ["org_admin"] },
   );
   assert.equal(setup.status, 200);
+  await openConflict(setup.body.score_id, 9.0, 8.5);
 
   const resolve = await httpPost(
     `/api/conflicts/${setup.body.score_id}/resolve`,
@@ -440,6 +460,7 @@ test("POST /api/conflicts/:id/resolve accept_proposed updates score", async (t) 
     { userId: testOperatorId, roles: ["org_admin"] },
   );
   assert.equal(setup.status, 200);
+  await openConflict(setup.body.score_id, 6.0, 6.5);
 
   const resolve = await httpPost(
     `/api/conflicts/${setup.body.score_id}/resolve`,

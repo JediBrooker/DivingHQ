@@ -4176,9 +4176,11 @@ test("claiming an old account keeps its synchro-partner snapshot", async (t) => 
       await pool.query("UPDATE users SET club_id = $1 WHERE id = $2", [clubId, id]);
       return { id, username };
     };
+    // Same person, so the same name: a claim only takes a past account
+    // with the claimer's name.
     const lead = await mk("Lead Diver", A.clubId);
-    const old = await mk("Old Me", A.clubId);
-    const me = await mk("New Me", leava);
+    const old = await mk("Sione Me", A.clubId);
+    const me = await mk("Sione Me", leava);
 
     const meet = await fetchJson("POST", "/api/meets", { token: A.token, body: { name: "Wallis Open", represent_as: "club" } });
     assert.equal(meet.status, 201, JSON.stringify(meet.body));
@@ -11101,6 +11103,553 @@ test("a meet's events tie on date, and the id settles the order everywhere", asy
   } finally {
     await pool.query("DELETE FROM meets WHERE org_id = $1", [st.orgId]);
     await recordKit.cleanup(st.orgId);
+    await teardownFixture(st);
+  }
+});
+
+// =====================================================================
+// Security and integrity sweep (area 7, 2026-09). Each test starts from
+// its own setupFixture org, so nothing here leans on shared rows.
+// =====================================================================
+const sweepKit = {
+  // A member of `orgId` with one role, signed in. insertUser's password
+  // is "not-used-here".
+  async member(orgId, role, fullName = `Sweep ${role}`) {
+    const username = `int-sw-${role.replace(/_/g, "")}-${crypto.randomBytes(4).toString("hex")}`;
+    const id = await insertUser({ orgId, username, fullName, role });
+    const login = await fetchJson("POST", "/api/auth/login", { body: { username, password: "not-used-here" } });
+    if (login.status !== 200) throw new Error(`sweepKit.member login ${login.status} ${JSON.stringify(login.body)}`);
+    return { id, username, token: login.body.token };
+  },
+  // One scored dive (a full panel) in a Live event of the org. Returns
+  // the event, the diver and the first judge's score row.
+  async scoredDive(orgId, score = 6) {
+    const ev = await recordKit.event(orgId, { gender: "Female" });
+    const diver = await recordKit.diver(orgId, null, "female", "Sweep Diver");
+    await recordKit.dive(ev, diver, 1, await recordKit.threeMetreDive(), score);
+    const row = (await pool.query(
+      "SELECT id FROM scores WHERE event_id = $1 AND judge_id = $2", [ev.id, ev.judges[0]],
+    )).rows[0];
+    return { ev, diver, scoreId: row.id };
+  },
+};
+
+// The conflict endpoint wrote any body-supplied value to any score in the
+// caller's org, finished events included, and skipped the per-event check
+// PUT /api/scores/:id does. It only exists to settle a manual entry the
+// judge's late sync disagreed with.
+test("conflict resolve only settles a real conflict, for someone who runs the event", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const referee = await sweepKit.member(st.orgId, "referee");
+    const { ev, scoreId } = await sweepKit.scoredDive(st.orgId, 6);
+    await pool.query("UPDATE events SET status = 'Completed' WHERE id = $1", [ev.id]);
+    const resolve = (token, body) => fetchJson("POST", `/api/conflicts/${scoreId}/resolve`, { token, body });
+    const current = async () => (await pool.query("SELECT score::float AS score, score_source FROM scores WHERE id = $1", [scoreId])).rows[0];
+
+    // A referee who isn't on the event: refused, same as PUT /api/scores/:id.
+    const outsider = await resolve(referee.token, { decision: "accept_proposed", proposed_score: 10 });
+    assert.equal(outsider.status, 403, JSON.stringify(outsider.body));
+    // Even the org admin can't use it on a score nobody disputed.
+    const noConflict = await resolve(st.adminToken, { decision: "accept_proposed", proposed_score: 10 });
+    assert.equal(noConflict.status, 409, JSON.stringify(noConflict.body));
+    assert.deepEqual(await current(), { score: 6, score_source: "judge_direct" });
+
+    // A real one: the operator typed 6, the judge's late sync said 7.5.
+    await pool.query("UPDATE scores SET score_source = 'manual_entry' WHERE id = $1", [scoreId]);
+    const { insertScoreAudit } = require("../lib/score-audit");
+    const s = (await pool.query("SELECT * FROM scores WHERE id = $1", [scoreId])).rows[0];
+    await insertScoreAudit(pool, {
+      scoreId, eventId: s.event_id, competitorId: s.competitor_id, judgeId: s.judge_id,
+      round: s.round_number, action: "rejected_duplicate", oldScore: 6, newScore: 7.5,
+    });
+    await pool.query("INSERT INTO event_managers (event_id, user_id) VALUES ($1, $2)", [ev.id, referee.id]);
+    const invented = await resolve(referee.token, { decision: "accept_proposed", proposed_score: 10 });
+    assert.equal(invented.status, 409, "only the judge's own value can be accepted");
+    const ok = await resolve(referee.token, { decision: "accept_proposed", proposed_score: 7.5 });
+    assert.equal(ok.status, 200, JSON.stringify(ok.body));
+    assert.deepEqual(await current(), { score: 7.5, score_source: "manual_then_reconciled" });
+    // Settled, so there's nothing left to resolve.
+    const again = await resolve(referee.token, { decision: "keep_existing" });
+    assert.equal(again.status, 409);
+  } finally {
+    await recordKit.cleanup(st.orgId);
+    await teardownFixture(st);
+  }
+});
+
+// claim-candidates only offers deleted accounts with the caller's name,
+// and the privacy policy says as much, but the claim itself took any
+// deleted id in the org and moved its results, panels and record books
+// across before hard-deleting it.
+test("claiming a past account needs the same name, not just the same org", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const me = await sweepKit.member(st.orgId, "diver", "Sophie Evans");
+    const champ = await recordKit.diver(st.orgId, null, "female", "Olympic Champion");
+    const ev = await recordKit.event(st.orgId, { gender: "Female" });
+    await recordKit.dive(ev, champ, 1, await recordKit.threeMetreDive(), 9);
+    await pool.query("UPDATE users SET deleted_at = now() WHERE id = $1", [champ]);
+
+    const claim = await fetchJson("POST", "/api/users/me/claim", {
+      token: me.token, body: { old_user_ids: [champ], password: "not-used-here" },
+    });
+    assert.equal(claim.status, 200, JSON.stringify(claim.body));
+    assert.deepEqual(claim.body.claimed, [], "someone else's past account isn't claimable");
+    const owner = (await pool.query(
+      "SELECT competitor_id FROM competitor_dive_lists WHERE event_id = $1", [ev.id],
+    )).rows[0].competitor_id;
+    assert.equal(owner, champ, "the dive list stays with the tombstone");
+    assert.equal((await pool.query("SELECT 1 FROM users WHERE id = $1", [champ])).rows.length, 1);
+
+    // Same name (any case) still works, that's the whole feature.
+    const mine = await recordKit.diver(st.orgId, null, "female", "sophie EVANS");
+    await pool.query("UPDATE users SET deleted_at = now() WHERE id = $1", [mine]);
+    const ok = await fetchJson("POST", "/api/users/me/claim", {
+      token: me.token, body: { old_user_ids: [mine], password: "not-used-here" },
+    });
+    assert.deepEqual(ok.body.claimed, [mine]);
+  } finally {
+    await recordKit.cleanup(st.orgId);
+    await teardownFixture(st);
+  }
+});
+
+// Custom dive-directory rows are an org's own drills, any DD from 0.1 to
+// 9.9, and any staff member anywhere can add one. Competition dive lists
+// took them from every org, so another federation's "101B at DD 9.9"
+// could go on a real entry and multiply every judge's score.
+test("a dive list can't use another org's custom dive, and the picker doesn't offer it", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const home = await setupFixture({ withEvent: false });
+  const away = await setupFixture({ withEvent: false });
+  try {
+    const coach = await sweepKit.member(away.orgId, "coach");
+    const made = await fetchJson("POST", "/api/dive-directory", {
+      // A DD no other run is using, since the directory is shared.
+      token: coach.token, body: { dive_code: "101", height: "3m", position: "B", dd: 5 + crypto.randomInt(49) / 10 },
+    });
+    assert.equal(made.status, 201, JSON.stringify(made.body));
+    const diver = await sweepKit.member(home.orgId, "diver");
+    const ev = (await pool.query(
+      `INSERT INTO events (org_id, name, gender, height, number_of_judges, total_rounds, event_type, status)
+       VALUES ($1, 'Sweep custom DD', 'Mixed', '3m', 5, 1, 'individual', 'Upcoming') RETURNING id`,
+      [home.orgId],
+    )).rows[0].id;
+    const submit = (diveId) => fetchJson("POST", "/api/competitor/submit-list", {
+      token: diver.token, body: { event_id: ev, dives: [{ round_number: 1, dive_id: diveId }] },
+    });
+    const foreign = await submit(made.body.id);
+    assert.equal(foreign.status, 400, JSON.stringify(foreign.body));
+    const core = (await pool.query(
+      "SELECT id FROM dive_directory WHERE dive_code = '101' AND position = 'B' AND height = 3 AND NOT is_custom",
+    )).rows[0].id;
+    assert.equal((await submit(core)).status, 200);
+
+    const listed = await fetchJson("GET", "/api/dive-directory", { token: diver.token });
+    assert.ok(!listed.body.some((d) => d.id === made.body.id), "the other org's drill isn't in this org's picker");
+    const theirs = await fetchJson("GET", "/api/dive-directory", { token: coach.token });
+    assert.ok(theirs.body.some((d) => d.id === made.body.id), "its own org still sees it");
+  } finally {
+    // Home's events (and any dive list that used the drill) go first.
+    await teardownFixture(home);
+    await pool.query("DELETE FROM dive_directory WHERE created_org_id = $1", [away.orgId]);
+    await teardownFixture(away);
+  }
+});
+
+// Decisions read the pending row without a lock and then wrote their
+// verdict unconditionally, so two admins (or one double-click) acting at
+// once both "won": the role granted while the request read 'rejected', a
+// guardian link flipping twice, a cancel overwriting a finished transfer.
+// Exactly one decision per request may land.
+test("overlapping decisions on one request: exactly one lands", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const both = (a, b) => Promise.all([a(), b()]);
+    for (let i = 0; i < 4; i++) {
+      // Role request: approve and reject at the same moment.
+      const who = await insertUser({ orgId: st.orgId, role: "diver", username: `int-sw-rr-${st.slug}-${i}`, fullName: "Racing Request" });
+      const rq = (await pool.query(
+        "INSERT INTO role_requests (user_id, org_id, requested_role) VALUES ($1, $2, 'coach') RETURNING id",
+        [who, st.orgId],
+      )).rows[0].id;
+      const review = (decision) => () => fetchJson("POST", `/api/role-requests/${rq}/review`, { token: st.adminToken, body: { decision } });
+      const [ap, rj] = await both(review("approved"), review("rejected"));
+      assert.equal([ap.status, rj.status].filter((s) => s === 200).length, 1, `role request run ${i}: ${ap.status}/${rj.status}`);
+      const status = (await pool.query("SELECT status::text FROM role_requests WHERE id = $1", [rq])).rows[0].status;
+      const granted = (await pool.query(
+        "SELECT 1 FROM user_org_roles WHERE user_id = $1 AND org_id = $2 AND role = 'coach'", [who, st.orgId],
+      )).rows.length === 1;
+      assert.equal(granted, status === "approved", `role request run ${i}: status ${status}, granted ${granted}`);
+
+      // Guardian request, the same race.
+      const parent = await insertUser({ orgId: st.orgId, role: "spectator", username: `int-sw-gp-${st.slug}-${i}`, fullName: "Racing Parent" });
+      const g = (await pool.query(
+        "INSERT INTO guardians (org_id, guardian_user_id, dependent_user_id) VALUES ($1, $2, $3) RETURNING id",
+        [st.orgId, parent, who],
+      )).rows[0].id;
+      const decide = (decision) => () => fetchJson("POST", `/api/guardian-requests/${g}/review`, { token: st.adminToken, body: { decision } });
+      const [ga, gr] = await both(decide("approved"), decide("rejected"));
+      assert.equal([ga.status, gr.status].filter((s) => s === 200).length, 1, `guardian run ${i}: ${ga.status}/${gr.status}`);
+    }
+
+    // A club change: the admin approves (which finalises it) while the
+    // diver cancels.
+    const [from, to] = [await recordKit.club(st.orgId, "Race From", "RFR"), await recordKit.club(st.orgId, "Race To", "RTO")];
+    for (let i = 0; i < 4; i++) {
+      const diver = await sweepKit.member(st.orgId, "diver", "Racing Mover");
+      await pool.query("UPDATE users SET club_id = $2 WHERE id = $1", [diver.id, from]);
+      const made = await fetchJson("POST", "/api/club-change-requests", { token: diver.token, body: { to_club_id: to } });
+      assert.equal(made.status, 201, JSON.stringify(made.body));
+      const [ok, cancel] = await both(
+        () => fetchJson("POST", `/api/club-change-requests/${made.body.id}/review`, { token: st.adminToken, body: { decision: "approved" } }),
+        () => fetchJson("POST", `/api/club-change-requests/${made.body.id}/cancel`, { token: diver.token }),
+      );
+      assert.equal([ok.status, cancel.status].filter((s) => s === 200).length, 1, `club change run ${i}: ${ok.status}/${cancel.status}`);
+      const row = (await pool.query("SELECT status::text FROM club_change_requests WHERE id = $1", [made.body.id])).rows[0];
+      const club = (await pool.query("SELECT club_id FROM users WHERE id = $1", [diver.id])).rows[0].club_id;
+      assert.equal(club === to, row.status === "approved", `club change run ${i}: ${row.status} with club ${club === to ? "moved" : "kept"}`);
+    }
+  } finally {
+    await pool.query("DELETE FROM club_change_requests WHERE to_org_id = $1", [st.orgId]);
+    await teardownFixture(st);
+  }
+});
+
+// PUT /api/users/me/password was the one password check with no limiter,
+// and it held a pooled connection through bcrypt, so one signed-in user
+// could stall the app with parallel wrong guesses, or a stolen session
+// could guess the password without limit. A non-string password 500'd.
+test("changing your password: wrong guesses are limited per account, junk is a 400", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  const saved = process.env.RATE_LIMIT_DISABLED;
+  try {
+    const me = await sweepKit.member(st.orgId, "spectator");
+    const change = (current_password) => fetchJson("PUT", "/api/users/me/password", {
+      token: me.token, body: { current_password, new_password: "a-brand-new-password-123" },
+    });
+    assert.equal((await change({ not: "a string" })).status, 400);
+    process.env.RATE_LIMIT_DISABLED = "false";
+    const statuses = [];
+    for (let i = 0; i < 6; i++) statuses.push((await change(`wrong-guess-${i}`)).status);
+    assert.deepEqual(statuses, [401, 401, 401, 401, 401, 429]);
+  } finally {
+    process.env.RATE_LIMIT_DISABLED = saved;
+    await teardownFixture(st);
+  }
+});
+
+// Accepting a synchro invite wrote both divers' lists (and deleted their
+// other rounds) without asking whether the event still takes entries.
+// Invites never expire, so one from weeks ago could rewrite two entries
+// after the lists locked, or with the event Live.
+test("accepting a synchro pairing runs the same entry gate as submitting", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const asker = await sweepKit.member(st.orgId, "diver", "Synchro Asker");
+    const partner = await sweepKit.member(st.orgId, "diver", "Synchro Partner");
+    const dive = (await pool.query(
+      "SELECT id FROM dive_directory WHERE height = 3 AND NOT is_custom ORDER BY dive_code, position LIMIT 1",
+    )).rows[0].id;
+    const ev = (await pool.query(
+      `INSERT INTO events (org_id, name, gender, height, number_of_judges, total_rounds, event_type, status, entries_close_at)
+       VALUES ($1, 'Sweep synchro', 'Mixed', '3m', 9, 1, 'synchro_pair', 'Upcoming', now() - interval '1 day') RETURNING id`,
+      [st.orgId],
+    )).rows[0].id;
+    const invite = async () => (await pool.query(
+      `INSERT INTO pending_partner_pairings (event_id, requester_id, partner_id, dives)
+       VALUES ($1, $2, $3, $4::jsonb) RETURNING id`,
+      [ev, asker.id, partner.id, JSON.stringify([{ dive_id: dive, round_number: 1 }])],
+    )).rows[0].id;
+    const accept = (id) => fetchJson("POST", `/api/competitor/pairings/${id}/accept`, { token: partner.token });
+    const entries = async () => (await pool.query("SELECT count(*)::int AS n FROM competitor_dive_lists WHERE event_id = $1", [ev])).rows[0].n;
+
+    const late = await invite();
+    const closed = await accept(late);
+    assert.equal(closed.status, 409, JSON.stringify(closed.body));
+    assert.equal(await entries(), 0);
+    assert.equal((await pool.query("SELECT status FROM pending_partner_pairings WHERE id = $1", [late])).rows[0].status, "pending");
+
+    // Reopen entries and it goes through.
+    await pool.query("UPDATE events SET entries_close_at = NULL WHERE id = $1", [ev]);
+    assert.equal((await accept(late)).status, 200);
+    // One row per round, on the lead (writeSynchroBothSides keeps no mirror).
+    assert.equal(await entries(), 1);
+  } finally {
+    await teardownFixture(st);
+  }
+});
+
+// Through the real server: the 2FA step-up token /api/auth/login hands
+// out for the password alone is not a session.
+test("the 2FA step-up token (and a reset link) can't be used as a session", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const jwt = require("jsonwebtoken");
+    for (const type of ["totp_pending", "password_reset", "email_verify"]) {
+      const token = jwt.sign({ sub: st.adminId, type }, process.env.JWT_SECRET, { expiresIn: "5m" });
+      for (const path of ["/api/dive-directory", "/api/divers/search?q=an", "/api/dashboard"]) {
+        const r = await fetchJson("GET", path, { token });
+        assert.equal(r.status, 401, `${type} on ${path}: ${r.status}`);
+      }
+    }
+  } finally {
+    await teardownFixture(st);
+  }
+});
+
+// A recovery code is single-use. The login read the stored list, matched
+// the code, then wrote the shorter list back unconditionally, so the same
+// code sent a few times at once minted a session each time.
+test("a 2FA recovery code signs in once, however many requests race it", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const totp = require("../lib/totp");
+    const jwt = require("jsonwebtoken");
+    const { plain, hashes } = await totp.generateRecoveryCodes(3);
+    await pool.query(
+      `UPDATE users SET totp_secret = $2, totp_enabled_at = now(), totp_recovery_codes = $3::jsonb WHERE id = $1`,
+      [st.adminId, "JBSWY3DPEHPK3PXP", JSON.stringify(hashes)],
+    );
+    const stepUp = () => jwt.sign({ sub: st.adminId, type: "totp_pending" }, process.env.JWT_SECRET, { expiresIn: "5m" });
+    const tries = await Promise.all([0, 1, 2, 3].map(() => fetchJson("POST", "/api/auth/login/totp", {
+      body: { totp_token: stepUp(), code: plain[1] },
+    })));
+    assert.equal(tries.filter((r) => r.status === 200).length, 1, tries.map((r) => r.status).join(","));
+    const left = (await pool.query("SELECT totp_recovery_codes FROM users WHERE id = $1", [st.adminId])).rows[0].totp_recovery_codes;
+    assert.equal(left.length, 2);
+  } finally {
+    await teardownFixture(st);
+  }
+});
+
+// PUT /api/scores/:id read the old score, updated it and wrote the audit
+// row as three separate statements with no lock, so two corrections at
+// once both logged the same old score and the trail skipped a step.
+test("score corrections at the same moment leave an unbroken audit chain", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const { scoreId } = await sweepKit.scoredDive(st.orgId, 6);
+    const put = (score) => fetchJson("PUT", `/api/scores/${scoreId}`, { token: st.adminToken, body: { score } });
+    for (let i = 0; i < 3; i++) {
+      const [a, b] = await Promise.all([put(6.5 + i), put(8 + i)]);
+      assert.equal(a.status, 200, JSON.stringify(a.body));
+      assert.equal(b.status, 200, JSON.stringify(b.body));
+    }
+    const trail = (await pool.query(
+      `SELECT old_score::float AS o, new_score::float AS n FROM score_audit_log
+        WHERE score_id = $1 AND action = 'update' ORDER BY created_at, id`,
+      [scoreId],
+    )).rows;
+    assert.equal(trail.length, 6);
+    // Each correction starts from where the one before it left the score:
+    // the old values are the starting 6 plus every new value but the last.
+    const final = Number((await pool.query("SELECT score FROM scores WHERE id = $1", [scoreId])).rows[0].score);
+    const news = [6, ...trail.map((r) => r.n)];
+    news.splice(news.indexOf(final), 1);
+    assert.deepEqual(trail.map((r) => r.o).sort(), news.sort(), JSON.stringify(trail));
+  } finally {
+    await recordKit.cleanup(st.orgId);
+    await teardownFixture(st);
+  }
+});
+
+// recordAudit swallows its own INSERT error, but handed a transaction
+// client the failed statement aborted the caller's transaction, and the
+// later COMMIT quietly came back as ROLLBACK: the route said 200 and
+// nothing was saved.
+test("a failed audit row doesn't roll back the transaction it was written in", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  const { recordAudit } = require("../lib/audit");
+  const client = await pool.connect();
+  try {
+    const bad = { org_id: crypto.randomUUID(), entity_type: "club", action: "club.test" };   // no such org: FK error
+    await client.query("BEGIN");
+    const club = (await client.query(
+      "INSERT INTO clubs (org_id, name, short_code) VALUES ($1, 'Audit Survivors', 'AUS1') RETURNING id", [st.orgId],
+    )).rows[0].id;
+    await recordAudit(client, bad);
+    await client.query("UPDATE clubs SET name = 'Audit Survivors DC' WHERE id = $1", [club]);
+    await client.query("COMMIT");
+    const row = (await pool.query("SELECT name FROM clubs WHERE id = $1", [club])).rows[0];
+    assert.equal(row?.name, "Audit Survivors DC");
+
+    // Outside a transaction (the pool, or a client in autocommit) it's
+    // still just a logged miss, and a good row still lands.
+    await recordAudit(pool, bad);
+    await recordAudit(client, bad);
+    await recordAudit(client, { org_id: st.orgId, entity_type: "club", entity_id: club, action: "club.test" });
+    const n = (await pool.query("SELECT count(*)::int AS n FROM audit_log WHERE entity_id = $1 AND action = 'club.test'", [club])).rows[0].n;
+    assert.equal(n, 1);
+  } finally {
+    await client.query("ROLLBACK").catch(() => {});
+    client.release();
+    await pool.query("DELETE FROM audit_log WHERE org_id = $1", [st.orgId]);
+    await pool.query("DELETE FROM clubs WHERE org_id = $1", [st.orgId]);
+    await teardownFixture(st);
+  }
+});
+
+// A non-UUID in a path went straight into `WHERE id = $1`, pg threw
+// 22P02 and the route said 500: a mistyped link or a crawler looked like
+// an outage in the 5xx metrics. The shared gates and the busiest public
+// routes answer 404 now.
+test("a malformed id in the path is a 404, not a 500", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const bad = "not-a-uuid";
+    const anon = [
+      // /api/events/:id/history answers 400 for a malformed id, pinned by
+      // its own visibility test further up.
+      `/api/scoreboard/${bad}`, `/api/scoreboard/${bad}/leaderboard`,
+      `/api/venue/scoreboard-state/${bad}`, `/api/archive/${bad}/results`,
+      `/api/meets/${bad}/program.pdf`, `/api/meets/${bad}/program.csv`, `/api/events/${bad}/start-list.pdf`,
+      `/api/events/${bad}/results.csv`, `/api/events/${bad}/results.pdf`,
+      `/api/events/${bad}/judge-ranking-analysis`, `/api/events/${bad}/judge-ranking-analysis.csv`,
+    ];
+    const admin = [
+      `/api/events/${bad}/managers`, `/api/events/${bad}/judges`, `/api/events/${bad}/score-audit`,
+      `/api/events/${bad}/referees`, `/api/events/${bad}/teams`, `/api/users/${bad}/role-audit`,
+      `/api/clubs/${bad}/affiliation`,
+    ];
+    const got = [];
+    for (const p of anon) got.push([p, (await fetchJson("GET", p)).status]);
+    for (const p of admin) got.push([p, (await fetchJson("GET", p, { token: st.adminToken })).status]);
+    assert.deepEqual(got.filter(([, s]) => s !== 404), []);
+  } finally {
+    await teardownFixture(st);
+  }
+});
+
+// A club still waiting on its federation isn't public (migration 096),
+// and every public surface joins clubs through PUBLIC_CLUB_JOIN. The
+// judge-ranking analysis and the Super Final rankings joined them plain.
+test("judge-ranking analysis doesn't print a pending club's name", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const { ev } = await sweepKit.scoredDive(st.orgId, 6);
+    const club = await recordKit.club(st.orgId, "Unvetted Founder Club", "UFC");
+    await pool.query("UPDATE clubs SET status = 'pending' WHERE id = $1", [club]);
+    await pool.query("UPDATE users SET club_id = $2 WHERE id = ANY($1::uuid[])", [ev.judges, club]);
+    const json = await fetchJson("GET", `/api/events/${ev.id}/judge-ranking-analysis`);
+    assert.equal(json.status, 200, JSON.stringify(json.body).slice(0, 200));
+    assert.ok(!JSON.stringify(json.body).includes("Unvetted Founder Club"));
+    const csv = await fetchJson("GET", `/api/events/${ev.id}/judge-ranking-analysis.csv`);
+    assert.ok(!String(csv.body).includes("Unvetted Founder Club"));
+  } finally {
+    await pool.query("UPDATE users SET club_id = NULL WHERE org_id = $1", [st.orgId]);
+    await recordKit.cleanup(st.orgId);
+    await pool.query("DELETE FROM clubs WHERE org_id = $1", [st.orgId]);
+    await teardownFixture(st);
+  }
+});
+
+// The public fee cards take ?subject_user_id= so a guardian can see
+// whether their child's entry is paid. Nothing checked who was asking, so
+// anyone could walk competitor ids off a scoreboard and learn who'd paid.
+// And the lookup matched the payer, so a child whose parent paid read as
+// unpaid on their own card.
+test("fee cards: already_paid only for yourself or your dependant", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: true });
+  try {
+    const parent = await sweepKit.member(st.orgId, "spectator", "Paying Parent");
+    const child = await sweepKit.member(st.orgId, "diver", "Entered Child");
+    const nosy = await sweepKit.member(st.orgId, "diver", "Nosy Neighbour");
+    await pool.query(
+      "INSERT INTO guardians (org_id, guardian_user_id, dependent_user_id, status) VALUES ($1, $2, $3, 'approved')",
+      [st.orgId, parent.id, child.id],
+    );
+    const def = (await pool.query(
+      `INSERT INTO fee_definitions (org_id, scope, event_id, name) VALUES ($1, 'event_entry', $2, 'Entry') RETURNING id`,
+      [st.orgId, st.eventId],
+    )).rows[0].id;
+    await pool.query("INSERT INTO fee_prices (fee_definition_id, label, amount_cents) VALUES ($1, 'standard', 1500)", [def]);
+    await pool.query(
+      `INSERT INTO payments (org_id, fee_definition_id, payer_user_id, subject_user_id, subject_type, event_id,
+                             amount_cents, platform_fee_cents, currency, status)
+       VALUES ($1, $2, $3, $4, 'event_entry', $5, 1500, 0, 'GBP', 'paid')`,
+      [st.orgId, def, parent.id, child.id, st.eventId],
+    );
+    const fee = (q, token) => fetchJson("GET", `/api/events/${st.eventId}/fee${q}`, { token });
+    const about = `?subject_user_id=${child.id}`;
+
+    assert.equal((await fee(about)).status, 403, "anonymous");
+    assert.equal((await fee(about, nosy.token)).status, 403, "not their guardian");
+    assert.equal((await fee("?subject_user_id=nope", parent.token)).status, 403);
+    assert.equal((await fee(about, parent.token)).body.fee.already_paid, true, "the guardian who paid");
+    assert.equal((await fee("", child.token)).body.fee.already_paid, true, "the child's own card");
+    assert.equal((await fee("", nosy.token)).body.fee.already_paid, false);
+  } finally {
+    await pool.query("DELETE FROM payments WHERE org_id = $1", [st.orgId]);
+    await pool.query("DELETE FROM fee_definitions WHERE org_id = $1", [st.orgId]);
+    await teardownFixture(st);
+  }
+});
+
+// users.email is varchar(255). register-org and the email change cap it
+// at 254; self-registration didn't, so a long address died as a 500.
+test("self-registration refuses an over-long email with a 400", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const r = await fetchJson("POST", "/api/auth/register", {
+      body: {
+        username: `int-sw-long-${st.slug}`, password: TEST_PASSWORD, full_name: "Long Address",
+        email: `${"a".repeat(250)}@example.test`, org_id: st.orgId,
+      },
+    });
+    assert.equal(r.status, 400, JSON.stringify(r.body));
+  } finally {
+    await teardownFixture(st);
+  }
+});
+
+// The sysadmin can add a coach link in any org (POST /api/orgs/:id/
+// coach-links) but the delete matched the caller's own org only, so a
+// wrong link in a federation with no admin of its own couldn't go.
+test("the sysadmin can remove a coach link in another org", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const coach = await insertUser({ orgId: st.orgId, role: "coach", username: `int-sw-co-${st.slug}`, fullName: "Link Coach" });
+    const diver = await insertUser({ orgId: st.orgId, role: "diver", username: `int-sw-di-${st.slug}`, fullName: "Link Diver" });
+    const link = (await pool.query(
+      "INSERT INTO coach_diver_links (coach_id, diver_id, org_id) VALUES ($1, $2, $3) RETURNING id",
+      [coach, diver, st.orgId],
+    )).rows[0].id;
+    const sys = await claimKit.login("admin", "admin");
+    const del = await fetchJson("DELETE", `/api/coach-links/${link}`, { token: sys.token });
+    assert.equal(del.status, 200, JSON.stringify(del.body));
+    assert.equal((await pool.query("SELECT 1 FROM coach_diver_links WHERE id = $1", [link])).rows.length, 0);
+  } finally {
     await teardownFixture(st);
   }
 });

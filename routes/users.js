@@ -941,21 +941,23 @@ module.exports = function createUsersRouter({
       const counts = { dives: 0, scores: 0, panels: 0, audits: 0 };
 
       for (const oldId of old_user_ids) {
-        // Validate same-org, deleted-only. Anything else is a 404
-        // (not a 403) so we don't leak whether the id exists in a
-        // different org.
+        // Same rule as claim-candidates: a deleted account in the
+        // caller's org with the caller's name. The name check used to
+        // live only in the candidate list, so any deleted id in the org
+        // could be claimed, results, records and all. Anything that
+        // doesn't qualify (a junk id, an already-claimed row) is skipped
+        // quietly so the rest of the batch still goes through, and so it
+        // doesn't say whether the id exists somewhere else. FOR UPDATE so
+        // two claims of one tombstone can't both move it.
+        if (!isUuid(oldId)) continue;
         const oldRes = await client.query(
-          `SELECT id, org_id, full_name, deleted_at
-           FROM users WHERE id = $1`,
-          [oldId],
+          `SELECT id FROM users
+            WHERE id = $1 AND org_id = $2 AND deleted_at IS NOT NULL
+              AND lower(full_name) = lower($3)
+            FOR UPDATE`,
+          [oldId, me.org_id, me.full_name],
         );
-        const old = oldRes.rows[0];
-        if (!old || old.deleted_at == null || old.org_id !== me.org_id) {
-          // Idempotent: an already-claimed (hard-deleted) row
-          // returns 404 instead of 500. We just continue past it
-          // so a partial batch can still succeed for the others.
-          continue;
-        }
+        if (!oldRes.rows.length) continue;
 
         // Conflict detection: if the new account already has a
         // dive list for the same (event, round) as the old account,
