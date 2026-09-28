@@ -162,3 +162,30 @@ test("public pages keep their sticky header while scrolling", async ({ page }) =
   expect(after).toBeGreaterThanOrEqual(0);
   expect(after).toBeLessThanOrEqual(before);
 });
+
+test("the closed mobile drawer is out of the tab order", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 740 });
+  await signIn(page, world.diver.username);
+  await page.goto("/dashboard");
+  await expect(page.locator("aside.sidebar")).toBeAttached();
+  await expect(page.locator(".topbar")).toBeVisible();
+
+  // Tab through the first stretch of the page. Nothing that gets focus
+  // may be inside the off-canvas sidebar or off the screen.
+  for (let i = 0; i < 8; i++) {
+    await page.keyboard.press("Tab");
+    const f = await page.evaluate(() => {
+      const el = document.activeElement;
+      const r = el.getBoundingClientRect();
+      return { inSidebar: !!el.closest("aside.sidebar"), right: r.right, text: (el.textContent || "").trim().slice(0, 30) };
+    });
+    expect(f.inSidebar, `tab ${i + 1} landed on "${f.text}" in the hidden drawer`).toBe(false);
+  }
+
+  // Open it and its links are reachable again.
+  await page.locator(".topbar .icon-btn").first().click();
+  await expect(page.locator(".app-shell.mobile-open")).toBeVisible();
+  const link = page.locator("aside.sidebar a.sb-item").first();
+  await link.focus();
+  expect(await link.evaluate((el) => el === document.activeElement)).toBe(true);
+});

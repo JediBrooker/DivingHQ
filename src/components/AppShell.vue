@@ -6,7 +6,7 @@
 //
 // Nav is role-gated against the auth store (system admins see
 // everything). Collapse state and theme live in the Pinia ui store.
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter, useRoute, RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useUiStore } from '@/stores/ui'
@@ -215,18 +215,36 @@ const collapsed = computed(() => (isMobile.value ? !mobileOpen.value : ui.sideba
 // to one icon whose hover/focus flyout lists its items. Mobile keeps the
 // off-canvas overlay, so the rail is desktop-only.
 const railMode = computed(() => ui.sidebarCollapsed && !isMobile.value)
+// The closed drawer is only slid off-screen, so it's also made inert
+// (template) or its links sat in the tab order and the a11y tree while
+// invisible. That means focus has to be walked in and out by hand.
+const sidebarEl = ref(null)
+const toggleBtn = ref(null)
 function toggleSidebar() {
-  if (isMobile.value) mobileOpen.value = !mobileOpen.value
-  else ui.toggleSidebar()
+  if (!isMobile.value) { ui.toggleSidebar(); return }
+  mobileOpen.value = !mobileOpen.value
+  // inert only comes off on the next render, focus() before that is a no-op.
+  if (mobileOpen.value) nextTick(() => sidebarEl.value?.querySelector('a[href], button')?.focus())
 }
-function closeMobile() { mobileOpen.value = false }
+// restoreFocus for scrim/Esc. A nav link click is heading to a new page,
+// so there's no point dragging focus back to the toggle for that.
+function closeMobile(restoreFocus = false) {
+  if (!mobileOpen.value) return
+  mobileOpen.value = false
+  if (restoreFocus) nextTick(() => toggleBtn.value?.focus())
+}
 </script>
 
 <template>
   <div class="app-shell" :class="{ collapsed, mobile: isMobile, 'mobile-open': isMobile && mobileOpen }">
     <a class="skip-link" href="#main-content">Skip to main content</a>
     <!-- Sidebar -->
-    <aside class="sidebar">
+    <aside
+      ref="sidebarEl"
+      class="sidebar"
+      :inert="isMobile && !mobileOpen"
+      @keydown.esc="closeMobile(true)"
+    >
       <RouterLink to="/dashboard" class="sb-brand">
         <LogoMark :size="28" />
         <span class="wm brand-wordmark">DIVING<span>HQ</span></span>
@@ -278,7 +296,7 @@ function closeMobile() { mobileOpen.value = false }
             :to="it.to"
             class="sb-item"
             :class="{ active: isActive(it.to) }"
-            @click="closeMobile"
+            @click="closeMobile()"
           >
             <component :is="it.icon" class="sb-ic" />
             <span class="sb-label">{{ navLabel(it) }}</span>
@@ -309,12 +327,12 @@ function closeMobile() { mobileOpen.value = false }
     </aside>
 
     <!-- Scrim for the mobile off-canvas sidebar -->
-    <div v-if="isMobile && mobileOpen" class="shell-scrim" @click="closeMobile"></div>
+    <div v-if="isMobile && mobileOpen" class="shell-scrim" @click="closeMobile(true)"></div>
 
     <!-- Main column -->
     <div class="shell-main">
       <header class="topbar">
-        <button class="icon-btn" type="button" :aria-label="collapsed ? 'Expand sidebar' : 'Collapse sidebar to icons'" @click="toggleSidebar">
+        <button ref="toggleBtn" class="icon-btn" type="button" :aria-label="collapsed ? 'Expand sidebar' : 'Collapse sidebar to icons'" :aria-expanded="isMobile ? mobileOpen : undefined" @click="toggleSidebar">
           <PanelLeftOpen v-if="collapsed" />
           <PanelLeftClose v-else />
         </button>
