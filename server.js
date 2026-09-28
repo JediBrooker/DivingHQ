@@ -1041,6 +1041,7 @@ app.use(require("./routes/event-staff")({
 // =============================================================
 app.use(require("./routes/control-room")({
   pool,
+  optionalAuth,
   requireOrgRole,
   requireMeetEditor,
   bulkWriteLimiter,

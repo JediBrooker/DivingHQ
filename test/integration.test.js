@@ -7507,3 +7507,31 @@ test("a failed audit row doesn't roll back the transaction it was written in", a
     await teardownFixture(st);
   }
 });
+
+// /api/scoreboard hides an Upcoming event from outsiders, but the
+// dive-by-dive /history next to it had no gate at all. Scores can sit
+// on an Upcoming event (a Live rehearsal reset to Upcoming, a manual
+// entry), so anyone could pull the try-out scores.
+test("event history follows the scoreboard's visibility rule", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  const other = await setupFixture({ withEvent: false });
+  try {
+    const { ev } = await sweepKit.scoredDive(st.orgId, 6);
+    await pool.query("UPDATE events SET status = 'Upcoming' WHERE id = $1", [ev.id]);
+    const history = (token) => fetchJson("GET", `/api/events/${ev.id}/history`, { token });
+    assert.equal((await history()).status, 404, "anonymous");
+    assert.equal((await history(other.adminToken)).status, 404, "another org");
+    const own = await history(st.adminToken);
+    assert.equal(own.status, 200);
+    assert.ok(own.body.length > 0);
+    await pool.query("UPDATE events SET status = 'Live' WHERE id = $1", [ev.id]);
+    assert.equal((await history()).status, 200, "Live is public");
+    assert.equal((await fetchJson("GET", "/api/events/not-a-uuid/history")).status, 404);
+  } finally {
+    await recordKit.cleanup(st.orgId);
+    await teardownFixture(st);
+    await teardownFixture(other);
+  }
+});

@@ -32,6 +32,7 @@ const { recordAudit, auditFromReq } = require("../lib/audit");
 const createIdempotency = require("../lib/idempotency");
 const { perDiveSelect } = require("../lib/scoring-sql");
 const { PUBLIC_CLUB_JOIN } = require("../lib/club-approvals");
+const { createScoreboardVisibility } = require("../lib/scoreboard-visibility");
 
 // Mirrors init.sql's dive_position enum. Heads up: pre-validating
 // each CSV cell keeps a bad value from ever reaching the
@@ -128,6 +129,9 @@ async function loadUpcomingEvent(pool, req, res, { verb = null, columns = [] } =
 
 module.exports = function createControlRoomRouter({
   pool,
+  // Optional: decodes a session when there is one, for /history's
+  // visibility check. Without it every caller reads as anonymous.
+  optionalAuth,
   requireOrgRole,
   requireMeetEditor,
   bulkWriteLimiter,
@@ -153,6 +157,8 @@ module.exports = function createControlRoomRouter({
     throw new Error("createControlRoomRouter requires { pool, ensureEventPreMeet, … }");
   }
   const router = express.Router();
+  const maybeAuth = optionalAuth || ((_req, _res, next) => next());
+  const ensureScoreboardVisible = createScoreboardVisibility(pool);
 
   // Tuple repeated 7× across the original section. Build it once
   // here so a typo can't drift one route's role gate.
@@ -1179,11 +1185,15 @@ module.exports = function createControlRoomRouter({
 
   // -------------------------------------------------------------
   // GET /api/events/:id/history: public dive-by-dive recap. Used
-  // by the live scoreboard and the post-meet recap. No auth needed,
-  // the data is already public via the scoreboard endpoint.
+  // by the live scoreboard and the post-meet recap. Same visibility
+  // as the scoreboard it sits next to: public once the event is Live,
+  // before that only for its own org and the orgs taking part. It used
+  // to have no gate at all, and an Upcoming event can already carry
+  // scores (a rehearsal reset from Live, a manual entry).
   // -------------------------------------------------------------
-  router.get("/api/events/:id/history", async (req, res) => {
+  router.get("/api/events/:id/history", maybeAuth, async (req, res) => {
     try {
+      if (!(await ensureScoreboardVisible(req, res, req.params.id))) return;
       // Dive-by-dive scope: d.dd is a grouping column, so it
       // feeds the UDF directly (no MAX() wrapper).
       // Rep codes come from the reps CTE, once per person rather than

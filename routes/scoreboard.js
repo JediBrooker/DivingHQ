@@ -24,6 +24,7 @@ const {
 } = require("../lib/scoring-sql");
 const { eventRecordMarks } = require("../lib/records");
 const { PUBLIC_CLUB_JOIN } = require("../lib/club-approvals");
+const { createScoreboardVisibility } = require("../lib/scoreboard-visibility");
 
 module.exports = function createScoreboardRouter({
   pool,
@@ -34,29 +35,8 @@ module.exports = function createScoreboardRouter({
   const router = express.Router();
   const maybeAuth = optionalAuth || ((req, _res, next) => next());
 
-  async function ensureScoreboardVisible(req, res, eventId) {
-    const ev = await pool.query(
-      "SELECT id, org_id, status FROM events WHERE id = $1",
-      [eventId],
-    );
-    if (!ev.rows.length) {
-      res.status(404).json({ error: "Event not found" });
-      return false;
-    }
-    const event = ev.rows[0];
-    if (["Live", "Completed"].includes(event.status)) return true;
-    if (req.user?.is_system_admin || req.user?.org_id === event.org_id) return true;
-    if (req.user?.org_id) {
-      const part = await pool.query(
-        `SELECT 1 FROM event_participating_orgs
-          WHERE event_id = $1 AND org_id = $2`,
-        [eventId, req.user.org_id],
-      );
-      if (part.rows.length) return true;
-    }
-    res.status(404).json({ error: "Event not found" });
-    return false;
-  }
+  // Upcoming events stay with their own org (lib/scoreboard-visibility.js).
+  const ensureScoreboardVisible = createScoreboardVisibility(pool);
 
   // A miss goes through getOrBuild so a burst of viewers refetching on
   // the same socket event shares one rebuild. ?cache=skip is someone
