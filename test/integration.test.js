@@ -11653,3 +11653,174 @@ test("the sysadmin can remove a coach link in another org", async (t) => {
     await teardownFixture(st);
   }
 });
+
+// =====================================================================
+// Migration 103: the one-off data cleanup (synchro mirror rows, roles
+// left behind by org transfers, referees club or region admins handed
+// out). It works on the whole database, and other suites run beside this
+// one against the same DB, so the fixtures and both runs of the file all
+// happen on one client inside a transaction that's rolled back at the
+// end. Nothing seeded or removed here ever lands in the shared test DB.
+// =====================================================================
+test("migration 103 removes mirror rows, transfer leftovers and club-granted referees, and a re-run changes nothing", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const fs = require("node:fs");
+  const path = require("node:path");
+  const file = fs.readFileSync(path.join(__dirname, "..", "migrations", "103_data_cleanup.sql"), "utf8");
+  // It carries its own BEGIN/COMMIT, which would commit ours halfway.
+  assert.match(file, /^BEGIN;$/m);
+  assert.match(file, /^COMMIT;$/m);
+  const body = file.replace(/^BEGIN;$/m, "").replace(/^COMMIT;$/m, "");
+  const sys = await claimSysadmin();
+  if (!sys) return t.skip("no sysadmin in this DB");
+
+  const c = await pool.connect();
+  try {
+    await c.query("BEGIN");
+    const q = async (sql, params) => (await c.query(sql, params)).rows;
+    const tag = crypto.randomBytes(3).toString("hex");
+    const org = async (name, claimState) => (await q(
+      `INSERT INTO organisations (name, country_code, slug, status, claim_state)
+       VALUES ($1, 'MNG', $1, 'active', $2) RETURNING id`, [`m103-${name}-${tag}`, claimState],
+    ))[0].id;
+    const user = async (orgId, name, roles = [], grantedBy = null) => {
+      const id = (await q(
+        "INSERT INTO users (username, full_name, org_id, email_verified_at) VALUES ($1, $2, $3, now()) RETURNING id",
+        [`m103-${name}-${tag}`, name, orgId],
+      ))[0].id;
+      for (const role of roles) {
+        await q("INSERT INTO user_org_roles (user_id, org_id, role, granted_by) VALUES ($1, $2, $3, $4)", [id, orgId, role, grantedBy]);
+      }
+      return id;
+    };
+    const grant = (userId, orgId, role, grantedBy = null) =>
+      q("INSERT INTO user_org_roles (user_id, org_id, role, granted_by) VALUES ($1, $2, $3, $4)", [userId, orgId, role, grantedBy]);
+
+    const home = await org("home", "claimed");
+    const away = await org("away", "claimed");
+    const clubsOnly = await org("clubs", "unclaimed");
+
+    // ---- synchro pairs, entered the way the old portal code did ----
+    const ev = (await q(
+      `INSERT INTO events (org_id, name, gender, height, number_of_judges, total_rounds, event_type, status)
+       VALUES ($1, 'Mirror Synchro', 'Mixed', '3m', 9, 2, 'synchro_pair', 'Completed') RETURNING id`, [home],
+    ))[0].id;
+    const dives = (await q("SELECT id FROM dive_directory WHERE height = 3 ORDER BY dive_code, id LIMIT 2")).map((r) => r.id);
+    const row = (competitor, partner, round, withdrawn = false) => q(
+      `INSERT INTO competitor_dive_lists (event_id, competitor_id, partner_id, round_number, dive_id, withdrawn_at)
+       VALUES ($1, $2, $3, $4, $5, $6)`, [ev, competitor, partner, round, dives[round - 1], withdrawn ? new Date() : null],
+    );
+    const pairing = (requester, partner, status, respondedAgo = 0) => q(
+      `INSERT INTO pending_partner_pairings (event_id, requester_id, partner_id, status, responded_at)
+       VALUES ($1, $2, $3, $4, now() - make_interval(days => $5))`, [ev, requester, partner, status, respondedAgo],
+    );
+    const D = {};
+    for (const n of "abcdefghij") D[n] = await user(home, `Diver ${n.toUpperCase()}`, ["diver"]);
+    // A plain pair: B's rows mirror A's.
+    await pairing(D.a, D.b, "accepted");
+    for (const r of [1, 2]) { await row(D.a, D.b, r); await row(D.b, D.a, r); }
+    // D's round 1 mirror got scored. Round 1 stays, round 2 goes.
+    await pairing(D.c, D.d, "accepted");
+    for (const r of [1, 2]) { await row(D.c, D.d, r); await row(D.d, D.c, r); }
+    const judge = await user(home, "Mirror Judge", ["judge"]);
+    await q("INSERT INTO scores (event_id, competitor_id, judge_id, round_number, score) VALUES ($1, $2, $3, 1, 6.5)", [ev, D.d, judge]);
+    // Somebody withdrew E's round 1 by hand and kept F's: that's F's to keep.
+    await pairing(D.e, D.f, "accepted");
+    await row(D.e, D.f, 1, true); await row(D.f, D.e, 1);
+    await row(D.e, D.f, 2); await row(D.f, D.e, 2);
+    // Accepted both ways round: the newer pairing (H asked) names the lead.
+    await pairing(D.g, D.h, "accepted", 2);
+    await pairing(D.h, D.g, "accepted", 0);
+    await row(D.g, D.h, 1); await row(D.h, D.g, 1);
+    // Still pending: nothing to go by, both rows stay.
+    await pairing(D.i, D.j, "pending");
+    await row(D.i, D.j, 1); await row(D.j, D.i, 1);
+
+    // ---- roles ----
+    const clubAdmin = await user(clubsOnly, "Club Admin", ["diver"]);
+    // Moved home -> away long ago; the old org_admin and meet_manager stayed.
+    const mover = await user(away, "Moved Admin", ["diver"]);
+    await grant(mover, home, "org_admin");
+    await grant(mover, home, "meet_manager");
+    const legit = await user(home, "Own Org Admin", ["org_admin", "judge"]);
+    // Referees in the country with no federation.
+    const refOnly = await user(clubsOnly, "Club Referee", [], null);
+    await grant(refOnly, clubsOnly, "referee", clubAdmin);
+    const refDiver = await user(clubsOnly, "Diving Referee", ["diver"]);
+    await grant(refDiver, clubsOnly, "referee", clubAdmin);
+    const refSys = await user(clubsOnly, "DivingHQ Referee", ["referee"], sys.id);
+    const refNull = await user(clubsOnly, "Seeded Referee", ["referee"], null);
+    // Granted by the same club admin, but in a claimed org: not ours to judge.
+    const refClaimed = await user(home, "Federation Referee", ["referee"], clubAdmin);
+    // Both at once: a club admin's referee grant in an org they've left.
+    const refMoved = await user(home, "Moved Referee", ["diver"]);
+    await grant(refMoved, clubsOnly, "referee", clubAdmin);
+
+    const everyone = [...Object.values(D), judge, clubAdmin, mover, legit, refOnly, refDiver, refSys, refNull, refClaimed, refMoved];
+    const versions = async () => Object.fromEntries((await q(
+      "SELECT id, token_version FROM users WHERE id = ANY($1::uuid[])", [everyone],
+    )).map((r) => [r.id, r.token_version]));
+    const rolesOf = async (id) => (await q(
+      "SELECT org_id, role::text AS role FROM user_org_roles WHERE user_id = $1 ORDER BY org_id, role", [id],
+    )).map((r) => `${r.org_id === home ? "home" : r.org_id === away ? "away" : "clubs"}:${r.role}`);
+    const audit = async (id) => (await q(
+      "SELECT role::text AS role, action::text AS action, actor_id, note FROM role_audit_log WHERE user_id = $1 ORDER BY role, action", [id],
+    ));
+    const entries = async () => (await q(
+      "SELECT competitor_id, round_number FROM competitor_dive_lists WHERE event_id = $1", [ev],
+    )).map((r) => `${Object.keys(D).find((k) => D[k] === r.competitor_id)}${r.round_number}`).sort();
+    const before = await versions();
+
+    await c.query(body);
+
+    assert.deepEqual(await entries(), [
+      "a1", "a2",        // B's mirrors gone
+      "c1", "c2", "d1",  // D's scored round 1 stays
+      "e1", "e2", "f1",  // F's round 1 was the one kept by hand
+      "h1",              // the newer pairing's lead
+      "i1", "j1",        // pending, untouched
+    ]);
+    assert.equal((await q("SELECT count(*)::int AS n FROM scores WHERE event_id = $1", [ev]))[0].n, 1, "the score stays");
+
+    assert.deepEqual(await rolesOf(mover), ["away:diver"]);
+    assert.deepEqual((await audit(mover)).map((r) => `${r.role}:${r.action}`), ["meet_manager:revoked", "org_admin:revoked"]);
+    for (const r of await audit(mover)) {
+      assert.equal(r.actor_id, null);
+      assert.match(r.note, /migration 103/);
+    }
+    assert.deepEqual(await rolesOf(legit), ["home:judge", "home:org_admin"]);
+
+    assert.deepEqual(await rolesOf(refOnly), ["clubs:spectator"], "not left with nothing");
+    assert.deepEqual((await audit(refOnly)).map((r) => `${r.role}:${r.action}`), ["referee:revoked", "spectator:granted"]);
+    assert.deepEqual(await rolesOf(refDiver), ["clubs:diver"]);
+    assert.deepEqual((await audit(refDiver)).map((r) => `${r.role}:${r.action}`), ["referee:revoked"]);
+    assert.deepEqual(await rolesOf(refSys), ["clubs:referee"]);
+    assert.deepEqual(await rolesOf(refNull), ["clubs:referee"]);
+    assert.deepEqual(await rolesOf(refClaimed), ["home:referee"]);
+    assert.deepEqual(await rolesOf(refMoved), ["home:diver"]);
+    const movedAudit = await audit(refMoved);
+    assert.equal(movedAudit.length, 1, "audited once, as a transfer leftover");
+    assert.match(movedAudit[0].note, /another organisation/);
+
+    const after = await versions();
+    const bumped = everyone.filter((id) => after[id] !== before[id]).sort();
+    assert.deepEqual(bumped, [mover, refOnly, refDiver, refMoved].sort(), "only the people who lost a role sign in again");
+    for (const id of bumped) assert.equal(after[id], before[id] + 1);
+    assert.equal((await q("SELECT version FROM schema_meta WHERE id = 1"))[0].version, 103);
+
+    // Again: nothing left to do, so nothing moves.
+    const snapshot = async () => JSON.stringify({
+      entries: await entries(),
+      roles: await (async () => { const out = []; for (const id of everyone) out.push(await rolesOf(id)); return out; })(),
+      audit: (await q("SELECT count(*)::int AS n FROM role_audit_log WHERE user_id = ANY($1::uuid[])", [everyone]))[0].n,
+      versions: await versions(),
+    });
+    const once = await snapshot();
+    await c.query(body);
+    assert.equal(await snapshot(), once);
+  } finally {
+    await c.query("ROLLBACK").catch(() => {});
+    c.release();
+  }
+});

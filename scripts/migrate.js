@@ -218,6 +218,10 @@ async function printStatus(client, migs, ledger) {
 
 (async () => {
   const client = makeClient();
+  // A RAISE NOTICE in a migration (093's orgs still missing a country, 103's
+  // cleanup counts) is written for whoever runs the deploy, but pg drops
+  // notices on the floor unless something listens. So print them.
+  client.on("notice", (msg) => console.log(`[migrate] ${msg.message}`));
   await client.connect();
   try {
     const migs = listMigrations();
