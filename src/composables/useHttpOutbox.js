@@ -188,6 +188,14 @@ export function armOutboxDrain(auth, socket) {
   if (socket.connected) scheduleDrain(auth)
 }
 
+// Signed out: stop sending through the old user's socket. Entries stay
+// in IndexedDB under their fingerprint for when that person is back.
+export function disarmOutboxDrain() {
+  _socket = null
+  clearTimeout(retryTimer)
+  retryTimer = null
+}
+
 // --- Public composable -------------------------------------------
 
 export function useHttpOutbox() {

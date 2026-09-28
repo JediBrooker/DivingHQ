@@ -25,6 +25,7 @@ let instance = null
 let instanceFingerprint = null   // whose queue the singleton is scoped to
 let refreshTimer = null
 let offlineScope = null   // detached effectScope owning the socket watch
+let offlineUserId = null  // whose socket that watch is on
 
 const counts = ref({ pending: 0, inflight: 0, synced: 0, conflict: 0, failed: 0 })
 const offlineSince = ref(null)        // Date | null, set on disconnect, cleared on reconnect
@@ -93,8 +94,18 @@ export function getOutbox() {
 
 export function useOutbox() {
   const outbox = getOutbox()
+  const uid = useAuthStore().user?.id || null
 
+  // The socket is per identity, and after a sign-out its lease is dropped
+  // and it disconnects for good. A watch left on it would read "offline"
+  // forever for whoever signs in next, so rebuild it for the new user.
+  if (offlineScope && offlineUserId !== uid) {
+    offlineScope.stop()
+    offlineScope = null
+    offlineSince.value = null
+  }
   if (!offlineScope) {
+    offlineUserId = uid
     const socket = useSocket()
     // Track offline duration via the existing socket singleton.
     // We watch isConnected rather than subscribing to connect/
@@ -158,6 +169,7 @@ export function _resetOutboxForTests() {
     offlineScope.stop()
     offlineScope = null
   }
+  offlineUserId = null
   instance = null
   instanceFingerprint = null
   counts.value = { pending: 0, inflight: 0, synced: 0, conflict: 0, failed: 0 }
