@@ -7897,3 +7897,39 @@ test("roster: an entry a guardian paid for counts as paid", async (t) => {
     await compKit.cleanup(orgId);
   }
 });
+
+test("team dive lists are held to the event's voluntary DD cap, per member", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const orgId = await compKit.org("ddcap");
+  try {
+    const manager = await compKit.user(orgId, "Cap Manager", ["meet_manager"]);
+    const m1 = await compKit.user(orgId, "Cap Member One", ["diver"]);
+    const m2 = await compKit.user(orgId, "Cap Member Two", ["diver"]);
+    const eventId = await compKit.event(orgId, {
+      event_type: "team", total_rounds: 2, dd_limit_rounds: 2, dd_limit_value: 5.0,
+    });
+    const team = (await pool.query("INSERT INTO teams (org_id, name) VALUES ($1, 'Cap Team') RETURNING id", [orgId])).rows[0].id;
+    await pool.query("INSERT INTO team_members (team_id, user_id) VALUES ($1, $2), ($1, $3)", [team, m1.id, m2.id]);
+    const dd = async (limit) => (await pool.query(
+      "SELECT id FROM dive_directory WHERE height = 3 AND dd = $1 ORDER BY dive_code, id LIMIT 2", [limit])).rows.map((r) => r.id);
+    const [easyA, easyB] = await dd(2.0);
+    const hard = (await pool.query(
+      "SELECT id FROM dive_directory WHERE height = 3 AND dd >= 4.0 ORDER BY dive_code, id LIMIT 2")).rows.map((r) => r.id);
+    const post = (lists) => fetchJson("POST", `/api/teams/${team}/dive-lists`, {
+      token: manager.token,
+      body: { event_id: eventId, dives: lists.flatMap(([member, ids]) => ids.map((dive_id, i) => ({ competitor_id: member.id, dive_id, round_number: i + 1 }))) },
+    });
+    // 4.0 each: fine, though the team adds up to 8.0.
+    const ok = await post([[m1, [easyA, easyB]], [m2, [easyA, easyB]]]);
+    assert.ok(ok.status < 300, JSON.stringify(ok.body));
+    // One member over the cap: the same list the diver portal refuses.
+    const over = await post([[m1, [easyA, easyB]], [m2, hard]]);
+    assert.equal(over.status, 400, JSON.stringify(over.body));
+    assert.match(over.body.error, /exceeds the 5\.0 limit/);
+  } finally {
+    await pool.query("DELETE FROM events WHERE org_id = $1", [orgId]).catch(() => {});
+    await pool.query("DELETE FROM teams WHERE org_id = $1", [orgId]).catch(() => {});
+    await compKit.cleanup(orgId);
+  }
+});
