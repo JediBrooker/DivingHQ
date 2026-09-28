@@ -88,6 +88,12 @@ test("announce pushes the focused pool's standings and toasts", async ({ request
   const { orgId, username, adminToken } = await setup.createOrgAndAdmin(request, { countryCode: "AUS", orgName: "Tools Announce" });
   await setup.insertClub({ orgId, name: "TA Club", shortCode: "TAC" });
   const { event, diveId, divers, judges } = await liveEvent(request, { orgId, adminToken, name: "Announce Event" });
+  // Listen in on the room. The toast alone passed for months while the
+  // server refused every announce for want of an event_id.
+  const spectator = await setup.openSocket(baseURL, "spectator");
+  const announced = [];
+  spectator.on("final_score_announced", (d) => { if (d.event_id === event.id) announced.push(d); });
+  spectator.emit("subscribe_event", { event_id: event.id });
 
   await signIn(page, username);
   await page.goto("/control");
@@ -102,4 +108,7 @@ test("announce pushes the focused pool's standings and toasts", async ({ request
   await expect(announce).toBeEnabled({ timeout: 8_000 });
   await announce.click();
   await expect(page.locator(".notify-bar")).toContainText(/Announced/i, { timeout: 6_000 });
+  await expect.poll(() => announced.length, { timeout: 6_000 }).toBeGreaterThan(0);
+  expect(announced[0].standings.length).toBeGreaterThan(0);
+  spectator.disconnect();
 });

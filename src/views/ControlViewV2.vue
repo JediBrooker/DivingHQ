@@ -42,11 +42,11 @@ import { diveDescription } from '@/composables/useDiveLabel'
 import { idbInvalidate } from '@/lib/idbCache'
 import { activeDiverPayload } from '@/lib/activeDiver'
 import { useMeetHold } from '@/composables/useMeetHold'
-import { useHttpOutbox } from '@/composables/useHttpOutbox'
+import { useHttpOutbox, waitForOutboxEntry } from '@/composables/useHttpOutbox'
 import { useOutbox } from '@/composables/useOutbox'
 import { confirmAction } from '@/composables/useConfirm'
 import { showUndo } from '@/composables/useUndo'
-import { showError, showSuccess } from '@/composables/useNotify'
+import { showError, showSuccess, showInfo } from '@/composables/useNotify'
 
 const route = useRoute()
 const auth = useAuthStore()
@@ -299,12 +299,30 @@ function closeCorrection() {
 }
 
 // Announce (#9): push the focused pool's standings to the spectator
-// scoreboard ("say it on screen") via announce_score.
-function announceFocused() {
+// scoreboard ("say it on screen") via announce_score. The server's gate
+// reads event_id; this used to send eventId, so every announce was
+// refused while the toast said it had gone out. The toast now waits for
+// the server's yes.
+// The standings go through JSON on the way into the outbox: they're a
+// reactive array, and IndexedDB can't clone a Proxy, so the push itself
+// threw before anything was queued.
+async function announceFocused() {
   const ev = currentEvent.value
   if (!ev || !focusedStandings.value.length) return
-  queueSocketAction('announce_score', { standings: focusedStandings.value, eventId: ev.id })
-  showSuccess(`Announced "${ev.name}" standings on the scoreboard.`)
+  let key
+  try {
+    key = await queueSocketAction('announce_score', {
+      event_id: ev.id,
+      standings: JSON.parse(JSON.stringify(focusedStandings.value)),
+    })
+  } catch (err) {
+    showError(`Couldn't announce "${ev.name}" standings: ${err.message}`)
+    return
+  }
+  const status = await waitForOutboxEntry(key)
+  if (status === 'synced') showSuccess(`Announced "${ev.name}" standings on the scoreboard.`)
+  else if (status === 'failed') showError(`Couldn't announce "${ev.name}" standings.`)
+  else showInfo(`"${ev.name}" standings are queued and will go out when the connection's back.`)
 }
 
 // The old single-pool nextDiver funnel, generalized to ANY pool so each

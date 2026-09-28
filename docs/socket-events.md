@@ -20,7 +20,7 @@ that's intentional, but every privileged event must call
 | `score_received`          | The full score-submit payload + `judge_id`, `judge_number` | A judge submits a score. Broadcast to everyone watching the meet. |
 | `score_rejected`          | `{ reason: 'not_authenticated' \| 'insufficient_role' \| 'not_on_panel' \| 'bad_payload' \| 'bad_round' \| 'bad_score' \| 'rate_limited', message?: string }` | A submit_score from this socket failed validation. Sent only to the offending socket. |
 | `score_corrected`         | The new score row from `PUT /api/scores/:id` | A referee corrects a score via HTTP (the socket bus rebroadcasts so other operators see it live). |
-| `final_score_announced`   | Whatever the announcer sent | Announcer presses "Announce" in the Control Room. |
+| `final_score_announced`   | Whatever the announcer sent: `{ event_id, standings }` from the Control Room | Announcer presses "Announce" in the Control Room. The scoreboard refetches its standings on receipt. |
 | `referee_action_failed`   | `{ event_id, competitor_id, round_number, … }` | Referee marks a dive failed. |
 | `referee_action_cap`      | `{ event_id, competitor_id, round_number, cap_value, … }` | Referee caps the panel's scores at `cap_value` (default 2.0). |
 | `referee_action_redive`   | `{ event_id, competitor_id, round_number, … }` | Referee orders a re-dive. |
@@ -52,7 +52,7 @@ in a country with no federation on DivingHQ runs its own meets.
 | `set_active_diver`        | meet_manager / referee / org_admin / sysadmin | Roster row + `diverName`, `diveCode`, `eventName`, `status` (built by `activeDiverPayload` in `src/lib/activeDiver.js`) | Persists to in-memory `activeDivers[event_id]` so late-joiners see it. Readers run `normaliseActiveDiver` so a replayed payload without the display fields still renders. |
 | `get_active_diver`        | none (any socket)             | `{ event_id }` | Read-only — returns the current state to the asking socket only. |
 | `submit_score`            | judge / referee / sysadmin    | `{ event_id, competitor_id, round_number, score, dive_id?, judge_number? }` | Server-trusted `judge_id = socket.userId`. Rate-limited (60/min/judge). Validates 0–10 in 0.5 steps, confirms event_judges membership. |
-| `announce_score`          | meet_manager / referee / org_admin / sysadmin | Free-form announce payload | Re-broadcast as `final_score_announced`. |
+| `announce_score`          | meet_manager / referee / org_admin / sysadmin | `{ event_id, standings }` (the Control Room sends the focused pool's standings) | Re-broadcast as `final_score_announced`. `event_id` is required: the manage-event gate reads it, and a payload without it is refused as `missing_event_id`. |
 | `referee_failed_dive`     | referee / meet_manager / org_admin / sysadmin | `{ event_id, competitor_id, round_number }` | Logged to `score_audit_log`. The dive's record books are replayed (`recomputeRecordKeys`), so a record it set goes back to whoever held it before. |
 | `referee_cap_scores`      | referee / meet_manager / org_admin / sysadmin | `{ event_id, competitor_id, round_number, cap_value }` | Logged. Record books replayed, as for a failed dive. |
 | `referee_redive`          | referee / meet_manager / org_admin / sysadmin | `{ event_id, competitor_id, round_number }` | Logged. Marks the round's score rows `status = 'redive'` until each judge scores again, so records don't count the dive until the whole panel is fresh; any record the old total held is replayed away. |

@@ -155,6 +155,42 @@ export function armOutboxDrain(auth, socket) {
   if (socket.connected) scheduleDrain(auth)
 }
 
+// Wait for one queued entry to settle. Resolves 'synced' once the server
+// took it, 'failed' once the outbox gave up on it (or parked it as a
+// conflict), and 'pending' if it's still queued when the time runs out,
+// which is the offline case, or a server that keeps saying no while the
+// retries tick over. Never rejects.
+//
+// For the few actions whose success toast only means something once the
+// server has said yes. An announce the server refused used to toast
+// "Announced" all the same.
+export function waitForOutboxEntry(key, { timeoutMs = 8000 } = {}) {
+  const ob = getOutbox()
+  if (!ob || !key) return Promise.resolve('pending')
+  return new Promise((resolve) => {
+    let done = false
+    let off = () => {}
+    const finish = (status) => {
+      if (done) return
+      done = true
+      clearTimeout(timer)
+      off()
+      resolve(status)
+    }
+    async function check() {
+      try {
+        const e = await ob.getEntry(key)
+        if (!e) return
+        if (e.status === 'synced') finish('synced')
+        else if (e.status === 'failed' || e.status === 'conflict' || e.status === 'cancelled') finish('failed')
+      } catch { /* look again on the next change */ }
+    }
+    const timer = setTimeout(() => finish('pending'), timeoutMs)
+    off = ob.on('change', check)
+    check()
+  })
+}
+
 // --- Public composable -------------------------------------------
 
 export function useHttpOutbox() {
