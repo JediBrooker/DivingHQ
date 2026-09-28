@@ -7584,3 +7584,37 @@ test("a JWT for a user that no longer exists, or a link token, isn't a session",
     await teardownFixture(st);
   }
 });
+
+// World Aquatics Art 4.1.5: "If two or more Athletes or teams score the
+// same number of total points at the end of an event or stage of an
+// event, a tie is declared for that particular place." The analytics
+// widgets have to agree with the scoreboard on that.
+test("diver analytics ranks equal totals as a shared place, like the scoreboard", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const dive = await recordKit.threeMetreDive();
+    const ev = await recordKit.event(st.orgId, { gender: "Female" });
+    const top = await recordKit.diver(st.orgId, null, "female", "Tie Top");
+    const spiky = await recordKit.diver(st.orgId, null, "female", "Tie Spiky");
+    const steady = await recordKit.diver(st.orgId, null, "female", "Tie Steady");
+    await recordKit.dive(ev, top, 1, dive, 9);
+    await recordKit.dive(ev, top, 2, dive, 9);
+    // Same total, different shape: 8 + 4 against 6 + 6.
+    await recordKit.dive(ev, spiky, 1, dive, 8);
+    await recordKit.dive(ev, spiky, 2, dive, 4);
+    await recordKit.dive(ev, steady, 1, dive, 6);
+    await recordKit.dive(ev, steady, 2, dive, 6);
+    const rankOf = async (id) => {
+      const r = await fetchJson("GET", `/api/divers/${id}/analytics`, { token: st.adminToken });
+      assert.equal(r.status, 200, JSON.stringify(r.body));
+      return r.body.recent_form.find((x) => x.event_id === ev.id)?.rank;
+    };
+    assert.equal(Number(await rankOf(spiky)), 2);
+    assert.equal(Number(await rankOf(steady)), 2, "no single-dive tie-break in WA diving");
+  } finally {
+    await recordKit.cleanup(st.orgId);
+    await teardownFixture(st);
+  }
+});

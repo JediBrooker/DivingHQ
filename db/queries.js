@@ -62,26 +62,25 @@ const PER_DIVE = perDiveSelect({
 // CTE chain:
 //   diver_events  : { event_id }   the events the diver competed in
 //   all_per_dive  : every dive in those events, by every competitor
-//   event_totals  : per-(event, competitor) sum of dive points + a
-//                   `dives_desc` array of the diver's dive points
-//                   sorted descending (used as the tie-break key)
-//   ranked        : event_totals + RANK over the World Aquatics ordering:
-//                     ORDER BY total DESC, dives_desc DESC
-//                   plus an `is_tied_on_total` flag for UI hints
-//                   when two divers share a raw total but the
-//                   secondary criterion separates them.
+//   event_totals  : per-(event, competitor) sum of dive points
+//   ranked        : event_totals + RANK() by total, plus an
+//                   `is_tied_on_total` flag for the "=" marker and the
+//                   field size.
 //
 // Required params:
 //   $1 = competitor_id (uuid), the diver of interest
 //   $2 = from_date (date or null)
 //   $3 = to_date   (date or null)
 //
-// World Aquatics tie-break: when two divers have the same total, the higher
-// finish goes to whoever has the highest single dive; if those tie,
-// the second-highest, and so on. Postgres' element-wise array
-// comparison on `dives_desc DESC` implements that exactly:
-// [9,8,7] > [9,8,6] > [9,8,5]. RANK() with that ordering gives the
-// correct World Aquatics placement for free.
+// Ties are shared places. World Aquatics Competition Regulations Art
+// 4.1.5: "If two or more Athletes or teams score the same number of
+// total points at the end of an event or stage of an event, a tie is
+// declared for that particular place." Diving has no highest-single-
+// dive tie-break (that's a different sport's rule), and ranking by one
+// here put a diver 10th in their analytics while the scoreboard, recap
+// and results PDF all had them joint 9th, or cost them a shared bronze
+// in the placings widget. RANK() over the total alone matches those
+// surfaces (routes/scoreboard.js, routes/archive.js).
 // =====================================================================
 const FULL_FIELD_RANKING = `
   diver_events AS (
@@ -100,8 +99,7 @@ const FULL_FIELD_RANKING = `
   })},
   event_totals AS (
     SELECT event_id, competitor_id,
-           SUM(dive_points) AS total,
-           array_agg(dive_points ORDER BY dive_points DESC) AS dives_desc
+           SUM(dive_points) AS total
     FROM all_per_dive
     GROUP BY event_id, competitor_id
   ),
@@ -109,11 +107,10 @@ const FULL_FIELD_RANKING = `
     SELECT et.*,
            RANK() OVER (
              PARTITION BY et.event_id
-             ORDER BY et.total DESC, et.dives_desc DESC
+             ORDER BY et.total DESC
            ) AS rank,
-           /* True when 2+ rows in this event share the SAME total,
-              shows an "=" marker in the UI so spectators understand why
-              two divers with identical totals were separated. */
+           /* True when 2+ rows in this event share the SAME total, i.e.
+              share a place. The UI shows an "=" marker for it. */
            COUNT(*) OVER (
              PARTITION BY et.event_id, et.total
            ) > 1 AS is_tied_on_total,
