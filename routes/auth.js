@@ -509,19 +509,11 @@ module.exports = function createAuthRouter({
       let accepted = false;
       let consumedRecovery = false;
       if (looksLikeTotp) accepted = await consumeTotpStep(user.id, user.totp_secret, code);
-      if (!accepted) {
-        const { matched, remainingHashes } = await totp.consumeRecoveryCode(
-          user.totp_recovery_codes || [],
-          code,
-        );
-        if (matched) {
-          accepted = true;
-          consumedRecovery = true;
-          await pool.query(
-            "UPDATE users SET totp_recovery_codes = $1::jsonb WHERE id = $2",
-            [JSON.stringify(remainingHashes), user.id],
-          );
-        }
+      if (!accepted && await totp.spendRecoveryCode(pool, user.id, user.totp_recovery_codes, code)) {
+        // spendRecoveryCode only says yes to the request that actually
+        // burnt the code; a parallel one with the same code gets a no.
+        accepted = true;
+        consumedRecovery = true;
       }
       if (!accepted) {
         return res.status(401).json({ error: "Invalid TOTP / recovery code" });

@@ -7409,3 +7409,30 @@ test("the 2FA step-up token (and a reset link) can't be used as a session", asyn
     await teardownFixture(st);
   }
 });
+
+// A recovery code is single-use. The login read the stored list, matched
+// the code, then wrote the shorter list back unconditionally, so the same
+// code sent a few times at once minted a session each time.
+test("a 2FA recovery code signs in once, however many requests race it", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const totp = require("../lib/totp");
+    const jwt = require("jsonwebtoken");
+    const { plain, hashes } = await totp.generateRecoveryCodes(3);
+    await pool.query(
+      `UPDATE users SET totp_secret = $2, totp_enabled_at = now(), totp_recovery_codes = $3::jsonb WHERE id = $1`,
+      [st.adminId, "JBSWY3DPEHPK3PXP", JSON.stringify(hashes)],
+    );
+    const stepUp = () => jwt.sign({ sub: st.adminId, type: "totp_pending" }, process.env.JWT_SECRET, { expiresIn: "5m" });
+    const tries = await Promise.all([0, 1, 2, 3].map(() => fetchJson("POST", "/api/auth/login/totp", {
+      body: { totp_token: stepUp(), code: plain[1] },
+    })));
+    assert.equal(tries.filter((r) => r.status === 200).length, 1, tries.map((r) => r.status).join(","));
+    const left = (await pool.query("SELECT totp_recovery_codes FROM users WHERE id = $1", [st.adminId])).rows[0].totp_recovery_codes;
+    assert.equal(left.length, 2);
+  } finally {
+    await teardownFixture(st);
+  }
+});
