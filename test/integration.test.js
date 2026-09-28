@@ -10822,3 +10822,52 @@ test("the latest-5 ranking cut matches the full ranking, and a partner's synchro
     await teardownFixture(st);
   }
 });
+
+// Who's in a Super Final stage for the carry (lib/scoring-sql stageMembers):
+// an active diver, or one who has already dived it. A reserve doesn't count
+// even with a scored try-out on their row. That used to be enough to carry
+// their whole H2H total onto the SF board, where ownStageScores had already
+// kept the try-out itself off, and to add them to the field on every
+// diver's score sheet.
+test("a Super Final reserve's scored try-out doesn't carry their H2H total onto the SF", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const dive = await recordKit.threeMetreDive();
+    const dd = Number((await pool.query("SELECT dd FROM dive_directory WHERE id = $1", [dive])).rows[0].dd);
+    const x = await recordKit.diver(st.orgId, null, "female", "Reserve Xena");
+    const y = await recordKit.diver(st.orgId, null, "female", "Reserve Yara");
+    const r = await recordKit.diver(st.orgId, null, "female", "Reserve Rhea");
+    const h2h = await recordKit.event(st.orgId, { gender: "Female" });
+    await recordKit.dive(h2h, x, 1, dive, 8);
+    await recordKit.dive(h2h, y, 1, dive, 6);
+    await recordKit.dive(h2h, r, 1, dive, 9.5); // best in the H2H, but only a reserve in the SF
+    const sf = await recordKit.event(st.orgId, { gender: "Female" });
+    await pool.query("UPDATE events SET score_carry_from = $1, status = 'Completed' WHERE id = $2", [h2h.id, sf.id]);
+    await recordKit.dive(sf, x, 1, dive, 7);
+    await recordKit.dive(sf, y, 1, dive, 7);
+    // Someone tried the reserve's row out on the Control Room.
+    await recordKit.dive(sf, r, 1, dive, 10);
+    await pool.query(
+      "UPDATE competitor_dive_lists SET is_reserve = TRUE, reserve_position = 1 WHERE event_id = $1 AND competitor_id = $2",
+      [sf.id, r],
+    );
+
+    const pts = (...scores) => (3 * scores.reduce((a, b) => a + b, 0) * dd).toFixed(2);
+    const expected = { "Reserve Xena": pts(8, 7), "Reserve Yara": pts(6, 7) };
+    const table = (rows) => Object.fromEntries(rows.map((row) => [row.full_name, Number(row.total).toFixed(2)]));
+    const live = await fetchJson("GET", `/api/scoreboard/${sf.id}?cache=skip`);
+    assert.equal(live.status, 200, JSON.stringify(live.body));
+    assert.deepEqual(table(live.body.standings), expected);
+    const recap = await fetchJson("GET", `/api/archive/${sf.id}/results`);
+    assert.deepEqual(table(recap.body.standings), expected);
+    const board = await fetchJson("GET", `/api/scoreboard/${sf.id}/leaderboard?cache=skip`);
+    assert.deepEqual(board.body.rounds.flatMap((rd) => rd.rankings.map((row) => row.full_name)).sort(), ["Reserve Xena", "Reserve Yara"]);
+    const sheet = await fetch(`${baseUrl}/api/events/${sf.id}/divers/${x}/score-sheet.pdf`);
+    assert.match(pdfText(Buffer.from(await sheet.arrayBuffer())).join("\n"), /1st of 2/);
+  } finally {
+    await recordKit.cleanup(st.orgId);
+    await teardownFixture(st);
+  }
+});

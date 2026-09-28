@@ -28,6 +28,7 @@ const {
   eventRepCodesCte,
   PUBLIC_PANEL_SQL,
   ownStageScores,
+  stageMembers,
   carriedStageScores,
   standingsScoreScope,
   standingsPerDiveCte,
@@ -949,9 +950,17 @@ test("standingsScoreScope: own dives (withdrawn included), plus the carried stag
   assert.ok(!own.includes("withdrawn_at"), "a withdrawn diver keeps the dives they did");
   const carried = carriedStageScores({ eventId: "$3" });
   assert.ok(carried.includes("SELECT score_carry_from FROM events WHERE id = $3"));
-  assert.ok(carried.includes("r.withdrawn_at IS NULL"), "on this stage's active roster");
-  assert.ok(carried.includes("FROM scores sc WHERE sc.event_id = $3"), "or already scored in it");
+  assert.ok(carried.includes(stageMembers({ eventId: "$3" })));
   assert.ok(!carried.includes("$1"));
+  // In the stage: an active non-reserve row, or a non-reserve row that's
+  // been scored. A reserve's scored try-out isn't a way in.
+  const [active, scored] = stageMembers({ eventId: "$3" }).split("\n   UNION\n");
+  assert.ok(active.includes("r.event_id = $3 AND r.is_reserve = FALSE AND r.withdrawn_at IS NULL"), "on this stage's active roster");
+  assert.ok(scored.includes("JOIN scores sc ON sc.event_id = r.event_id AND sc.competitor_id = r.competitor_id"), "or already scored in it");
+  assert.ok(scored.includes("sc.round_number = r.round_number"));
+  assert.ok(scored.includes("r.event_id = $3 AND r.is_reserve = FALSE"), "on a row that isn't a reserve's");
+  assert.ok(!scored.includes("withdrawn_at"), "withdrawn mid-stage still counts");
+  assert.ok(!/\bOR\b/.test(stageMembers()));
   const both = standingsScoreScope();
   assert.ok(both.includes(own) && both.includes(carriedStageScores()));
   assert.ok(/\)\n OR \(/.test(both));
