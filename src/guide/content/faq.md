@@ -93,7 +93,7 @@ It's intentionally hidden during a Live meet that hasn't reached its last dive �
 
 ### "I can't add a diver — entries closed"
 
-Past `entries_close_at`, divers can't self-submit lists. The meet manager has the **late-entry override** at the top of the Dive Order panel (**+ Add**). It works after entries close.
+Past `entries_close_at`, divers can't self-submit lists. The meet manager has the **late-entry override** in the Control Room: focus the event, then **Tools** → **Late entry** → **Add a late diver…**. It works after entries close.
 
 ### "A judge isn't seeing the active diver update"
 
