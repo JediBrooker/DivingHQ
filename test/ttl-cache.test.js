@@ -1,6 +1,7 @@
 // lib/ttl-cache.js: the storage under lib/scoreboard-cache.js and
 // lib/archive-cache.js. Their own behaviour is pinned in
-// test/scoreboard-cache.test.js; this covers the shared bits.
+// test/scoreboard-cache.test.js and test/archive-cache.test.js; this
+// covers the shared bits.
 
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
