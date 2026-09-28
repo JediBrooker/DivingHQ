@@ -479,6 +479,16 @@ h1, h2, h3, h4 {
   to   { opacity: 1; transform: translateY(0); }
 }
 
+/* The LIVE pulse. Declared here, globally, because a keyframes name set
+   in a <style scoped> block gets a per-component hash, and a reference
+   from anywhere else (the scoreboard's meet list, the .md-cta badge
+   below) quietly animates nothing. Components with their own scoped
+   copy keep using that. */
+@keyframes pulse-red {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
 /* ── Utility ──────────────────────────────────────────────── */
 .hidden { display: none !important; }
 .mono        { font-family: var(--font-mono); }
