@@ -7386,3 +7386,38 @@ test("program.pdf in Russian prints readable headers and names", async (t) => {
     await teardownFixture(st);
   }
 });
+
+// The Control Room's "paid" flag looked for payer_user_id = the diver, so
+// an entry a guardian paid for (payer = guardian, subject = diver) showed
+// as unpaid on the roster.
+test("the roster counts an entry a guardian paid for as paid", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture();
+  try {
+    const kid = await insertUser({ orgId: st.orgId, role: "diver", username: `int-gp-k-${st.slug}`, fullName: "Paid Kid" });
+    const parent = await insertUser({ orgId: st.orgId, role: "spectator", username: `int-gp-p-${st.slug}`, fullName: "Paying Parent" });
+    const dive = await recordKit.threeMetreDive();
+    await pool.query(
+      "INSERT INTO competitor_dive_lists (event_id, competitor_id, dive_id, round_number) VALUES ($1, $2, $3, 1)",
+      [st.eventId, kid, dive],
+    );
+    const paid = async () => {
+      const r = await fetchJson("GET", `/api/events/${st.eventId}/roster`, { token: st.adminToken });
+      assert.equal(r.status, 200, JSON.stringify(r.body));
+      const rows = Array.isArray(r.body) ? r.body : r.body.roster || r.body.rows;
+      return rows.find((row) => row.competitor_id === kid).paid_entry;
+    };
+    assert.equal(await paid(), false);
+    await pool.query(
+      `INSERT INTO payments (org_id, payer_user_id, subject_user_id, subject_type, event_id,
+                             amount_cents, platform_fee_cents, currency, status, paid_at)
+       VALUES ($1, $2, $3, 'event_entry', $4, 2000, 300, 'GBP', 'paid', now())`,
+      [st.orgId, parent, kid, st.eventId],
+    );
+    assert.equal(await paid(), true);
+  } finally {
+    await pool.query("DELETE FROM payments WHERE org_id = $1", [st.orgId]);
+    await teardownFixture(st);
+  }
+});

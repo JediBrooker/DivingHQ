@@ -1194,18 +1194,21 @@ module.exports = function createPaymentsRouter({
       if (!feeRes.rows.length) return res.json({ fee: null, payments_enabled: payments.enabled });
       const def = feeRes.rows[0];
       const prices = (await pool.query("SELECT * FROM fee_prices WHERE fee_definition_id = $1", [def.id])).rows;
-      const member = req.user ? await isActiveMember(pool, orgId, req.user.id) : false;
+      // Priced and checked for the diver the card is about (a guardian's
+      // dependent, or the caller), the same person startCheckout prices.
+      const beneficiary = await readBeneficiary(req);
+      const member = await isActiveMember(pool, orgId, beneficiary);
       const chosen = resolvePrice(prices, { isMember: member });
       const org = await loadOrg(orgId);
       // "Submit, then pay": the dive-list entry exists independently; an
-      // entry is confirmed once a paid payment exists for this diver.
-      const checkUserId = req.query.subject_user_id || (req.user && req.user.id);
-      const alreadyPaid = checkUserId
+      // entry is confirmed once a paid payment exists for this diver,
+      // whoever paid it (a guardian's row has the diver as subject).
+      const alreadyPaid = beneficiary
         ? (await pool.query(
             `SELECT 1 FROM payments
-              WHERE event_id = $1 AND payer_user_id = $2
+              WHERE event_id = $1 AND COALESCE(subject_user_id, payer_user_id) = $2
                 AND subject_type = 'event_entry' AND status = 'paid' LIMIT 1`,
-            [eventId, checkUserId],
+            [eventId, beneficiary],
           )).rows.length > 0
         : false;
       const late = await resolveLateFee(pool, eventId);
@@ -1229,6 +1232,7 @@ module.exports = function createPaymentsRouter({
         payments_enabled: payments.enabled,
       });
     } catch (err) {
+      if (err.status) return res.status(err.status).json({ error: err.message });
       logger.error({ err: err.message }, "[payments] read event fee failed");
       return res.status(500).json({ error: "Failed to read the entry fee." });
     }
@@ -1428,16 +1432,16 @@ module.exports = function createPaymentsRouter({
       if (!feeRes.rows.length) return res.json({ fee: null, payments_enabled: payments.enabled });
       const def = feeRes.rows[0];
       const prices = (await pool.query("SELECT * FROM fee_prices WHERE fee_definition_id = $1", [def.id])).rows;
-      const member = req.user ? await isActiveMember(pool, orgId, req.user.id) : false;
+      const beneficiary = await readBeneficiary(req);
+      const member = await isActiveMember(pool, orgId, beneficiary);
       const chosen = resolvePrice(prices, { isMember: member });
       const org = await loadOrg(orgId);
-      const meetCheckUserId = req.query.subject_user_id || (req.user && req.user.id);
-      const alreadyPaid = meetCheckUserId
+      const alreadyPaid = beneficiary
         ? (await pool.query(
             `SELECT 1 FROM payments
-              WHERE meet_id = $1 AND payer_user_id = $2
+              WHERE meet_id = $1 AND COALESCE(subject_user_id, payer_user_id) = $2
                 AND subject_type = 'event_entry' AND status = 'paid' LIMIT 1`,
-            [meetId, meetCheckUserId],
+            [meetId, beneficiary],
           )).rows.length > 0
         : false;
       return res.json({
@@ -1452,6 +1456,7 @@ module.exports = function createPaymentsRouter({
         payments_enabled: payments.enabled,
       });
     } catch (err) {
+      if (err.status) return res.status(err.status).json({ error: err.message });
       logger.error({ err: err.message }, "[payments] read meet fee failed");
       return res.status(500).json({ error: "Failed to read the meet fee." });
     }
@@ -1575,13 +1580,13 @@ module.exports = function createPaymentsRouter({
       const prices = (await pool.query("SELECT * FROM fee_prices WHERE fee_definition_id = $1", [def.id])).rows;
       const chosen = resolvePrice(prices, { isMember: false });
       const org = await loadOrg(orgId);
-      const accessCheckUserId = req.query.subject_user_id || (req.user && req.user.id);
-      const alreadyPaid = accessCheckUserId
+      const beneficiary = await readBeneficiary(req);
+      const alreadyPaid = beneficiary
         ? (await pool.query(
             `SELECT 1 FROM payments
-              WHERE meet_id = $1 AND payer_user_id = $2
+              WHERE meet_id = $1 AND COALESCE(subject_user_id, payer_user_id) = $2
                 AND subject_type = $3 AND status = 'paid' LIMIT 1`,
-            [meetId, accessCheckUserId, req.query.kind],
+            [meetId, beneficiary, req.query.kind],
           )).rows.length > 0
         : false;
       return res.json({
@@ -1595,6 +1600,7 @@ module.exports = function createPaymentsRouter({
         payments_enabled: payments.enabled,
       });
     } catch (err) {
+      if (err.status) return res.status(err.status).json({ error: err.message });
       logger.error({ err: err.message }, "[payments] read meet access failed");
       return res.status(500).json({ error: "Failed to read the access fee." });
     }
@@ -1746,13 +1752,13 @@ module.exports = function createPaymentsRouter({
       // public card hides itself rather than offering an empty purchase.
       if (!events.length) return res.json({ fee: null, payments_enabled: payments.enabled });
       const org = await loadOrg(orgId);
-      const bundleCheckUserId = req.query.subject_user_id || (req.user && req.user.id);
-      const alreadyPaid = bundleCheckUserId
+      const beneficiary = await readBeneficiary(req);
+      const alreadyPaid = beneficiary
         ? (await pool.query(
             `SELECT 1 FROM payments
-              WHERE meet_id = $1 AND payer_user_id = $2
+              WHERE meet_id = $1 AND COALESCE(subject_user_id, payer_user_id) = $2
                 AND subject_type = 'meet_bundle' AND status = 'paid' LIMIT 1`,
-            [meetId, bundleCheckUserId],
+            [meetId, beneficiary],
           )).rows.length > 0
         : false;
       return res.json({
@@ -1766,6 +1772,7 @@ module.exports = function createPaymentsRouter({
         payments_enabled: payments.enabled,
       });
     } catch (err) {
+      if (err.status) return res.status(err.status).json({ error: err.message });
       logger.error({ err: err.message }, "[payments] read meet bundle failed");
       return res.status(500).json({ error: "Failed to read the meet bundle." });
     }

@@ -405,3 +405,85 @@ test("refunds still work with the payments flag switched off", async (t) => {
     flagOn = true;
   }
 });
+
+// B4-11: "already paid" is about the beneficiary, and ?subject_user_id= is
+// only for the beneficiary's guardian. A guardian's payment (payer =
+// guardian, subject = child) never counted for the child, and anyone
+// (anonymous too) could ask whether any user had paid.
+test("already_paid counts a guardian's payment for the child, and nobody else can ask", async (t) => {
+  if (!ready) return t.skip();
+  const meet = (await pool.query(
+    "INSERT INTO meets (org_id, name) VALUES ($1, $2) RETURNING id", [orgId, `Paid meet ${suffix}`],
+  )).rows[0].id;
+  const ev = await newEvent("Paid 1m", meet);
+  await setEntryFee(ev);
+  acting = admin;
+  assert.equal((await api("PUT", `/api/meets/${meet}/access-fee`, {
+    kind: "programme", prices: [{ amount_cents: 500 }], currency: "GBP",
+  })).status, 200);
+  assert.equal((await api("PUT", `/api/meets/${meet}/bundle`, {
+    event_ids: [ev], prices: [{ amount_cents: 3000 }], currency: "GBP",
+  })).status, 200);
+  acting = as(G);
+  for (const [path, body] of [
+    [`/api/events/${ev}/checkout`, { subject_user_id: A }],
+    [`/api/meets/${meet}/access/checkout?kind=programme`, { subject_user_id: A }],
+    [`/api/meets/${meet}/bundle/checkout`, { subject_user_id: A }],
+  ]) {
+    const co = await api("POST", path, body);
+    assert.equal(co.status, 200, `${path} ${JSON.stringify(co.body)}`);
+    await completeWebhook(co.body.payment_id);
+  }
+  const reads = [
+    `/api/events/${ev}/fee`,
+    `/api/meets/${meet}/access?kind=programme`,
+    `/api/meets/${meet}/bundle`,
+  ];
+  const withSubject = (path, id) => `${path}${path.includes("?") ? "&" : "?"}subject_user_id=${id}`;
+  for (const path of reads) {
+    acting = as(G);
+    const forA = await api("GET", withSubject(path, A));
+    assert.equal(forA.status, 200, `${path} ${JSON.stringify(forA.body)}`);
+    assert.equal(forA.body.fee.already_paid, true, `${path}: the guardian paid for A`);
+    acting = as(A);
+    assert.equal((await api("GET", path)).body.fee.already_paid, true, `${path}: A's own view`);
+    acting = as(G);
+    assert.equal((await api("GET", withSubject(path, B))).body.fee.already_paid, false, `${path}: B hasn't`);
+
+    acting = as(S);
+    assert.equal((await api("GET", withSubject(path, A))).status, 403, `${path}: not S's business`);
+    acting = null;
+    assert.equal((await api("GET", withSubject(path, A))).status, 403, `${path}: nor an anonymous caller's`);
+    acting = as(G);
+    assert.equal((await api("GET", withSubject(path, "not-a-uuid"))).status, 403, `${path}: malformed is a 403`);
+  }
+});
+
+test("the entry price on a guardian's card is the dependent's, not the guardian's", async (t) => {
+  if (!ready) return t.skip();
+  const ev = await newEvent("Member price 3m");
+  acting = admin;
+  assert.equal((await api("PUT", `/api/events/${ev}/fee`, {
+    prices: [{ amount_cents: 3000, audience: "non_member", label: "standard" }, { amount_cents: 2000, audience: "member", label: "member" }],
+    currency: "GBP",
+  })).status, 200);
+  // The guardian is a member (earlier tests), this child isn't.
+  const C = (await pool.query(
+    "INSERT INTO users (username, full_name, org_id, date_of_birth) VALUES ($1, 'Kid C', $2, '2015-05-05') RETURNING id",
+    [`gc-kidc-${suffix}`, orgId],
+  )).rows[0].id;
+  await pool.query(
+    "INSERT INTO guardians (org_id, guardian_user_id, dependent_user_id, status) VALUES ($1, $2, $3, 'approved')",
+    [orgId, G, C],
+  );
+  acting = as(G);
+  const own = (await api("GET", `/api/events/${ev}/fee`)).body.fee;
+  assert.equal(own.price.amount_cents, 2000);
+  const forC = (await api("GET", `/api/events/${ev}/fee?subject_user_id=${C}`)).body.fee;
+  assert.equal(forC.is_member, false);
+  assert.equal(forC.price.amount_cents, 3000, "what C's checkout will charge");
+  const co = await api("POST", `/api/events/${ev}/checkout`, { subject_user_id: C });
+  assert.equal(co.status, 200, JSON.stringify(co.body));
+  const amount = (await pool.query("SELECT amount_cents FROM payments WHERE id = $1", [co.body.payment_id])).rows[0].amount_cents;
+  assert.equal(amount, 3000);
+});
