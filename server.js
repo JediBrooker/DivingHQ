@@ -1418,10 +1418,20 @@ app.use((req, res) => {
 // START
 // =============================================================
 
-// Runs once before listen(): load the feature flags (fatal if it
-// can't), refuse a production box still on the default admin
-// password (fatal), then the best-effort bits that only warn on
-// failure: log the schema version, snapshot and purge the audit logs.
+// Boot runs in two halves around listen().
+//
+// bootChecks() is awaited BEFORE the port opens: the feature flags
+// (fatal if unreadable), the default-admin refusal (fatal), and the
+// live-state rehydrate. It used to run inside the listen callback,
+// unawaited, so the first requests after a restart were served with
+// every flag reading off (maintenance and signups included) and a
+// Control Room socket that reconnected in that window got no active
+// diver. Worse, a set_active_diver landing then was overwritten by the
+// pre-restart row when init() caught up.
+//
+// startBackgroundJobs() runs once we're listening: the sweepers, the
+// schema-version log line and the audit snapshot + purge, none of which
+// a request depends on.
 async function bootChecks() {
   // Pull the feature flags into memory before we take a single request.
   // This is NOT best-effort. Serving with a guessed flag state is how you
@@ -1482,7 +1492,9 @@ async function bootChecks() {
   } catch (err) {
     logger.warn({ err: err.message }, "live-state rehydrate failed");
   }
+}
 
+async function startBackgroundJobs() {
   // Start the idempotency-keys TTL sweeper (migration 054).
   // Background interval inside this Node process; deletes rows
   // older than 72 hours every hour. Safe to call before any
@@ -1626,9 +1638,13 @@ if (require.main === module) {
     );
   });
 
-  server.listen(PORT, () => {
-    logger.info({ port: PORT }, "diving app started");
-    bootChecks();
+  // Nothing listens until the flags and live state are in memory, see
+  // bootChecks(). A fatal check exits from inside it.
+  bootChecks().then(() => {
+    server.listen(PORT, () => {
+      logger.info({ port: PORT }, "diving app started");
+      startBackgroundJobs();
+    });
   });
 
   // -------- Graceful shutdown --------

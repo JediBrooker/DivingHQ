@@ -7412,3 +7412,35 @@ test("SIGTERM with a socket connected shuts down cleanly and quickly", { timeout
     await srv.stop();
   }
 });
+
+test("no request is served before the feature flags have loaded", { timeout: 60000 }, async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const { features } = require("../server.js");
+  if (!features.enabled("signups")) await features.set("signups", true);
+  // Hold feature_flags so the spawned server's features.load() blocks. A
+  // server listening in the meantime answers with every flag off
+  // (signups is on in this DB), which is the bug.
+  const lock = await pool.connect();
+  const srv = await b1Boot.spawn();
+  const seen = [];
+  try {
+    await lock.query("BEGIN");
+    await lock.query("LOCK TABLE feature_flags IN ACCESS EXCLUSIVE MODE");
+    const until = Date.now() + 2500;
+    while (Date.now() < until && !srv.gone) {
+      const r = await b1Boot.get(srv.url, "/api/auth/signups-status");
+      if (r) seen.push(r.body);
+      await new Promise((res) => setTimeout(res, 25));
+    }
+    await lock.query("COMMIT");
+    await b1Boot.waitHealthy(srv);
+    const r = await b1Boot.get(srv.url, "/api/auth/signups-status");
+    seen.push(r.body);
+    assert.deepEqual(seen.filter((b) => !b || b.enabled !== true), [], "every answer saw the real flag");
+  } finally {
+    await lock.query("ROLLBACK").catch(() => {});
+    lock.release();
+    await srv.stop();
+  }
+});
