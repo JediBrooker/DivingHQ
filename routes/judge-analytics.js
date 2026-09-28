@@ -619,7 +619,9 @@ module.exports = function createJudgeAnalyticsRouter({
              SELECT
                p.event_id,
                e.name AS event_name,
-               e.created_at,
+               /* JUDGE_PER_DIVE's created_at is when the event took
+                  place (db/queries.js EVENT_DATE). */
+               p.created_at,
                COUNT(*)::int                                              AS dives,
                AVG(p.my_score - p.panel_kept_mean)::numeric(5,3)          AS signed_deviation,
                AVG(ABS(p.my_score - p.panel_kept_mean))::numeric(5,3)     AS abs_deviation,
@@ -637,8 +639,8 @@ module.exports = function createJudgeAnalyticsRouter({
              JOIN events e ON e.id = p.event_id
              WHERE p.event_type <> 'synchro_pair'
                AND p.panel_kept_mean IS NOT NULL
-             GROUP BY p.event_id, e.name, e.created_at
-             ORDER BY e.created_at DESC, p.event_id DESC
+             GROUP BY p.event_id, e.name, p.created_at
+             ORDER BY p.created_at DESC, p.event_id DESC
              LIMIT 10`,
             baseParams,
           ),

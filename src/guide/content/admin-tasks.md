@@ -191,7 +191,7 @@ Divers and judges **cannot** read the audit log — it's an integrity tool for o
 
 ### Retention
 
-Audit rows are kept for 30 days by default (configurable via `purge_audit_logs(retention_days)` which runs on server boot). After the retention window, scoreboards and standings still work normally — only the per-row "who edited what when" history is pruned.
+Audit rows are kept for 30 days by default (`purge_audit_logs(retention_days)`, which the server runs at startup and then once a day). After the retention window, scoreboards and standings still work normally — only the per-row "who edited what when" history is pruned.
 
 ### Long-term archive
 
@@ -199,7 +199,7 @@ For legal disputes / compliance reviews that need history older than 30 days, th
 
 1. **Streaming CSV export.** `GET /api/audit/export.csv?kind=scores|roles|activity&from=<iso>&to=<iso>&org_id=<uuid>` returns the full date-range as CSV with no row cap. Org-admin gated; sysadmin can scope across orgs via the `org_id` query param. The Audit Log view's per-tab CSV button uses the same data shape but only for the rows currently loaded in the page (capped at 100 per request).
 
-2. **Daily snapshot job.** When `AUDIT_SNAPSHOT_DIR=/path/to/audit-archives` is set in the server's `.env`, the server's bootChecks (which runs the daily purge) writes the past 24 h of all three audit tables to JSONL files in that directory BEFORE the purge runs. One file per table per day:
+2. **Daily snapshot job.** When `AUDIT_SNAPSHOT_DIR=/path/to/audit-archives` is set in the server's `.env`, the server copies all three audit tables to JSONL files in that directory at startup and then once a day, always BEFORE the purge runs. Each run picks up where the last one stopped (the directory keeps a small `.snapshot-marks.json`), so no row is missed however long the server stays up or however far apart restarts are; the very first run copies everything still in the database. Rows are copied once they're five minutes old. One file per table per day:
 
     ```
     /path/to/audit-archives/score_audit_2026-03-14.jsonl
@@ -207,7 +207,7 @@ For legal disputes / compliance reviews that need history older than 30 days, th
     /path/to/audit-archives/audit_2026-03-14.jsonl
     ```
 
-    Push the directory to S3 / off-site backup via your own cron / systemd job — the server doesn't ship the rows anywhere on its own. Without `AUDIT_SNAPSHOT_DIR` set the snapshot is a no-op (dev / single-node deployments don't need it).
+    Push the directory to S3 / off-site backup via your own cron / systemd job — the server doesn't ship the rows anywhere on its own. Keep `.snapshot-marks.json` with the files: delete it and the next run copies everything still in the database again. If the directory can't be written (permissions, a full disk) the server logs a warning and carries on serving; the next run retries from the same point. Without `AUDIT_SNAPSHOT_DIR` set the snapshot is a no-op (dev / single-node deployments don't need it).
 
 ## Role Audit Log
 

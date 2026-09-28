@@ -7206,3 +7206,744 @@ test("sitemap.xml lists the payments and classes guides only while they're switc
     await features.set("classes", saved.classes);
   }
 });
+
+// =====================================================================
+// Server-core hardening (bug sweep, area B1). These drive the socket
+// engine through a real socket.io client against the in-process server,
+// and a few boot and shutdown paths through a spawned server.js.
+// =====================================================================
+const b1Kit = {
+  io: require("socket.io-client").io,
+  connect({ token, cookie } = {}) {
+    return new Promise((resolve, reject) => {
+      const s = b1Kit.io(baseUrl, {
+        transports: ["websocket"], reconnection: false, timeout: 4000,
+        ...(token ? { auth: { token } } : {}),
+        ...(cookie ? { extraHeaders: { cookie } } : {}),
+      });
+      const timer = setTimeout(() => { s.close(); reject(new Error("socket never connected")); }, 5000);
+      s.on("connect", () => { clearTimeout(timer); resolve(s); });
+      s.on("connect_error", (e) => { clearTimeout(timer); s.close(); reject(e); });
+    });
+  },
+  ack(s, event, data, ms = 4000) {
+    return s.timeout(ms).emitWithAck(event, data);
+  },
+  // Resolves with the next payload of `event`, or null after ms.
+  next(s, event, ms = 2000) {
+    return new Promise((resolve) => {
+      const timer = setTimeout(() => { s.off(event, on); resolve(null); }, ms);
+      const on = (p) => { clearTimeout(timer); resolve(p); };
+      s.once(event, on);
+    });
+  },
+  async login(username, password = "not-used-here") {
+    const r = await fetchJson("POST", "/api/auth/login", { body: { username, password } });
+    assert.equal(r.status, 200, JSON.stringify(r.body));
+    return r.body.token;
+  },
+  async alive() {
+    return (await fetchJson("GET", "/api/health")).status === 200;
+  },
+  // fetchJson plus request headers.
+  request(method, path, { body, token, headers = {} } = {}) {
+    return new Promise((resolve, reject) => {
+      const url = new URL(baseUrl + path);
+      const data = body === undefined ? null : (typeof body === "string" ? body : JSON.stringify(body));
+      const h = { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}), ...headers };
+      if (data) h["Content-Length"] = Buffer.byteLength(data);
+      const req = http.request({ method, host: url.hostname, port: url.port, path: url.pathname + url.search, headers: h }, (res) => {
+        const chunks = [];
+        res.on("data", (c) => chunks.push(c));
+        res.on("end", () => {
+          const text = Buffer.concat(chunks).toString("utf8");
+          let parsed = text;
+          try { parsed = text ? JSON.parse(text) : null; } catch { /* keep the text */ }
+          resolve({ status: res.statusCode, headers: res.headers, body: parsed, text });
+        });
+      });
+      req.on("error", reject);
+      if (data) req.write(data);
+      req.end();
+    });
+  },
+  // A round-1 dive-list row, which scores hang off (FK).
+  async enter(ev, diver) {
+    await pool.query(
+      "INSERT INTO competitor_dive_lists (event_id, competitor_id, dive_id, round_number) VALUES ($1, $2, $3, 1)",
+      [ev.id, diver, await recordKit.threeMetreDive()],
+    );
+  },
+};
+
+test("socket handshake with a malformed session cookie connects as a guest instead of crashing", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const s = await b1Kit.connect({ cookie: "dhq_session=%E0%A4%A" });
+  try {
+    assert.ok(s.connected);
+    assert.ok(await b1Kit.alive());
+  } finally {
+    s.close();
+  }
+});
+
+test("Control Room socket events refuse a non-UUID event_id instead of crashing the server", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  const s = await b1Kit.connect({ token: st.adminToken });
+  try {
+    const refusal = b1Kit.next(s, "unauthorized");
+    s.emit("claim_event_control", { event_id: "not-a-uuid" });
+    assert.equal((await refusal)?.reason, "bad_event_id");
+    for (const ev of ["meet_hold", "set_active_diver", "referee_failed_dive", "announce_score"]) {
+      const out = await b1Kit.ack(s, ev, { event_id: "x'; --", competitor_id: "c", round_number: 1 });
+      assert.equal(out.ok, false, ev);
+    }
+    assert.ok(await b1Kit.alive());
+  } finally {
+    s.close();
+    await teardownFixture(st);
+  }
+});
+
+test("maintenance mode refuses socket score submits and Control Room actions from non-admins", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const { features } = require("../server.js");
+  const st = await setupFixture({ withEvent: false });
+  const ev = await recordKit.event(st.orgId, { gender: "Female" });
+  const diver = await recordKit.diver(st.orgId, null, "female", "Maintenance Diver");
+  await b1Kit.enter(ev, diver);
+  const judgeName = (await pool.query("SELECT username FROM users WHERE id = $1", [ev.judges[0]])).rows[0].username;
+  const judge = await b1Kit.connect({ token: await b1Kit.login(judgeName) });
+  const admin = await b1Kit.connect({ token: st.adminToken });
+  try {
+    await features.set("maintenance", true);
+    const sub = await b1Kit.ack(judge, "submit_score", { event_id: ev.id, competitor_id: diver, round_number: 1, score: 7 });
+    assert.equal(sub.ok, false);
+    assert.equal(sub.error, "maintenance");
+    const held = await b1Kit.ack(admin, "meet_hold", { event_id: ev.id, reason: "x" });
+    assert.equal(held.ok, false);
+    const stored = await pool.query("SELECT 1 FROM scores WHERE event_id = $1", [ev.id]);
+    assert.equal(stored.rows.length, 0, "nothing reached the scores table");
+
+    // Off again, the same submit goes through.
+    await features.set("maintenance", false);
+    const again = await b1Kit.ack(judge, "submit_score", { event_id: ev.id, competitor_id: diver, round_number: 1, score: 7 });
+    assert.equal(again.ok, true, JSON.stringify(again));
+  } finally {
+    await features.set("maintenance", false);
+    judge.close();
+    admin.close();
+    await recordKit.cleanup(st.orgId);
+    await teardownFixture(st);
+  }
+});
+
+// notification:ack is a write too; its HTTP twin gets a 503 in
+// maintenance, so the socket one mustn't slip through.
+test("maintenance mode drops a socket notification ack, like the HTTP route", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const { features } = require("../server.js");
+  const st = await setupFixture({ withEvent: false });
+  const s = await b1Kit.connect({ token: st.adminToken });
+  const statusOf = async (id) => (await pool.query("SELECT status FROM notifications WHERE id = $1", [id])).rows[0].status;
+  try {
+    const id = (await pool.query(
+      "INSERT INTO notifications (user_id, category, title, status) VALUES ($1, 'generic', 'b1 ack', 'sent') RETURNING id",
+      [st.adminId],
+    )).rows[0].id;
+    await features.set("maintenance", true);
+    s.emit("notification:ack", { id });
+    await new Promise((r) => setTimeout(r, 400));
+    assert.equal(await statusOf(id), "sent", "no write while maintenance is on");
+
+    // And once it's off the same ack lands, so the check above means something.
+    await features.set("maintenance", false);
+    s.emit("notification:ack", { id });
+    const until = Date.now() + 3000;
+    while (Date.now() < until && (await statusOf(id)) !== "acknowledged") {
+      await new Promise((r) => setTimeout(r, 50));
+    }
+    assert.equal(await statusOf(id), "acknowledged");
+  } finally {
+    await features.set("maintenance", false);
+    s.close();
+    await pool.query("DELETE FROM notifications WHERE user_id = $1 AND title = 'b1 ack'", [st.adminId]);
+    await teardownFixture(st);
+  }
+});
+
+test("a null, empty or boolean score is refused on the socket and HTTP paths, never stored as 0", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  const ev = await recordKit.event(st.orgId, { gender: "Female" });
+  const diver = await recordKit.diver(st.orgId, null, "female", "Null Score Diver");
+  await b1Kit.enter(ev, diver);
+  const judgeName = (await pool.query("SELECT username FROM users WHERE id = $1", [ev.judges[0]])).rows[0].username;
+  const judge = await b1Kit.connect({ token: await b1Kit.login(judgeName) });
+  try {
+    for (const score of [null, "", " ", false, true, []]) {
+      const out = await b1Kit.ack(judge, "submit_score", { event_id: ev.id, competitor_id: diver, round_number: 1, score });
+      assert.equal(out.ok, false, JSON.stringify(score));
+      assert.equal(out.error, "bad_score", JSON.stringify(score));
+    }
+    assert.equal((await pool.query("SELECT 1 FROM scores WHERE event_id = $1", [ev.id])).rows.length, 0);
+
+    const ok = await b1Kit.ack(judge, "submit_score", { event_id: ev.id, competitor_id: diver, round_number: 1, score: "6.5" });
+    assert.equal(ok.ok, true, JSON.stringify(ok));
+    const id = (await pool.query("SELECT id FROM scores WHERE event_id = $1", [ev.id])).rows[0].id;
+    for (const score of [null, "", false]) {
+      const put = await fetchJson("PUT", `/api/scores/${id}`, { token: st.adminToken, body: { score, reason: "typo" } });
+      assert.equal(put.status, 400, `${JSON.stringify(score)}: ${JSON.stringify(put.body)}`);
+    }
+    const kept = await pool.query("SELECT score::float AS score FROM scores WHERE id = $1", [id]);
+    assert.equal(kept.rows[0].score, 6.5);
+  } finally {
+    judge.close();
+    await recordKit.cleanup(st.orgId);
+    await teardownFixture(st);
+  }
+});
+
+test("an audit insert that fails inside a transaction doesn't roll the caller's work back", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    // End to end: the proxy hop the app trusts isn't an IP, the event
+    // create writes its audit row with it, and the event still has to exist.
+    const res = await b1Kit.request("POST", "/api/events", {
+      token: st.adminToken,
+      headers: { "X-Forwarded-For": "not-an-ip" },
+      body: { name: "Audit Rollback Event", gender: "Mixed", height: "3m", number_of_judges: 5, total_rounds: 6, event_type: "individual" },
+    });
+    assert.equal(res.status, 201, JSON.stringify(res.body));
+    const ev = await pool.query("SELECT 1 FROM events WHERE id = $1", [res.body.id]);
+    assert.equal(ev.rows.length, 1, "the created event was persisted");
+
+    // Straight at the helper: an audit row that can't be written (org_id
+    // points nowhere) mustn't turn the parent COMMIT into a ROLLBACK.
+    const { recordAudit } = require("../lib/audit");
+    const client = await pool.connect();
+    const name = `audit-sp-${st.slug}`;
+    try {
+      await client.query("BEGIN");
+      await client.query("UPDATE organisations SET name = $2 WHERE id = $1", [st.orgId, name]);
+      await recordAudit(client, {
+        org_id: "00000000-0000-4000-8000-000000000000", entity_type: "org", action: "org.renamed",
+        entity_name: "x".repeat(300), ip_address: "also-not-an-ip",
+      });
+      const done = await client.query("COMMIT");
+      assert.equal(done.command, "COMMIT");
+    } finally {
+      client.release();
+    }
+    const org = await pool.query("SELECT name FROM organisations WHERE id = $1", [st.orgId]);
+    assert.equal(org.rows[0].name, name);
+
+    // Outside a transaction (a bare client, no BEGIN) it still writes.
+    const bare = await pool.connect();
+    try {
+      await recordAudit(bare, { org_id: st.orgId, entity_type: "org", action: "org.poked", ip_address: "::ffff:10.0.0.1" });
+    } finally {
+      bare.release();
+    }
+    const row = await pool.query("SELECT host(ip_address) AS ip FROM audit_log WHERE org_id = $1 AND action = 'org.poked'", [st.orgId]);
+    assert.equal(row.rows.length, 1);
+  } finally {
+    await pool.query("DELETE FROM audit_log WHERE org_id = $1", [st.orgId]);
+    await teardownFixture(st);
+  }
+});
+
+// A real `node server.js` in a child process, for the paths that only run
+// when server.js is the entry point (boot order, shutdown, env parsing).
+const b1Boot = {
+  path: require("node:path"),
+  async freePort() {
+    const net = require("node:net");
+    return new Promise((resolve, reject) => {
+      const srv = net.createServer();
+      srv.once("error", reject);
+      srv.listen(0, "127.0.0.1", () => { const { port } = srv.address(); srv.close(() => resolve(port)); });
+    });
+  },
+  async spawn(env = {}) {
+    const { spawn } = require("node:child_process");
+    const port = await b1Boot.freePort();
+    const childEnv = { ...process.env, PORT: String(port), DR_IMPORT_SYNC_HOURS: "0", AUDIT_SNAPSHOT_DIR: "" };
+    for (const [k, v] of Object.entries(env)) {
+      if (v === null) delete childEnv[k]; else childEnv[k] = String(v);
+    }
+    const root = b1Boot.path.join(__dirname, "..");
+    const child = spawn(process.execPath, [b1Boot.path.join(root, "server.js")], {
+      cwd: root, env: childEnv, stdio: ["ignore", "pipe", "pipe"],
+    });
+    let log = "";
+    child.stdout.on("data", (d) => { log += d; });
+    child.stderr.on("data", (d) => { log += d; });
+    const exited = new Promise((resolve) => child.on("exit", (code, signal) => resolve({ code, signal })));
+    let gone = false;
+    exited.then(() => { gone = true; });
+    return {
+      child, port, url: `http://127.0.0.1:${port}`, exited,
+      log: () => log,
+      get gone() { return gone; },
+      async stop() { if (!gone) { child.kill("SIGKILL"); await exited; } },
+    };
+  },
+  // GET against a spawned server. Resolves { status, body } or null when
+  // nothing is listening (yet).
+  get(url, path) {
+    return new Promise((resolve) => {
+      const req = http.get(url + path, (res) => {
+        const chunks = [];
+        res.on("data", (c) => chunks.push(c));
+        res.on("end", () => {
+          const text = Buffer.concat(chunks).toString("utf8");
+          let body = text;
+          try { body = JSON.parse(text); } catch { /* not json */ }
+          resolve({ status: res.statusCode, body });
+        });
+      });
+      req.on("error", () => resolve(null));
+      req.setTimeout(3000, () => { req.destroy(); resolve(null); });
+    });
+  },
+  async waitHealthy(srv, ms = 15000) {
+    const until = Date.now() + ms;
+    while (Date.now() < until) {
+      if (srv.gone) throw new Error(`server exited during boot:\n${srv.log()}`);
+      const r = await b1Boot.get(srv.url, "/api/health");
+      if (r && r.status === 200) return;
+      await new Promise((res) => setTimeout(res, 50));
+    }
+    throw new Error(`server never became healthy:\n${srv.log()}`);
+  },
+};
+
+test("SIGTERM with a socket connected shuts down cleanly and quickly", { timeout: 60000 }, async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const srv = await b1Boot.spawn();
+  let sock;
+  try {
+    await b1Boot.waitHealthy(srv);
+    sock = b1Kit.io(srv.url, { transports: ["websocket"], reconnection: false });
+    await new Promise((resolve, reject) => { sock.on("connect", resolve); sock.on("connect_error", reject); });
+    const started = Date.now();
+    srv.child.kill("SIGTERM");
+    const out = await Promise.race([srv.exited, new Promise((r) => setTimeout(() => r(null), 30000))]);
+    const took = Date.now() - started;
+    assert.ok(out, `still running 30s after SIGTERM:\n${srv.log()}`);
+    assert.equal(out.code, 0, srv.log());
+    // PM2's kill_timeout is 5s; anything slower gets SIGKILLed mid-drain.
+    assert.ok(took < 5000, `took ${took}ms`);
+    assert.match(srv.log(), /pg pool drained/);
+  } finally {
+    sock?.close();
+    await srv.stop();
+  }
+});
+
+test("no request is served before the feature flags have loaded", { timeout: 60000 }, async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const { features } = require("../server.js");
+  if (!features.enabled("signups")) await features.set("signups", true);
+  // Hold feature_flags so the spawned server's features.load() blocks. A
+  // server listening in the meantime answers with every flag off
+  // (signups is on in this DB), which is the bug.
+  const lock = await pool.connect();
+  const srv = await b1Boot.spawn();
+  const seen = [];
+  try {
+    await lock.query("BEGIN");
+    await lock.query("LOCK TABLE feature_flags IN ACCESS EXCLUSIVE MODE");
+    const until = Date.now() + 2500;
+    while (Date.now() < until && !srv.gone) {
+      const r = await b1Boot.get(srv.url, "/api/auth/signups-status");
+      if (r) seen.push(r.body);
+      await new Promise((res) => setTimeout(res, 25));
+    }
+    await lock.query("COMMIT");
+    await b1Boot.waitHealthy(srv);
+    const r = await b1Boot.get(srv.url, "/api/auth/signups-status");
+    seen.push(r.body);
+    assert.deepEqual(seen.filter((b) => !b || b.enabled !== true), [], "every answer saw the real flag");
+  } finally {
+    await lock.query("ROLLBACK").catch(() => {});
+    lock.release();
+    await srv.stop();
+  }
+});
+
+test("an unwritable AUDIT_SNAPSHOT_DIR only logs a warning, the server stays up", { timeout: 60000 }, async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  // root writes through a 0555 directory, so there'd be no failure to see.
+  if (process.getuid?.() === 0) return t.skip("running as root, permissions don't bite");
+  const fs = require("node:fs");
+  const os = require("node:os");
+  const dir = fs.mkdtempSync(b1Boot.path.join(os.tmpdir(), "b1-snap-"));
+  fs.chmodSync(dir, 0o555);
+  // Something to write, so the snapshot really opens a file.
+  const st = await setupFixture({ withEvent: false });
+  await pool.query(
+    "INSERT INTO audit_log (org_id, entity_type, action, created_at) VALUES ($1, 'org', 'org.poked', now() - interval '1 hour')",
+    [st.orgId],
+  );
+  const srv = await b1Boot.spawn({ AUDIT_SNAPSHOT_DIR: dir });
+  try {
+    await b1Boot.waitHealthy(srv);
+    const until = Date.now() + 5000;
+    while (Date.now() < until && !srv.gone && !/audit snapshot failed/.test(srv.log())) {
+      await new Promise((res) => setTimeout(res, 50));
+    }
+    assert.equal(srv.gone, false, `server died:\n${srv.log()}`);
+    assert.match(srv.log(), /audit snapshot failed/);
+    const r = await b1Boot.get(srv.url, "/api/health");
+    assert.equal(r?.status, 200);
+  } finally {
+    await srv.stop();
+    fs.chmodSync(dir, 0o755);
+    fs.rmSync(dir, { recursive: true, force: true });
+    await pool.query("DELETE FROM audit_log WHERE org_id = $1", [st.orgId]);
+    await teardownFixture(st);
+  }
+});
+
+test("audit snapshots pick up where the last one stopped, with no gaps and no repeats", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const fs = require("node:fs");
+  const os = require("node:os");
+  const dir = fs.mkdtempSync(b1Boot.path.join(os.tmpdir(), "b1-snap-"));
+  const st = await setupFixture({ withEvent: false });
+  const add = async (action, age) => (await pool.query(
+    `INSERT INTO audit_log (org_id, entity_type, action, created_at)
+     VALUES ($1, 'org', $2, now() - $3::interval) RETURNING id`,
+    [st.orgId, action, age],
+  )).rows[0].id;
+  const lines = () => fs.readdirSync(dir).filter((f) => f.startsWith("audit_") && f.endsWith(".jsonl"))
+    .flatMap((f) => fs.readFileSync(b1Boot.path.join(dir, f), "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l)))
+    .filter((r) => r.org_id === st.orgId);
+  try {
+    // A one-second settle window instead of five minutes, so the test
+    // doesn't have to wait.
+    const snap = require("../lib/audit-snapshot")({ pool, dir, settleSeconds: 1 });
+    // Three days old: the boot-time version only ever looked back 24h.
+    const old = await add("org.old", "3 days");
+    const settled = await add("org.settled", "1 hour");
+    await snap.snapshot();
+    assert.deepEqual(lines().map((r) => r.id).sort(), [old, settled].sort());
+    assert.ok(JSON.parse(fs.readFileSync(b1Boot.path.join(dir, ".snapshot-marks.json"), "utf8")).audit_log);
+
+    const later = await add("org.later", "0 seconds");
+    await new Promise((r) => setTimeout(r, 1200));
+    const fresh = await add("org.fresh", "0 seconds");
+    await snap.snapshot();
+    const ids = lines().map((r) => r.id);
+    assert.equal(ids.filter((id) => id === old).length, 1, "nothing copied twice");
+    assert.ok(ids.includes(later));
+    assert.ok(!ids.includes(fresh), "rows younger than the settle window wait for the next run");
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+    await pool.query("DELETE FROM audit_log WHERE org_id = $1", [st.orgId]);
+    await teardownFixture(st);
+  }
+});
+
+// The rate limits as production runs them (the suite otherwise switches
+// them off). A venue's phones share one public IP, so ordinary use from
+// one address has to fit.
+test("rate limits: a venue's scoreboard loads and sign-ins don't run each other out", { timeout: 90000 }, async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  const srv = await b1Boot.spawn({ RATE_LIMIT_DISABLED: null });
+  const post = (p, body) => new Promise((resolve, reject) => {
+    const data = JSON.stringify(body);
+    const req = http.request(srv.url + p, { method: "POST", headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(data) } }, (res) => {
+      res.resume(); res.on("end", () => resolve(res.statusCode));
+    });
+    req.on("error", reject);
+    req.end(data);
+  });
+  try {
+    await b1Boot.waitHealthy(srv);
+    // Forty spectators opening the scoreboard: the (cached) listing, then
+    // a completed event's recap and a results CSV.
+    for (let i = 0; i < 40; i++) {
+      assert.equal((await b1Boot.get(srv.url, "/api/archive"))?.status, 200, `listing #${i + 1}`);
+    }
+    const nope = "00000000-0000-4000-8000-000000000000";
+    assert.notEqual((await b1Boot.get(srv.url, `/api/archive/${nope}/results`))?.status, 429);
+    assert.notEqual((await b1Boot.get(srv.url, `/api/events/${nope}/results.csv`))?.status, 429);
+
+    // Twenty-five officials signing in from the venue wifi.
+    for (let i = 0; i < 25; i++) {
+      assert.equal(await post("/api/auth/login", { username: st.username, password: TEST_PASSWORD }), 200, `login #${i + 1}`);
+    }
+    // Failed attempts still count, so guessing is still throttled...
+    const bad = [];
+    for (let i = 0; i < 22; i++) bad.push(await post("/api/auth/login", { username: st.username, password: "wrong-password" }));
+    assert.equal(bad.at(-1), 429, JSON.stringify(bad));
+    // Routing ignores case and a trailing slash, so those spellings reach
+    // the same handler and have to land in the same bucket.
+    for (const p of ["/api/auth/login/", "/API/Auth/Login"]) {
+      assert.equal(await post(p, { username: st.username, password: "wrong-password" }), 429, p);
+    }
+    // ...without taking the password-reset flow down with it.
+    assert.notEqual(await post("/api/auth/forgot-password", { email: `nobody-${st.slug}@example.test` }), 429);
+  } finally {
+    await srv.stop();
+    await teardownFixture(st);
+  }
+});
+
+test("a JWT for a user that no longer exists, or a link token, isn't a session", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const ghost = claimKit.jwt.sign(
+      { id: crypto.randomUUID(), org_id: st.orgId, org_roles: ["org_admin"], is_system_admin: false, tv: 0 },
+      process.env.JWT_SECRET, { expiresIn: "1h" },
+    );
+    const users = await fetchJson("GET", "/api/users", { token: ghost });
+    assert.equal(users.status, 401, JSON.stringify(users.body).slice(0, 200));
+
+    const link = claimKit.jwt.sign({ sub: st.adminId, type: "email_verify" }, process.env.JWT_SECRET, { expiresIn: "1h" });
+    const inbox = await fetchJson("GET", "/api/notifications/me", { token: link });
+    assert.equal(inbox.status, 401);
+
+    // The real session still works.
+    assert.equal((await fetchJson("GET", "/api/notifications/me", { token: st.adminToken })).status, 200);
+  } finally {
+    await teardownFixture(st);
+  }
+});
+
+// World Aquatics Art 4.1.5: "If two or more Athletes or teams score the
+// same number of total points at the end of an event or stage of an
+// event, a tie is declared for that particular place." The analytics
+// widgets have to agree with the scoreboard on that.
+test("diver analytics ranks equal totals as a shared place, like the scoreboard", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const dive = await recordKit.threeMetreDive();
+    const ev = await recordKit.event(st.orgId, { gender: "Female" });
+    const top = await recordKit.diver(st.orgId, null, "female", "Tie Top");
+    const spiky = await recordKit.diver(st.orgId, null, "female", "Tie Spiky");
+    const steady = await recordKit.diver(st.orgId, null, "female", "Tie Steady");
+    await recordKit.dive(ev, top, 1, dive, 9);
+    await recordKit.dive(ev, top, 2, dive, 9);
+    // Same total, different shape: 8 + 4 against 6 + 6.
+    await recordKit.dive(ev, spiky, 1, dive, 8);
+    await recordKit.dive(ev, spiky, 2, dive, 4);
+    await recordKit.dive(ev, steady, 1, dive, 6);
+    await recordKit.dive(ev, steady, 2, dive, 6);
+    const rankOf = async (id) => {
+      const r = await fetchJson("GET", `/api/divers/${id}/analytics`, { token: st.adminToken });
+      assert.equal(r.status, 200, JSON.stringify(r.body));
+      return r.body.recent_form.find((x) => x.event_id === ev.id)?.rank;
+    };
+    assert.equal(Number(await rankOf(spiky)), 2);
+    assert.equal(Number(await rankOf(steady)), 2, "no single-dive tie-break in WA diving");
+  } finally {
+    await recordKit.cleanup(st.orgId);
+    await teardownFixture(st);
+  }
+});
+
+// The live trim drops exactly k marks at each end (lowest judge number
+// first on a tie, same as the scoreboard's chips); the judge analytics
+// flags have to count the same drops.
+test("judge analytics flags exactly the marks the trim drops, ties included", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const { JUDGE_PER_DIVE } = require("../db/queries");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const dive = await recordKit.threeMetreDive();
+    const ev = await recordKit.event(st.orgId, { gender: "Female" });
+    const diver = await recordKit.diver(st.orgId, null, "female", "Unanimous Diver");
+    // A unanimous panel: every judge 7.0.
+    await recordKit.dive(ev, diver, 1, dive, 7);
+    const flags = [];
+    for (const j of ev.judges) {
+      const r = await pool.query(`SELECT is_dropped, is_dropped_high, is_dropped_low FROM (${JUDGE_PER_DIVE}) x WHERE event_id = '${ev.id}'`, [j, null, null]);
+      flags.push(r.rows[0]);
+    }
+    assert.equal(flags.filter((f) => f.is_dropped).length, 2, JSON.stringify(flags));
+    assert.equal(flags.filter((f) => f.is_dropped_high).length, 1);
+    assert.equal(flags.filter((f) => f.is_dropped_low).length, 1);
+    // Judges 1..5 in order: judge 1 is the low drop, judge 5 the high.
+    assert.equal(flags[0].is_dropped_low, true);
+    assert.equal(flags[4].is_dropped_high, true);
+    assert.deepEqual(flags.slice(1, 4).map((f) => f.is_dropped), [false, false, false]);
+
+    // Two marks in: fewer than 2k+1, so nothing is trimmed and nothing flagged.
+    await pool.query("INSERT INTO competitor_dive_lists (event_id, competitor_id, dive_id, round_number) VALUES ($1, $2, $3, 2)", [ev.id, diver, dive]);
+    for (const j of ev.judges.slice(0, 2)) {
+      await pool.query("INSERT INTO scores (event_id, competitor_id, judge_id, dive_id, round_number, score) VALUES ($1, $2, $3, $4, 2, 5)", [ev.id, diver, j, dive]);
+    }
+    const partial = await pool.query(`SELECT is_dropped FROM (${JUDGE_PER_DIVE}) x WHERE event_id = '${ev.id}' AND round_number = 2`, [ev.judges[0], null, null]);
+    assert.equal(partial.rows[0].is_dropped, false);
+  } finally {
+    await recordKit.cleanup(st.orgId);
+    await teardownFixture(st);
+  }
+});
+
+// Events exist weeks before anyone dives in them, so "when" for the
+// analytics is when the event took place (its scheduled time, else its
+// meet's start date), not when the row was created.
+test("analytics date ranges and years follow when the event happened, not when it was created", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const { JUDGE_PER_DIVE } = require("../db/queries");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const dive = await recordKit.threeMetreDive();
+    const diver = await recordKit.diver(st.orgId, null, "female", "Dated Diver");
+    // Created today, held on 1 June 2020.
+    const held = await recordKit.event(st.orgId, { gender: "Female" });
+    await pool.query("UPDATE events SET scheduled_at = '2020-06-01T10:00:00Z' WHERE id = $1", [held.id]);
+    await recordKit.dive(held, diver, 1, dive, 7);
+    // No time of its own, but its meet started on 3 March 2019.
+    const meet = (await pool.query(
+      "INSERT INTO meets (org_id, name, start_date) VALUES ($1, 'Dated Meet', '2019-03-03') RETURNING id", [st.orgId],
+    )).rows[0].id;
+    const inMeet = await recordKit.event(st.orgId, { gender: "Female" });
+    await pool.query("UPDATE events SET meet_id = $2, scheduled_at = NULL WHERE id = $1", [inMeet.id, meet]);
+    await recordKit.dive(inMeet, diver, 1, dive, 6);
+
+    const range = async (from, to) => {
+      const r = await fetchJson("GET", `/api/divers/${diver}/analytics?from_date=${from}&to_date=${to}`, { token: st.adminToken });
+      assert.equal(r.status, 200, JSON.stringify(r.body));
+      return r.body;
+    };
+    const y2020 = await range("2020-01-01", "2020-12-31");
+    assert.deepEqual(y2020.recent_form.map((x) => x.event_id), [held.id]);
+    assert.deepEqual(y2020.year_over_year.map((x) => x.year), [2020]);
+    const y2019 = await range("2019-01-01", "2019-12-31");
+    assert.deepEqual(y2019.recent_form.map((x) => x.event_id), [inMeet.id]);
+    const all = await range("2000-01-01", "2100-01-01");
+    assert.deepEqual(all.year_over_year.map((x) => x.year), [2020, 2019]);
+    const today = new Date().toISOString().slice(0, 10);
+    assert.equal((await range(today, today)).recent_form.length, 0, "created today, but not held today");
+
+    const profile = await fetchJson("GET", `/api/divers/${diver}/profile?from_date=2020-01-01&to_date=2020-12-31`, { token: st.adminToken });
+    assert.equal(profile.status, 200);
+    assert.deepEqual(profile.body.score_trend.map((x) => x.event_id), [held.id]);
+
+    const judged = await pool.query(`SELECT event_id FROM (${JUDGE_PER_DIVE}) x`, [held.judges[0], "2020-01-01", "2020-12-31"]);
+    assert.deepEqual(judged.rows.map((r) => r.event_id), [held.id]);
+  } finally {
+    await recordKit.cleanup(st.orgId);
+    await pool.query("DELETE FROM events WHERE org_id = $1", [st.orgId]);
+    await pool.query("DELETE FROM meets WHERE org_id = $1", [st.orgId]);
+    await teardownFixture(st);
+  }
+});
+
+test("an impossible from_date is a 400 on the diver profile and analytics", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    for (const p of ["profile", "analytics"]) {
+      const r = await fetchJson("GET", `/api/divers/${st.adminId}/${p}?from_date=2026-02-31`, { token: st.adminToken });
+      assert.equal(r.status, 400, `${p}: ${JSON.stringify(r.body)}`);
+    }
+  } finally {
+    await teardownFixture(st);
+  }
+});
+
+test("a malformed or oversized JSON body gets a JSON error, not Express's HTML page", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const bad = await b1Kit.request("POST", "/api/auth/login", { body: "{bad" });
+  assert.equal(bad.status, 400);
+  assert.match(bad.headers["content-type"], /application\/json/);
+  assert.equal(typeof bad.body.error, "string");
+  assert.equal(bad.body.code, "bad_json");
+
+  const big = await b1Kit.request("POST", "/api/auth/login", { body: JSON.stringify({ username: "x".repeat(300 * 1024) }) });
+  assert.equal(big.status, 413);
+  assert.match(big.headers["content-type"], /application\/json/);
+  assert.equal(big.body.code, "body_too_large");
+  assert.doesNotMatch(big.text, /<html|at \w+ \(/i, "no HTML page, no stack trace");
+});
+
+// A hashed chunk that isn't on disk (an old build's, after a deploy) has
+// to be a 404. The SPA fallback used to answer it with index.html and a
+// 200, which the service worker then cached under the .js URL for good.
+test("a missing /assets file is a 404, never the SPA shell", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  for (const p of ["/assets/ManagerView-OLDHASH.js", "/assets/app-OLD.css", "/assets/nested/x.js"]) {
+    const r = await b1Kit.request("GET", p);
+    assert.equal(r.status, 404, p);
+    assert.doesNotMatch(r.headers["content-type"] || "", /text\/html/, p);
+  }
+});
+
+test("TRUST_PROXY=true boots, the way the socket layer already read it", { timeout: 60000 }, async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const srv = await b1Boot.spawn({ TRUST_PROXY: "true" });
+  try {
+    await b1Boot.waitHealthy(srv);
+  } finally {
+    await srv.stop();
+  }
+});
+
+test("event live and results emails skip withdrawn divers and reserves", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  // Put back just the keys we set. Swapping process.env for a plain copy
+  // would drop its string coercion for every later test in this file.
+  const mailEnv = ["CF_ACCOUNT_ID", "CF_EMAIL_TOKEN", "EMAIL_FROM"];
+  const saved = { fetch: global.fetch, env: Object.fromEntries(mailEnv.map((k) => [k, process.env[k]])) };
+  try {
+    const dive = await recordKit.threeMetreDive();
+    const ev = await recordKit.event(st.orgId, { gender: "Female" });
+    const who = {};
+    for (const name of ["diving", "withdrawn", "reserve"]) {
+      who[name] = await recordKit.diver(st.orgId, null, "female", `Mail ${name}`);
+      await pool.query("UPDATE users SET email = $2 WHERE id = $1", [who[name], `${name}-${st.slug}@example.test`]);
+      await pool.query(
+        `INSERT INTO competitor_dive_lists (event_id, competitor_id, dive_id, round_number, withdrawn_at, is_reserve)
+         VALUES ($1, $2, $3, 1, $4, $5)`,
+        [ev.id, who[name], dive, name === "withdrawn" ? new Date() : null, name === "reserve"],
+      );
+    }
+    Object.assign(process.env, { CF_ACCOUNT_ID: "acct-test", CF_EMAIL_TOKEN: "token-test", EMAIL_FROM: "noreply@example.test" });
+    const sent = [];
+    global.fetch = async (_url, opts) => { sent.push(JSON.parse(opts.body).to); return { ok: true, json: async () => ({}) }; };
+    const email = require("../lib/email")({ pool });
+    await email.sendEventStartedEmails({ id: ev.id, name: "Mail Test 3m" });
+    await email.sendEventResultsEmails({ id: ev.id, name: "Mail Test 3m" });
+    assert.deepEqual(sent, [`diving-${st.slug}@example.test`, `diving-${st.slug}@example.test`]);
+  } finally {
+    global.fetch = saved.fetch;
+    for (const [k, v] of Object.entries(saved.env)) {
+      if (v === undefined) delete process.env[k]; else process.env[k] = v;
+    }
+    await recordKit.cleanup(st.orgId);
+    await teardownFixture(st);
+  }
+});

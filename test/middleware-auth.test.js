@@ -224,9 +224,12 @@ test("optionalAuth: deleted or stale-tv sessions read as guests", async () => {
   }
 });
 
-test("isTokenVersionCurrent: missing row and missing tv both pass, a stale tv doesn't", async () => {
+test("isTokenVersionCurrent: a missing row fails, a missing tv passes, a stale tv doesn't", async () => {
+  // A users row that's gone (the claim flow hard-deletes a self-deleted
+  // account) must not bring that account's old sessions back to life.
   const noRow = createMiddleware({ pool: { async query() { return { rows: [] }; } }, JWT_SECRET });
-  assert.equal(await noRow.isTokenVersionCurrent(USER_ID, 1), true);
+  assert.equal(await noRow.isTokenVersionCurrent(USER_ID, 1), false);
+  assert.equal(await noRow.isTokenVersionCurrent(undefined, 1), false);
   const { isTokenVersionCurrent } = build({ token_version: 3 });
   assert.equal(await isTokenVersionCurrent(USER_ID, null), true);
   assert.equal(await isTokenVersionCurrent(USER_ID, 2), false);
@@ -303,4 +306,91 @@ test("club guards: no club id is a 400", async () => {
     mw.requireClubAdminOnly()(req, res, () => resolve({ statusCode: 0 }));
   });
   assert.equal(out.statusCode, 400);
+});
+
+// socketCanManageEvent is awaited by every Control Room socket handler
+// with no catch, and socket.io doesn't catch for them, so it must answer
+// false rather than reject. A throw here used to crash the process.
+const EVENT_ID = "33333333-3333-4333-8333-333333333333";
+function controlSocket(extra = {}) {
+  const s = fakeSocket({ sysadmin: false });
+  return Object.assign(s, { userOrgId: "org-1", userOrgRoles: ["meet_manager"], userTokenVersion: 1, disconnect() {} }, extra);
+}
+
+test("socketCanManageEvent: a non-UUID event id is refused before any query", async () => {
+  let queried = false;
+  const mw = createMiddleware({ pool: { async query() { queried = true; return { rows: [] }; } }, JWT_SECRET });
+  const s = controlSocket();
+  assert.equal(await mw.socketCanManageEvent(s, "not-a-uuid"), false);
+  assert.equal(s.emits.at(-1).payload.reason, "bad_event_id");
+  assert.equal(queried, false);
+});
+
+test("socketCanManageEvent: a DB error answers false instead of rejecting", async () => {
+  const mw = createMiddleware({ pool: { async query() { throw new Error("connection terminated"); } }, JWT_SECRET });
+  const s = controlSocket();
+  assert.equal(await mw.socketCanManageEvent(s, EVENT_ID), false);
+  assert.equal(s.emits.at(-1).payload.reason, "server_error");
+});
+
+test("socketCanManageEvent: maintenance mode refuses a non-admin, lets a sysadmin through", async () => {
+  const pool = {
+    async query(sql) {
+      if (/FROM users u\s+LEFT JOIN organisations o/.test(sql)) {
+        return { rows: [{ token_version: 1, org_status: "active", is_system_admin: false }] };
+      }
+      if (/FROM events WHERE id/.test(sql)) return { rows: [{ org_id: "org-1" }] };
+      return { rows: [] };
+    },
+  };
+  let on = true;
+  const mw = createMiddleware({ pool, JWT_SECRET, isMaintenance: () => on });
+  const s = controlSocket();
+  assert.equal(await mw.socketCanManageEvent(s, EVENT_ID), false);
+  assert.equal(s.emits.at(-1).payload.reason, "maintenance");
+  assert.equal(await mw.socketCanManageEvent(controlSocket({ userIsSystemAdmin: true }), EVENT_ID), true);
+  assert.equal(mw.socketMaintenanceBlocked(s), true);
+  on = false;
+  assert.equal(await mw.socketCanManageEvent(s, EVENT_ID), true);
+  assert.equal(mw.socketMaintenanceBlocked(s), false);
+});
+
+// A token is only a session if it names a user that still exists. The
+// org_roles and is_system_admin baked into it mean nothing otherwise.
+test("verifyToken: a token for a user row that no longer exists is revoked", async () => {
+  const noRow = createMiddleware({ pool: { async query() { return { rows: [] }; } }, JWT_SECRET });
+  const out = await runVerify(noRow.verifyToken, sign({ id: USER_ID, tv: 1, org_roles: ["org_admin"] }));
+  assert.equal(out.type, "res");
+  assert.equal(out.statusCode, 401);
+  const guest = await runVerify(noRow.optionalAuth, sign({ id: USER_ID, tv: 1, org_roles: ["org_admin"] }));
+  assert.equal(guest.type, "next");
+  assert.equal(guest.req.user, undefined);
+});
+
+test("verifyToken: email-verify, password-reset and 2FA-step tokens aren't sessions", async () => {
+  const { verifyToken, optionalAuth } = build();
+  for (const type of ["email_verify", "password_reset", "totp_pending"]) {
+    const tok = sign({ sub: USER_ID, type });
+    const out = await runVerify(verifyToken, tok);
+    assert.equal(out.statusCode, 401, type);
+    const guest = await runVerify(optionalAuth, tok);
+    assert.equal(guest.req.user, undefined, type);
+  }
+  // Even with an id alongside, a typed token stays a link token.
+  assert.equal((await runVerify(verifyToken, sign({ id: USER_ID, tv: 1, type: "email_verify" }))).statusCode, 401);
+  // And an id has to look like one.
+  assert.equal((await runVerify(verifyToken, sign({ id: "not-a-uuid", tv: 1 }))).statusCode, 401);
+});
+
+// Date.parse rolls impossible days over (2026-02-31 is 3 March) instead
+// of failing, so they used to reach Postgres: a 500 on /profile and
+// silently empty widgets on /analytics.
+test("parseDateRange: impossible calendar dates are a 400, real ones pass", () => {
+  const { parseDateRange } = build();
+  for (const bad of ["2026-02-31", "2026-02-29", "2025-04-31", "2026-13-01", "2026-00-10", "2026-01-32"]) {
+    assert.throws(() => parseDateRange({ from_date: bad }), (e) => e.status === 400, bad);
+    assert.throws(() => parseDateRange({ to_date: bad }), (e) => e.status === 400, bad);
+  }
+  assert.deepEqual(parseDateRange({ from_date: "2024-02-29", to_date: "2026-12-31" }), { from: "2024-02-29", to: "2026-12-31" });
+  assert.deepEqual(parseDateRange({}), { from: null, to: null });
 });

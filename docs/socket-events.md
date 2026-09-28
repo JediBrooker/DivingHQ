@@ -18,7 +18,7 @@ that's intentional, but every privileged event must call
 |---|---|---|
 | `state_update`            | `{ event_id, diverName, country_code, club_name, club_code, diveCode, description, round_number, status, … }` | A diver becomes active in the Control Room, or a new client connects (rebroadcast on demand). |
 | `score_received`          | The full score-submit payload + `judge_id`, `judge_number` | A judge submits a score. Broadcast to everyone watching the meet. |
-| `score_rejected`          | `{ reason: 'not_authenticated' \| 'insufficient_role' \| 'not_on_panel' \| 'bad_payload' \| 'bad_round' \| 'bad_score' \| 'rate_limited', message?: string }` | A submit_score from this socket failed validation. Sent only to the offending socket. |
+| `score_rejected`          | `{ reason: 'not_authenticated' \| 'insufficient_role' \| 'maintenance' \| 'token_revoked' \| 'not_on_panel' \| 'event_not_live' \| 'bad_payload' \| 'bad_round' \| 'bad_score' \| 'rate_limited' \| 'server_error', message?: string }` | A submit_score from this socket failed validation. Sent only to the offending socket; the submit's ack carries the same `reason` as `error`. `maintenance` means the platform is in maintenance mode (non-sysadmins can't score until it's lifted; the judge's outbox keeps the mark, retries a few times, then holds it as failed for a manual resend). `bad_score` covers anything that isn't a number or numeric string in 0-10 half points, `null` and `""` included. |
 | `score_corrected`         | The new score row from `PUT /api/scores/:id` | A referee corrects a score via HTTP (the socket bus rebroadcasts so other operators see it live). |
 | `final_score_announced`   | Whatever the announcer sent | Announcer presses "Announce" in the Control Room. |
 | `referee_action_failed`   | `{ event_id, competitor_id, round_number, … }` | Referee marks a dive failed. |
@@ -28,7 +28,7 @@ that's intentional, but every privileged event must call
 | `meet_held`               | `{ event_id, reason \| null, since: <ms epoch> }` | Operator holds the meet, or a new client joins while a hold is active. |
 | `meet_resumed`            | `{ event_id }` | Operator resumes the meet. |
 | `venue.scoreboard_state`  | Canonical venue payload from `lib/venue-state.js` | Emitted to `venue:<event_id>` subscribers after subscribe, active-diver changes, score changes, score announce, hold, and resume. Used by hardware bridges. |
-| `unauthorized`            | `{ reason: 'not_authenticated' \| 'insufficient_role' }` | A privileged event was attempted by an anonymous or under-roled socket. |
+| `unauthorized`            | `{ reason: 'not_authenticated' \| 'insufficient_role' \| 'maintenance' \| 'missing_event_id' \| 'bad_event_id' \| 'event_not_found' \| 'wrong_org' \| 'token_revoked' \| 'server_error' }` | A privileged event was refused: anonymous or under-roled socket, maintenance mode (non-sysadmins), an `event_id` that's missing or not a UUID, an event outside the socket's org, a revoked session, or a server-side failure while checking. The Control Room events also ack `{ ok: false, error }`. |
 | `schedule:conflict_dismissed` | `{ meet_id, action: 'dismiss' \| 'undismiss' }` | A scheduler conflict was dismissed or un-dismissed via the editor-only API. Drawer clients refetch `/api/meets/:id/conflicts` on receipt. The broadcast is intentionally minimal and does not include personnel labels. |
 | `schedule:block_updated`      | `{ meet_id, session_id, block_id?, created?, session_updated? }` | A Phase 3 manual edit landed (`PUT /api/blocks/:id`, `POST /api/sessions/:sessionId/blocks`, or `PUT /api/sessions/:id`). Other timeline tabs refetch `/sessions` and update inline. The broadcast is intentionally minimal; conflict details stay behind `/api/meets/:id/conflicts`. |
 | `schedule:block_deleted`      | `{ meet_id, session_id, block_id }` | A schedule block was deleted via `DELETE /api/blocks/:id`. Other tabs refetch the schedule. |
@@ -47,6 +47,12 @@ event: an `event_managers` row, or admin of the club hosting the event's
 meet (`meets.host_club_id`, migration 087). That second path is how a club
 in a country with no federation on DivingHQ runs its own meets.
 
+Maintenance mode (the `maintenance` feature flag) refuses every socket
+write from a non-sysadmin: the Control Room events through
+`socketCanManageEvent`, `submit_score`, `judge_signal` and
+`notification:ack` through `socketMaintenanceBlocked`. `socketCanManageEvent` never rejects; a
+non-UUID `event_id` or a DB error is answered as `unauthorized`.
+
 | Event | Required role | Payload | Notes |
 |---|---|---|---|
 | `set_active_diver`        | meet_manager / referee / org_admin / sysadmin | Roster row + status | Persists to in-memory `activeDivers[event_id]` so late-joiners see it. |
@@ -59,6 +65,7 @@ in a country with no federation on DivingHQ runs its own meets.
 | `meet_hold`               | meet_manager / referee / org_admin / sysadmin | `{ event_id, reason? }` | Updates in-memory `meetHolds[event_id]`. |
 | `meet_resume`             | meet_manager / referee / org_admin / sysadmin | `{ event_id }` | Clears the hold. |
 | `get_meet_hold`           | none (any socket)             | `{ event_id }` | Read-only — returns the current hold state to the asking socket. |
+| `notification:ack`        | any signed-in socket          | `{ id }` | Marks the caller's own notification `acknowledged` (the UPDATE is scoped to `socket.userId`). Dropped silently in maintenance mode, like its HTTP twin `POST /api/notifications/:id/acknowledge`. |
 | `subscribe_venue`         | none (any socket)             | `{ event_id }` | Joins `venue:<event_id>` and immediately emits a fresh `venue.scoreboard_state` snapshot for hardware bridges. |
 | `disconnect`              | (built-in)                    | — | Just logs; no state cleanup needed. |
 

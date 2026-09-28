@@ -29,6 +29,7 @@
 const jwt = require("jsonwebtoken");
 const createIdempotency = require("../lib/idempotency");
 const { readSessionCookie } = require("../lib/session-cookie");
+const { trustProxyHops } = require("../lib/trust-proxy");
 const { announceRecords } = require("../lib/records");
 const { insertScoreAudit } = require("../lib/score-audit");
 // Held as the module object and called through it, never destructured:
@@ -68,12 +69,14 @@ module.exports = function attachSocket({
   pool,
   JWT_SECRET,
   // From lib/middleware. socketRequireRole is passed in but nothing
-  // here calls it: submit_score does its own role check and the
-  // Control Room events go through socketCanManageEvent. Heads up,
-  // that means the maintenance-mode check that lives in
-  // socketRequireRole doesn't run for any socket write today.
+  // here calls it: submit_score and judge_signal do their own role
+  // checks and the Control Room events go through socketCanManageEvent.
+  // Maintenance mode still covers all of them: socketCanManageEvent
+  // checks it, and the two with their own checks ask
+  // socketMaintenanceBlocked directly.
   socketRequireRole,
   socketCanManageEvent,
+  socketMaintenanceBlocked = () => false,
   isValidScore,
   isTokenVersionCurrent,
   // From lib/records:
@@ -135,12 +138,17 @@ module.exports = function attachSocket({
     //                                   which rides the handshake headers
     //                                   (browser JS can't read it to pass
     //                                   it via auth.token anymore).
-    const authToken = socket.handshake.auth?.token;
-    const raw = authToken === "spectator"
-      ? null
-      : (authToken || readSessionCookie(socket.handshake.headers?.cookie));
-    if (raw) {
-      try {
+    // Everything below runs inside the try. socket.io never looks at
+    // what this async middleware returns, so a throw that escaped it
+    // (a malformed cookie, a DB error in the tv check) was an unhandled
+    // rejection, and that takes the process down. Any failure here just
+    // means the connection carries on as an anonymous spectator.
+    try {
+      const authToken = socket.handshake.auth?.token;
+      const raw = authToken === "spectator"
+        ? null
+        : (authToken || readSessionCookie(socket.handshake.headers?.cookie));
+      if (raw) {
         const decoded = jwt.verify(raw, JWT_SECRET, { algorithms: ["HS256"] });
         // Validate tv via the same 30s cache the HTTP path uses.
         // A revoked session must lose its socket privileges too.
@@ -154,24 +162,19 @@ module.exports = function attachSocket({
         // re-check it on every privileged action (catches role
         // revocation / 2FA-bump on a long-lived websocket).
         socket.userTokenVersion = decoded.tv != null ? Number(decoded.tv) : null;
-      } catch {
-        // Invalid token, treat as anonymous (spectator).
       }
+    } catch {
+      // Invalid token (or we couldn't check it), treat as anonymous.
     }
     next();
   });
 
   // -----------------------------------------------------------
-  // XFF / IP: mirror the Express side's TRUST_PROXY chain
-  // length so audit-log IPs aren't trivially forgeable.
+  // XFF / IP: the same TRUST_PROXY chain length the Express side
+  // uses (one parser, lib/trust-proxy.js) so audit-log IPs aren't
+  // trivially forgeable.
   // -----------------------------------------------------------
-  const TRUST_PROXY_HOPS = (() => {
-    const raw = process.env.TRUST_PROXY;
-    if (raw === undefined || raw === "" || raw === "true") return 1;
-    if (raw === "false" || raw === "0") return 0;
-    const n = parseInt(raw, 10);
-    return Number.isFinite(n) && n >= 0 ? n : 1;
-  })();
+  const TRUST_PROXY_HOPS = trustProxyHops();
 
   function clientIp(socket) {
     const fwd = socket.handshake.headers["x-forwarded-for"];
@@ -353,8 +356,12 @@ module.exports = function attachSocket({
     // SPA banner click → mark the notifications row 'acknowledged'
     // via the engine. Idempotent; cross-user attempts no-op
     // because the engine scopes the UPDATE to user_id.
+    //
+    // It's still a write, so maintenance mode drops it the way the
+    // HTTP twin (POST /api/notifications/:id/acknowledge) gets a 503.
     socket.on("notification:ack", async (data) => {
       if (!socket.userId || !data?.id || !push) return;
+      if (socketMaintenanceBlocked(socket)) return;
       try {
         await push.acknowledgeNotification(data.id, socket.userId);
       } catch (err) {
@@ -533,6 +540,16 @@ module.exports = function attachSocket({
           && !roles.includes("judge")
           && !roles.includes("referee")) {
         reject("insufficient_role");
+        return;
+      }
+      // Maintenance mode is a read-only lockdown, scores included. The
+      // mark isn't lost: the judge's outbox keeps it and retries a few
+      // times with backoff, and if maintenance outlasts those it parks
+      // the entry as failed, where the judge can send it again by hand.
+      // It won't land by itself once a long lockdown lifts, hence the
+      // wording below.
+      if (socketMaintenanceBlocked(socket)) {
+        reject("maintenance", { message: "DivingHQ is in maintenance mode, so scores can't be saved right now. Your score is kept on this device; send it again once maintenance is over." });
         return;
       }
       // Re-check revocation on this long-lived socket. The handshake
@@ -855,6 +872,7 @@ module.exports = function attachSocket({
     // -----------------------------------------------------------
     socket.on("judge_signal", async (data) => {
       if (!socket.userId) return;
+      if (socketMaintenanceBlocked(socket)) return;
       if (socketActionRateLimited("judge_signal", socket.userId)) return;
       if (typeof socket.userTokenVersion === "number"
           && !(await isTokenVersionCurrent(socket.userId, socket.userTokenVersion))) {

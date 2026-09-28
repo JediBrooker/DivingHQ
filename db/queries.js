@@ -17,13 +17,34 @@
 const { perDiveSelect, perDivePointsCte } = require("../lib/scoring-sql");
 
 // =====================================================================
+// EVENT_DATE: when an event took place, for every analytics date range,
+// year bucket and "most recent first" ordering. Needs events aliased `e`.
+//
+// The event's own scheduled time, else its meet's start date, else when
+// the row was created. Everything used to key on events.created_at, but
+// events are set up before entries open, often weeks ahead: a January
+// championship created in December landed in the previous year's
+// year_over_year, fell out of a range for the month it was held, and
+// dropped off a judge's analytics for the month they judged it. Use
+// this one expression everywhere a surface filters, groups or sorts by
+// date, or the widgets stop agreeing with each other. (A correlated
+// lookup rather than a join, so it drops into any query that has `e`.)
+// =====================================================================
+const EVENT_DATE = `COALESCE(e.scheduled_at,
+  (SELECT m.start_date::timestamptz FROM meets m WHERE m.id = e.meet_id),
+  e.created_at)`;
+const EVENT_DATE_FILTER = `
+    AND ($2::date IS NULL OR ${EVENT_DATE} >= $2::date)
+    AND ($3::date IS NULL OR ${EVENT_DATE} < $3::date + INTERVAL '1 day')`;
+
+// =====================================================================
 // PER_DIVE: one row per dive the diver performed.
 //
 // Filters to a single competitor and (optionally) a date range.
 // Columns:
 //   event_id, competitor_id, round_number,
 //   dive_code, position, height, dd, description,
-//   event_type::text AS event_type, created_at,
+//   event_type::text AS event_type, created_at (the EVENT_DATE),
 //   dive_total, avg_judge_score
 //
 // Required params:
@@ -35,19 +56,17 @@ const PER_DIVE = perDiveSelect({
   select: [
     "s.event_id", "s.competitor_id", "s.round_number",
     "d.dive_code", "d.position", "d.height", "d.dd", "d.description",
-    "e.event_type::text AS event_type", "e.created_at",
+    "e.event_type::text AS event_type", `${EVENT_DATE} AS created_at`,
   ],
   pointsAlias: "dive_total",
   selectExtra: ["AVG(s.score) AS avg_judge_score"],
   where: `s.competitor_id = $1
-    AND COALESCE(e.is_rehearsal, FALSE) = FALSE
-    AND ($2::date IS NULL OR e.created_at >= $2::date)
-    AND ($3::date IS NULL OR e.created_at < $3::date + INTERVAL '1 day')`,
+    AND COALESCE(e.is_rehearsal, FALSE) = FALSE${EVENT_DATE_FILTER}`,
   groupBy: [
     "s.event_id", "s.competitor_id", "s.round_number",
     "d.dive_code", "d.position", "d.height", "d.dd", "d.description",
   ],
-  groupByExtra: ["e.created_at"],
+  groupByExtra: ["e.scheduled_at", "e.meet_id", "e.created_at"],
 });
 
 // =====================================================================
@@ -62,26 +81,25 @@ const PER_DIVE = perDiveSelect({
 // CTE chain:
 //   diver_events  : { event_id }   the events the diver competed in
 //   all_per_dive  : every dive in those events, by every competitor
-//   event_totals  : per-(event, competitor) sum of dive points + a
-//                   `dives_desc` array of the diver's dive points
-//                   sorted descending (used as the tie-break key)
-//   ranked        : event_totals + RANK over the World Aquatics ordering:
-//                     ORDER BY total DESC, dives_desc DESC
-//                   plus an `is_tied_on_total` flag for UI hints
-//                   when two divers share a raw total but the
-//                   secondary criterion separates them.
+//   event_totals  : per-(event, competitor) sum of dive points
+//   ranked        : event_totals + RANK() by total, plus an
+//                   `is_tied_on_total` flag for the "=" marker and the
+//                   field size.
 //
 // Required params:
 //   $1 = competitor_id (uuid), the diver of interest
 //   $2 = from_date (date or null)
 //   $3 = to_date   (date or null)
 //
-// World Aquatics tie-break: when two divers have the same total, the higher
-// finish goes to whoever has the highest single dive; if those tie,
-// the second-highest, and so on. Postgres' element-wise array
-// comparison on `dives_desc DESC` implements that exactly:
-// [9,8,7] > [9,8,6] > [9,8,5]. RANK() with that ordering gives the
-// correct World Aquatics placement for free.
+// Ties are shared places. World Aquatics Competition Regulations Art
+// 4.1.5: "If two or more Athletes or teams score the same number of
+// total points at the end of an event or stage of an event, a tie is
+// declared for that particular place." Diving has no highest-single-
+// dive tie-break (that's a different sport's rule), and ranking by one
+// here put a diver 10th in their analytics while the scoreboard, recap
+// and results PDF all had them joint 9th, or cost them a shared bronze
+// in the placings widget. RANK() over the total alone matches those
+// surfaces (routes/scoreboard.js, routes/archive.js).
 // =====================================================================
 const FULL_FIELD_RANKING = `
   diver_events AS (
@@ -89,9 +107,7 @@ const FULL_FIELD_RANKING = `
     FROM scores s
     JOIN events e ON e.id = s.event_id
     WHERE s.competitor_id = $1
-      AND COALESCE(e.is_rehearsal, FALSE) = FALSE
-      AND ($2::date IS NULL OR e.created_at >= $2::date)
-      AND ($3::date IS NULL OR e.created_at < $3::date + INTERVAL '1 day')
+      AND COALESCE(e.is_rehearsal, FALSE) = FALSE${EVENT_DATE_FILTER}
   ),
   ${perDivePointsCte({
     name:   "all_per_dive",
@@ -100,8 +116,7 @@ const FULL_FIELD_RANKING = `
   })},
   event_totals AS (
     SELECT event_id, competitor_id,
-           SUM(dive_points) AS total,
-           array_agg(dive_points ORDER BY dive_points DESC) AS dives_desc
+           SUM(dive_points) AS total
     FROM all_per_dive
     GROUP BY event_id, competitor_id
   ),
@@ -109,11 +124,10 @@ const FULL_FIELD_RANKING = `
     SELECT et.*,
            RANK() OVER (
              PARTITION BY et.event_id
-             ORDER BY et.total DESC, et.dives_desc DESC
+             ORDER BY et.total DESC
            ) AS rank,
-           /* True when 2+ rows in this event share the SAME total,
-              shows an "=" marker in the UI so spectators understand why
-              two divers with identical totals were separated. */
+           /* True when 2+ rows in this event share the SAME total, i.e.
+              share a place. The UI shows an "=" marker for it. */
            COUNT(*) OVER (
              PARTITION BY et.event_id, et.total
            ) > 1 AS is_tied_on_total,
@@ -146,7 +160,10 @@ const FULL_FIELD_RANKING = `
 //   * `is_dropped`: TRUE when this judge's score was on the trimmed
 //     ends (one of the highest k or lowest k for the panel size).
 //     For a 7-judge panel this is the high-2 / low-2 the trim
-//     drops. Drives the "drop rate" + hi/lo asymmetry metrics
+//     drops, exactly two at each end even when marks tie (Art
+//     9.1.5.1: "When more than two (2) of either the highest or
+//     lowest awards are equal, only two (2) of each will be
+//     cancelled"). Drives the "drop rate" + hi/lo asymmetry metrics
 //     (see WA Article 8.4.9, referee may remove a judge whose
 //     judgement is unsatisfactory; a persistent hi-bias dropping
 //     pattern is the kind of thing the WA judges programme
@@ -184,7 +201,7 @@ const JUDGE_PER_DIVE = `
     s.round_number,
     s.judge_id,
     s.score::numeric                       AS my_score,
-    e.created_at,
+    ${EVENT_DATE}                          AS created_at,
     e.event_type::text                     AS event_type,
     e.number_of_judges                     AS panel_size,
     e.height                               AS event_height,
@@ -236,23 +253,22 @@ const JUDGE_PER_DIVE = `
        For 7-judge: drop_count = 2 → 2 highest + 2 lowest dropped.
        For 5-judge: drop_count = 1 → 1 highest + 1 lowest dropped.
        For 3-judge: drop_count = 0 → no scores dropped.
+       Nothing is flagged until more than 2 × drop_count marks are in,
+       the same point where panel_kept_mean starts trimming.
        Synchro panels (9, 11) are excluded from this signal,
        see the file header. */
     CASE
       WHEN e.event_type::text = 'synchro_pair' THEN NULL
-      WHEN s.score >= panel.high_threshold THEN TRUE
-      WHEN s.score <= panel.low_threshold  THEN TRUE
-      ELSE FALSE
+      ELSE panel.trims AND (panel.my_pos <= panel.drop_count
+                            OR panel.my_pos > panel.n - panel.drop_count)
     END                                    AS is_dropped,
     CASE
       WHEN e.event_type::text = 'synchro_pair' THEN NULL
-      WHEN s.score >= panel.high_threshold THEN TRUE
-      ELSE FALSE
+      ELSE panel.trims AND panel.my_pos > panel.n - panel.drop_count
     END                                    AS is_dropped_high,
     CASE
       WHEN e.event_type::text = 'synchro_pair' THEN NULL
-      WHEN s.score <= panel.low_threshold  THEN TRUE
-      ELSE FALSE
+      ELSE panel.trims AND panel.my_pos <= panel.drop_count
     END                                    AS is_dropped_low
   FROM scores s
   JOIN events e ON e.id = s.event_id
@@ -266,21 +282,21 @@ const JUDGE_PER_DIVE = `
   LEFT JOIN organisations co ON co.id = cu.org_id
   LEFT JOIN clubs cl ON cl.id = cu.club_id
   /* Panel-level rollup for the same (event, competitor, round).
-     We compute the trim thresholds from the sorted panel scores:
        drop_count = 2 for 7-judge, 1 for 5-judge, 3 for 11-judge,
                     2 for 9-judge, 0 otherwise.
-     low_threshold  = the (drop_count)th lowest score
-     high_threshold = the (drop_count)th highest score
-     A judge whose score is <= low_threshold sits on the dropped
-     low end; >= high_threshold on the dropped high end. Ties
-     break against the judge, same behaviour as the live trim,
-     which drops "the lowest k by sorted order regardless of
-     duplicates". This means a 3-way tie at the bottom drops all
-     three, which over-reports drops on rare tie cases (fine for
-     analytics); the trim function in init.sql does the same. */
+     Drops go by position in the sorted panel, not by value: the k
+     lowest positions and the k highest, ordered by score and then
+     judge number, which is the order the live trim and the
+     scoreboard's chips use (useScoreTrim's dropEndsByJudgeNumber).
+     This used to compare each mark against the k-th lowest and k-th
+     highest values, which flags every judge sitting on a tied
+     boundary. With half-point marks that's most dives, not a rare
+     case: a unanimous panel had all of its judges flagged high AND
+     low, and a judge who scored with the panel showed a drop rate
+     near 100%. my_pos is this judge's position; n the marks in. */
   LEFT JOIN LATERAL (
     SELECT
-      array_agg(s2.score ORDER BY s2.score)::numeric[] AS panel_scores,
+      array_agg(p.score ORDER BY p.score)::numeric[] AS panel_scores,
       /* drop_count by panel size (Article 9.1.5.1-9.1.5.2 / calc_dive_points). */
       CASE
         WHEN e.number_of_judges = 5  THEN 1
@@ -289,45 +305,30 @@ const JUDGE_PER_DIVE = `
         WHEN e.number_of_judges = 11 THEN 3
         ELSE 0
       END AS drop_count,
-      /* low_threshold = the score at index (drop_count) when
-         sorted ascending. For drop_count = 0 we pick a sentinel
-         below the score range (-1) so no row is flagged. */
-      COALESCE(
-        (array_agg(s2.score ORDER BY s2.score))[
-          (CASE
-            WHEN e.number_of_judges = 5  THEN 1
-            WHEN e.number_of_judges = 7  THEN 2
-            WHEN e.number_of_judges = 9  THEN 2
-            WHEN e.number_of_judges = 11 THEN 3
-            ELSE 0
-          END)
-        ],
-        -1
-      ) AS low_threshold,
-      /* high_threshold = the score at index (count - drop_count + 1)
-         when sorted ascending. Sentinel 11 above the range when
-         drop_count = 0. */
-      COALESCE(
-        (array_agg(s2.score ORDER BY s2.score))[
-          (COUNT(*)::int - (CASE
-            WHEN e.number_of_judges = 5  THEN 1
-            WHEN e.number_of_judges = 7  THEN 2
-            WHEN e.number_of_judges = 9  THEN 2
-            WHEN e.number_of_judges = 11 THEN 3
-            ELSE 0
-          END) + 1)
-        ],
-        11
-      ) AS high_threshold
-    FROM scores s2
-    WHERE s2.event_id      = s.event_id
-      AND s2.competitor_id = s.competitor_id
-      AND s2.round_number  = s.round_number
+      COUNT(*)::int AS n,
+      MAX(p.pos) FILTER (WHERE p.judge_id = s.judge_id) AS my_pos,
+      COUNT(*) > 2 * (CASE
+        WHEN e.number_of_judges = 5  THEN 1
+        WHEN e.number_of_judges = 7  THEN 2
+        WHEN e.number_of_judges = 9  THEN 2
+        WHEN e.number_of_judges = 11 THEN 3
+        ELSE 0
+      END) AS trims
+    FROM (
+      SELECT s2.judge_id, s2.score,
+             ROW_NUMBER() OVER (
+               ORDER BY s2.score, ej2.judge_number NULLS LAST, s2.judge_id
+             ) AS pos
+      FROM scores s2
+      LEFT JOIN event_judges ej2
+        ON ej2.event_id = s2.event_id AND ej2.judge_id = s2.judge_id
+      WHERE s2.event_id      = s.event_id
+        AND s2.competitor_id = s.competitor_id
+        AND s2.round_number  = s.round_number
+    ) p
   ) panel ON TRUE
   WHERE s.judge_id = $1
-    AND COALESCE(e.is_rehearsal, FALSE) = FALSE
-    AND ($2::date IS NULL OR e.created_at >= $2::date)
-    AND ($3::date IS NULL OR e.created_at <  $3::date + INTERVAL '1 day')
+    AND COALESCE(e.is_rehearsal, FALSE) = FALSE${EVENT_DATE_FILTER}
 `;
 
-module.exports = { PER_DIVE, FULL_FIELD_RANKING, JUDGE_PER_DIVE };
+module.exports = { EVENT_DATE, EVENT_DATE_FILTER, PER_DIVE, FULL_FIELD_RANKING, JUDGE_PER_DIVE };

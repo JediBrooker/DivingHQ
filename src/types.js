@@ -283,7 +283,7 @@
  * @property {number}      best_total
  * @property {string}      event_name
  * @property {string}      event_id
- * @property {string}      created_at  ISO timestamp
+ * @property {string}      created_at  ISO timestamp of when the event took place (its scheduled_at, else its meet's start date, else when it was created; db/queries.js EVENT_DATE)
  * @property {number}      attempts
  */
 
@@ -294,7 +294,7 @@
  * @property {string}        [height]
  * @property {string}        [gender]
  * @property {string}        status        'pending' | 'live' | 'completed'
- * @property {string}        created_at    ISO
+ * @property {string}        created_at    ISO, when the event took place (see PersonalBest.created_at)
  * @property {string}        event_type    'individual' | 'synchro_pair' | 'team'
  * @property {number}        total_score
  * @property {number}        final_rank
@@ -325,9 +325,9 @@
  * @typedef {Object} RecentFormRow
  * @property {string}      event_id
  * @property {string}      event_name
- * @property {string}      created_at
+ * @property {string}      created_at  when the event took place (see PersonalBest.created_at)
  * @property {number}      total
- * @property {number}      rank        Diver's finishing place in this meet.
+ * @property {number}      rank        Diver's finishing place in this meet. Equal totals share a place (WA Art 4.1.5).
  * @property {number}      field_size  Total competitors in the meet.
  * @property {RecentFormDive[]} [dives] Per-dive breakdown for the click-to-expand panel.
  */
@@ -428,7 +428,7 @@
 
 /**
  * @typedef {Object} YearOverYearRow
- * @property {number}      year
+ * @property {number}      year        the year the events took place (db/queries.js EVENT_DATE)
  * @property {number}      meets
  * @property {number|null} avg_meet_total
  * @property {number|null} best_meet_total

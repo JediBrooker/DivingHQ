@@ -3,12 +3,17 @@
 # Deploy script. Run from the box hosting the live service.
 #
 # Order is intentional:
-#   pull → install → build → migrate → test → restart → health-check
+#   pull → install → build → migrate → test → swap → restart → health-check
 #   (then the background i18n auto-translate, step 8)
 #
 #   * Build runs BEFORE migrate so a code-side failure (broken
 #     syntax, TDZ, missing import, build error) surfaces before we
-#     touch the DB.
+#     touch the DB. It builds into dist.next/, not dist/: the running
+#     server reads dist/ on every request, so building in place handed
+#     the old process the new SPA (and deleted the chunks open tabs
+#     needed) for the whole migrate + test window, and for good when a
+#     later step stopped the deploy. scripts/swap-dist.sh moves it into
+#     place right before the restart.
 #   * Tests run AFTER migrate, because new code usually queries the
 #     columns its own migration adds (step 4 has the details).
 #   * Migrate runs BEFORE restart so the new code starts against
@@ -51,7 +56,7 @@ cd "$(dirname "$0")"
 # Adjust these to match your environment.
 PM2_PROCESS_NAME="dive-recorder"
 HEALTH_URL="http://127.0.0.1:3000/api/health"
-HEALTH_TIMEOUT_S=10            # max time to wait for the service to come up
+HEALTH_TIMEOUT_S="${HEALTH_TIMEOUT_S:-10}"   # max time to wait for the service to come up
 
 # ---- Args -----------------------------------------------------
 SKIP_TESTS=0
@@ -61,6 +66,10 @@ ALLOW_BREAKING=0
 # Set when this run applied a migration the previous code can't run
 # against, which changes what a failed health check should tell you.
 BREAKING_APPLIED=0
+# Set when this run swapped a new SPA into dist/. Only then is dist.prev/
+# the build that matches PREV_SHA; after a plain restart it's some older
+# deploy's, and the rollback hint mustn't tell anyone to put it live.
+SWAPPED_DIST=0
 for arg in "$@"; do
   case "$arg" in
     --skip-tests) SKIP_TESTS=1 ;;
@@ -86,6 +95,9 @@ run()  {
     "$@"
   fi
 }
+# Stamps a finished build with the commit it came from, so a later run
+# can tell whether a leftover dist.next/ matches what it's restarting.
+record_build_sha() { git rev-parse HEAD > dist.next/.build-sha; }
 
 # ---- Preflight ------------------------------------------------
 # Capture the current commit so a rollback is one git command.
@@ -165,8 +177,13 @@ if [[ $NOOP -eq 0 ]]; then
   # the build process won't actually use it all unless the bundle
   # keeps growing. Override via NODE_OPTIONS in the shell env if
   # you want a different cap.
-  step "npm run build"
-  run env NODE_OPTIONS="${NODE_OPTIONS:---max-old-space-size=4096}" npm run build
+  #
+  # Into dist.next/, see the note at the top. A leftover from a deploy
+  # that stopped part way is thrown away first.
+  step "npm run build (into dist.next/)"
+  run rm -rf dist.next
+  run env NODE_OPTIONS="${NODE_OPTIONS:---max-old-space-size=4096}" npm run build -- --outDir dist.next
+  run record_build_sha
 
   # ---- 4. Apply pending migrations ----------------------------
   # --dry first so the deploy log shows exactly what's about to
@@ -244,7 +261,26 @@ if [[ $NOOP -eq 0 ]]; then
   fi
 fi
 
-# ---- 6. Restart service ---------------------------------------
+# ---- 6. Swap in the new SPA, restart service -------------------
+# The new build goes live here and not earlier, and then only because
+# migrate and the tests passed. The old process serves it for the second
+# or so until the restart below, which is fine: the new API is about to
+# be there.
+#
+# A no-op run (nothing new pulled) can still find a dist.next/ that a
+# stopped run built from this very commit. The restart below boots that
+# commit's server code, so its SPA goes in with it rather than leaving
+# the older one next to the newer API.
+if [[ $NOOP -eq 0 ]]; then
+  step "swap dist.next/ into dist/"
+  run scripts/swap-dist.sh
+  SWAPPED_DIST=1
+elif [[ -f dist.next/.build-sha && "$(cat dist.next/.build-sha)" == "$(git rev-parse HEAD)" ]]; then
+  step "swap dist.next/ (built from $(git rev-parse --short HEAD) by an earlier run) into dist/"
+  run scripts/swap-dist.sh
+  SWAPPED_DIST=1
+fi
+
 # Named process, not "all", so other PM2 processes on this box
 # (cron workers, side services) aren't disturbed.
 #
@@ -295,9 +331,15 @@ while true; do
     if [[ $BREAKING_APPLIED -eq 1 ]]; then
       echo "[deploy] Do NOT roll back to ${PREV_SHA}: this run applied a migration that code"
       echo "[deploy] can't run against (scripts/migration-compat.js). Fix forward and restart."
-    else
-      echo "[deploy] To roll back: git reset --hard ${PREV_SHA} && pm2 restart ${PM2_PROCESS_NAME}"
+    elif [[ $SWAPPED_DIST -eq 1 ]]; then
+      echo "[deploy] To roll back: git reset --hard ${PREV_SHA} && rm -rf dist && mv dist.prev dist && pm2 restart ${PM2_PROCESS_NAME}"
+      echo "[deploy] (dist.prev/ is the SPA that was live before this run; its .build-sha says which commit.)"
       echo "[deploy] (note: the migrations applied in this run are additive and safe to leave)."
+    else
+      # Plain restart, dist/ wasn't touched: it already matches the code,
+      # and dist.prev/ belongs to an older deploy.
+      echo "[deploy] To roll back: git reset --hard ${PREV_SHA} && pm2 restart ${PM2_PROCESS_NAME}"
+      echo "[deploy] (dist/ was left as it was; don't restore dist.prev/, it's from an earlier deploy.)"
     fi
     exit 1
   fi

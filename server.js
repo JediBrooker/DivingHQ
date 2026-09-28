@@ -103,11 +103,9 @@ app.use(metrics.httpMetricsMiddleware);
 //   * req.ip is the proxy address, not the real client.
 // `1` trusts ONE hop, which is exactly what we want behind a single
 // edge proxy. Override via TRUST_PROXY env if you need more hops
-// (or set to 'false' for a no-proxy setup).
-const TRUST_PROXY = process.env.TRUST_PROXY ?? "1";
-app.set("trust proxy", TRUST_PROXY === "false" ? false
-  : /^\d+$/.test(TRUST_PROXY) ? Number(TRUST_PROXY)
-  : TRUST_PROXY);
+// (or set to 'false' for a no-proxy setup). lib/trust-proxy.js reads it
+// for the socket layer too, so the two agree on what a client's IP is.
+app.set("trust proxy", require("./lib/trust-proxy").expressTrustProxy());
 
 const server = http.createServer(app);
 // credentials: true so the browser sends the httpOnly session cookie
@@ -204,12 +202,59 @@ const skipWhenDisabled = () => RATE_LIMIT_DISABLED;
 // 20 requests / 15 min / IP for auth + password flows. Tight enough
 // to slow brute-force, loose enough that a real user fat-fingering
 // their password a couple of times isn't locked out.
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  limit: 20,
-  message: { error: "Too many attempts, please try again in 15 minutes." },
-  skip: skipWhenDisabled,
-});
+//
+// One bucket per flow, not one for the lot. It used to be a single
+// instance counting every sign-in, successful or not, together with
+// registration, verification and password resets. On meet morning the
+// judges, referee, operators and coaches all sign in from the venue
+// wifi (one NAT address, and 8h tokens mean more sign-ins mid-day), so
+// the 21st official got "Too many attempts" and couldn't reach the
+// keypad. Now a successful sign-in doesn't count at all; failed ones
+// still do, which is the brute force this is for. The other flows keep
+// counting every request (skipping successes there would make signup and
+// verification-email spam free) but in buckets of their own, so a burst
+// in one can't lock people out of another.
+function createAuthLimiter({ skipSuccessfulRequests = false } = {}) {
+  return rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 20,
+    message: { error: "Too many attempts, please try again in 15 minutes." },
+    skip: skipWhenDisabled,
+    skipSuccessfulRequests,
+  });
+}
+// routes/auth.js mounts `authLimiter` on each of these. A path this map
+// doesn't know about still gets limited, in a bucket of its own.
+const AUTH_FLOW_OF = {
+  "/api/auth/login": "login",
+  "/api/auth/login/totp": "login",
+  "/api/auth/register": "register",
+  "/api/auth/register-org": "register",
+  "/api/auth/verify-email": "verify",
+  "/api/auth/resend-verification": "verify",
+  "/api/auth/forgot-password": "password",
+  "/api/auth/reset-password": "password",
+  "/api/users/me/email/change-request": "email",
+  "/api/auth/confirm-email-change": "email",
+  "/api/auth/2fa/confirm": "twofa",
+  "/api/auth/2fa/disable": "twofa",
+};
+const authLimiters = {
+  login: createAuthLimiter({ skipSuccessfulRequests: true }),
+  register: createAuthLimiter(),
+  verify: createAuthLimiter(),
+  password: createAuthLimiter(),
+  email: createAuthLimiter(),
+  twofa: createAuthLimiter(),
+  other: createAuthLimiter(),
+};
+// Express routing ignores case and a trailing slash, so /API/auth/Login/
+// reaches the login handler too. Look the bucket up the same way, or each
+// spelling of the URL would buy a guesser a fresh budget in "other".
+function authLimiter(req, res, next) {
+  const p = req.path.toLowerCase().replace(/\/+$/, "");
+  return authLimiters[AUTH_FLOW_OF[p] || "other"](req, res, next);
+}
 
 // Heavier limiter for the bulk-write endpoints (CSV roster import,
 // dive-list submission). Mostly to prevent a logged-in but malicious
@@ -223,21 +268,44 @@ const bulkWriteLimiter = rateLimit({
   skip: skipWhenDisabled,
 });
 
-// Export-class endpoints (PDF program / results, results.csv,
-// archive listing, OG-card render). These are anonymous-readable
-// and individually expensive (PDFKit, sharp, multi-CTE aggregates),
-// so without a limiter a single anonymous client can saturate the
-// event loop with a few dozen RPS. Per-IP cap is intentionally
-// generous so a federation kiosk legitimately downloading every
-// program in the lobby still works.
-const exportLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  limit: 30,
-  standardHeaders: "draft-7",
-  legacyHeaders: false,
-  message: { error: "Too many export requests, please try again shortly." },
-  skip: skipWhenDisabled,
-});
+// Export-class endpoints (PDF program / results, results.csv, the
+// archive recap, OG-card render). These are anonymous-readable and
+// individually expensive (PDFKit, sharp, multi-CTE aggregates), so
+// without a limiter a single anonymous client can saturate the event
+// loop with a few dozen RPS. Per-IP cap is intentionally generous so a
+// federation kiosk legitimately downloading every program in the lobby
+// still works.
+//
+// A fresh one per router, like createSearchLimiter below. It used to be
+// one instance shared by the archive, PDF, judge-ranking and public
+// profile routers, so 30 requests a minute from a venue's one public IP
+// across all four ran every one of them out, and the archive listing is
+// on every scoreboard page load.
+function createExportLimiter({ limit = 30 } = {}) {
+  return rateLimit({
+    windowMs: 60 * 1000,
+    limit,
+    standardHeaders: "draft-7",
+    legacyHeaders: false,
+    message: { error: "Too many export requests, please try again shortly." },
+    skip: skipWhenDisabled,
+  });
+}
+
+// The archive listing (/api/archive, /api/archive/clubs) is served from
+// a 60s cache (lib/archive-cache.js) and every scoreboard visitor loads
+// it, so it's nowhere near export-class. It still gets a ceiling, since
+// a paged request (?limit/?before) skips the cache.
+function createListingLimiter() {
+  return rateLimit({
+    windowMs: 60 * 1000,
+    limit: 300,
+    standardHeaders: "draft-7",
+    legacyHeaders: false,
+    message: { error: "Too many requests, please try again shortly." },
+    skip: skipWhenDisabled,
+  });
+}
 
 // Every limiter below is mounted through limitRoutes() so it only
 // counts requests for the router it guards. A bare app.use(limiter,
@@ -323,9 +391,15 @@ for (const [file, type] of [["robots.txt", "text/plain"], ["sitemap.xml", "appli
 // name, so a URL there never changes what it points at. Browsers and the
 // Cloudflare edge can keep those for a year without asking again. The
 // rest of dist/ (index.html, sw.js, the manifest, icons) isn't hashed and
-// keeps the default max-age=0 revalidation. A name that isn't on disk
-// falls through to the next mount and then the SPA fallback, as before.
-app.use("/assets", express.static(path.join(__dirname, "dist", "assets"), { immutable: true, maxAge: "1y" }));
+// keeps the default max-age=0 revalidation.
+//
+// A name that isn't on disk is a 404 right here (fallthrough: false hands
+// it to the error handler at the bottom). It used to fall through to the
+// SPA fallback and come back as index.html with a 200: a tab still on the
+// previous build lazy-loading its old ManagerView-<hash>.js got a MIME
+// error instead of a clean failure, and the service worker cached the
+// HTML under the .js URL for good.
+app.use("/assets", express.static(path.join(__dirname, "dist", "assets"), { immutable: true, maxAge: "1y", fallthrough: false }));
 app.use(express.static(path.join(__dirname, 'dist')))
 
 // [SECTION: DB POOL & JWT_SECRET]
@@ -461,6 +535,7 @@ const {
   isInSameOrg,
   socketRequireRole,
   socketCanManageEvent,
+  socketMaintenanceBlocked,
   isValidScore,
   parseDateRange,
   bumpTokenVersion,
@@ -502,7 +577,9 @@ const requireMeetOrClubEditor = [
 // Global read-only lockdown. While the flag is on, any state-changing
 // request from a non-sysadmin is refused, but reads, the scoreboard, admin
 // sign-in, and the Stripe webhook stay live. Mounted here so it fronts every
-// router below; the socket side is gated in socketRequireRole (lib/middleware).
+// router below; the socket side is gated in lib/middleware too
+// (socketMaintenanceBlocked, which socketCanManageEvent and the judge's
+// submit_score both ask).
 //
 // Reads are the overwhelming majority of traffic, so the fast path is a
 // method + flag check before we spend anything decoding a token.
@@ -1281,6 +1358,7 @@ require("./routes/socket")({
   JWT_SECRET,
   socketRequireRole,
   socketCanManageEvent,
+  socketMaintenanceBlocked,
   isValidScore,
   isTokenVersionCurrent,
   checkAndApplyRecords,
@@ -1325,7 +1403,14 @@ setInterval(() => {
 // /api/archive, /api/archive/clubs, /api/archive/:eventId/results
 // extracted into routes/archive.js.
 // =============================================================
-app.use(limitRoutes(exportLimiter, require("./routes/archive")({ pool, readPool })));
+// The recap (/api/archive/:eventId/results) is uncached but spectators
+// open it straight from the scoreboard, so it gets more room than a PDF.
+app.use(limitRoutes(createExportLimiter({ limit: 120 }), require("./routes/archive")({ pool, readPool }), {
+  overrides: {
+    "/api/archive": createListingLimiter(),
+    "/api/archive/clubs": createListingLimiter(),
+  },
+}));
 
 // DiveRecorder mined archive (dr_* tables): public, read-only
 // browse of historical results imported from diverecorder.co.uk.
@@ -1334,18 +1419,20 @@ app.use(limitRoutes(exportLimiter, require("./routes/archive")({ pool, readPool 
 app.use(limitRoutes(createSearchLimiter(), require("./routes/dr-archive")({ pool, readPool, requireSystemAdmin })));
 
 // Optional scheduled DiveRecorder incremental sync. Off by default;
-// set DR_IMPORT_SYNC_HOURS=24 (or any positive number) to pull newly
-// published meets on that cadence. onlyNew mode keeps each run cheap.
-// Uses the same single-flight runner as the sysadmin "import now"
-// button, so a manual run and the schedule never overlap.
+// set DR_IMPORT_SYNC_HOURS=24 (or any positive number, a month is fine)
+// to pull newly published meets on that cadence. onlyNew mode keeps each
+// run cheap. Uses the same single-flight runner as the sysadmin "import
+// now" button, so a manual run and the schedule never overlap.
+// repeatEvery rather than setInterval, which turns anything over ~596
+// hours into a 1 ms loop.
 {
   const syncHours = Number(process.env.DR_IMPORT_SYNC_HOURS || 0);
   if (syncHours > 0) {
-    const { startImport } = require("./lib/diverecorder-import-runner");
+    const { startImport, repeatEvery } = require("./lib/diverecorder-import-runner");
     logger.info({ syncHours }, "DiveRecorder scheduled sync enabled");
-    setInterval(() => {
+    repeatEvery(syncHours * 60 * 60 * 1000, () => {
       startImport(pool, { onlyNew: true, trigger: "schedule" });
-    }, syncHours * 60 * 60 * 1000).unref();
+    });
   }
 }
 
@@ -1357,7 +1444,7 @@ app.use(limitRoutes(createSearchLimiter(), require("./routes/dr-archive")({ pool
 // the local csvCell / csvRow helpers and the World Aquatics trim
 // annotation used by the score sheet.
 // =============================================================
-app.use(limitRoutes(exportLimiter, require("./routes/pdf")({ pool })));
+app.use(limitRoutes(createExportLimiter(), require("./routes/pdf")({ pool })));
 
 // =============================================================
 // JUDGE RANKING ANALYSIS
@@ -1368,7 +1455,7 @@ app.use(limitRoutes(exportLimiter, require("./routes/pdf")({ pool })));
 // + PDF exports for federation reporting. See routes/judge-
 // ranking.js for the rationale (public read; v1 individual only).
 // =============================================================
-app.use(limitRoutes(exportLimiter, require("./routes/judge-ranking")({ pool })));
+app.use(limitRoutes(createExportLimiter(), require("./routes/judge-ranking")({ pool })));
 
 // =============================================================
 // PUBLIC DIVER PROFILE
@@ -1378,7 +1465,7 @@ app.use(limitRoutes(exportLimiter, require("./routes/judge-ranking")({ pool })))
 // SPA fall-through for browsers). Mounted BEFORE the SPA static
 // fallback so the crawler path can next() into it.
 // =============================================================
-app.use(limitRoutes(exportLimiter, require("./routes/public-profile")({ pool, readPool })));
+app.use(limitRoutes(createExportLimiter(), require("./routes/public-profile")({ pool, readPool })));
 
 // =============================================================
 // SPA FALLBACK (must come after all API routes)
@@ -1398,6 +1485,8 @@ app.use((req, res, next) => {
   if (req.method !== 'GET') return next();
   if (req.path.startsWith('/api/')) return next();
   if (req.path.startsWith('/socket.io/')) return next();
+  // Build output never gets the shell; see the /assets mount above.
+  if (req.path.startsWith('/assets/')) return next();
   sendSpaShell(req, res, next);
 });
 
@@ -1410,14 +1499,55 @@ app.use((req, res) => {
   res.status(404).send('Not found');
 });
 
+// Last stop for anything passed to next(err): the JSON body parser's 400
+// (malformed JSON) and 413 (over the 256kb limit), a failed read of the
+// SPA shell, an async route handler that rejected (Express 5 forwards
+// those). Without this they fell through to Express's own handler, which
+// answers with an HTML error page (not the { error } the SPA and API
+// clients read) and prints a full stack trace for every junk request.
+// A client's mistake is one warn line; a real failure is logged in full.
+const { t: serverT } = require("./lib/server-i18n");
+app.use((err, req, res, next) => {
+  const raw = Number(err.status || err.statusCode);
+  const status = raw >= 400 && raw < 600 ? raw : 500;
+  if (status >= 500) {
+    logger.error({ err, method: req.method, path: req.path }, "request failed");
+  } else {
+    logger.warn({ status, method: req.method, path: req.path, reason: err.type || err.message }, "request refused");
+  }
+  // Headers already out: all Express can do is drop the connection, and
+  // its default handler knows how.
+  if (res.headersSent) return next(err);
+  const code = err.type === "entity.parse.failed" ? "bad_json"
+    : err.type === "entity.too.large" ? "body_too_large"
+    : undefined;
+  const message = status >= 500 ? serverT(req, "errors.server_error")
+    : status === 404 ? serverT(req, "errors.not_found")
+    : serverT(req, "errors.validation_failed");
+  if (req.path.startsWith("/api/") || req.path.startsWith("/webhooks/")) {
+    return res.status(status).json({ error: message, ...(code ? { code } : {}) });
+  }
+  res.status(status).type("text").send(message);
+});
+
 // =============================================================
 // START
 // =============================================================
 
-// Runs once before listen(): load the feature flags (fatal if it
-// can't), refuse a production box still on the default admin
-// password (fatal), then the best-effort bits that only warn on
-// failure: log the schema version, snapshot and purge the audit logs.
+// Boot runs in two halves around listen().
+//
+// bootChecks() is awaited BEFORE the port opens: the feature flags
+// (fatal if unreadable), the default-admin refusal (fatal), and the
+// live-state rehydrate. It used to run inside the listen callback,
+// unawaited, so the first requests after a restart were served with
+// every flag reading off (maintenance and signups included) and a
+// Control Room socket that reconnected in that window got no active
+// diver. Worse, a set_active_diver landing then was overwritten by the
+// pre-restart row when init() caught up.
+//
+// startBackgroundJobs() runs once we're listening: the sweepers, the
+// schema-version log line and the audit snapshot + purge, none of which
+// a request depends on.
 async function bootChecks() {
   // Pull the feature flags into memory before we take a single request.
   // This is NOT best-effort. Serving with a guessed flag state is how you
@@ -1478,7 +1608,9 @@ async function bootChecks() {
   } catch (err) {
     logger.warn({ err: err.message }, "live-state rehydrate failed");
   }
+}
 
+function startBackgroundJobs() {
   // Start the idempotency-keys TTL sweeper (migration 054).
   // Background interval inside this Node process; deletes rows
   // older than 72 hours every hour. Safe to call before any
@@ -1516,87 +1648,25 @@ async function bootChecks() {
       logger.warn({ err: err.message }, "auto-withdraw sweeper start failed");
     }
   }
-  try {
-    const v = await pool.query("SELECT version, applied_at FROM schema_meta WHERE id = 1");
-    if (v.rows[0]) {
-      logger.info(
-        { schema_version: v.rows[0].version, applied_at: v.rows[0].applied_at },
-        "schema_meta loaded",
-      );
-    } else {
-      logger.warn("schema_meta has no rows — run migration 008");
-    }
-  } catch (err) {
-    logger.warn({ err: err.message }, "couldn't read schema_meta");
-  }
-  // Snapshot the past 24 h of audit rows to AUDIT_SNAPSHOT_DIR
-  // BEFORE the purge runs, so legal-retention archives outlive
-  // the 30-day DB window. No-op when AUDIT_SNAPSHOT_DIR isn't
-  // set (dev / single-node deployments don't need it).
-  if (process.env.AUDIT_SNAPSHOT_DIR) {
-    try {
-      await snapshotAuditTables();
-    } catch (err) {
-      logger.warn(
-        { err: err.message },
-        "audit snapshot failed; purge will continue",
-      );
-    }
-  }
-  try {
-    const purge = await pool.query("SELECT * FROM purge_audit_logs(30)");
-    const total = purge.rows.reduce((sum, r) => sum + Number(r.deleted_rows), 0);
-    if (total > 0) logger.info({ deleted_rows: total }, "purged audit log");
-  } catch (err) {
-    logger.warn({ err: err.message }, "purge_audit_logs failed (run migration 008?)");
-  }
-}
-
-// Writes the 24 h of audit rows before now to JSONL files in
-// AUDIT_SNAPSHOT_DIR (one file per table per day). Only called from
-// bootChecks, before the purge, so it runs once per server start
-// rather than on a timer. The operator is expected to push the dir to
-// S3 / off-site backup via a separate cron / systemd job.
-async function snapshotAuditTables() {
-  const fs = require("node:fs");
-  const path = require("node:path");
-  const dir = process.env.AUDIT_SNAPSHOT_DIR;
-  if (!dir) return;
-  fs.mkdirSync(dir, { recursive: true });
-  const stamp = new Date().toISOString().slice(0, 10);
-  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-
-  for (const [table, file] of [
-    ["score_audit_log", `score_audit_${stamp}.jsonl`],
-    ["role_audit_log",  `role_audit_${stamp}.jsonl`],
-    ["audit_log",       `audit_${stamp}.jsonl`],
-  ]) {
-    try {
-      const r = await pool.query(
-        `SELECT * FROM ${table} WHERE created_at >= $1 ORDER BY created_at`,
-        [since],
-      );
-      const out = path.join(dir, file);
-      // Append mode so multiple snapshots in the same day
-      // accumulate rather than overwrite, dedupe is the
-      // operator's problem if they run this manually.
-      const stream = fs.createWriteStream(out, { flags: "a" });
-      for (const row of r.rows) {
-        stream.write(JSON.stringify(row) + "\n");
-      }
-      stream.end();
-      if (r.rows.length) {
+  pool.query("SELECT version, applied_at FROM schema_meta WHERE id = 1")
+    .then((v) => {
+      if (v.rows[0]) {
         logger.info(
-          { table, file, rows: r.rows.length },
-          "audit snapshot written",
+          { schema_version: v.rows[0].version, applied_at: v.rows[0].applied_at },
+          "schema_meta loaded",
         );
+      } else {
+        logger.warn("schema_meta has no rows — run migration 008");
       }
-    } catch (err) {
-      logger.warn(
-        { table, err: err.message },
-        "audit snapshot failed for one table; continuing",
-      );
-    }
+    })
+    .catch((err) => logger.warn({ err: err.message }, "couldn't read schema_meta"));
+  // Audit retention: snapshot the audit tables to AUDIT_SNAPSHOT_DIR (when
+  // set) and then purge rows past 30 days. Now and daily after that, see
+  // lib/audit-snapshot.js.
+  try {
+    require("./lib/audit-snapshot")({ pool, logger }).start();
+  } catch (err) {
+    logger.warn({ err: err.message }, "audit retention job start failed");
   }
 }
 
@@ -1609,30 +1679,53 @@ const PORT = process.env.PORT || 3000;
 // the app + server so the test can drive it without a side-effect
 // listener that the process never closes.
 if (require.main === module) {
-  server.listen(PORT, () => {
-    logger.info({ port: PORT }, "diving app started");
-    bootChecks();
+  // Belt and braces for async code nobody awaits. socket.io ignores the
+  // promise an async handler returns, so a throw outside a handler's own
+  // try lands here, and Node's default for an unhandled rejection is to
+  // exit: one bad packet (or one DB blip) and every live meet on the box
+  // loses its sockets. Log it and keep serving. uncaughtException still
+  // exits, that's a genuinely broken process.
+  process.on("unhandledRejection", (reason) => {
+    logger.error(
+      { err: reason instanceof Error ? reason : { message: String(reason) } },
+      "unhandled promise rejection, still serving",
+    );
+  });
+
+  // Nothing listens until the flags and live state are in memory, see
+  // bootChecks(). A fatal check exits from inside it.
+  bootChecks().then(() => {
+    // A SIGTERM that landed mid-boot is already tearing things down.
+    if (shuttingDown) return;
+    server.listen(PORT, () => {
+      logger.info({ port: PORT }, "diving app started");
+      startBackgroundJobs();
+    });
   });
 
   // -------- Graceful shutdown --------
-  // SIGTERM (deploy script / Docker / pm2 reload) and SIGINT
+  // SIGTERM (deploy script / Docker / pm2 restart) and SIGINT
   // (Ctrl-C in dev) drop us here. Without trapping these, Node
   // exits the process while in-flight HTTP requests are still
   // running, sockets get yanked without a `disconnect` event,
   // and the pg pool's open connections become Postgres zombies
   // for a few seconds. With this handler:
   //
-  //   1. Stop accepting new connections (server.close stops
-  //      .listen but lets active requests finish).
-  //   2. Close all socket.io connections (io.close drains).
-  //   3. Drain the pg pool (pool.end waits for queries in
-  //      flight).
-  //   4. Exit 0.
+  //   1. io.close() disconnects every socket.io client and then
+  //      closes the HTTP server it's attached to, which stops new
+  //      connections and waits for requests already in flight.
+  //   2. Drain the pg pools (pool.end waits for queries in flight).
+  //   3. Exit 0.
   //
-  // Worth flagging: the 25-second deadline forces an exit if any
-  // of the above hangs, better to bounce loudly than to leave a
-  // half-dead process holding a port. The deploy environment's grace
-  // period (pm2 default 30s, Kubernetes default 30s) matches.
+  // The order matters. This used to await server.close() first, but an
+  // upgraded WebSocket (or a pending long-poll) keeps the HTTP server
+  // open, and during a meet there's always a spectator connected. The
+  // close never finished, the pools were never drained, and the process
+  // sat there until the deadline.
+  //
+  // The deadline sits under ecosystem.config.js's kill_timeout (5s): past
+  // that PM2 SIGKILLs anyway, and it's better we exit on our own terms.
+  const SHUTDOWN_DEADLINE_MS = 4_500;
   let shuttingDown = false;
   async function gracefulShutdown(signal) {
     if (shuttingDown) return;
@@ -1642,30 +1735,28 @@ if (require.main === module) {
     const deadline = setTimeout(() => {
       logger.error("graceful shutdown deadline hit — forcing exit");
       process.exit(1);
-    }, 25_000);
+    }, SHUTDOWN_DEADLINE_MS);
     deadline.unref();
 
     try {
-      // Stop accepting new HTTP, promisified so we await the close.
-      await new Promise((resolve, reject) =>
-        server.close((err) => (err ? reject(err) : resolve())),
-      );
-      logger.info("http server closed");
-      // Detach all socket clients.
-      try {
-        io.close();
-        logger.info("socket.io server closed");
-      } catch (err) {
-        logger.warn({ err: err.message }, "io.close threw; continuing");
+      // Also fine if a signal lands during boot, before listen(): the
+      // server-not-running error is just logged.
+      await new Promise((resolve) => io.close((err) => {
+        if (err) logger.warn({ err: err.message }, "http server close reported an error; continuing");
+        resolve();
+      }));
+      logger.info("socket.io and http server closed");
+      // Drain the pg pools. New queries on them reject immediately after
+      // end() is called. readPool is the same object as pool unless a
+      // replica is configured.
+      for (const p of readPool === pool ? [pool] : [pool, readPool]) {
+        try {
+          await p.end();
+        } catch (err) {
+          logger.warn({ err: err.message }, "pool.end threw; continuing");
+        }
       }
-      // Drain the pg pool. New queries on this pool will reject
-      // immediately after end() is called.
-      try {
-        await pool.end();
-        logger.info("pg pool drained");
-      } catch (err) {
-        logger.warn({ err: err.message }, "pool.end threw; continuing");
-      }
+      logger.info("pg pool drained");
       logger.info("graceful shutdown complete");
       clearTimeout(deadline);
       process.exit(0);

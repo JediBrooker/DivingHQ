@@ -76,7 +76,7 @@ test("limitRoutes refuses a router whose paths it can't see", () => {
 
 test("server.js mounts no limiter bare in front of a router", () => {
   const src = fs.readFileSync(path.join(__dirname, "..", "server.js"), "utf8");
-  const bare = src.match(/app\.use\(\s*(createSearchLimiter\(\)|exportLimiter|bulkWriteLimiter|authLimiter)\s*,/g);
+  const bare = src.match(/app\.use\(\s*(createSearchLimiter\(\)|createExportLimiter\([^)]*\)|createListingLimiter\(\)|bulkWriteLimiter|authLimiter)\s*,/g);
   assert.equal(bare, null, `use limitRoutes() instead: ${bare}`);
 });
 
@@ -87,4 +87,30 @@ test("the public records read is throttled like the other public reads", () => {
   const src = fs.readFileSync(path.join(__dirname, "..", "server.js"), "utf8");
   assert.match(src, /app\.use\(limitRoutes\(createSearchLimiter\(\),\s*recordsRouter\)\)/);
   assert.doesNotMatch(src, /app\.use\(recordsRouter\)/);
+});
+
+test("limitRoutes can give some of a router's paths their own limiter", async () => {
+  const router = express.Router();
+  router.get("/api/list", (_req, res) => res.json({ ok: true }));
+  router.get("/api/heavy/:id", (_req, res) => res.json({ ok: true }));
+  const app = express();
+  app.use(limitRoutes(tinyLimiter(), router, { overrides: { "/api/list": rateLimit({ windowMs: 60_000, limit: 5 }) } }));
+
+  await withApp(app, async (get) => {
+    for (let i = 0; i < 5; i++) assert.equal(await get("/api/list"), 200);
+    assert.equal(await get("/api/list"), 429);
+    // The listing's traffic never touched the heavy route's bucket.
+    assert.equal(await get("/api/heavy/1"), 200);
+    assert.equal(await get("/api/heavy/2"), 200);
+    assert.equal(await get("/api/heavy/3"), 429);
+  });
+});
+
+test("server.js hands every router its own limiter instance", () => {
+  // One limiter object mounted on several routers is one shared bucket:
+  // the archive listing every scoreboard load hits used to spend the same
+  // 30/min as the PDF exports and public profiles. Mount a fresh one.
+  const src = fs.readFileSync(path.join(__dirname, "..", "server.js"), "utf8");
+  const shared = src.match(/limitRoutes\(\s*[A-Za-z_$][\w$]*\s*,/g);
+  assert.equal(shared, null, `pass a freshly created limiter: ${shared}`);
 });

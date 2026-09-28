@@ -187,13 +187,29 @@ function configureSerial(path, baud) {
   }
 }
 
+// Every sink's close() returns a promise that settles once what was sent
+// has actually gone out (or can't), resolving to { undelivered }, the
+// number of frames that never left. --once waits on it before exiting.
+const CLOSE_WAIT_MS = 5000;
+
+// close() can be reached twice (--once, then the error path when that
+// found undelivered frames); the second call gets the first's answer
+// rather than closing a closed socket.
 function createSink(args) {
+  const sink = openSink(args);
+  let closed = null;
+  return { send: (buffer) => sink.send(buffer), close: () => (closed ||= sink.close()) };
+}
+
+function openSink(args) {
   if (args.transport === "stdout") {
     return {
       send(buffer) {
         process.stdout.write(buffer);
       },
-      close() {},
+      close() {
+        return Promise.resolve({ undelivered: 0 });
+      },
     };
   }
 
@@ -203,12 +219,36 @@ function createSink(args) {
       if (args.broadcast) socket.setBroadcast(true);
     });
     socket.bind();
+    // dgram's send() is asynchronous (it waits on the bind and resolves
+    // the host first) and close() drops whatever is still queued. Closing
+    // straight after the one --once send threw the frame away while the
+    // tool reported success. So close() waits for every send's callback.
+    let inFlight = 0;
+    let failed = 0;
+    let whenIdle = null;
     return {
       send(buffer) {
-        socket.send(buffer, args.port, args.host);
+        inFlight += 1;
+        socket.send(buffer, args.port, args.host, (err) => {
+          inFlight -= 1;
+          if (err) {
+            failed += 1;
+            log(args, `UDP send failed: ${err.message}`);
+          }
+          if (inFlight === 0 && whenIdle) whenIdle();
+        });
       },
       close() {
-        socket.close();
+        return new Promise((resolve) => {
+          let done = false;
+          whenIdle = () => {
+            if (done) return;
+            done = true;
+            socket.close(() => resolve({ undelivered: failed + inFlight }));
+          };
+          if (inFlight === 0) whenIdle();
+          else setTimeout(whenIdle, CLOSE_WAIT_MS).unref();
+        });
       },
     };
   }
@@ -217,6 +257,10 @@ function createSink(args) {
     let socket = null;
     let connected = false;
     let retry = null;
+    // Set by close(). A deliberate close isn't a dropped link: the 'close'
+    // handler used to schedule a reconnect after it, which kept a --once
+    // run alive forever.
+    let closing = false;
     const pending = [];
     const connect = () => {
       socket = net.createConnection({ host: args.host, port: args.port });
@@ -224,6 +268,7 @@ function createSink(args) {
         connected = true;
         log(args, `connected to tcp://${args.host}:${args.port}`);
         while (pending.length) socket.write(pending.shift());
+        if (closing) socket.end();
       });
       socket.on("error", (err) => {
         connected = false;
@@ -231,12 +276,11 @@ function createSink(args) {
       });
       socket.on("close", () => {
         connected = false;
-        if (!retry) {
-          retry = setTimeout(() => {
-            retry = null;
-            connect();
-          }, 1000);
-        }
+        if (closing || retry) return;
+        retry = setTimeout(() => {
+          retry = null;
+          connect();
+        }, 1000);
       });
     };
     connect();
@@ -245,9 +289,21 @@ function createSink(args) {
         if (connected) socket.write(buffer);
         else pending.push(Buffer.from(buffer));
       },
+      // Flush and end rather than destroy: a frame still waiting for the
+      // connection goes out once it's up. Gives up after CLOSE_WAIT_MS.
       close() {
-        if (retry) clearTimeout(retry);
-        if (socket) socket.destroy();
+        closing = true;
+        if (retry) {
+          clearTimeout(retry);
+          retry = null;
+        }
+        return new Promise((resolve) => {
+          const finish = () => resolve({ undelivered: pending.length });
+          if (!socket || socket.destroyed) return finish();
+          socket.once("close", finish);
+          if (connected) socket.end();
+          setTimeout(() => socket.destroy(), CLOSE_WAIT_MS).unref();
+        });
       },
     };
   }
@@ -264,7 +320,7 @@ function createSink(args) {
       stream.write(buffer);
     },
     close() {
-      stream.end();
+      return new Promise((resolve) => stream.end(() => resolve({ undelivered: 0 })));
     },
   };
 }
@@ -302,7 +358,10 @@ async function run(args) {
     send(initial, "snapshot");
 
     if (args.once) {
-      sink.close();
+      const { undelivered } = await sink.close();
+      if (undelivered) {
+        throw new Error(`${undelivered} frame(s) not delivered over ${args.transport} to ${args.host}:${args.port}`);
+      }
       return;
     }
 
@@ -337,7 +396,7 @@ async function run(args) {
     process.once("SIGTERM", shutdown);
   } catch (err) {
     if (repeatTimer) clearInterval(repeatTimer);
-    sink.close();
+    await sink.close();
     throw err;
   }
 }

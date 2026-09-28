@@ -1,8 +1,12 @@
 # Dependencies
 node_modules/
 
-# Build output
+# Build output. deploy.sh builds into dist.next/ and keeps the previous
+# build as dist.prev/ (scripts/swap-dist.sh); left untracked they'd trip
+# its dirty-tree check on the next deploy.
 dist/
+dist.next/
+dist.prev/
 *.log
 
 # Playwright e2e artifacts (only when a test fails)
