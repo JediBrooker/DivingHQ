@@ -7955,3 +7955,20 @@ test("a role request left waiting in the federation someone moved out of can't g
     await teardownFixture(Y);
   }
 });
+
+test("an admin profile edit refuses a year-zero birth date with a 400", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const diver = await insertUser({ orgId: st.orgId, role: "diver", username: `int-b3dob-${st.slug}`, fullName: "Old Timer" });
+    for (const dob of ["0000-01-01", "1850-06-01", "2999-01-01"]) {
+      const r = await fetchJson("PUT", `/api/users/${diver}/profile`, { token: st.adminToken, body: { date_of_birth: dob } });
+      assert.equal(r.status, 400, `${dob}: ${JSON.stringify(r.body)}`);
+    }
+    const ok = await fetchJson("PUT", `/api/users/${diver}/profile`, { token: st.adminToken, body: { date_of_birth: "2012-02-29" } });
+    assert.equal(ok.status, 200, JSON.stringify(ok.body));
+  } finally {
+    await teardownFixture(st);
+  }
+});

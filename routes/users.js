@@ -1258,9 +1258,13 @@ module.exports = function createUsersRouter({
         // The shape alone let 2020-02-30 through to Postgres, which
         // refused it and the route answered 500. Round-trip it through a
         // real date so only ones that exist pass.
+        // Year 0000 still got through (JS takes it, Postgres doesn't) and so
+        // did 1066 or 2999, so it has to be a plausible birthday as well:
+        // 1900 on, and not past tomorrow (a day of slack for timezones).
         const parsed = typeof dob === "string" ? new Date(`${dob}T00:00:00Z`) : null;
+        const latest = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
         if (dob && (!/^\d{4}-\d{2}-\d{2}$/.test(String(dob)) || Number.isNaN(parsed.getTime())
-            || parsed.toISOString().slice(0, 10) !== dob))
+            || parsed.toISOString().slice(0, 10) !== dob || dob < "1900-01-01" || dob > latest))
           return res.status(400).json({ error: "Date of birth must be a real date, YYYY-MM-DD" });
         sets.push(`date_of_birth = $${i++}`); vals.push(dob);
       }
