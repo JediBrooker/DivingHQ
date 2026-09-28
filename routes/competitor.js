@@ -175,7 +175,7 @@ module.exports = function createCompetitorRouter({
              FROM competitor_dive_lists cdl
              JOIN events e ON e.id = cdl.event_id
             WHERE cdl.event_id = $1
-              AND cdl.competitor_id = $2
+              AND (cdl.competitor_id = $2 OR cdl.partner_id = $2)
               AND cdl.withdrawn_at IS NULL`,
           [eventId, req.user.id],
         ),
@@ -183,17 +183,21 @@ module.exports = function createCompetitorRouter({
         // directory so the diver portal can pre-fill their
         // existing list (whether they self-submitted earlier
         // or it was inherited from a prior stage).
+        // A synchro pair is one row per round with the second diver in
+        // partner_id, so the partner reads the same list. DISTINCT ON
+        // keeps a round single if old data still has a row each side.
         pool.query(
-          `SELECT cdl.round_number,
+          `SELECT DISTINCT ON (cdl.round_number)
+                  cdl.round_number,
                   cdl.dive_id,
                   d.dive_code, d.position, d.dd, d.description,
                   d.height AS dive_height
              FROM competitor_dive_lists cdl
              LEFT JOIN dive_directory d ON d.id = cdl.dive_id
             WHERE cdl.event_id = $1
-              AND cdl.competitor_id = $2
+              AND (cdl.competitor_id = $2 OR cdl.partner_id = $2)
               AND cdl.withdrawn_at IS NULL
-            ORDER BY cdl.round_number ASC`,
+            ORDER BY cdl.round_number ASC, (cdl.competitor_id = $2) DESC`,
           [eventId, req.user.id],
         ),
       ]);
@@ -221,7 +225,7 @@ module.exports = function createCompetitorRouter({
       const r = await pool.query(
         `UPDATE competitor_dive_lists
             SET confirmed_at = NOW()
-          WHERE event_id = $1 AND competitor_id = $2
+          WHERE event_id = $1 AND (competitor_id = $2 OR partner_id = $2)
           RETURNING round_number`,
         [event_id, req.user.id],
       );
@@ -253,9 +257,15 @@ module.exports = function createCompetitorRouter({
         return res.status(404).json({ error: "Event not found" });
       }
       const event = evRes.rows[0];
+      // The entry the caller dives in: their own, or the synchro pair
+      // they're the partner on (one row per round, lead in
+      // competitor_id). Everything below reads the entry, not the
+      // caller, so a partner gets the pair's list, queue and standing.
       const isMine = await pool.query(
-        `SELECT 1 FROM competitor_dive_lists
-          WHERE event_id = $1 AND competitor_id = $2 AND withdrawn_at IS NULL
+        `SELECT competitor_id FROM competitor_dive_lists
+          WHERE event_id = $1 AND (competitor_id = $2 OR partner_id = $2)
+            AND withdrawn_at IS NULL
+          ORDER BY (competitor_id = $2) DESC
           LIMIT 1`,
         [eventId, userId],
       );
@@ -264,6 +274,7 @@ module.exports = function createCompetitorRouter({
           error: "You're not entered in this event",
         });
       }
+      const entryId = isMine.rows[0].competitor_id;
 
       // 2. My dive list, joined to directory, with completion flag.
       const myDivesRes = await pool.query(
@@ -284,7 +295,7 @@ module.exports = function createCompetitorRouter({
           WHERE cdl.event_id = $1 AND cdl.competitor_id = $2
             AND cdl.withdrawn_at IS NULL
           ORDER BY cdl.round_number ASC`,
-        [eventId, userId, parseInt(event.number_of_judges) || 5],
+        [eventId, entryId, parseInt(event.number_of_judges) || 5],
       );
       const myDives = myDivesRes.rows.map(r => ({
         round_number: r.round_number,
@@ -325,7 +336,7 @@ module.exports = function createCompetitorRouter({
           prevTotal = s.total;
         }
       }
-      const meRow = ranked.find(s => s.competitor_id === userId);
+      const meRow = ranked.find(s => s.competitor_id === entryId);
       const myRank  = meRow ? meRow.rank  : null;
       const myTotal = meRow ? Number(meRow.total) : 0;
       const totalCompetitors = ranked.length;
@@ -414,7 +425,7 @@ module.exports = function createCompetitorRouter({
           `SELECT display_order
              FROM competitor_dive_lists
             WHERE event_id = $1 AND competitor_id = $2 AND round_number = $3`,
-          [eventId, userId, nextDive.round_number],
+          [eventId, entryId, nextDive.round_number],
         );
         const myOrder = meOrderRes.rows[0]?.display_order;
         if (myOrder != null) {
@@ -453,7 +464,7 @@ module.exports = function createCompetitorRouter({
           country_code: event.country_code,
         },
         me: {
-          competitor_id: userId,
+          competitor_id: entryId,
           full_name: req.user.full_name,
         },
         next_dive: nextDive ? {

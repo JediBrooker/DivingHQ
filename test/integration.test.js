@@ -7349,3 +7349,53 @@ test("referee calls hold the awards that land after them (WA 8.6.6, 8.4.7)", asy
     await compKit.cleanup(orgId);
   }
 });
+
+test("synchro pairs entered through the portal are one entry per round", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const orgId = await compKit.org("sync");
+  try {
+    const manager = await compKit.user(orgId, "Sync Manager", ["meet_manager"]);
+    const a = await compKit.user(orgId, "Sync Diver A", ["diver"]);
+    const b = await compKit.user(orgId, "Sync Diver B", ["diver"]);
+    const c = await compKit.user(orgId, "Sync Diver C", ["diver"]);
+    const eventId = await compKit.event(orgId, { event_type: "synchro_pair", number_of_judges: 9 });
+    const list = (await compKit.dives(3)).map((dive_id, i) => ({ dive_id, round_number: i + 1 }));
+    const submit = (u, partner) => fetchJson("POST", "/api/competitor/submit-list", {
+      token: u.token, body: { event_id: eventId, dives: list, partner_id: partner.id },
+    });
+
+    // B invites A, A answers with B: the pair is confirmed.
+    assert.equal((await submit(b, a)).body.pairing.status, "pending");
+    assert.equal((await submit(a, b)).body.pairing.status, "auto_confirmed");
+    const rows = async () => (await pool.query(
+      `SELECT competitor_id, partner_id, round_number FROM competitor_dive_lists
+        WHERE event_id = $1 ORDER BY round_number`, [eventId])).rows;
+    assert.deepEqual((await rows()).map((r) => [r.competitor_id, r.partner_id]),
+      [[b.id, a.id], [b.id, a.id], [b.id, a.id]], "the inviter leads, one row a round");
+
+    // The Control Room queue has the pair once per round.
+    const roster = await fetchJson("GET", `/api/events/${eventId}/roster`, { token: manager.token });
+    assert.equal(roster.status, 200);
+    assert.equal(roster.body.length, 3);
+
+    // The partner still finds the entry from their side.
+    const status = await fetchJson("GET", `/api/competitor/list-status?event_id=${eventId}`, { token: a.token });
+    assert.equal(status.body.entered, true);
+    assert.equal(status.body.dives.length, 3);
+    const dash = await fetchJson("GET", "/api/dashboard", { token: a.token });
+    assert.ok(dash.body.diver_event_ids.includes(eventId));
+
+    // A re-pairs with C. B's old pair goes; A's new one is one row a round.
+    assert.equal((await submit(a, c)).body.pairing.status, "pending");
+    const pending = await fetchJson("GET", "/api/competitor/pending-pairings", { token: c.token });
+    const invite = (pending.body.incoming || pending.body).find((p) => p.event_id === eventId);
+    assert.ok(invite, "C sees A's invite");
+    const acc = await fetchJson("POST", `/api/competitor/pairings/${invite.id}/accept`, { token: c.token });
+    assert.equal(acc.status, 200);
+    assert.deepEqual((await rows()).map((r) => [r.competitor_id, r.partner_id]),
+      [[a.id, c.id], [a.id, c.id], [a.id, c.id]]);
+  } finally {
+    await compKit.cleanup(orgId);
+  }
+});
