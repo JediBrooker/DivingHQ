@@ -243,7 +243,12 @@ export const useAuthStore = defineStore('auth', () => {
       }
       throw err
     }
-    return res.json()
+    // 204 (DELETE /api/dive-directory/:id) and the odd empty 200 have no
+    // body to parse. res.json() threw on those AFTER the write had
+    // landed, so the caller reported a failure and skipped its refresh.
+    if (res.status === 204) return null
+    const text = await res.text()
+    return text ? JSON.parse(text) : null
   }
 
   // Stale-while-revalidate variant of apiFetch. Wraps idbCache's
