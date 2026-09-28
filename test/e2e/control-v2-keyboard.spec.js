@@ -244,3 +244,39 @@ test("Space respects a hold, and asks before skipping a diver nobody has scored"
   await expect(diver).toContainText("BBB G");
   await setup.deleteOrg(orgId);
 });
+
+// Chrome leaves a clicked button focused. Space on a control reached with
+// Tab presses it, but one that only has focus because the mouse clicked
+// it mustn't take the advance: click Resume, hit Space to move on, and the
+// pool went straight back on hold (and after a mouse Re-dive, the next
+// Space re-dived the diver again, over the judges' fresh scores).
+test("Space after clicking a card button advances, it doesn't press that button again", async ({ request, page }) => {
+  test.setTimeout(120_000);
+  const { orgId, username, adminToken } = await setup.createOrgAndAdmin(request, { countryCode: "AUS", orgName: "Keyboard Click Diving" });
+  const A = await liveEvent(request, { orgId, adminToken, name: "Click Pool", diverNames: ["AAA K", "BBB K"] });
+
+  await signIn(page, username);
+  await page.goto(`/control?event=${A.event.id}`);
+  const cardA = page.locator(`.cv2-pool[data-event-id="${A.event.id}"]`);
+  const diver = cardA.locator(".cv2-live-diver");
+  await expect(diver).toContainText("AAA K", { timeout: 10_000 });
+  const hold = cardA.locator(".cv2-pool-hold");
+  const heldbar = cardA.locator(".cv2-pool-heldbar");
+  const confirm = page.locator('.confirm-backdrop[aria-modal="true"]');
+
+  await hold.click();
+  await expect(heldbar).toBeVisible();
+  await hold.click();
+  await expect(heldbar).toHaveCount(0);
+  // the button the mouse just used still has focus
+  await expect(hold).toBeFocused();
+  await page.keyboard.press("Space");
+  // Space is the advance: nobody has scored yet, so it asks first
+  await expect(confirm).toHaveCount(1);
+  await expect(heldbar).toHaveCount(0);
+  await confirm.locator(".confirm-btn-cancel").click();
+  await expect(confirm).toHaveCount(0);
+  await expect(diver).toContainText("AAA K");
+  await expect(heldbar).toHaveCount(0);
+  await setup.deleteOrg(orgId);
+});

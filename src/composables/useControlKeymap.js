@@ -38,20 +38,36 @@ function within(el, selector) {
   return !!(el && typeof el.closest === 'function' && el.closest(selector))
 }
 
+// The control a Space on `el` would press, or null. The view also uses it
+// to remember which control the mouse last pressed.
+export function spaceOwnerOf(el) {
+  return el && typeof el.closest === 'function' ? el.closest(SPACE_OWNERS) : null
+}
+
 // True when a keydown should be left alone rather than read as a hotkey.
 // modalOpen is the caller's "is a modal dialog up" (the view checks for
 // [aria-modal="true"]): while one is, the keyboard belongs to it, so
 // f / r / c / h can't reach a pool from behind a correction dialog. A key
 // pressed inside any dialog, modal or not (the Tools drawer), stays there
 // too.
-export function hotkeyBlocked(e, { modalOpen = false } = {}) {
+//
+// clickedControl is the control the mouse last pressed. Chrome leaves a
+// clicked button focused, and an operator who clicks Resume (or Re-dive)
+// and then hits Space to move on means move on. Handing that Space to the
+// button put the pool straight back on hold, or re-dived the diver again
+// over the judges' fresh scores. So Space only presses a control the
+// keyboard got to.
+export function hotkeyBlocked(e, { modalOpen = false, clickedControl = null } = {}) {
   if (!e) return true
   if (modalOpen) return true
   const target = e.target
   if (isTypingTarget(target)) return true
   if (within(target, '[role="dialog"], [aria-modal="true"]')) return true
   const key = e.key
-  if ((key === ' ' || key === 'Spacebar') && within(target, SPACE_OWNERS)) return true
+  if (key === ' ' || key === 'Spacebar') {
+    const owner = spaceOwnerOf(target)
+    if (owner && owner !== clickedControl) return true
+  }
   if (key && key.startsWith('Arrow') && within(target, ARROW_OWNERS)) return true
   return false
 }

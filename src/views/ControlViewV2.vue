@@ -40,7 +40,7 @@ import { useSocketEvent } from '@/composables/useSocketEvent'
 import { useLivePools, selectDiver, rosterIndexForActive, competingQueue, rebaseQueue, applyRedive, historyNewestFirst } from '@/composables/useLivePools'
 import { annotateJudgeRows } from '@/composables/useScoreTrim'
 import { synchroJudgeGroups } from '@/composables/useScoreCategories'
-import { controlKeyIntent, hotkeyBlocked } from '@/composables/useControlKeymap'
+import { controlKeyIntent, hotkeyBlocked, spaceOwnerOf } from '@/composables/useControlKeymap'
 import { diveDescription } from '@/composables/useDiveLabel'
 import { idbInvalidate } from '@/lib/idbCache'
 import { activeDiverPayload } from '@/lib/activeDiver'
@@ -485,12 +485,24 @@ function toggleHoldFocused() {
   else confirmHold()
 }
 
+// The control the mouse last pressed (see hotkeyBlocked). A button that
+// only has focus because it was clicked doesn't get Space, the advance
+// does. Tab forgets it, so tabbing back onto that button presses it.
+let clickedControl = null
+function onPointerDown(e) {
+  clickedControl = spaceOwnerOf(e.target)
+}
+
 // Per-pool keyboard control. One window listener: controlKeyIntent
 // maps the key, hotkeyBlocked keeps it out of inputs, dialogs and the
 // buttons Space already presses, and every action resolves through the
 // FOCUSED pool (number keys only switch focus).
 function onKeydown(e) {
-  if (hotkeyBlocked(e, { modalOpen: !!document.querySelector('[aria-modal="true"]') })) return
+  if (e.key === 'Tab') clickedControl = null
+  if (hotkeyBlocked(e, {
+    modalOpen: !!document.querySelector('[aria-modal="true"]'),
+    clickedControl,
+  })) return
   const intent = controlKeyIntent(e, livePools.value.length)
   if (!intent) return
   if (intent.action === 'focus') {
@@ -787,6 +799,7 @@ onMounted(async () => {
   window.addEventListener('beforeunload', onBeforeUnload)
   // Per-pool operator hotkeys (focused pool only).
   window.addEventListener('keydown', onKeydown)
+  window.addEventListener('pointerdown', onPointerDown, true)
   if (await loadEvents() && !unmounted) bringUpPools()
   if (unmounted) return
   // Fetch the drawer chunk while the board sits idle so it's already here
@@ -803,6 +816,7 @@ onUnmounted(() => {
   seedTimers.forEach(clearTimeout)
   seedTimers.clear()
   window.removeEventListener('keydown', onKeydown)
+  window.removeEventListener('pointerdown', onPointerDown, true)
   window.removeEventListener('beforeunload', onBeforeUnload)
 })
 

@@ -93,3 +93,21 @@ test('hotkeyBlocked: plain page focus and typing', async () => {
   assert.equal(hotkeyBlocked({ key: ' ', target: el('INPUT') }), true)
   assert.equal(hotkeyBlocked({ key: 'f', target: null }), false)
 })
+
+// Chrome keeps a clicked button focused. Space on it used to press it
+// again: click Resume, hit Space to move on, and the pool was held again.
+// A button only gets Space when the keyboard got there.
+test('hotkeyBlocked: Space on the button the mouse just pressed is still the advance', async () => {
+  const { hotkeyBlocked, spaceOwnerOf } = await import('../src/composables/useControlKeymap.js')
+  // closest() hands back the element itself, so identity works
+  const button = { tagName: 'BUTTON', closest: (sel) => (sel.split(',').map((s) => s.trim()).includes('button') ? button : null) }
+  const other = { tagName: 'BUTTON', closest: (sel) => (sel.split(',').map((s) => s.trim()).includes('button') ? other : null) }
+  assert.equal(spaceOwnerOf(button), button)
+  assert.equal(spaceOwnerOf({ tagName: 'H1', closest: () => null }), null)
+  assert.equal(hotkeyBlocked({ key: ' ', target: button }, { clickedControl: button }), false)
+  // reached some other way (Tab), it presses as usual
+  assert.equal(hotkeyBlocked({ key: ' ', target: button }, { clickedControl: other }), true)
+  assert.equal(hotkeyBlocked({ key: ' ', target: button }), true)
+  // a dialog still keeps its keys whatever was clicked
+  assert.equal(hotkeyBlocked({ key: ' ', target: button }, { clickedControl: button, modalOpen: true }), true)
+})
