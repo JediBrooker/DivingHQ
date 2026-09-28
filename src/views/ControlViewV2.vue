@@ -77,9 +77,11 @@ useSocketEvent(socket, 'judge_signal', (data) => {
   routeSignal(data)
 })
 
-// Authoritative active-diver restore. The server replays state_update on
-// (re)connect and in reply to get_active_diver, carrying the diver it
-// currently has live per event. We record it and snap the matching pool
+// Authoritative active-diver restore. The server answers get_active_diver
+// with a state_update carrying the diver it currently has live per event.
+// It also replays one on (re)connect, but only for events in the user's
+// own org they hold a control role in, so a delegate (a host club admin,
+// say) leans on get_active_diver alone. We record it and snap the matching pool
 // to that diver, without emitting, so reopening the Control Room
 // mid-meet never yanks the judges' panel back to roster[0]. Only a
 // genuinely fresh event (no server diver) announces, over in setupLivePool.

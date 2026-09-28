@@ -26,8 +26,8 @@ test("isValidScore: only a number or a numeric string, never something Number() 
 });
 
 test("isValidScore agrees with lib/middleware's copy", () => {
-  // The socket path still validates through lib/middleware. Until that
-  // one becomes a re-export, pin that the two can't drift apart.
+  // lib/middleware re-exports this one now. Pinned anyway, so a local
+  // copy creeping back in there can't quietly drift from it.
   const mw = require("../lib/middleware")({
     pool: { query: async () => ({ rows: [] }) },
     JWT_SECRET: "x".repeat(40),
