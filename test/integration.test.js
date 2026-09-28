@@ -7591,6 +7591,11 @@ test("rate limits: a venue's scoreboard loads and sign-ins don't run each other 
     const bad = [];
     for (let i = 0; i < 22; i++) bad.push(await post("/api/auth/login", { username: st.username, password: "wrong-password" }));
     assert.equal(bad.at(-1), 429, JSON.stringify(bad));
+    // Routing ignores case and a trailing slash, so those spellings reach
+    // the same handler and have to land in the same bucket.
+    for (const p of ["/api/auth/login/", "/API/Auth/Login"]) {
+      assert.equal(await post(p, { username: st.username, password: "wrong-password" }), 429, p);
+    }
     // ...without taking the password-reset flow down with it.
     assert.notEqual(await post("/api/auth/forgot-password", { email: `nobody-${st.slug}@example.test` }), 429);
   } finally {

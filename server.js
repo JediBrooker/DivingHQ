@@ -248,8 +248,12 @@ const authLimiters = {
   twofa: createAuthLimiter(),
   other: createAuthLimiter(),
 };
+// Express routing ignores case and a trailing slash, so /API/auth/Login/
+// reaches the login handler too. Look the bucket up the same way, or each
+// spelling of the URL would buy a guesser a fresh budget in "other".
 function authLimiter(req, res, next) {
-  return authLimiters[AUTH_FLOW_OF[req.path] || "other"](req, res, next);
+  const p = req.path.toLowerCase().replace(/\/+$/, "");
+  return authLimiters[AUTH_FLOW_OF[p] || "other"](req, res, next);
 }
 
 // Heavier limiter for the bulk-write endpoints (CSV roster import,
