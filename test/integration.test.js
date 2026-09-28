@@ -7347,3 +7347,45 @@ test("changing your password: wrong guesses are limited per account, junk is a 4
     await teardownFixture(st);
   }
 });
+
+// Accepting a synchro invite wrote both divers' lists (and deleted their
+// other rounds) without asking whether the event still takes entries.
+// Invites never expire, so one from weeks ago could rewrite two entries
+// after the lists locked, or with the event Live.
+test("accepting a synchro pairing runs the same entry gate as submitting", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const asker = await sweepKit.member(st.orgId, "diver", "Synchro Asker");
+    const partner = await sweepKit.member(st.orgId, "diver", "Synchro Partner");
+    const dive = (await pool.query(
+      "SELECT id FROM dive_directory WHERE height = 3 AND NOT is_custom ORDER BY dive_code, position LIMIT 1",
+    )).rows[0].id;
+    const ev = (await pool.query(
+      `INSERT INTO events (org_id, name, gender, height, number_of_judges, total_rounds, event_type, status, entries_close_at)
+       VALUES ($1, 'Sweep synchro', 'Mixed', '3m', 9, 1, 'synchro_pair', 'Upcoming', now() - interval '1 day') RETURNING id`,
+      [st.orgId],
+    )).rows[0].id;
+    const invite = async () => (await pool.query(
+      `INSERT INTO pending_partner_pairings (event_id, requester_id, partner_id, dives)
+       VALUES ($1, $2, $3, $4::jsonb) RETURNING id`,
+      [ev, asker.id, partner.id, JSON.stringify([{ dive_id: dive, round_number: 1 }])],
+    )).rows[0].id;
+    const accept = (id) => fetchJson("POST", `/api/competitor/pairings/${id}/accept`, { token: partner.token });
+    const entries = async () => (await pool.query("SELECT count(*)::int AS n FROM competitor_dive_lists WHERE event_id = $1", [ev])).rows[0].n;
+
+    const late = await invite();
+    const closed = await accept(late);
+    assert.equal(closed.status, 409, JSON.stringify(closed.body));
+    assert.equal(await entries(), 0);
+    assert.equal((await pool.query("SELECT status FROM pending_partner_pairings WHERE id = $1", [late])).rows[0].status, "pending");
+
+    // Reopen entries and it goes through.
+    await pool.query("UPDATE events SET entries_close_at = NULL WHERE id = $1", [ev]);
+    assert.equal((await accept(late)).status, 200);
+    assert.equal(await entries(), 2);
+  } finally {
+    await teardownFixture(st);
+  }
+});

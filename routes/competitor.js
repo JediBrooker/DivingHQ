@@ -564,6 +564,17 @@ module.exports = function createCompetitorRouter({
             .status(409)
             .json({ error: `Pairing already ${pairing.status}` });
         }
+        // Accepting writes both divers' lists, so it has to pass the gate
+        // a submit does (Upcoming, entries open, lists not locked).
+        // Invites don't expire, and one accepted after the lock or once
+        // the meet was Live used to rewrite both entries and delete the
+        // divers' other rounds. The invite stays pending, it can still go
+        // through if the meet reopens entries.
+        const gate = await loadEventForEntries(client, pairing.event_id);
+        if (gate.error) {
+          await client.query("ROLLBACK");
+          return res.status(gate.status).json({ error: gate.error });
+        }
 
         // Flip the row and write both sides in one transaction.
         await client.query(
