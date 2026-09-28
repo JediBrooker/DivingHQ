@@ -7176,3 +7176,42 @@ test("conflict resolve only settles a real conflict, for someone who runs the ev
     await teardownFixture(st);
   }
 });
+
+// claim-candidates only offers deleted accounts with the caller's name,
+// and the privacy policy says as much, but the claim itself took any
+// deleted id in the org and moved its results, panels and record books
+// across before hard-deleting it.
+test("claiming a past account needs the same name, not just the same org", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const me = await sweepKit.member(st.orgId, "diver", "Sophie Evans");
+    const champ = await recordKit.diver(st.orgId, null, "female", "Olympic Champion");
+    const ev = await recordKit.event(st.orgId, { gender: "Female" });
+    await recordKit.dive(ev, champ, 1, await recordKit.threeMetreDive(), 9);
+    await pool.query("UPDATE users SET deleted_at = now() WHERE id = $1", [champ]);
+
+    const claim = await fetchJson("POST", "/api/users/me/claim", {
+      token: me.token, body: { old_user_ids: [champ], password: "not-used-here" },
+    });
+    assert.equal(claim.status, 200, JSON.stringify(claim.body));
+    assert.deepEqual(claim.body.claimed, [], "someone else's past account isn't claimable");
+    const owner = (await pool.query(
+      "SELECT competitor_id FROM competitor_dive_lists WHERE event_id = $1", [ev.id],
+    )).rows[0].competitor_id;
+    assert.equal(owner, champ, "the dive list stays with the tombstone");
+    assert.equal((await pool.query("SELECT 1 FROM users WHERE id = $1", [champ])).rows.length, 1);
+
+    // Same name (any case) still works, that's the whole feature.
+    const mine = await recordKit.diver(st.orgId, null, "female", "sophie EVANS");
+    await pool.query("UPDATE users SET deleted_at = now() WHERE id = $1", [mine]);
+    const ok = await fetchJson("POST", "/api/users/me/claim", {
+      token: me.token, body: { old_user_ids: [mine], password: "not-used-here" },
+    });
+    assert.deepEqual(ok.body.claimed, [mine]);
+  } finally {
+    await recordKit.cleanup(st.orgId);
+    await teardownFixture(st);
+  }
+});
