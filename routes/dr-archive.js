@@ -20,6 +20,7 @@
 
 const express = require("express");
 const { startImport, getImportStatus } = require("../lib/diverecorder-import-runner");
+const { uuidParams } = require("../lib/uuid-params");
 
 // The q / nat / from / to filters shared by /meets and /meets-count, so
 // the page count can't disagree with the list it's paging. Returns the
@@ -55,6 +56,8 @@ module.exports = function createDrArchiveRouter({ pool, readPool, requireSystemA
   if (!pool) throw new Error("createDrArchiveRouter requires { pool }");
   const reads = readPool || pool;
   const router = express.Router();
+  // Malformed path ids fall through to a 404 (lib/uuid-params).
+  uuidParams(router, "id");
 
   // GET /api/dr-archive/stats: headline totals for the archive
   // (events + meets). Cheap COUNT(*)s, used by the public

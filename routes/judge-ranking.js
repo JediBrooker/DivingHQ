@@ -66,6 +66,7 @@ const { perDivePointsCte } = require("../lib/scoring-sql");
 // its federation keeps its name private (migration 096).
 const { PUBLIC_CLUB_JOIN } = require("../lib/club-approvals");
 const { ensureEventVisible } = require("../lib/event-visibility");
+const { uuidParams } = require("../lib/uuid-params");
 // Unicode names print readably, see lib/pdf-document.
 const { createPdfDocument } = require("../lib/pdf-document");
 // CSV escaping + formula-injection guard, and the filename slug the
@@ -389,6 +390,8 @@ async function buildAnalysis(pool, eventId) {
 module.exports = function createJudgeRankingRouter({ pool, optionalAuth }) {
   if (!pool) throw new Error("createJudgeRankingRouter requires { pool }");
   const router = express.Router();
+  // Malformed path ids fall through to a 404 (lib/uuid-params).
+  uuidParams(router, "id");
   // Public once the event is Live or Completed; before that it's the host
   // and participating orgs only, same as the scoreboard
   // (lib/event-visibility). Scores typed into an Upcoming event are

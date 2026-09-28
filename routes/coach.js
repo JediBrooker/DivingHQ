@@ -25,6 +25,7 @@ const express = require("express");
 const { recordAudit } = require("../lib/audit");
 const submitDiveList = require("../lib/dive-list-submit");
 const { perDivePointsCte } = require("../lib/scoring-sql");
+const { uuidParams } = require("../lib/uuid-params");
 
 module.exports = function createCoachRouter({
   pool,
@@ -36,6 +37,8 @@ module.exports = function createCoachRouter({
 }) {
   if (!pool) throw new Error("createCoachRouter requires { pool, … }");
   const router = express.Router();
+  // Malformed path ids fall through to a 404 (lib/uuid-params).
+  uuidParams(router, "event_id", "diver_id", "id");
 
   // Helper: checks that the logged-in coach actually has a
   // coach_diver_links row for the target diver, either within the

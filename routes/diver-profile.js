@@ -25,6 +25,7 @@ const express = require("express");
 const { PER_DIVE: SHARED_PER_DIVE, FULL_FIELD_RANKING, diverDivesWhere } =
   require("../db/queries");
 const { perDiveSelect, perDivePointsCte } = require("../lib/scoring-sql");
+const { uuidParams } = require("../lib/uuid-params");
 const { PUBLIC_CLUB_JOIN } = require("../lib/club-approvals");
 
 // Catalog of widget IDs the diver can enable on their dashboard.
@@ -118,6 +119,8 @@ module.exports = function createDiverProfileRouter({
   // second they submit a dive list.
   const reads = readPool || pool;
   const router = express.Router();
+  // Malformed path ids fall through to a 404 (lib/uuid-params).
+  uuidParams(router, "id");
 
   // -------------------------------------------------------------
   // GET /api/divers/:id/profile: stats, PBs, per-meet trend

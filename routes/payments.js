@@ -26,6 +26,7 @@ const express = require("express");
 const { resolvePrice, priceCharge } = require("../lib/fee-pricing");
 const { recordAudit, auditFromReq } = require("../lib/audit");
 const ledger = require("../lib/payout-ledger");
+const { uuidParams } = require("../lib/uuid-params");
 const { fromStripeAmount, toAlpha2 } = require("../lib/stripe");
 const {
   canReconcile, retirePendingPayment, retireBlocked, resumeOrRetireCheckout, applyFullRefundSideEffects,
@@ -103,6 +104,8 @@ module.exports = function createPaymentsRouter({
   email = null,
 }) {
   const router = express.Router();
+  // Malformed path ids fall through to a 404 (lib/uuid-params).
+  uuidParams(router, "id");
 
   // club_affiliation / club_accreditation share all plumbing and differ
   // only by scope + the club_affiliations.kind they grant. One mapper

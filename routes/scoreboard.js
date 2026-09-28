@@ -26,6 +26,7 @@ const {
 const { eventRecordMarks } = require("../lib/records");
 const { PUBLIC_CLUB_JOIN } = require("../lib/club-approvals");
 const { ensureEventVisible } = require("../lib/event-visibility");
+const { uuidParams } = require("../lib/uuid-params");
 
 module.exports = function createScoreboardRouter({
   pool,
@@ -34,6 +35,8 @@ module.exports = function createScoreboardRouter({
   optionalAuth,
 }) {
   const router = express.Router();
+  // Malformed path ids fall through to a 404 (lib/uuid-params).
+  uuidParams(router, "eventId");
   const maybeAuth = optionalAuth || ((req, _res, next) => next());
 
   // Live and Completed events are public, earlier ones only to the host

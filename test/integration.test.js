@@ -7680,3 +7680,37 @@ test("results exports, score sheets and judge ranking follow the scoreboard's vi
     await teardownFixture(st);
   }
 });
+
+// Ids go straight into uuid comparisons, so a malformed one made Postgres
+// throw 22P02 and every route here answered 500 (and logged an error per
+// crawler hit). Path ids now 404, filter ids 400.
+test("malformed ids get a 404 or 400, never a 500", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture();
+  try {
+    const x = "not-a-uuid";
+    for (const path of [
+      `/api/scoreboard/${x}`, `/api/scoreboard/${x}/leaderboard`, `/api/archive/${x}/results`,
+      `/api/events/${x}/judge-ranking-analysis`, `/api/events/${x}/judge-ranking-analysis.csv`,
+      `/api/divers/${x}/profile`, `/api/divers/${x}/analytics`,
+      `/api/judges/${x}/profile`, `/api/judges/${x}/analytics`,
+      `/api/events/${x}/results.pdf`, `/api/events/${x}/results.csv`, `/api/events/${x}/start-list.pdf`,
+      `/api/events/${st.eventId}/divers/${x}/score-sheet.pdf`,
+      `/api/meets/${x}/program.pdf`, `/api/meets/${x}/fees`, `/api/events/${x}/fee`,
+      `/api/dr-archive/meets/${x}`, `/api/dr-archive/divers/${x}`,
+    ]) {
+      const r = await fetchJson("GET", path);
+      assert.equal(r.status, 404, `${path} → ${r.status}`);
+    }
+    const coach = await fetchJson("GET", `/api/coach/dive-lists/${x}`, { token: st.adminToken });
+    assert.equal(coach.status, 404);
+    assert.equal((await fetchJson("GET", `/api/judges/directory?org_id=${x}`)).status, 400);
+    assert.equal((await fetchJson("GET", `/api/divers?club_id=${x}`, { token: st.adminToken })).status, 400);
+    // A well-formed id that doesn't exist is still a 404, and a real one works.
+    assert.equal((await fetchJson("GET", `/api/scoreboard/${crypto.randomUUID()}`)).status, 404);
+    assert.equal((await fetchJson("GET", `/api/judges/directory?org_id=${st.orgId}`)).status, 200);
+  } finally {
+    await teardownFixture(st);
+  }
+});

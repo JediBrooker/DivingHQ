@@ -17,6 +17,7 @@
 
 const express = require("express");
 const { ADMIN_ORG_ID } = require("../lib/admin-org");
+const { rejectBadUuidQuery } = require("../lib/uuid-params");
 
 module.exports = function createDiverSearchRouter({ pool, verifyToken }) {
   const router = express.Router();
@@ -59,6 +60,8 @@ module.exports = function createDiverSearchRouter({ pool, verifyToken }) {
 
   // Browse-all paginated diver list; limit clamped to [1, 100].
   router.get("/api/divers", verifyToken, async (req, res) => {
+    // A malformed filter id is the caller's mistake: 400, not a 22P02 500.
+    if (rejectBadUuidQuery(req, res, "org_id", "club_id")) return;
     const q           = (req.query.q || "").trim();
     const orgId       = req.query.org_id || null;
     const clubId      = req.query.club_id || null;

@@ -31,6 +31,7 @@ const { eventRecordMarks } = require("../lib/records");
 // (current_round, last_diver_name, counts).
 const archiveCache = require("../lib/archive-cache");
 const { PUBLIC_CLUB_JOIN } = require("../lib/club-approvals");
+const { uuidParams } = require("../lib/uuid-params");
 const archiveCacheGet = archiveCache.get;
 const archiveCacheSet = archiveCache.set;
 
@@ -43,6 +44,8 @@ module.exports = function createArchiveRouter({ pool, readPool }) {
   // when no replica is configured, just in case.
   const reads = readPool || pool;
   const router = express.Router();
+  // Malformed path ids fall through to a 404 (lib/uuid-params).
+  uuidParams(router, "eventId");
 
   // -------------------------------------------------------------
   // GET /api/archive: every Live or Completed event with the

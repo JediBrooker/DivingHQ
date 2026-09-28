@@ -37,6 +37,7 @@ const { PUBLIC_CLUB_JOIN } = require("../lib/club-approvals");
 // lib/csv.js.
 const { csvRow, slugify } = require("../lib/csv");
 const { ensureEventVisible } = require("../lib/event-visibility");
+const { uuidParams } = require("../lib/uuid-params");
 
 // The trim that marks judges' scores kept or dropped lives in the SPA
 // (src/composables/useScoreTrim.js, ESM) and AGENTS.md wants one copy of
@@ -51,6 +52,8 @@ function loadScoreTrim() {
 module.exports = function createPdfRouter({ pool, optionalAuth }) {
   if (!pool) throw new Error("createPdfRouter requires { pool }");
   const router = express.Router();
+  // Malformed path ids fall through to a 404 (lib/uuid-params).
+  uuidParams(router, "id", "diverId");
   // Anything with scores in it (results, score sheets) follows the
   // scoreboard's visibility rule, which needs to know who's asking. The
   // program and the start list stay open to everyone.
