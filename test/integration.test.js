@@ -7518,3 +7518,46 @@ test("audit snapshots pick up where the last one stopped, with no gaps and no re
     await teardownFixture(st);
   }
 });
+
+// The rate limits as production runs them (the suite otherwise switches
+// them off). A venue's phones share one public IP, so ordinary use from
+// one address has to fit.
+test("rate limits: a venue's scoreboard loads and sign-ins don't run each other out", { timeout: 90000 }, async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  const srv = await b1Boot.spawn({ RATE_LIMIT_DISABLED: null });
+  const post = (p, body) => new Promise((resolve, reject) => {
+    const data = JSON.stringify(body);
+    const req = http.request(srv.url + p, { method: "POST", headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(data) } }, (res) => {
+      res.resume(); res.on("end", () => resolve(res.statusCode));
+    });
+    req.on("error", reject);
+    req.end(data);
+  });
+  try {
+    await b1Boot.waitHealthy(srv);
+    // Forty spectators opening the scoreboard: the (cached) listing, then
+    // a completed event's recap and a results CSV.
+    for (let i = 0; i < 40; i++) {
+      assert.equal((await b1Boot.get(srv.url, "/api/archive"))?.status, 200, `listing #${i + 1}`);
+    }
+    const nope = "00000000-0000-4000-8000-000000000000";
+    assert.notEqual((await b1Boot.get(srv.url, `/api/archive/${nope}/results`))?.status, 429);
+    assert.notEqual((await b1Boot.get(srv.url, `/api/events/${nope}/results.csv`))?.status, 429);
+
+    // Twenty-five officials signing in from the venue wifi.
+    for (let i = 0; i < 25; i++) {
+      assert.equal(await post("/api/auth/login", { username: st.username, password: TEST_PASSWORD }), 200, `login #${i + 1}`);
+    }
+    // Failed attempts still count, so guessing is still throttled...
+    const bad = [];
+    for (let i = 0; i < 22; i++) bad.push(await post("/api/auth/login", { username: st.username, password: "wrong-password" }));
+    assert.equal(bad.at(-1), 429, JSON.stringify(bad));
+    // ...without taking the password-reset flow down with it.
+    assert.notEqual(await post("/api/auth/forgot-password", { email: `nobody-${st.slug}@example.test` }), 429);
+  } finally {
+    await srv.stop();
+    await teardownFixture(st);
+  }
+});

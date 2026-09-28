@@ -204,12 +204,55 @@ const skipWhenDisabled = () => RATE_LIMIT_DISABLED;
 // 20 requests / 15 min / IP for auth + password flows. Tight enough
 // to slow brute-force, loose enough that a real user fat-fingering
 // their password a couple of times isn't locked out.
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  limit: 20,
-  message: { error: "Too many attempts, please try again in 15 minutes." },
-  skip: skipWhenDisabled,
-});
+//
+// One bucket per flow, not one for the lot. It used to be a single
+// instance counting every sign-in, successful or not, together with
+// registration, verification and password resets. On meet morning the
+// judges, referee, operators and coaches all sign in from the venue
+// wifi (one NAT address, and 8h tokens mean more sign-ins mid-day), so
+// the 21st official got "Too many attempts" and couldn't reach the
+// keypad. Now a successful sign-in doesn't count at all; failed ones
+// still do, which is the brute force this is for. The other flows keep
+// counting every request (skipping successes there would make signup and
+// verification-email spam free) but in buckets of their own, so a burst
+// in one can't lock people out of another.
+function createAuthLimiter({ skipSuccessfulRequests = false } = {}) {
+  return rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 20,
+    message: { error: "Too many attempts, please try again in 15 minutes." },
+    skip: skipWhenDisabled,
+    skipSuccessfulRequests,
+  });
+}
+// routes/auth.js mounts `authLimiter` on each of these. A path this map
+// doesn't know about still gets limited, in a bucket of its own.
+const AUTH_FLOW_OF = {
+  "/api/auth/login": "login",
+  "/api/auth/login/totp": "login",
+  "/api/auth/register": "register",
+  "/api/auth/register-org": "register",
+  "/api/auth/verify-email": "verify",
+  "/api/auth/resend-verification": "verify",
+  "/api/auth/forgot-password": "password",
+  "/api/auth/reset-password": "password",
+  "/api/users/me/email/change-request": "email",
+  "/api/auth/confirm-email-change": "email",
+  "/api/auth/2fa/confirm": "twofa",
+  "/api/auth/2fa/disable": "twofa",
+};
+const authLimiters = {
+  login: createAuthLimiter({ skipSuccessfulRequests: true }),
+  register: createAuthLimiter(),
+  verify: createAuthLimiter(),
+  password: createAuthLimiter(),
+  email: createAuthLimiter(),
+  twofa: createAuthLimiter(),
+  other: createAuthLimiter(),
+};
+function authLimiter(req, res, next) {
+  return authLimiters[AUTH_FLOW_OF[req.path] || "other"](req, res, next);
+}
 
 // Heavier limiter for the bulk-write endpoints (CSV roster import,
 // dive-list submission). Mostly to prevent a logged-in but malicious
