@@ -7484,3 +7484,41 @@ test("advance and H2H seeding leave a withdrawn diver out", async (t) => {
     await compKit.cleanup(orgId);
   }
 });
+
+test("advance carries a synchro pair's partner, and won't split up a team event", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const orgId = await compKit.org("advsync");
+  try {
+    const leads = [];
+    const partners = [];
+    for (let i = 0; i < 2; i++) {
+      leads.push(await compKit.user(orgId, `AdvSync Lead ${i + 1}`, ["diver"]));
+      partners.push(await compKit.user(orgId, `AdvSync Partner ${i + 1}`, ["diver"]));
+    }
+    const { manager, prelim, final } = await compKit.stage(orgId, "AdvSync", {
+      divers: leads, partners, totals: [8, 7], eventType: "synchro_pair",
+    });
+    const r = await fetchJson("POST", `/api/events/${prelim}/advance`, {
+      token: manager.token, body: { top_n: 2, reserves: 0 },
+    });
+    assert.equal(r.status, 200, JSON.stringify(r.body));
+    const pairs = (await pool.query(
+      `SELECT DISTINCT competitor_id, partner_id FROM competitor_dive_lists WHERE event_id = $1`, [final])).rows;
+    assert.deepEqual(
+      pairs.map((p) => `${p.competitor_id}|${p.partner_id}`).sort(),
+      [0, 1].map((i) => `${leads[i].id}|${partners[i].id}`).sort(),
+    );
+
+    // A team event ranks its members one by one, which isn't how teams
+    // go through. Refuse rather than seed a final of loose divers.
+    const team = await compKit.stage(orgId, "AdvTeam", { divers: partners, totals: [6, 5], eventType: "team" });
+    const tr = await fetchJson("POST", `/api/events/${team.prelim}/advance`, {
+      token: team.manager.token, body: { top_n: 2, reserves: 0 },
+    });
+    assert.equal(tr.status, 400);
+    assert.equal((await pool.query("SELECT COUNT(*)::int AS n FROM competitor_dive_lists WHERE event_id = $1", [team.final])).rows[0].n, 0);
+  } finally {
+    await compKit.cleanup(orgId);
+  }
+});

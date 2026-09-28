@@ -1209,6 +1209,10 @@ module.exports = function createEventsRouter({
        )
        SELECT r.competitor_id, r.total, r.rnk,
               u.full_name, u.username,
+              /* A synchro pair is one row per round, lead in
+                 competitor_id, so the partner rides along here and
+                 into the next stage. Same on every round. */
+              MIN(cdl.partner_id::text)::uuid AS partner_id,
               MIN(cdl.display_order) AS parent_display_order,
               array_agg(json_build_object(
                 'round_number', cdl.round_number,
@@ -1313,7 +1317,7 @@ module.exports = function createEventsRouter({
       try {
         await client.query("BEGIN");
         const parentRes = await client.query(
-          "SELECT id, event_format, status, total_rounds FROM events WHERE id = $1",
+          "SELECT id, event_format, event_type, status, total_rounds FROM events WHERE id = $1",
           [req.params.id],
         );
         if (!parentRes.rows.length) {
@@ -1324,6 +1328,15 @@ module.exports = function createEventsRouter({
         if (!['preliminary', 'semifinal'].includes(parent.event_format)) {
           await client.query("ROLLBACK");
           return res.status(400).json({ error: "Only preliminary or semifinal events advance" });
+        }
+        // The ranking below is per diver. For a team event that would
+        // pull individual members through and drop the team they dive
+        // for, so refuse rather than seed a final of loose divers.
+        if (parent.event_type === 'team') {
+          await client.query("ROLLBACK");
+          return res.status(400).json({
+            error: "Team events can't be advanced diver by diver. Enter the teams on the next stage from its team lists.",
+          });
         }
         if (parent.status !== 'Completed') {
           await client.query("ROLLBACK");
@@ -1437,6 +1450,7 @@ module.exports = function createEventsRouter({
           for (let r = 1; r <= childRounds; r++) {
             seedRows.push({
               competitor_id: diver.competitor_id,
+              partner_id: diver.partner_id || null,
               dive_id: prescribedByRound.has(r)
                 ? prescribedByRound.get(r)
                 : (byRound.get(r) || null),
