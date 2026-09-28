@@ -108,7 +108,9 @@ function canViewJudgePrivate(viewer, judgeRow) {
 // result. (The 3 date-bearing widgets, recent_meets, score_trend,
 // panel_deviation_per_event, stay native since their timestamp/date
 // columns serialise differently through jsonb, so folding them in
-// would change the wire shape. Net: 16 → 4 materialisations.)
+// would change the wire shape. recent_meets and the per-event deviation
+// share one of those native queries, so the net is 16 → 3
+// materialisations.)
 //
 // Byte-identical output: node-postgres returns `numeric` as a
 // STRING ("0.500", scale preserved). Raw jsonb would coerce it to a
@@ -580,7 +582,7 @@ module.exports = function createJudgeAnalyticsRouter({
       // The 13 date-free widgets share one per_dive materialisation
       // (JUDGE_ANALYTICS_BUNDLE, above). On error the bundle degrades to
       // empty widgets (mirroring the old per-widget try/catch) so a
-      // bundle failure still serves the 3 native widgets below instead
+      // bundle failure still serves the native widgets below instead
       // of 500-ing the whole page.
       const EMPTY_BUNDLE = {
         bias_summary: null, deviation_distribution: [], agreement_rate: null,
@@ -590,14 +592,13 @@ module.exports = function createJudgeAnalyticsRouter({
         panel_deviation_summary: null,
       };
 
-      // The bundle and the 3 date-bearing widgets are independent, so
-      // they all go at once. That's 4 pool slots at most, same bound the
-      // old batching kept, but the wall time is now the slowest query
-      // rather than the bundle plus the slowest native one. The 3
-      // natives stay separate (unchanged SQL) because their
+      // The bundle and the date-bearing widgets are independent, so
+      // they all go at once (3 pool slots), and the wall time is the
+      // slowest query rather than the bundle plus the slowest native
+      // one. The natives stay out of the bundle because their
       // timestamp/date columns serialise differently through jsonb, so
-      // folding them into the bundle would change the wire shape.
-      const [bundle, recent_meets, score_trend, panel_deviation_per_event] =
+      // folding them in would change the wire shape.
+      const [bundle, perEventRows, score_trend] =
         await Promise.all([
           reads.query(JUDGE_ANALYTICS_BUNDLE, baseParams)
             .then((r) => r.rows[0] || EMPTY_BUNDLE)
@@ -605,9 +606,15 @@ module.exports = function createJudgeAnalyticsRouter({
               console.error("[Judge Analytics bundle]", err.message);
               return EMPTY_BUNDLE;
             }),
-          // ---- recent_meets: last 10 events officiated, with mean
-          // signed deviation + dive count + drop rate per event.
-          runQuery("recent_meets",
+          // ---- recent_meets + panel_deviation.per_event: the last 10
+          // events officiated. Both widgets filter, group and order the
+          // same way, so one query works out both sets of columns and
+          // they're split below. As two queries each one paid for its
+          // own JUDGE_PER_DIVE (the panel LATERAL for every dive), which
+          // is the priciest part of the page for a busy judge. event_id
+          // breaks created_at ties so the list doesn't hang on plan
+          // order. Downside: if this fails, both widgets go empty.
+          runQuery("recent_meets+panel_deviation_per_event",
             `WITH per_dive AS (${JUDGE_PER_DIVE})
              SELECT
                p.event_id,
@@ -618,13 +625,20 @@ module.exports = function createJudgeAnalyticsRouter({
                AVG(ABS(p.my_score - p.panel_kept_mean))::numeric(5,3)     AS abs_deviation,
                (COUNT(*) FILTER (WHERE p.is_dropped IS TRUE)::numeric
                 / NULLIF(COUNT(*) FILTER (WHERE p.is_dropped IS NOT NULL),0)
-               )::numeric(4,3)                                            AS drop_rate
+               )::numeric(4,3)                                            AS drop_rate,
+               COUNT(*) FILTER (
+                 WHERE ABS(p.my_score - p.panel_kept_mean) >= 1.0
+               )::int                                                     AS differ_tight,
+               (
+                 COUNT(*) FILTER (WHERE ABS(p.my_score - p.panel_kept_mean) >= 1.0)::numeric
+                 / NULLIF(COUNT(*), 0)
+               )::numeric(4,3)                                            AS tight_rate
              FROM per_dive p
              JOIN events e ON e.id = p.event_id
              WHERE p.event_type <> 'synchro_pair'
                AND p.panel_kept_mean IS NOT NULL
              GROUP BY p.event_id, e.name, e.created_at
-             ORDER BY e.created_at DESC
+             ORDER BY e.created_at DESC, p.event_id DESC
              LIMIT 10`,
             baseParams,
           ),
@@ -644,33 +658,26 @@ module.exports = function createJudgeAnalyticsRouter({
              LIMIT 52`,
             baseParams,
           ),
-          // ---- panel_deviation_per_event: the differ-tight rate
-          // aggregated per event; most-recent first, cap 10.
-          runQuery("panel_deviation_per_event",
-            `WITH per_dive AS (${JUDGE_PER_DIVE}),
-             per_event AS (
-               SELECT pd.event_id, e.name AS event_name, e.created_at,
-                      COUNT(*)::int AS dives,
-                      COUNT(*) FILTER (
-                        WHERE ABS(pd.my_score - pd.panel_kept_mean) >= 1.0
-                      )::int AS differ_tight,
-                      (
-                        COUNT(*) FILTER (WHERE ABS(pd.my_score - pd.panel_kept_mean) >= 1.0)::numeric
-                        / NULLIF(COUNT(*), 0)
-                      )::numeric(4,3) AS tight_rate,
-                      AVG(pd.my_score - pd.panel_kept_mean)::numeric(5,3) AS signed_deviation
-                 FROM per_dive pd
-                 JOIN events e ON e.id = pd.event_id
-                WHERE pd.event_type <> 'synchro_pair' AND pd.panel_kept_mean IS NOT NULL
-                GROUP BY pd.event_id, e.name, e.created_at
-             )
-             SELECT *
-               FROM per_event
-              ORDER BY created_at DESC
-              LIMIT 10`,
-            baseParams,
-          ),
         ]);
+      // Same keys in the same order the two separate queries returned.
+      const recent_meets = perEventRows.map((r) => ({
+        event_id: r.event_id,
+        event_name: r.event_name,
+        created_at: r.created_at,
+        dives: r.dives,
+        signed_deviation: r.signed_deviation,
+        abs_deviation: r.abs_deviation,
+        drop_rate: r.drop_rate,
+      }));
+      const panel_deviation_per_event = perEventRows.map((r) => ({
+        event_id: r.event_id,
+        event_name: r.event_name,
+        created_at: r.created_at,
+        dives: r.dives,
+        differ_tight: r.differ_tight,
+        tight_rate: r.tight_rate,
+        signed_deviation: r.signed_deviation,
+      }));
 
       res.json({
         bias_summary:           bundle.bias_summary,
