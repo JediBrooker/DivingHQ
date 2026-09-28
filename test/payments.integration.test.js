@@ -987,6 +987,28 @@ test("a Stripe failure opening the session marks the row failed", async (t) => {
   assert.equal(row.stripe_checkout_session, null);
 });
 
+// requireChosenPrice: a fee whose only variant isn't on sale yet refuses
+// before any payment row exists. Editors always save these flat, so the
+// window is pushed out by hand here.
+test("a checkout with no price on sale is a 409 and inserts nothing", async (t) => {
+  if (!ready) return t.skip();
+  const put = await api("PUT", `/api/orgs/${orgId}/official-fee`, {
+    role_type: "meet_manager", currency: "GBP",
+    prices: [{ label: "annual", amount_cents: 2000, audience: "all" }],
+  });
+  assert.equal(put.status, 200);
+  const feeId = (await put.json()).id;
+  await pool.query(
+    "UPDATE fee_prices SET starts_at = now() + interval '30 days' WHERE fee_definition_id = $1",
+    [feeId],
+  );
+  const res = await api("POST", `/api/orgs/${orgId}/official-accreditation/checkout?role_type=meet_manager`, {});
+  assert.equal(res.status, 409);
+  assert.equal((await res.json()).error, "This isn't open for purchase right now.");
+  const rows = (await pool.query("SELECT 1 FROM payments WHERE fee_definition_id = $1", [feeId])).rows;
+  assert.equal(rows.length, 0);
+});
+
 // ---- Fines (disciplinary, appealable) -------------------------------
 
 let fineId;

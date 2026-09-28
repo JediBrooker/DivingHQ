@@ -401,6 +401,18 @@ module.exports = function createPaymentsRouter({
     return { feeId: def.id, surchargeCents: chosen.amount_cents, applies, trigger: def.late_fee_trigger, triggerAt };
   }
 
+  // The price variant this buyer pays right now, or the 409 they see when
+  // no variant is on sale (outside every window, or member-only).
+  function requireChosenPrice(prices, opts) {
+    const chosen = resolvePrice(prices, opts);
+    if (!chosen) {
+      const err = new Error("This isn't open for purchase right now.");
+      err.status = 409;
+      throw err;
+    }
+    return chosen;
+  }
+
   // Every checkout needs a currency before it can charge. Returns it, or
   // throws the 409 the payer sees when their federation hasn't set one.
   function requireCurrency(currency) {
@@ -464,12 +476,7 @@ module.exports = function createPaymentsRouter({
     const member = await isActiveMember(pool, org.id, beneficiaryId);
     // A payer buying membership isn't a member yet, so resolve at the
     // 'all' tier; entry checkout is member-aware.
-    const chosen = resolvePrice(prices, { isMember: subjectType === "membership" ? false : member });
-    if (!chosen) {
-      const err = new Error("This isn't open for purchase right now.");
-      err.status = 409;
-      throw err;
-    }
+    const chosen = requireChosenPrice(prices, { isMember: subjectType === "membership" ? false : member });
     const currency = requireCurrency(fee.currency || org.default_currency);
     if (subjectType === "membership") {
       await refuseOutsideRenewalWindow({
@@ -571,12 +578,7 @@ module.exports = function createPaymentsRouter({
   // member-aware individual path). The platform collects it and the ledger
   // owes the federation, less DivingHQ's cut.
   async function startClubCheckout({ req, org, club, fee, prices, kind }) {
-    const chosen = resolvePrice(prices, { isMember: false });
-    if (!chosen) {
-      const err = new Error("This isn't open for purchase right now.");
-      err.status = 409;
-      throw err;
-    }
+    const chosen = requireChosenPrice(prices, { isMember: false });
     const currency = requireCurrency(fee.currency || org.default_currency);
     const subjectType = clubScope(kind);
     await refuseOutsideRenewalWindow({
@@ -668,12 +670,7 @@ module.exports = function createPaymentsRouter({
   // user+role+fee. The ledger owes it to the federation.
   async function startOfficialCheckout({ req, org, fee, prices, roleType }) {
     const userId = req.user.id;
-    const chosen = resolvePrice(prices, { isMember: false });
-    if (!chosen) {
-      const err = new Error("This isn't open for purchase right now.");
-      err.status = 409;
-      throw err;
-    }
+    const chosen = requireChosenPrice(prices, { isMember: false });
     const currency = requireCurrency(fee.currency || org.default_currency);
     await refuseOutsideRenewalWindow({
       sql: `SELECT MAX(period_end) AS until FROM official_accreditations
