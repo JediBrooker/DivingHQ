@@ -261,7 +261,7 @@ everything beneath it, never sideways.
 | Create/edit meets hosted by… | own club | own region + its clubs | anything in org | n/a, no org admin exists |
 | Run the Control Room for those meets | yes | yes | yes | |
 | Approve role requests from… | own club's members | clubs in region | anyone in org | |
-| Approve guardian links for children in… (§21) | own club | clubs in region | anyone in org | |
+| Approve guardian links for children in… (§22) | own club | clubs in region | anyone in org | |
 | Appoint club admins for… | own club (co-admins) | clubs in region | any club | |
 | See member data for… | own club | clubs in region | whole org | |
 | Set fees / take payments | own club | own region | org | |
