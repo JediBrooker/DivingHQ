@@ -185,11 +185,16 @@ function downloadPdf() {
     + `</style></head><body><h1>${esc(title)}</h1><p class="sub">${esc(genOn)}</p>`
     + `<table><thead><tr>${th.map((h) => `<th>${esc(h)}</th>`).join('')}</tr></thead>`
     + `<tbody>${bodyRows}</tbody></table>`
-    + `<scr` + `ipt>window.onload=function(){setTimeout(function(){window.print();},60);};</scr` + `ipt>`
     + `</body></html>`
   w.document.open()
   w.document.write(doc)
   w.document.close()
+  // Print from here, not from a script inside the popup. An about:blank
+  // window inherits this page's CSP (script-src 'self', no inline), so
+  // the inline window.print() it used to carry was refused and the print
+  // dialog never came up. The document is complete once close() returns.
+  w.focus()
+  w.print()
 }
 
 onMounted(load)
