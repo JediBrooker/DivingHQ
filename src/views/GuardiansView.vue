@@ -114,9 +114,12 @@ onMounted(loadDependents)
             <span v-if="dep.date_of_birth" class="gv-dep-age">
               {{ t('guardians.age_years', { age: ageFromDob(dep.date_of_birth) }) }}
             </span>
+            <!-- Under the name rather than beside it: on a phone a third
+                 item in the row squeezed the name down to one word a line
+                 and the badge ended up on top of it. -->
+            <span v-if="dep.status === 'pending'" class="badge badge-amber gv-dep-badge">{{ t('guardians.pending_badge') }}</span>
           </div>
-          <span v-if="dep.status === 'pending'" class="badge badge-amber">{{ t('guardians.pending_badge') }}</span>
-          <button class="btn btn-ghost btn-sm" @click="revoke(dep)">
+          <button class="btn btn-ghost btn-sm gv-dep-action" @click="revoke(dep)">
             {{ dep.status === 'pending' ? t('guardians.withdraw') : t('guardians.revoke') }}
           </button>
         </div>
@@ -175,8 +178,10 @@ onMounted(loadDependents)
   margin-bottom: 0.5rem;
 }
 .gv-dep-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.1rem; }
-.gv-dep-name { font-weight: 600; color: var(--text); }
+.gv-dep-name { font-weight: 600; color: var(--text); overflow-wrap: anywhere; }
 .gv-dep-age { font-size: var(--text-sm); color: var(--text-3); }
+.gv-dep-badge { align-self: flex-start; margin-top: 0.25rem; }
+.gv-dep-action { flex-shrink: 0; }
 
 .gv-link-section { margin-top: 1.25rem; }
 
