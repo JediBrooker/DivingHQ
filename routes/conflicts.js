@@ -136,13 +136,16 @@ module.exports = function createConflictsRouter({
         }
 
         // Is there actually a conflict on this row? The latest rejected
-        // sync carries the judge's value.
+        // sync carries the judge's value. score_id has no index of its
+        // own on the audit log (every score writes a row there), so the
+        // event_id is what lets this ride idx_score_audit_event_created
+        // instead of scanning the whole table.
         const rejected = row.score_source === "manual_entry"
           ? (await client.query(
               `SELECT new_score FROM score_audit_log
-                WHERE score_id = $1 AND action = 'rejected_duplicate'
+                WHERE event_id = $2 AND score_id = $1 AND action = 'rejected_duplicate'
                 ORDER BY created_at DESC, id DESC LIMIT 1`,
-              [row.id],
+              [row.id, row.event_id],
             )).rows[0]
           : null;
         if (!rejected) {
