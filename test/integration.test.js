@@ -7449,3 +7449,38 @@ test("advance: a field smaller than top_n takes everyone, with no reserves to sp
     await compKit.cleanup(orgId);
   }
 });
+
+test("advance and H2H seeding leave a withdrawn diver out", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const orgId = await compKit.org("wd");
+  try {
+    const divers = [];
+    for (let i = 0; i < 3; i++) divers.push(await compKit.user(orgId, `Wd Diver ${i + 1}`, ["diver"]));
+    const { manager, prelim, final } = await compKit.stage(orgId, "Wd", { divers, totals: [8, 7, 6] });
+    // The second diver pulled out injured after scoring (coach withdraw
+    // marks every row).
+    await pool.query(
+      "UPDATE competitor_dive_lists SET withdrawn_at = now() WHERE event_id = $1 AND competitor_id = $2",
+      [prelim, divers[1].id],
+    );
+    const r = await fetchJson("POST", `/api/events/${prelim}/advance`, {
+      token: manager.token, body: { top_n: 3, reserves: 0 },
+    });
+    assert.equal(r.status, 200, JSON.stringify(r.body));
+    const seeded = (await pool.query(
+      "SELECT DISTINCT competitor_id FROM competitor_dive_lists WHERE event_id = $1", [final])).rows
+      .map((row) => row.competitor_id).sort();
+    assert.deepEqual(seeded, [divers[0].id, divers[2].id].sort());
+
+    const h2h = await compKit.event(orgId, {
+      name: "Wd H2H", event_format: "super_final_h2h", number_of_judges: 3, total_rounds: 3,
+      parent_event_id: prelim,
+    });
+    const preview = await fetchJson("GET", `/api/events/${h2h}/seed-h2h/preview?max_per_org=12`, { token: manager.token });
+    assert.equal(preview.status, 200, JSON.stringify(preview.body));
+    assert.deepEqual(preview.body.ranked.map((row) => row.competitor_id).sort(), [divers[0].id, divers[2].id].sort());
+  } finally {
+    await compKit.cleanup(orgId);
+  }
+});

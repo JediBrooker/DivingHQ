@@ -114,6 +114,12 @@ module.exports = function createSuperFinalSeedingRoutes({
          SELECT competitor_id,
                 SUM(round_total) AS total
          FROM dive_totals
+         /* A diver who withdrew from the Stop-1 stage keeps their
+            scores but can't be seeded into the H2H, same rule as
+            advance. */
+         WHERE competitor_id IN (
+           SELECT competitor_id FROM competitor_dive_lists
+            WHERE event_id = $1 AND withdrawn_at IS NULL AND is_reserve = FALSE)
          GROUP BY competitor_id
        ),
        ranked AS (

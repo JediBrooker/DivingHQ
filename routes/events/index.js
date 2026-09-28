@@ -1193,6 +1193,13 @@ module.exports = function createEventsRouter({
          SELECT competitor_id,
                 SUM(round_total) AS total
          FROM dive_totals
+         /* Only divers still in the stage. A diver withdrawn after
+            scoring (coach withdraw marks every row) keeps their scores
+            but mustn't take a place in the next stage, WA 4.1.12: the
+            next-ranked diver goes through instead. */
+         WHERE competitor_id IN (
+           SELECT competitor_id FROM competitor_dive_lists
+            WHERE event_id = $1 AND withdrawn_at IS NULL AND is_reserve = FALSE)
          GROUP BY competitor_id
        ),
        ranked AS (
