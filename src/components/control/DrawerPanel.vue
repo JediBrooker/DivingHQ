@@ -6,11 +6,19 @@
 // deferred until its first open. Reserves/audit use the same endpoints
 // the old single-pool Control Room did (/reserves, /audit-recent);
 // broadcast reuses BroadcastModal; sponsor reuses SponsorLogosManager.
-// No new business rule here, just moving where the markup lives.
-import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
+//
+// Late entry (LateEntryModal) and the Super Final panels (dive-offs,
+// Appendix 3 §6, and the synchro reserve pool, §5.1) live here too. The
+// cutover to the Stage-Rail Control Room left both with no way in, and
+// the server still refuses to seed the semi or rank the Super Final
+// while an H2H pair is tied, so a tie stalled the whole thing. This drawer
+// is its own lazy chunk, so they cost the live board nothing.
+import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import BroadcastModal from '@/components/control/BroadcastModal.vue'
 import SponsorLogosManager from '@/components/manager/SponsorLogosManager.vue'
+import LateEntryModal from '@/components/control/LateEntryModal.vue'
+import SuperFinalPanels from '@/components/control/SuperFinalPanels.vue'
 import { showSuccess, showError } from '@/composables/useNotify'
 
 const props = defineProps({ event: { type: Object, default: null } })
@@ -29,6 +37,25 @@ function toggle(section) {
   openSection.value = openSection.value === section ? '' : section
   if (openSection.value === 'reserves' && !reservesLoaded.value) loadReserves()
   if (openSection.value === 'audit' && !auditLoaded.value) loadAudit()
+  if (openSection.value === 'superfinal') nextTick(() => superFinal.value?.reload())
+}
+
+// --- Late entry: a diver who turns up after entries closed. Not once
+// the event's finished.
+const lateOpen = ref(false)
+const canLateEnter = computed(() => !!props.event && props.event.status !== 'Completed')
+function onLateAdded() {
+  showSuccess('Late entry added.')
+  if (props.event) emit('roster-changed', props.event.id)
+}
+
+// --- Super Final: only the stages that have dive-offs or a reserve pool.
+const superFinal = ref(null)
+const isSuperFinalStage = computed(() =>
+  ['super_final_h2h', 'super_final_semi'].includes(props.event?.event_format),
+)
+function onSuperFinalRefresh() {
+  if (props.event) emit('roster-changed', props.event.id)
 }
 
 // --- Broadcast: lazy-mount the intact chooser, then open it imperatively
@@ -100,6 +127,9 @@ async function loadAudit() {
 let prevFocus = null
 function onKeydown(e) {
   if (e.key === 'Escape') {
+    // A dialog opened from in here (late entry, a dive-off) takes the
+    // Escape itself; closing the drawer as well would unmount it midway.
+    if (document.querySelector('[aria-modal="true"]')) return
     e.stopPropagation()
     emit('close')
   }
@@ -171,6 +201,38 @@ onBeforeUnmount(() => {
               >{{ promoting === r.competitor_id ? '…' : 'Promote' }}</button>
             </li>
           </ul>
+        </div>
+      </section>
+
+      <!-- LATE ENTRY -->
+      <section v-if="canLateEnter" class="cv2-drawer-section">
+        <button
+          type="button"
+          class="cv2-drawer-row"
+          :aria-expanded="openSection === 'late'"
+          @click="toggle('late')"
+        >
+          <span>➕ Late entry</span><span aria-hidden="true">{{ openSection === 'late' ? '▾' : '▸' }}</span>
+        </button>
+        <div v-if="openSection === 'late'" class="cv2-drawer-body">
+          <p class="cv2-drawer-hint">A diver who arrived after entries closed. They join the queue for every round.</p>
+          <button type="button" class="cv2-drawer-action" @click="lateOpen = true">Add a late diver…</button>
+        </div>
+        <LateEntryModal :open="lateOpen" :event="event" @close="lateOpen = false" @added="onLateAdded" />
+      </section>
+
+      <!-- SUPER FINAL -->
+      <section v-if="isSuperFinalStage" class="cv2-drawer-section">
+        <button
+          type="button"
+          class="cv2-drawer-row"
+          :aria-expanded="openSection === 'superfinal'"
+          @click="toggle('superfinal')"
+        >
+          <span>🏆 Super Final</span><span aria-hidden="true">{{ openSection === 'superfinal' ? '▾' : '▸' }}</span>
+        </button>
+        <div v-if="openSection === 'superfinal'" class="cv2-drawer-body cv2-drawer-superfinal">
+          <SuperFinalPanels ref="superFinal" :event="event" @refresh="onSuperFinalRefresh" />
         </div>
       </section>
 
@@ -262,6 +324,27 @@ onBeforeUnmount(() => {
   font-family: var(--font-mono); font-size: 12px; color: var(--text-3);
   padding: 0.3rem 0.25rem; border-bottom: 1px solid var(--border-2);
 }
+
+/* SuperFinalPanels brings the old Control Room's reserves-panel markup,
+   whose styles went with ControlView.css at the cutover. Just enough to
+   lay it out in the drawer. */
+.cv2-drawer-superfinal :deep(.reserves-panel) { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1rem; }
+.cv2-drawer-superfinal :deep(.reserves-head) {
+  display: flex; align-items: center; gap: 0.5rem;
+  font-family: var(--font-display); font-size: 13px; font-weight: 700; color: var(--fg);
+}
+.cv2-drawer-superfinal :deep(.reserves-head-count) { font-family: var(--font-mono); font-size: 12px; color: var(--text-3); }
+.cv2-drawer-superfinal :deep(.reserves-list) { display: flex; flex-direction: column; gap: 0.4rem; }
+.cv2-drawer-superfinal :deep(.reserves-row) {
+  display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
+  padding: 0.4rem 0.25rem; border-bottom: 1px solid var(--border-2);
+}
+.cv2-drawer-superfinal :deep(.reserves-row-head) { display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
+.cv2-drawer-superfinal :deep(.reserves-row-pos) {
+  flex: none; width: 1.4rem; height: 1.4rem; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700;
+}
+.cv2-drawer-superfinal :deep(.reserves-row-name) { font-size: 13px; color: var(--text-2); }
 
 /* Phone: drawer turns into a bottom sheet (dvh-bound, safe-area padded)
    so it stays thumb-reachable and never forces a horizontal scrollbar. */

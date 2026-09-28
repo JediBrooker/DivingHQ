@@ -31,6 +31,9 @@ import ScoreCorrectionModal from '@/components/control/ScoreCorrectionModal.vue'
 // the outbox and have to keep working through a network blip.
 const loadDrawer = () => import('@/components/control/DrawerPanel.vue')
 const DrawerPanel = defineAsyncComponent(loadDrawer)
+// Only opens after finalising an event that overran its schedule slot, so
+// it rides in its own chunk too.
+const ReflowModal = defineAsyncComponent(() => import('@/components/ReflowModal.vue'))
 import EmptyState from '@/components/EmptyState.vue'
 import { useSocket } from '@/composables/useSocket'
 import { useSocketEvent } from '@/composables/useSocketEvent'
@@ -480,10 +483,28 @@ function onKeydown(e) {
   else if (intent.action === 'ref') refActionFocused(intent.arg)
 }
 
+// Schedule re-flow after an event that ran long (docs/session-scheduler.md
+// §6). The status PUT comes back with a `reflow` proposal when the event's
+// block overran by 5+ minutes and later blocks in its session haven't
+// started; the operator picks which of them shift. The old Control Room
+// opened this and the Stage-Rail rewrite dropped it, so a late-running
+// event never offered to move the rest of the session.
+const reflowOpen = ref(false)
+const reflowProposal = ref(null)
+const reflowEventName = ref('')
+function closeReflow() {
+  reflowOpen.value = false
+  reflowProposal.value = null
+  reflowEventName.value = ''
+}
+function onReflowSaved(payload) {
+  const n = (payload && payload.count) || 0
+  if (n > 0) showSuccess(`Shifted ${n} later block${n === 1 ? '' : 's'} in the schedule.`)
+  closeReflow()
+}
+
 // Finalise one pool: consequences confirm, PUT Completed, then an undo
-// toast. The old single-pool finalise could also open the schedule
-// reflow modal; that never came across, so nothing opens it today (an
-// event with no long-run candidates, the common case, never needed it).
+// toast, and the re-flow prompt when the event overran its slot.
 async function finalisePool(ev) {
   if (!ev) return
   const p = pools[ev.id]
@@ -515,12 +536,17 @@ async function finalisePool(ev) {
   const evId = ev.id
   const evName = ev.name
   try {
-    await auth.apiFetch(`/api/events/${evId}/status`, {
+    const res = await auth.apiFetch(`/api/events/${evId}/status`, {
       method: 'PUT',
       body: JSON.stringify({ status: 'Completed' }),
     })
     const target = events.value.find((e) => String(e.id) === String(evId))
     if (target) target.status = 'Completed' // -> workflowMode flips to review
+    if (Array.isArray(res?.reflow?.candidates) && res.reflow.candidates.length) {
+      reflowProposal.value = res.reflow
+      reflowEventName.value = evName
+      reflowOpen.value = true
+    }
     // The card unmounts from the live grid (status no longer Live) and its
     // own onUnmounted stops its shot clock; nothing to reset here.
     showUndo({
@@ -961,6 +987,15 @@ function onBeforeUnload(e) {
       :event="currentEvent"
       @close="drawerOpen = false"
       @roster-changed="(id) => refreshPoolRoster(id)"
+    />
+
+    <ReflowModal
+      v-if="reflowOpen"
+      :open="reflowOpen"
+      :proposal="reflowProposal"
+      :event-name="reflowEventName"
+      @close="closeReflow"
+      @saved="onReflowSaved"
     />
 
     <!-- Score correction (#9): amend a judge score on a completed dive in

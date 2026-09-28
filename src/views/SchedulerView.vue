@@ -46,10 +46,8 @@
 // Phase 4 (this revision): subscribes to `schedule:shifted` and
 // refetches /sessions on receipt. The re-flow UI itself (the
 // "Reschedule downstream" modal, src/components/ReflowModal.vue)
-// was opened from the old Control Room's finalise flow. The
-// Stage-Rail Control Room doesn't open it, so today nothing does,
-// and schedule:shifted only fires if something POSTs
-// /api/blocks/reflow directly.
+// opens from the Control Room when finalising an event that ran long,
+// and its confirm is what POSTs /api/blocks/reflow.
 
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
