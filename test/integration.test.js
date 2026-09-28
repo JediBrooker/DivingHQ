@@ -7764,3 +7764,36 @@ test("TRUST_PROXY=true boots, the way the socket layer already read it", { timeo
     await srv.stop();
   }
 });
+
+test("event live and results emails skip withdrawn divers and reserves", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  const saved = { fetch: global.fetch, env: { ...process.env } };
+  try {
+    const dive = await recordKit.threeMetreDive();
+    const ev = await recordKit.event(st.orgId, { gender: "Female" });
+    const who = {};
+    for (const name of ["diving", "withdrawn", "reserve"]) {
+      who[name] = await recordKit.diver(st.orgId, null, "female", `Mail ${name}`);
+      await pool.query("UPDATE users SET email = $2 WHERE id = $1", [who[name], `${name}-${st.slug}@example.test`]);
+      await pool.query(
+        `INSERT INTO competitor_dive_lists (event_id, competitor_id, dive_id, round_number, withdrawn_at, is_reserve)
+         VALUES ($1, $2, $3, 1, $4, $5)`,
+        [ev.id, who[name], dive, name === "withdrawn" ? new Date() : null, name === "reserve"],
+      );
+    }
+    Object.assign(process.env, { CF_ACCOUNT_ID: "acct-test", CF_EMAIL_TOKEN: "token-test", EMAIL_FROM: "noreply@example.test" });
+    const sent = [];
+    global.fetch = async (_url, opts) => { sent.push(JSON.parse(opts.body).to); return { ok: true, json: async () => ({}) }; };
+    const email = require("../lib/email")({ pool });
+    await email.sendEventStartedEmails({ id: ev.id, name: "Mail Test 3m" });
+    await email.sendEventResultsEmails({ id: ev.id, name: "Mail Test 3m" });
+    assert.deepEqual(sent, [`diving-${st.slug}@example.test`, `diving-${st.slug}@example.test`]);
+  } finally {
+    global.fetch = saved.fetch;
+    process.env = saved.env;
+    await recordKit.cleanup(st.orgId);
+    await teardownFixture(st);
+  }
+});
