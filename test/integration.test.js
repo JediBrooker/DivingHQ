@@ -7239,6 +7239,41 @@ test("maintenance mode refuses socket score submits and Control Room actions fro
   }
 });
 
+// notification:ack is a write too; its HTTP twin gets a 503 in
+// maintenance, so the socket one mustn't slip through.
+test("maintenance mode drops a socket notification ack, like the HTTP route", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const { features } = require("../server.js");
+  const st = await setupFixture({ withEvent: false });
+  const s = await b1Kit.connect({ token: st.adminToken });
+  const statusOf = async (id) => (await pool.query("SELECT status FROM notifications WHERE id = $1", [id])).rows[0].status;
+  try {
+    const id = (await pool.query(
+      "INSERT INTO notifications (user_id, category, title, status) VALUES ($1, 'generic', 'b1 ack', 'sent') RETURNING id",
+      [st.adminId],
+    )).rows[0].id;
+    await features.set("maintenance", true);
+    s.emit("notification:ack", { id });
+    await new Promise((r) => setTimeout(r, 400));
+    assert.equal(await statusOf(id), "sent", "no write while maintenance is on");
+
+    // And once it's off the same ack lands, so the check above means something.
+    await features.set("maintenance", false);
+    s.emit("notification:ack", { id });
+    const until = Date.now() + 3000;
+    while (Date.now() < until && (await statusOf(id)) !== "acknowledged") {
+      await new Promise((r) => setTimeout(r, 50));
+    }
+    assert.equal(await statusOf(id), "acknowledged");
+  } finally {
+    await features.set("maintenance", false);
+    s.close();
+    await pool.query("DELETE FROM notifications WHERE user_id = $1 AND title = 'b1 ack'", [st.adminId]);
+    await teardownFixture(st);
+  }
+});
+
 test("a null, empty or boolean score is refused on the socket and HTTP paths, never stored as 0", async (t) => {
   if (!dbReachable) return t.skip("DB not reachable");
   if (!serverReady) return t.skip("server didn't boot — see warning above");

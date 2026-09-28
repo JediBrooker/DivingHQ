@@ -356,8 +356,12 @@ module.exports = function attachSocket({
     // SPA banner click → mark the notifications row 'acknowledged'
     // via the engine. Idempotent; cross-user attempts no-op
     // because the engine scopes the UPDATE to user_id.
+    //
+    // It's still a write, so maintenance mode drops it the way the
+    // HTTP twin (POST /api/notifications/:id/acknowledge) gets a 503.
     socket.on("notification:ack", async (data) => {
       if (!socket.userId || !data?.id || !push) return;
+      if (socketMaintenanceBlocked(socket)) return;
       try {
         await push.acknowledgeNotification(data.id, socket.userId);
       } catch (err) {
@@ -539,10 +543,13 @@ module.exports = function attachSocket({
         return;
       }
       // Maintenance mode is a read-only lockdown, scores included. The
-      // outbox treats this like any other refused send and retries, so
-      // the judge's mark lands once the flag is off again.
+      // mark isn't lost: the judge's outbox keeps it and retries a few
+      // times with backoff, and if maintenance outlasts those it parks
+      // the entry as failed, where the judge can send it again by hand.
+      // It won't land by itself once a long lockdown lifts, hence the
+      // wording below.
       if (socketMaintenanceBlocked(socket)) {
-        reject("maintenance", { message: "DivingHQ is in maintenance mode. Your score will be sent again once it's over." });
+        reject("maintenance", { message: "DivingHQ is in maintenance mode, so scores can't be saved right now. Your score is kept on this device; send it again once maintenance is over." });
         return;
       }
       // Re-check revocation on this long-lived socket. The handshake

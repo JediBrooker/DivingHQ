@@ -219,8 +219,8 @@ existing-account flow stay open regardless.
 read-only lockdown. `maintenanceGate` in `server.js` refuses non-sysadmin
 write-method requests (allowlist: login, logout, health, `/webhooks/`); the
 socket side is one check, `socketMaintenanceBlocked` (`lib/middleware.js`),
-which `socketRequireRole` and `socketCanManageEvent` both run and `submit_score`
-/ `judge_signal` call directly. Every mutating socket event has to reach that
+which `socketRequireRole` and `socketCanManageEvent` both run and `submit_score`,
+`judge_signal` and `notification:ack` call directly. Every mutating socket event has to reach that
 check and not roll its own. `MaintenanceBanner.vue` shows the notice, suppressed in the chromeless
 broadcast/overlay modes. `bootChecks()` loads flags before `listen()`, so a
 test that `require()`s `server.js` (only `integration.test.js` does) must call
