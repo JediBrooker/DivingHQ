@@ -94,6 +94,7 @@ function makeHarness(opts = {}) {
         address: extra.address || ip,
       },
       join: (room) => { rooms.add(room); },
+      leave: (room) => { rooms.delete(room); },
       emit: (name, payload) => { emitted.push({ name, payload }); },
       on: (event, fn) => { onHandlers.set(event, [...listeners(event), fn]); },
       disconnect: () => { disconnected = true; },
@@ -366,12 +367,25 @@ test("event rooms: only UUIDs, and a cap per socket", async () => {
   }
   const eventRooms = () => [...c.rooms].filter((r) => r.startsWith("event:"));
   assert.deepEqual(eventRooms(), [], "junk ids join nothing");
+  const ev = (i) => `00000000-0000-4000-8000-${String(i).padStart(12, "0")}`;
   for (let i = 0; i < 200; i++) {
-    await c.fire("subscribe_event", { event_id: `00000000-0000-4000-8000-${String(i).padStart(12, "0")}` });
+    await c.fire("subscribe_event", { event_id: ev(i) });
   }
   assert.equal(eventRooms().length, 50);
-  // Rejoining one it's already in is fine.
-  await c.fire("get_active_diver", { event_id: "00000000-0000-4000-8000-000000000000" });
+  // Past the cap the stalest room makes way, so the newest joins still
+  // land (a long-lived SPA socket browsing a big meet keeps getting live
+  // updates for whatever it opened last).
+  assert.ok(c.rooms.has(`event:${ev(199)}`) && !c.rooms.has(`event:${ev(149)}`));
+  // A rejoin counts as a touch: 150 is now the oldest, so the next new
+  // event pushes out 151 instead of the one just asked about.
+  await c.fire("get_active_diver", { event_id: ev(150) });
+  await c.fire("subscribe_event", { event_id: ev(500) });
+  assert.equal(eventRooms().length, 50);
+  assert.ok(c.rooms.has(`event:${ev(150)}`) && c.rooms.has(`event:${ev(500)}`));
+  assert.ok(!c.rooms.has(`event:${ev(151)}`));
+  // And one that had been dropped can come back.
+  await c.fire("get_meet_hold", { event_id: ev(0) });
+  assert.ok(c.rooms.has(`event:${ev(0)}`));
   assert.equal(eventRooms().length, 50);
 });
 

@@ -417,18 +417,28 @@ module.exports = function attachSocket({
     // Helper: clients join `event:${id}` rooms when they
     // subscribe to an event (via get_active_diver, get_meet_hold,
     // or by explicit `subscribe_event`). Anonymous, so it's fenced: the
-    // id has to look like an event id, and one socket gets
+    // id has to look like an event id, and one socket sits in at most
     // MAX_EVENT_ROOMS of them. Before, any string made a room, and one
     // socket looping unique ids ate a couple of hundred MB in seconds.
-    // A busy Control Room watches a handful of pools, nowhere near it.
-    // Returns whether the socket is (now) in the room.
+    //
+    // Past the cap the room touched longest ago gets dropped instead of
+    // the new join being refused. The SPA's socket lasts the whole
+    // session and never leaves a room, so a scoreboard left up on a TV
+    // over a two-day meet (or an operator who never reloads) walks past
+    // 50 events, and a hard cap froze live updates for every event after
+    // that. The Set keeps insertion order and a rejoin moves the id to
+    // the back, so the one that goes is the one nobody has asked about
+    // for longest. Returns whether the socket is (now) in the room.
     const joinedEvents = new Set();
     function joinEvent(eventId) {
       if (typeof eventId !== "string" || !EVENT_UUID_RE.test(eventId)) return false;
-      if (!joinedEvents.has(eventId)) {
-        if (joinedEvents.size >= MAX_EVENT_ROOMS) return false;
-        joinedEvents.add(eventId);
+      joinedEvents.delete(eventId);
+      if (joinedEvents.size >= MAX_EVENT_ROOMS) {
+        const oldest = joinedEvents.values().next().value;
+        joinedEvents.delete(oldest);
+        socket.leave(`event:${oldest}`);
       }
+      joinedEvents.add(eventId);
       socket.join(`event:${eventId}`);
       return true;
     }

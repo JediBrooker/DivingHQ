@@ -65,7 +65,7 @@ that stopped the whole server.
 | Event | Required role | Payload | Notes |
 |---|---|---|---|
 | `set_active_diver`        | meet_manager / referee / org_admin / sysadmin | Roster row + status | Persists to in-memory `activeDivers[event_id]` so late-joiners see it. |
-| `subscribe_event`         | none (any socket)             | `{ event_id }` | Joins `event:<event_id>`. The id must be a UUID and one socket can be in at most 50 event rooms; anything past that is ignored. |
+| `subscribe_event`         | none (any socket)             | `{ event_id }` | Joins `event:<event_id>`. The id must be a UUID and one socket sits in at most 50 event rooms: joining a 51st drops the room it last touched longest ago (joins through `get_active_diver` / `get_meet_hold` count as touches). A non-UUID id is ignored. |
 | `get_active_diver`        | none (any socket)             | `{ event_id }` | Read-only — joins the room (same rules as `subscribe_event`) and returns the current state to the asking socket only. |
 | `submit_score`            | judge / referee / sysadmin    | `{ event_id, competitor_id, round_number, score, dive_id?, judge_number? }` | Server-trusted `judge_id = socket.userId`. Rate-limited (60/min/judge). Validates 0–10 in 0.5 steps, confirms event_judges membership. |
 | `announce_score`          | meet_manager / referee / org_admin / sysadmin | Free-form announce payload | Re-broadcast as `final_score_announced`. |
