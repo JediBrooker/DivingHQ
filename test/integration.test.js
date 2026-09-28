@@ -7933,3 +7933,34 @@ test("team dive lists are held to the event's voluntary DD cap, per member", asy
     await compKit.cleanup(orgId);
   }
 });
+
+test("duplicating a session moves its blocks by exactly the days asked, east of UTC too", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const orgId = await compKit.org("dup");
+  // node-pg reads a DATE as local midnight, so the bug only shows on a
+  // host ahead of UTC. Run this one as if the box were in Sydney.
+  const savedTz = process.env.TZ;
+  process.env.TZ = "Australia/Sydney";
+  try {
+    const manager = await compKit.user(orgId, "Dup Manager", ["meet_manager"]);
+    const meet = (await pool.query("INSERT INTO meets (org_id, name) VALUES ($1, 'Dup Meet') RETURNING id", [orgId])).rows[0].id;
+    const sess = (await pool.query(
+      "INSERT INTO sessions (meet_id, name, session_date) VALUES ($1, 'Day 1', '2026-06-02') RETURNING id", [meet])).rows[0].id;
+    await pool.query(
+      `INSERT INTO schedule_blocks (session_id, block_type, starts_at, ends_at)
+       VALUES ($1, 'break', '2026-06-02 09:42:00+10', '2026-06-02 10:00:00+10')`, [sess]);
+    const r = await fetchJson("POST", `/api/sessions/${sess}/duplicate`, {
+      token: manager.token, body: { target_date: "2026-06-03" },
+    });
+    assert.ok(r.status < 300, JSON.stringify(r.body));
+    const moved = (await pool.query(
+      `SELECT b.starts_at = '2026-06-03 09:42:00+10'::timestamptz AS on_the_day
+         FROM schedule_blocks b JOIN sessions s ON s.id = b.session_id
+        WHERE s.meet_id = $1 AND s.id <> $2`, [meet, sess])).rows;
+    assert.deepEqual(moved, [{ on_the_day: true }], "one day on, not two");
+  } finally {
+    if (savedTz === undefined) delete process.env.TZ; else process.env.TZ = savedTz;
+    await compKit.cleanup(orgId);
+  }
+});
