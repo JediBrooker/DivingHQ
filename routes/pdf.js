@@ -717,6 +717,7 @@ module.exports = function createPdfRouter({ pool }) {
                   pu.full_name AS partner_name,
                   tm.name AS team_name,
                   cdl.round_number, cdl.display_order, cdl.withdrawn_at,
+                  cdl.is_reserve, cdl.reserve_position,
                   d.dive_code, d.position, d.dd
            FROM users u
            JOIN competitor_dive_lists cdl ON u.id = cdl.competitor_id
@@ -726,7 +727,8 @@ module.exports = function createPdfRouter({ pool }) {
            LEFT JOIN teams tm  ON tm.id = cdl.team_id
            LEFT JOIN dive_directory d ON d.id = cdl.dive_id
            WHERE cdl.event_id = $1
-           ORDER BY cdl.display_order ASC NULLS LAST,
+           ORDER BY cdl.is_reserve ASC, cdl.reserve_position ASC NULLS LAST,
+                    cdl.display_order ASC NULLS LAST,
                     u.full_name ASC, cdl.round_number ASC`,
           [req.params.id],
         ),
@@ -748,6 +750,8 @@ module.exports = function createPdfRouter({ pool }) {
             partner_name: r.partner_name,
             team_name: r.team_name,
             withdrawn: !!r.withdrawn_at,
+            is_reserve: !!r.is_reserve,
+            reserve_position: r.reserve_position,
             dives: Array.from({ length: event.total_rounds }, () => null),
           });
         }
@@ -828,17 +832,30 @@ module.exports = function createPdfRouter({ pool }) {
       }
       drawTableHeader();
 
-      divers.forEach((d, idx) => {
+      // Reserves (WA 4.1.12) come last under their own header, labelled
+      // R1, R2… like the program PDF. They used to be numbered on as the
+      // next divers in the running order, as if they were competing.
+      let number = 0;
+      let inReserves = false;
+      divers.forEach((d) => {
         // Page break
         if (doc.y > 540) {
           doc.addPage({ size: "A4", layout: "landscape", margin: 40 });
           drawTableHeader();
         }
+        if (d.is_reserve && !inReserves) {
+          inReserves = true;
+          doc.moveDown(0.3);
+          doc.font("Helvetica-Bold").fontSize(8).fillColor("#94a3b8")
+            .text(pdfTranslate(req, "pdf.program.header_reserves").toUpperCase(), startX, doc.y, { characterSpacing: 2 });
+          doc.moveDown(0.3);
+        }
+        const label = d.is_reserve ? `R${d.reserve_position ?? ""}` : String(++number);
         const rowY = doc.y;
         let x = startX;
         // Number column
         doc.font("Helvetica").fontSize(10).fillColor(d.withdrawn ? "#cbd5e1" : "#0f172a");
-        doc.text(String(idx + 1), x, rowY, { width: numCol, align: "center" });
+        doc.text(label, x, rowY, { width: numCol, align: "center" });
         x += numCol;
         // Name + meta column
         doc.font("Helvetica-Bold").fontSize(10).fillColor(d.withdrawn ? "#cbd5e1" : "#0f172a");

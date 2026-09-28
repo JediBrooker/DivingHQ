@@ -7601,3 +7601,37 @@ test("the score sheet brackets the synchro sub-panel trim the scoreboard shows",
     await teardownFixture(st);
   }
 });
+
+// A reserve (WA 4.1.12) isn't competing. The start list numbered them as
+// the next diver, dives and all, with nothing to say they're a reserve;
+// the program PDF already lists them under RESERVES.
+test("the start list keeps reserves out of the running order", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture();
+  try {
+    const dive = await recordKit.threeMetreDive();
+    const add = async (name, order, reserve = null) => {
+      const id = await recordKit.diver(st.orgId, null, "female", name);
+      await pool.query(
+        `INSERT INTO competitor_dive_lists (event_id, competitor_id, dive_id, round_number, display_order, is_reserve, reserve_position)
+         VALUES ($1, $2, $3, 1, $4, $5, $6)`,
+        [st.eventId, id, dive, order, reserve != null, reserve],
+      );
+    };
+    await add("Start Ada", 1);
+    await add("Start Bea", 2);
+    await add("Reserve Cleo", null, 1);
+    const res = await fetch(`${baseUrl}/api/events/${st.eventId}/start-list.pdf`);
+    assert.equal(res.status, 200);
+    const lines = pdfText(Buffer.from(await res.arrayBuffer()));
+    const at = (re) => lines.findIndex((l) => re.test(l));
+    assert.ok(!lines.includes("3"), "the reserve isn't diver #3");
+    const header = at(/^RESERVES$/);
+    assert.ok(header > at(/^Start Bea/), "a RESERVES block after the running order");
+    assert.ok(at(/^Reserve Cleo/) > header);
+    assert.equal(lines[at(/^Reserve Cleo/) - 1], "R1");
+  } finally {
+    await teardownFixture(st);
+  }
+});
