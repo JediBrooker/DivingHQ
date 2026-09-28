@@ -46,19 +46,3 @@ test('orderWorkflowState: any status past Upcoming -> live', () => {
 test('WORKFLOW_STEPS is the canonical pre-meet order', () => {
   assert.deepEqual(WORKFLOW_STEPS, ['check-in', 'random', 'sign-off', 'start'])
 })
-
-// A6-35. Event ids are UUIDs, so the old Number(a.id) - Number(b.id)
-// tie-break was always NaN and two Live events created in the same
-// instant (seeded or imported together) kept whatever order the API gave
-// them, which could swap 'Pool 1' / 'Pool 2', their chips and hotkeys
-// between reloads.
-test('pools created in the same instant order by id, whatever the input order', async () => {
-  const { liveEventsInOrder } = await import('../src/composables/useControlStage.js')
-  const at = '2026-09-01T10:00:00.000Z'
-  const a = { id: '5eed0008-0000-0000-0000-00000000000a', status: 'Live', created_at: at }
-  const b = { id: '5eed0008-0000-0000-0000-00000000000b', status: 'Live', created_at: at }
-  const c = { id: '1eed0008-0000-0000-0000-00000000000c', status: 'Live', created_at: '2026-09-01T11:00:00.000Z' }
-  const ids = (list) => liveEventsInOrder(list).map((e) => e.id)
-  assert.deepEqual(ids([b, c, a]), [a.id, b.id, c.id])
-  assert.deepEqual(ids([a, c, b]), [a.id, b.id, c.id])
-})

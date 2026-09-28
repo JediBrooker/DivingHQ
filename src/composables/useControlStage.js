@@ -30,11 +30,7 @@ export function compareByCreation(a, b) {
   const ta = a?.created_at || ''
   const tb = b?.created_at || ''
   if (ta !== tb) return ta < tb ? -1 : 1
-  // Ids are UUIDs: Number() of one is NaN, so the old numeric tie-break
-  // never broke a tie and same-instant pools could swap between reloads.
-  const ia = String(a?.id ?? '')
-  const ib = String(b?.id ?? '')
-  return ia < ib ? -1 : ia > ib ? 1 : 0
+  return Number(a?.id) - Number(b?.id)
 }
 
 // every Live event in canonical order (a fresh array, never mutates input)
