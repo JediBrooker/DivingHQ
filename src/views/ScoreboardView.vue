@@ -1274,7 +1274,7 @@ onMounted(async () => {
          flashed on air at every load. Blank on those screens, a quiet
          Loading on the ordinary one. -->
     <div v-if="deepLinkPending" class="sb-deeplink-pending" aria-busy="true">
-      <span v-if="!broadcastMode && !overlayMode">Loading…</span>
+      <span v-if="!broadcastMode && !overlayMode">{{ $t('common.loading') }}</span>
     </div>
     <MeetsBrowser
       v-else-if="!currentEventId"

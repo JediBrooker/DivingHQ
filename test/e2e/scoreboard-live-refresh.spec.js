@@ -141,3 +141,20 @@ test("a broadcast deep link never flashes the meets list while it loads", async 
   await expect(page.locator(".sb-body")).toBeVisible({ timeout: 10_000 });
   await setup.deleteOrg(orgId);
 });
+
+// On an ordinary deep link the holding text shows, and like the rest of
+// the scoreboard it's in the spectator's language.
+test("a deep link's loading placeholder is in the viewer's language", async ({ page, request }) => {
+  test.setTimeout(60_000);
+  const { orgId, adminToken } = await setup.createOrgAndAdmin(request, { countryCode: "AUS", orgName: "Scoreboard Deep Link FR" });
+  const { event } = await liveEvent(request, { orgId, adminToken, name: "Deep Link FR", diverNames: ["AAA FR"] });
+  await page.addInitScript(() => { try { localStorage.setItem("locale", "fr"); } catch { /* private mode */ } });
+  await page.route(/\/api\/archive(\?.*)?$/, async (route) => {
+    await new Promise((r) => setTimeout(r, 2000));
+    await route.continue().catch(() => {});
+  });
+  await page.goto(`/scoreboard/${event.id}`);
+  await expect(page.locator(".sb-deeplink-pending")).toHaveText("Chargement…");
+  await expect(page.locator(".sb-body")).toBeVisible({ timeout: 10_000 });
+  await setup.deleteOrg(orgId);
+});
