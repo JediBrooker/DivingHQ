@@ -37,6 +37,7 @@ const {
   stampDiveListLock,
   refuseIfScoresExist,
 } = require("./stage-helpers");
+const { canSeeEvent } = require("./visibility");
 
 // Migration 039: shape-check operator-prescribed round_dives. We
 // only validate structure here (round numbering 1..N contiguous,
@@ -1103,28 +1104,23 @@ module.exports = function createEventsRouter({
   // the diver portal can render the locked rows without a second
   // round-trip. Empty array when no rows exist.
   //
-  // Public for Live/Completed events; authed scope for Upcoming
-  // (mirrors the GET /api/events visibility contract, operators
-  // shouldn't have their pre-meet bulletin leaked).
+  // Public for Live/Completed events; before that, the host org, a
+  // sysadmin, or a federation on the participating list (the same
+  // people GET /api/events lists it for, see ./visibility.js).
   // -------------------------------------------------------------
   router.get("/api/events/:id/round-dives", optionalAuth, async (req, res) => {
     try {
       // optionalAuth: a bad/revoked/suspended token reads as
       // anonymous, same floor as the old inline peek, but the
       // token-version / deleted_at / suspended_at checks now apply.
-      const callerOrgId = req.user?.org_id || null;
-      const callerIsSys = !!req.user?.is_system_admin;
       const ev = await pool.query(
-        "SELECT org_id, status FROM events WHERE id = $1",
+        "SELECT id, org_id, status FROM events WHERE id = $1",
         [req.params.id],
       );
-      if (!ev.rows.length) {
-        return res.status(404).json({ error: "Event not found" });
-      }
-      const evRow = ev.rows[0];
-      const isAuthScope =
-        callerIsSys || (callerOrgId && callerOrgId === evRow.org_id);
-      if (!isAuthScope && !["Live", "Completed"].includes(evRow.status)) {
+      // Pre-meet, a visiting federation on the participating list sees
+      // it too: its divers can enter, and without the prescribed slots
+      // their list just fails validation with no hint which dive.
+      if (!ev.rows.length || !(await canSeeEvent(pool, ev.rows[0], req.user))) {
         return res.status(404).json({ error: "Event not found" });
       }
       const rows = await pool.query(

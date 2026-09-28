@@ -20,6 +20,7 @@
 
 const express = require("express");
 const { recordAudit, auditFromReq } = require("../../lib/audit");
+const { canSeeEvent } = require("./visibility");
 
 module.exports = function createParticipationRoutes({
   pool,
@@ -143,24 +144,21 @@ module.exports = function createParticipationRoutes({
   // the host's competitive intelligence and stays private until
   // the event flips Live (the same moment the public listing
   // reveals the event itself). Authed callers in the host org
-  // (or sysadmin) bypass the status filter so the Federations
-  // modal works pre-meet.
+  // (or sysadmin), and federations already on the list, bypass the
+  // status filter so the Federations modal works pre-meet.
   router.get("/api/events/:id/participating-orgs", optionalAuth, async (req, res) => {
     try {
       // optionalAuth: a bad/revoked/suspended token reads as
       // anonymous, same floor as the old inline peek, but the
       // token-version / deleted_at / suspended_at checks now apply.
-      const callerOrgId = req.user?.org_id || null;
-      const callerIsSys = !!req.user?.is_system_admin;
       const ev = await pool.query(
-        "SELECT org_id, status FROM events WHERE id = $1",
+        "SELECT id, org_id, status FROM events WHERE id = $1",
         [req.params.id],
       );
       if (!ev.rows.length) return res.status(404).json({ error: "Event not found" });
-      const { org_id: hostOrgId, status } = ev.rows[0];
-      const callerIsHostOrParticipant = callerIsSys
-        || callerOrgId === hostOrgId;
-      if (!callerIsHostOrParticipant && status !== "Live" && status !== "Completed") {
+      // Host, sysadmin, or a federation already on the list (it's been
+      // told it's in, so it may see who else is).
+      if (!(await canSeeEvent(pool, ev.rows[0], req.user))) {
         return res.json([]);
       }
       const r = await pool.query(

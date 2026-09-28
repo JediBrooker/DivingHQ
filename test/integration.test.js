@@ -7522,3 +7522,33 @@ test("advance carries a synchro pair's partner, and won't split up a team event"
     await compKit.cleanup(orgId);
   }
 });
+
+test("a visiting federation's divers see an Upcoming event's prescribed dives", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const hostOrg = await compKit.org("host");
+  const guestOrg = await compKit.org("guest");
+  const otherOrg = await compKit.org("other");
+  try {
+    const guest = await compKit.user(guestOrg, "Guest Diver", ["diver"]);
+    const outsider = await compKit.user(otherOrg, "Outside Diver", ["diver"]);
+    const eventId = await compKit.event(hostOrg, { name: "BRN International" });
+    await pool.query("INSERT INTO event_participating_orgs (event_id, org_id) VALUES ($1, $2)", [eventId, guestOrg]);
+    const [dive] = await compKit.dives(1);
+    await pool.query("INSERT INTO event_round_dives (event_id, round_number, dive_id) VALUES ($1, 1, $2)", [eventId, dive]);
+
+    const rd = await fetchJson("GET", `/api/events/${eventId}/round-dives`, { token: guest.token });
+    assert.equal(rd.status, 200, JSON.stringify(rd.body));
+    assert.equal(rd.body.length, 1);
+    assert.equal(rd.body[0].dive_id, dive);
+    const po = await fetchJson("GET", `/api/events/${eventId}/participating-orgs`, { token: guest.token });
+    assert.deepEqual(po.body.map((o) => o.org_id), [guestOrg]);
+
+    // A federation that isn't on the list still sees nothing.
+    assert.equal((await fetchJson("GET", `/api/events/${eventId}/round-dives`, { token: outsider.token })).status, 404);
+    assert.deepEqual((await fetchJson("GET", `/api/events/${eventId}/participating-orgs`, { token: outsider.token })).body, []);
+    assert.equal((await fetchJson("GET", `/api/events/${eventId}/round-dives`)).status, 404);
+  } finally {
+    await compKit.cleanup(hostOrg, guestOrg, otherOrg);
+  }
+});
