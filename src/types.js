@@ -441,7 +441,14 @@
 /**
  * @typedef {Object} RosterRow
  * Row returned by the roster endpoint and used by the Control Room
- * queue. Every row is one (competitor, round, dive) tuple.
+ * queue. Every row is one (competitor, round, dive) tuple; a synchro
+ * pair is one row per round with the second diver in partner_id.
+ *
+ * The Control Room sends the active row as the set_active_diver
+ * payload. What the server keeps and broadcasts as state_update is a
+ * public copy of it: dive_list_id, competitor_org_id,
+ * competitor_org_name and paid_entry are dropped, and club_name /
+ * club_code are null unless the diver's club is approved.
  *
  * @property {string}      dive_list_id      cdl.id, target for reorder/withdraw
  * @property {number|null} display_order
