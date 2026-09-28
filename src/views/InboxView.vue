@@ -26,6 +26,7 @@ import { useAuthStore } from '@/stores/auth'
 import { showError, showSuccess } from '@/composables/useNotify'
 import EmptyState from '@/components/EmptyState.vue'
 import { fmtRelative } from '@/lib/format'
+import { dropNotifications } from '@/composables/usePush'
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -140,6 +141,9 @@ async function markRead(row) {
   row.acknowledged_at = new Date().toISOString()
   try {
     await auth.apiFetch(`/api/notifications/${row.id}/acknowledge`, { method: 'POST' })
+    // The floating banner stack reads a separate shared list. Take the
+    // row out of that too, or its banner stays up after it's read here.
+    dropNotifications([row.id])
   } catch {
     row.status = 'sent'
     row.acknowledged_at = null
@@ -157,7 +161,8 @@ async function markAllRead() {
   try {
     await Promise.all(
       unread.map((r) =>
-        auth.apiFetch(`/api/notifications/${r.id}/acknowledge`, { method: 'POST' }),
+        auth.apiFetch(`/api/notifications/${r.id}/acknowledge`, { method: 'POST' })
+          .then(() => dropNotifications([r.id])),
       ),
     )
     showSuccess(t('inbox.marked_read', { count: unread.length }))
