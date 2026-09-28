@@ -14,6 +14,7 @@
 
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
+const jwt = require("jsonwebtoken");
 
 const attachSocket = require("../routes/socket");
 const venueState = require("../lib/venue-state");
@@ -24,9 +25,13 @@ let seq = 0;
 // Builds a minimal io/socket harness, attaches the real handlers, and
 // returns a driver that can connect fake sockets and fire events.
 // FYI opts.maxPerIp overrides MAX_SOCKETS_PER_IP, read at attach time.
+// opts.canManage is what socketCanManageEvent answers (a function so a
+// test can flip it midway).
 function makeHarness(opts = {}) {
   let emitCount = 0;
-  venueState.emitVenueState = async () => { emitCount += 1; };
+  const venueCalls = [];
+  venueState.emitVenueState = async (args) => { emitCount += 1; venueCalls.push(args); };
+  const canManage = opts.canManage || (() => false);
 
   const captured = { use: null, connection: null };
   const io = {
@@ -46,12 +51,12 @@ function makeHarness(opts = {}) {
       pool: { query: async () => ({ rows: [] }) },
       JWT_SECRET: "test-secret",
       socketRequireRole: () => {},
-      socketCanManageEvent: async () => false,
+      socketCanManageEvent: async () => canManage(),
       isValidScore: () => true,
       isTokenVersionCurrent: async () => true,
       checkAndApplyRecords: async () => {},
       activeDivers: {},
-      meetHolds: {},
+      meetHolds: opts.meetHolds || {},
       persistActiveDiver: () => {},
       persistMeetHold: () => {},
       persistClearMeetHold: () => {},
@@ -65,37 +70,47 @@ function makeHarness(opts = {}) {
   }
 
   // Connects an anonymous socket from `ip` and returns a driver.
-  // onHandlers maps event → array of listeners since the production
-  // connection handler registers two `disconnect` listeners, and real
-  // socket.io fires both (a single-slot map would drop the decrement).
-  function connect(ip) {
+  // onHandlers maps event → array of listeners, like real socket.io,
+  // so a handler registering a second listener for the same event can't
+  // silently replace the first (the disconnect decrement, say).
+  async function connect(ip, token) {
     const onHandlers = new Map();
     const listeners = (event) => onHandlers.get(event) || [];
     let disconnected = false;
     const socket = {
       id: `sock-${ip}-${++seq}`,
-      handshake: { auth: {}, headers: { "x-forwarded-for": ip }, address: ip },
+      handshake: { auth: token ? { token } : {}, headers: { "x-forwarded-for": ip }, address: ip },
       join: () => {},
       emit: () => {},
       on: (event, fn) => { onHandlers.set(event, [...listeners(event), fn]); },
       disconnect: () => { disconnected = true; },
     };
-    captured.use(socket, () => {});   // soft handshake (no token → anon)
+    // Soft handshake: no token means anonymous. It's async (it checks
+    // the token version), so wait for next() before connecting.
+    await new Promise((resolve) => captured.use(socket, resolve));
     captured.connection(socket);
     return {
-      fire: (event, data) => listeners(event).reduce((_, fn) => fn(data), undefined),
+      fire: (event, data, ack) => listeners(event).reduce((_, fn) => fn(data, ack), undefined),
+      // Fires and resolves with whatever the handler acked.
+      ask: async (event, data) => {
+        let reply;
+        await listeners(event).reduce((_, fn) => fn(data, (r) => { reply = r; }), undefined);
+        return reply;
+      },
       triggerDisconnect: () => listeners("disconnect").forEach((fn) => fn()),
       isDisconnected: () => disconnected,
       isWired: () => listeners("subscribe_venue").length > 0,
     };
   }
 
-  return { connect, emits: () => emitCount };
+  return { connect, emits: () => emitCount, venueCalls };
 }
+
+const token = (id) => jwt.sign({ id, org_id: "org-1", org_roles: ["meet_manager"] }, "test-secret");
 
 test("subscribe_venue caps anonymous snapshots per IP", async () => {
   const h = makeHarness();
-  const c = h.connect("198.51.100.7");
+  const c = await h.connect("198.51.100.7");
   for (let i = 0; i < 100; i++) {
     await c.fire("subscribe_venue", { event_id: VALID_ID });
   }
@@ -105,7 +120,7 @@ test("subscribe_venue caps anonymous snapshots per IP", async () => {
 
 test("subscribe_venue rejects non-UUID event ids without a snapshot or budget cost", async () => {
   const h = makeHarness();
-  const c = h.connect("198.51.100.8");
+  const c = await h.connect("198.51.100.8");
   for (const bad of [undefined, null, "", "not-a-uuid", "12345", "../../etc", VALID_ID + "x"]) {
     await c.fire("subscribe_venue", { event_id: bad });
   }
@@ -118,30 +133,79 @@ test("subscribe_venue rejects non-UUID event ids without a snapshot or budget co
 
 test("the per-IP snapshot limit is isolated per client IP", async () => {
   const h = makeHarness();
-  const a = h.connect("203.0.113.1");
-  const b = h.connect("203.0.113.2");
+  const a = await h.connect("203.0.113.1");
+  const b = await h.connect("203.0.113.2");
   for (let i = 0; i < 40; i++) await a.fire("subscribe_venue", { event_id: VALID_ID });
   for (let i = 0; i < 5; i++) await b.fire("subscribe_venue", { event_id: VALID_ID });
   // A is capped at 30; B's 5 are well under its own limit → 35 total.
   assert.equal(h.emits(), 35, "one IP hitting the cap must not starve another");
 });
 
-test("caps concurrent sockets per IP and frees a slot on disconnect", () => {
+test("caps concurrent sockets per IP and frees a slot on disconnect", async () => {
   const h = makeHarness({ maxPerIp: 3 });
-  const conns = Array.from({ length: 5 }, () => h.connect("192.0.2.50"));
+  const conns = [];
+  for (let i = 0; i < 5; i++) conns.push(await h.connect("192.0.2.50"));
   assert.equal(conns.filter((c) => c.isWired()).length, 3, "first 3 admitted");
   assert.equal(conns.filter((c) => c.isDisconnected()).length, 2, "overflow rejected");
 
   // Freeing one accepted slot admits a new connection again.
   conns[0].triggerDisconnect();
-  const extra = h.connect("192.0.2.50");
+  const extra = await h.connect("192.0.2.50");
   assert.ok(extra.isWired() && !extra.isDisconnected(), "slot reclaimed after disconnect");
 });
 
-test("the connection cap is isolated per client IP", () => {
+test("the connection cap is isolated per client IP", async () => {
   const h = makeHarness({ maxPerIp: 2 });
-  const a = Array.from({ length: 3 }, () => h.connect("192.0.2.60"));
-  const b = Array.from({ length: 2 }, () => h.connect("192.0.2.61"));
+  const a = [];
+  const b = [];
+  for (let i = 0; i < 3; i++) a.push(await h.connect("192.0.2.60"));
+  for (let i = 0; i < 2; i++) b.push(await h.connect("192.0.2.61"));
   assert.equal(a.filter((c) => c.isDisconnected()).length, 1, "IP A overflow rejected");
   assert.equal(b.filter((c) => c.isDisconnected()).length, 0, "IP B unaffected by A");
+});
+
+// The Control Room events share one guard (routes/socket.js
+// guardControl). These pin what it has to keep doing for all of them.
+
+test("Control Room events refuse a caller who can't drive the event, each in its own words", async () => {
+  const h = makeHarness({ canManage: () => false });
+  const c = await h.connect("198.51.100.20", token("user-refused"));
+  const data = { event_id: VALID_ID, competitor_id: "c", round_number: 1 };
+  for (const ev of ["set_active_diver", "meet_hold", "meet_resume",
+    "referee_failed_dive", "referee_cap_scores", "referee_redive"]) {
+    assert.deepEqual(await c.ask(ev, data), { ok: false, error: "unauthorized" }, ev);
+  }
+  // announce_score has always said it differently; clients match on it.
+  assert.deepEqual(await c.ask("announce_score", data), { ok: false, error: "not authorised" });
+  assert.equal(h.emits(), 0, "nothing reaches the venue board");
+});
+
+test("a refused caller spends no rate budget; an allowed one is capped per action", async () => {
+  let allowed = false;
+  const h = makeHarness({ canManage: () => allowed });
+  const c = await h.connect("198.51.100.21", token("user-budget"));
+  const data = { event_id: VALID_ID };
+  for (let i = 0; i < 25; i++) await c.ask("meet_hold", data);
+  allowed = true;
+  const holds = [];
+  for (let i = 0; i < 12; i++) holds.push((await c.ask("meet_hold", data)).error || "ok");
+  // 10 = SOCKET_ACTION_LIMITS.meet_hold.limit
+  assert.deepEqual(holds, [...Array(10).fill("ok"), "rate_limited", "rate_limited"]);
+  // Each action has its own bucket, and announce_score its own wording.
+  const announces = [];
+  for (let i = 0; i < 31; i++) announces.push((await c.ask("announce_score", data)).error || "ok");
+  assert.equal(announces.filter((a) => a === "ok").length, 30);
+  assert.equal(announces[30], "rate limited");
+});
+
+test("meet_hold and meet_resume send the hold state to the venue board", async () => {
+  const meetHolds = {};
+  const h = makeHarness({ canManage: () => true, meetHolds });
+  const c = await h.connect("198.51.100.22", token("user-venue"));
+  assert.deepEqual(await c.ask("meet_hold", { event_id: VALID_ID, reason: "Lightning" }), { ok: true });
+  assert.equal(h.venueCalls.at(-1).eventId, VALID_ID);
+  assert.equal(h.venueCalls.at(-1).onHoldReason, "Lightning");
+  assert.deepEqual(await c.ask("meet_resume", { event_id: VALID_ID }), { ok: true });
+  assert.equal(h.venueCalls.at(-1).onHoldReason, null);
+  assert.equal(meetHolds[VALID_ID], undefined);
 });

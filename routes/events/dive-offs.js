@@ -18,14 +18,39 @@
 // crossed the "agent-grep cost real tokens" line. The block is
 // self-contained, the only outside-world dependencies are `pool`
 // (Postgres pool) and `requireEventManager` (auth gate).
-// `validateDiveOffChoice` (Appendix 3 §6, the chosen dive must be
-// one the diver already performed in this stage) lives inline in
-// both handlers because each closes over its own `client` /
-// `eventId`.
 
 const express = require("express");
 const { recordAudit, auditFromReq } = require("../../lib/audit");
 const { perDivePointsCte } = require("../../lib/scoring-sql");
+
+// AUDIT FIX (Strong-6): Appendix 3 §6 says each diver picks one of their
+// previously performed dives for the dive-off. The schema only FKs
+// dive_a_id / dive_b_id to dive_directory, with nothing scoping them to
+// the event or the diver, so the routes check it: the dive has to be the
+// diver's dive in one of their already-scored rounds of this event
+// (same dive identity rule as scoring, the score row's dive wins over
+// the list's). No dive chosen yet is fine. Returns the 400 message, or
+// null. Runs on the caller's transaction client.
+async function validateDiveOffChoice(client, eventId, competitorId, diveId, side) {
+  if (diveId == null) return null;
+  const prior = await client.query(
+    `SELECT 1
+       FROM scores s
+       LEFT JOIN competitor_dive_lists cdl
+         ON cdl.event_id = s.event_id
+        AND cdl.competitor_id = s.competitor_id
+        AND cdl.round_number = s.round_number
+      WHERE s.event_id = $1
+        AND s.competitor_id = $2
+        AND COALESCE(s.dive_id, cdl.dive_id) = $3
+      LIMIT 1`,
+    [eventId, competitorId, diveId],
+  );
+  if (!prior.rows.length) {
+    return `dive_${side}_id must be a dive the ${side} competitor has already performed in this stage (Appendix 3 §6)`;
+  }
+  return null;
+}
 
 module.exports = function createDiveOffsRoutes({ pool, requireEventManager }) {
   if (!pool || !requireEventManager) {
@@ -136,7 +161,7 @@ module.exports = function createDiveOffsRoutes({ pool, requireEventManager }) {
         // a tie-break within the same pool that's competing for
         // a single advancement slot.
         const rosterRes = await client.query(
-          `SELECT DISTINCT competitor_id, group_number, MIN(display_order) AS display_order
+          `SELECT competitor_id, group_number, MIN(display_order) AS display_order
              FROM competitor_dive_lists
             WHERE event_id = $1
               AND competitor_id = ANY($2::uuid[])
@@ -208,40 +233,14 @@ module.exports = function createDiveOffsRoutes({ pool, requireEventManager }) {
           });
         }
 
-        // AUDIT FIX (Strong-6): Appendix 3 §6 specifies the
-        // dive-off must use a previously performed dive ("Each
-        // diver picks one of their previously performed dives").
-        // The schema only FKs to dive_directory globally, there's
-        // no scoping to the event or the diver. So we validate at
-        // the route level: each chosen dive_id must appear as
-        // that divers dive in one of their already-scored rounds
-        // on this event.
-        async function validateDiveOffChoice(competitorId, diveId, side) {
-          if (diveId == null) return null; // optional at create
-          const prior = await client.query(
-            `SELECT 1
-               FROM scores s
-               LEFT JOIN competitor_dive_lists cdl
-                 ON cdl.event_id = s.event_id
-                AND cdl.competitor_id = s.competitor_id
-                AND cdl.round_number = s.round_number
-              WHERE s.event_id = $1
-                AND s.competitor_id = $2
-                AND COALESCE(s.dive_id, cdl.dive_id) = $3
-              LIMIT 1`,
-            [eventId, competitorId, diveId],
-          );
-          if (!prior.rows.length) {
-            return `dive_${side}_id must be a dive the ${side} competitor has already performed in this stage (Appendix 3 §6)`;
-          }
-          return null;
-        }
-        const errA = await validateDiveOffChoice(competitor_a_id, dive_a_id, "a");
+        // Both chosen dives (optional at create) have to be ones the
+        // diver already performed here, see validateDiveOffChoice.
+        const errA = await validateDiveOffChoice(client, eventId, competitor_a_id, dive_a_id, "a");
         if (errA) {
           await client.query("ROLLBACK");
           return res.status(400).json({ error: errA });
         }
-        const errB = await validateDiveOffChoice(competitor_b_id, dive_b_id, "b");
+        const errB = await validateDiveOffChoice(client, eventId, competitor_b_id, dive_b_id, "b");
         if (errB) {
           await client.query("ROLLBACK");
           return res.status(400).json({ error: errB });
@@ -339,38 +338,17 @@ module.exports = function createDiveOffsRoutes({ pool, requireEventManager }) {
           });
         }
 
-        // AUDIT FIX (Strong-6): dive_a_id / dive_b_id, when set
-        // via PATCH, must be a dive the relevant competitor has
-        // already performed in this stage (Appendix 3 §6).
-        async function validateDiveOffChoice(competitorId, diveId, side) {
-          if (diveId == null) return null;
-          const prior = await client.query(
-            `SELECT 1
-               FROM scores s
-               LEFT JOIN competitor_dive_lists cdl
-                 ON cdl.event_id = s.event_id
-                AND cdl.competitor_id = s.competitor_id
-                AND cdl.round_number = s.round_number
-              WHERE s.event_id = $1
-                AND s.competitor_id = $2
-                AND COALESCE(s.dive_id, cdl.dive_id) = $3
-              LIMIT 1`,
-            [eventId, competitorId, diveId],
-          );
-          if (!prior.rows.length) {
-            return `dive_${side}_id must be a dive the ${side} competitor has already performed in this stage (Appendix 3 §6)`;
-          }
-          return null;
-        }
+        // dive_a_id / dive_b_id, when set via PATCH, go through the
+        // same Appendix 3 §6 check as at create.
         if ("dive_a_id" in updates) {
-          const errA = await validateDiveOffChoice(existing.competitor_a_id, updates.dive_a_id, "a");
+          const errA = await validateDiveOffChoice(client, eventId, existing.competitor_a_id, updates.dive_a_id, "a");
           if (errA) {
             await client.query("ROLLBACK");
             return res.status(400).json({ error: errA });
           }
         }
         if ("dive_b_id" in updates) {
-          const errB = await validateDiveOffChoice(existing.competitor_b_id, updates.dive_b_id, "b");
+          const errB = await validateDiveOffChoice(client, eventId, existing.competitor_b_id, updates.dive_b_id, "b");
           if (errB) {
             await client.query("ROLLBACK");
             return res.status(400).json({ error: errB });

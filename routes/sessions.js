@@ -60,18 +60,14 @@
 // in phase 3, the seed is a starting point, not a constraint.
 //
 // Mounted via:
-//   app.use(require('./routes/sessions')({ pool, optionalAuth }))
+//   app.use(require('./routes/sessions')({ pool, optionalAuth,
+//     requireMeetEditor, requireMeetOrClubEditor, isMeetHostAdmin, io }))
 
 const express = require("express");
 const {
   detectConflicts,
   computeResourceFingerprint,
 } = require("../lib/schedule-conflicts");
-const {
-  buildReflowProposal,
-  stampActualStart,
-  REFLOW_NOISE_THRESHOLD_MS,
-} = require("../lib/schedule-reflow");
 const { recordAudit, auditFromReq } = require("../lib/audit");
 
 // Default operator warmup length in front of every competition
@@ -103,6 +99,18 @@ const SEEDED_BOARD_HEIGHTS = ["1m", "3m", "5m", "7.5m", "10m"];
 // also drops the cache so updates feel instant on the original
 // tab.
 const CONFLICT_CACHE_TTL_MS = 5000;
+
+// The block wire shape. GET /sessions, the single-block write
+// responses, duplicate and reflow all hand back rows like this and the
+// SPA's applyBlockUpdate relies on it, so it's written once. Callers
+// add their own WHERE / ORDER BY.
+const BLOCK_SELECT = `SELECT b.id, b.session_id, b.block_type, b.label,
+       b.starts_at, b.ends_at, b.board_ids, b.event_id,
+       b.actual_start_at, b.actual_end_at, b.notes,
+       b.created_at, b.updated_at,
+       e.name AS event_name, e.height AS event_height
+  FROM schedule_blocks b
+  LEFT JOIN events e ON e.id = b.event_id`;
 const conflictCache = new Map(); // meetId -> { at: ms, value: Conflict[] }
 
 function cachedConflicts(meetId) {
@@ -126,30 +134,27 @@ function invalidateConflictCache(meetId) {
 module.exports = function createSessionsRouter({
   pool,
   optionalAuth,
-  // Phase 2 additions, optional so the Phase 1 callsite (no auth /
-  // no socket) still works if someone keeps the old signature, but
-  // server.js wires them all in now so the conflict dismiss + emit
-  // surface is live.
+  // The conflict/dismiss/block-edit gate. requireMeetEditor is an
+  // array of middleware (role check + TOTP gate).
   requireMeetEditor,
+  // Optional: without it the schedule:* socket emits are skipped.
   io,
-  // Club-hosted meets (migration 087), optional. With them a club admin
-  // can edit the schedule of a meet their club hosts.
+  // Club-hosted meets (migration 087). With them a club admin can edit
+  // the schedule of a meet their club hosts, and requireMeetOrClubEditor
+  // takes over from requireMeetEditor as the editor gate.
   requireMeetOrClubEditor,
   isMeetHostAdmin,
 } = {}) {
-  if (!pool) throw new Error("createSessionsRouter requires { pool, … }");
+  // A mount missing its auth pieces used to limp along (anonymous
+  // reads, 503 on every edit). Throwing at boot is louder and there's
+  // exactly one mount, in server.js, which passes all of them.
+  if (!pool || !optionalAuth || !(requireMeetOrClubEditor || requireMeetEditor)) {
+    throw new Error(
+      "createSessionsRouter requires { pool, optionalAuth, requireMeetOrClubEditor or requireMeetEditor, … }",
+    );
+  }
   const router = express.Router();
-  const maybeAuth = optionalAuth || ((req, _res, next) => next());
-
-  // The dismiss endpoints need an auth gate. requireMeetEditor is
-  // an array of middleware (role check + TOTP gate); falls back
-  // to a 503 if the host wired the router without it, so a
-  // partially-configured deploy fails loudly instead of silently
-  // accepting unauth'd dismissals.
-  const editorGate = requireMeetOrClubEditor || requireMeetEditor || ((_req, res) =>
-    res.status(503).json({
-      error: "Conflict dismissal requires an authenticated configuration",
-    }));
+  const editorGate = requireMeetOrClubEditor || requireMeetEditor;
 
   async function userCanEditMeet(req, meet) {
     if (!req.user || !meet) return false;
@@ -178,9 +183,12 @@ module.exports = function createSessionsRouter({
     return meet;
   }
 
+  // Also hands back the session row itself (`session`), for callers
+  // that copy it.
   async function requireSessionEdit(client, req, res, sessionId) {
     const r = await client.query(
       `SELECT s.id AS session_id, s.name AS session_name,
+              s.session_date, s.pool, s.referee_user_id,
               m.id, m.org_id, m.name
          FROM sessions s
          JOIN meets m ON m.id = s.meet_id
@@ -197,7 +205,19 @@ module.exports = function createSessionsRouter({
       res.status(403).json({ error: "You cannot edit this meet schedule" });
       return null;
     }
-    return { meet, session_id: row.session_id, session_name: row.session_name };
+    return {
+      meet,
+      session_id: row.session_id,
+      session_name: row.session_name,
+      session: {
+        id: row.session_id,
+        meet_id: row.id,
+        name: row.session_name,
+        session_date: row.session_date,
+        pool: row.pool,
+        referee_user_id: row.referee_user_id,
+      },
+    };
   }
 
   async function requireBlockEdit(client, req, res, blockId) {
@@ -390,7 +410,7 @@ module.exports = function createSessionsRouter({
   // has events with scheduled_at but no sessions, the boards
   // and sessions are seeded inside a transaction.
   // -------------------------------------------------------------
-  router.get("/api/meets/:meetId/sessions", maybeAuth, async (req, res) => {
+  router.get("/api/meets/:meetId/sessions", optionalAuth, async (req, res) => {
     const { meetId } = req.params;
     let client;
     try {
@@ -448,13 +468,7 @@ module.exports = function createSessionsRouter({
       let blocks = [];
       if (sessionIds.length) {
         const blocksRes = await client.query(
-          `SELECT b.id, b.session_id, b.block_type, b.label,
-                  b.starts_at, b.ends_at, b.board_ids, b.event_id,
-                  b.actual_start_at, b.actual_end_at, b.notes,
-                  b.created_at, b.updated_at,
-                  e.name AS event_name, e.height AS event_height
-             FROM schedule_blocks b
-             LEFT JOIN events e ON e.id = b.event_id
+          `${BLOCK_SELECT}
             WHERE b.session_id = ANY($1::uuid[])
             ORDER BY b.starts_at ASC, b.created_at ASC`,
           [sessionIds],
@@ -710,14 +724,10 @@ module.exports = function createSessionsRouter({
       // moved. The drawer subscribes and refetches; spectators
       // just ignore it. Best-effort, a missing io shouldn't
       // fail the dismissal.
-      try {
-        if (io && typeof io.emit === "function") {
-          io.emit("schedule:conflict_dismissed", {
-            meet_id: meetId,
-            action: "dismiss",
-          });
-        }
-      } catch (_e) { /* best-effort */ }
+      safeEmit("schedule:conflict_dismissed", {
+        meet_id: meetId,
+        action: "dismiss",
+      });
 
       res.json({ dismissal: row });
     } catch (err) {
@@ -738,17 +748,7 @@ module.exports = function createSessionsRouter({
   // edit + insert endpoints to return the canonical post-write row
   // without making the caller re-fetch the full session.
   async function fetchBlockById(client, blockId) {
-    const r = await client.query(
-      `SELECT b.id, b.session_id, b.block_type, b.label,
-              b.starts_at, b.ends_at, b.board_ids, b.event_id,
-              b.actual_start_at, b.actual_end_at, b.notes,
-              b.created_at, b.updated_at,
-              e.name AS event_name, e.height AS event_height
-         FROM schedule_blocks b
-         LEFT JOIN events e ON e.id = b.event_id
-        WHERE b.id = $1`,
-      [blockId],
-    );
+    const r = await client.query(`${BLOCK_SELECT} WHERE b.id = $1`, [blockId]);
     return r.rows[0] || null;
   }
 
@@ -756,9 +756,17 @@ module.exports = function createSessionsRouter({
   // mention `blockId`. Tolerates a missing detector return (empty
   // array) so a downstream change to the detector shape doesn't
   // break the write path.
+  //
+  // The full result goes into the conflict cache on the way. Every
+  // caller runs this after its write has autocommitted, so it's the
+  // current picture, and the editing tab re-GETs /conflicts straight
+  // after each edit; without this that GET ran the whole detector a
+  // second time. Don't call it inside an open transaction, the cache
+  // would hold uncommitted rows.
   async function conflictsTouchingBlock(client, meetId, blockId) {
     try {
       const all = await detectConflicts(meetId, client);
+      conflictCache.set(meetId, { at: Date.now(), value: all });
       return all.filter(
         (c) => c.block_a?.id === blockId || c.block_b?.id === blockId,
       );
@@ -868,26 +876,11 @@ module.exports = function createSessionsRouter({
 
     const client = await pool.connect();
     try {
-      const existing = await client.query(
-        `SELECT b.id, b.session_id, b.starts_at, b.ends_at,
-                b.label, b.block_type, s.meet_id,
-                m.org_id, m.name AS meet_name
-           FROM schedule_blocks b
-           JOIN sessions s ON s.id = b.session_id
-           JOIN meets m ON m.id = s.meet_id
-          WHERE b.id = $1`,
-        [id],
-      );
-      if (!existing.rowCount) {
-        return res.status(404).json({ error: "Block not found" });
-      }
-      const row = existing.rows[0];
+      const access = await requireBlockEdit(client, req, res, id);
+      if (!access) return;
+      const { meet, block: row } = access;
       const sessionId = row.session_id;
-      const meetId = row.meet_id;
-      const meet = { id: meetId, org_id: row.org_id, name: row.meet_name };
-      if (!(await userCanEditMeet(req, meet))) {
-        return res.status(403).json({ error: "You cannot edit this meet schedule" });
-      }
+      const meetId = meet.id;
 
       // ---- Field-by-field validation + SET clause assembly ----
       let nextStartsAt = row.starts_at;
@@ -1314,26 +1307,14 @@ module.exports = function createSessionsRouter({
 
     const client = await pool.connect();
     try {
-      await client.query("BEGIN");
+      // Checked before BEGIN so a refusal has no transaction to undo.
+      // The source row is only read, never locked, so it's the same
+      // read either side of BEGIN.
+      const access = await requireSessionEdit(client, req, res, id);
+      if (!access) return;
+      const { meet, session: src } = access;
 
-      const srcRes = await client.query(
-        `SELECT s.id, s.meet_id, s.name, s.session_date, s.pool, s.referee_user_id,
-                m.org_id, m.name AS meet_name
-           FROM sessions s
-           JOIN meets m ON m.id = s.meet_id
-          WHERE s.id = $1`,
-        [id],
-      );
-      if (!srcRes.rowCount) {
-        await client.query("ROLLBACK");
-        return res.status(404).json({ error: "Session not found" });
-      }
-      const src = srcRes.rows[0];
-      const meet = { id: src.meet_id, org_id: src.org_id, name: src.meet_name };
-      if (!(await userCanEditMeet(req, meet))) {
-        await client.query("ROLLBACK");
-        return res.status(403).json({ error: "You cannot edit this meet schedule" });
-      }
+      await client.query("BEGIN");
 
       // Compute the delta in whole days so the timestamps shift by
       // exactly that integer day count. Using straight ms subtraction
@@ -1405,13 +1386,7 @@ module.exports = function createSessionsRouter({
       // they'll all be null on a fresh clone, but the keys are
       // present so the client doesn't have to special-case).
       const blocksRes = await client.query(
-        `SELECT b.id, b.session_id, b.block_type, b.label,
-                b.starts_at, b.ends_at, b.board_ids, b.event_id,
-                b.actual_start_at, b.actual_end_at, b.notes,
-                b.created_at, b.updated_at,
-                e.name AS event_name, e.height AS event_height
-           FROM schedule_blocks b
-           LEFT JOIN events e ON e.id = b.event_id
+        `${BLOCK_SELECT}
           WHERE b.session_id = $1
           ORDER BY b.starts_at ASC, b.created_at ASC`,
         [newSessionId],
@@ -1736,13 +1711,7 @@ module.exports = function createSessionsRouter({
       // gives the caller the canonical new windows without a second
       // round-trip.
       const blocksRes = await pool.query(
-        `SELECT b.id, b.session_id, b.block_type, b.label,
-                b.starts_at, b.ends_at, b.board_ids, b.event_id,
-                b.actual_start_at, b.actual_end_at, b.notes,
-                b.created_at, b.updated_at,
-                e.name AS event_name, e.height AS event_height
-           FROM schedule_blocks b
-           LEFT JOIN events e ON e.id = b.event_id
+        `${BLOCK_SELECT}
           WHERE b.id = ANY($1::uuid[])
           ORDER BY b.starts_at ASC`,
         [shiftedBlockIds],
@@ -1818,14 +1787,10 @@ module.exports = function createSessionsRouter({
         },
       });
       invalidateConflictCache(row.meet_id);
-      try {
-        if (io && typeof io.emit === "function") {
-          io.emit("schedule:conflict_dismissed", {
-            meet_id: row.meet_id,
-            action: "undismiss",
-          });
-        }
-      } catch (_e) { /* best-effort */ }
+      safeEmit("schedule:conflict_dismissed", {
+        meet_id: row.meet_id,
+        action: "undismiss",
+      });
       res.json({ message: "Dismissal removed", dismissal: row });
     } catch (err) {
       console.error("[DELETE conflicts/dismiss]", err.message);
@@ -1953,9 +1918,3 @@ function foldLine(line) {
   if (chunk) out.push(chunk);
   return out.map((p, i) => (i === 0 ? p : " " + p)).join("\r\n");
 }
-
-module.exports.__test__ = { renderIcs, escapeText, formatIcsUtc, foldLine };
-module.exports.__internals__ = {
-  invalidateConflictCache,
-  CONFLICT_CACHE_TTL_MS,
-};

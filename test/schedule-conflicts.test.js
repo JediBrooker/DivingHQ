@@ -434,3 +434,44 @@ test("computeResourceFingerprint: unknown resource_kind hashes the empty set", a
   });
   assert.equal(fp, refFingerprint([]));
 });
+
+// ---------------------------------------------------------------
+// Diver membership SQL snapshot
+// ---------------------------------------------------------------
+// The detector's event_divers CTE and the diver fingerprint query are
+// both generated from one builder (eventPeopleSql) so the "who is booked
+// on this event" rule can't drift between them. These pin the SQL they
+// generate, whitespace-normalised, to what was hand-written before the
+// builder existed. Any change here changes which dismissals hold.
+
+const EXPECTED_EVENT_DIVERS = "event_divers AS ( SELECT DISTINCT event_id, user_id FROM ( " +
+  ["dl.competitor_id AS user_id FROM competitor_dive_lists dl", "dl.partner_id AS user_id FROM competitor_dive_lists dl",
+    "tm.user_id FROM competitor_dive_lists dl JOIN team_members tm ON tm.team_id = dl.team_id"]
+    .map((head, i) => `SELECT dl.event_id, ${head} WHERE dl.event_id IN ( SELECT DISTINCT sb.event_id ` +
+      "FROM schedule_blocks sb JOIN sessions s ON s.id = sb.session_id WHERE s.meet_id = $1 AND sb.event_id IS NOT NULL ) " +
+      "AND dl.withdrawn_at IS NULL AND COALESCE(dl.is_reserve, FALSE) = FALSE AND " +
+      ["dl.competitor_id", "dl.partner_id", "dl.team_id"][i] + " IS NOT NULL")
+    .join(" UNION ") +
+  " ) src ),";
+
+const peopleOf = (side) => ["dl.competitor_id AS id", "dl.partner_id AS id", "tm.user_id AS id"]
+  .map((head, i) => `SELECT ${head} FROM block_events be JOIN competitor_dive_lists dl ON dl.event_id = be.${side}_event_id ` +
+    (i === 2 ? "JOIN team_members tm ON tm.team_id = dl.team_id " : "") +
+    "WHERE dl.withdrawn_at IS NULL AND COALESCE(dl.is_reserve, FALSE) = FALSE AND " +
+    ["dl.competitor_id", "dl.partner_id", "dl.team_id"][i] + " IS NOT NULL")
+  .join(" UNION ");
+const EXPECTED_DIVER_FINGERPRINT_SQL =
+  "WITH block_events AS ( SELECT a.event_id AS a_event_id, b.event_id AS b_event_id FROM schedule_blocks a " +
+  "JOIN schedule_blocks b ON b.id = $2 WHERE a.id = $1 ), " +
+  `a_people AS ( ${peopleOf("a")} ), b_people AS ( ${peopleOf("b")} ) ` +
+  "SELECT DISTINCT a_people.id FROM a_people JOIN b_people ON b_people.id = a_people.id";
+
+test("diver membership SQL: detector and fingerprint generate the pinned arms", async () => {
+  const sent = [];
+  const fake = { query: async (sql) => { sent.push(sql.replace(/\s+/g, " ").trim()); return { rows: [] }; } };
+  await detectConflicts("meet-1", fake);
+  await computeResourceFingerprint(fake, { blockAId: "a", blockBId: "b", resourceKind: "diver" });
+  const [detectorSql, diverSql] = sent;
+  assert.ok(detectorSql.includes(EXPECTED_EVENT_DIVERS), "event_divers CTE drifted");
+  assert.equal(diverSql, EXPECTED_DIVER_FINGERPRINT_SQL);
+});

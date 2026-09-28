@@ -30,15 +30,49 @@ const jwt = require("jsonwebtoken");
 const createIdempotency = require("../lib/idempotency");
 const { readSessionCookie } = require("../lib/session-cookie");
 const { announceRecords } = require("../lib/records");
+const { insertScoreAudit } = require("../lib/score-audit");
+// Held as the module object and called through it, never destructured:
+// test/socket-rate-limit.test.js swaps emitVenueState on this cached
+// module to keep the DB out of the unit tests.
+const venueState = require("../lib/venue-state");
+
+// Sliding-window counter, one timestamp list per key. limited() records
+// the attempt and says whether the key was already at its limit; a
+// refused attempt isn't recorded, so hammering past the cap doesn't push
+// the window out. prune() drops lists that have gone quiet, the maps
+// would otherwise keep a key for every judge/user/IP ever seen.
+function makeWindowLimiter() {
+  const windows = new Map();   // key -> [t, ...]
+  return {
+    limited(key, { limit, windowMs }) {
+      const now = Date.now();
+      const arr = (windows.get(key) || []).filter((t) => t > now - windowMs);
+      windows.set(key, arr);
+      if (arr.length >= limit) return true;
+      arr.push(now);
+      return false;
+    },
+    prune(windowMs) {
+      const cutoff = Date.now() - windowMs;
+      for (const [key, arr] of windows) {
+        const fresh = arr.filter((t) => t > cutoff);
+        if (fresh.length === 0) windows.delete(key);
+        else windows.set(key, fresh);
+      }
+    },
+  };
+}
 
 module.exports = function attachSocket({
   io,
   pool,
   JWT_SECRET,
-  // From lib/middleware:
-  socketRequireRole,        // currently re-exported but no longer
-                            // used directly, every privileged event
-                            // calls socketCanManageEvent now.
+  // From lib/middleware. socketRequireRole is passed in but nothing
+  // here calls it: submit_score does its own role check and the
+  // Control Room events go through socketCanManageEvent. Heads up,
+  // that means the maintenance-mode check that lives in
+  // socketRequireRole doesn't run for any socket write today.
+  socketRequireRole,
   socketCanManageEvent,
   isValidScore,
   isTokenVersionCurrent,
@@ -76,8 +110,8 @@ module.exports = function attachSocket({
   if (!io || !pool || !JWT_SECRET) {
     throw new Error("attachSocket requires { io, pool, JWT_SECRET, … }");
   }
-  // Avoid an unused-var lint warning while still naming the
-  // dependency at the call site for clarity.
+  // Not called yet (see the note on the parameter), void keeps lint
+  // quiet without dropping it from the mount.
   void socketRequireRole;
 
   // Idempotency layer (migration 054 + lib/idempotency.js).
@@ -154,22 +188,12 @@ module.exports = function attachSocket({
   // Rate limiters (per-judge for scores, per-(action,user) for
   // every other privileged event)
   // -----------------------------------------------------------
-  const SCORE_LIMIT = 60;
-  const SCORE_WINDOW_MS = 60 * 1000;
-  const scoreSubmissions = new Map();   // judgeId → array of timestamps
+  const SCORE_LIMIT = { limit: 60, windowMs: 60 * 1000 };
+  const scoreWindows = makeWindowLimiter();   // keyed on judgeId
 
   function judgeIsRateLimited(judgeId) {
     if (!judgeId) return false;
-    const now = Date.now();
-    const cutoff = now - SCORE_WINDOW_MS;
-    const arr = (scoreSubmissions.get(judgeId) || []).filter((t) => t > cutoff);
-    if (arr.length >= SCORE_LIMIT) {
-      scoreSubmissions.set(judgeId, arr);
-      return true;
-    }
-    arr.push(now);
-    scoreSubmissions.set(judgeId, arr);
-    return false;
+    return scoreWindows.limited(judgeId, SCORE_LIMIT);
   }
 
   const SOCKET_ACTION_LIMITS = {
@@ -184,22 +208,12 @@ module.exports = function attachSocket({
     // Control Room with red flashes.
     judge_signal:     { limit: 30, windowMs: 60 * 1000 },
   };
-  const socketActionWindows = new Map();   // `${action}:${userId}` → [t,…]
+  const actionWindows = makeWindowLimiter();   // keyed `${action}:${userId}`
 
   function socketActionRateLimited(action, userId) {
     const cfg = SOCKET_ACTION_LIMITS[action];
     if (!cfg || !userId) return false;
-    const key = `${action}:${userId}`;
-    const now = Date.now();
-    const cutoff = now - cfg.windowMs;
-    const arr = (socketActionWindows.get(key) || []).filter((t) => t > cutoff);
-    if (arr.length >= cfg.limit) {
-      socketActionWindows.set(key, arr);
-      return true;
-    }
-    arr.push(now);
-    socketActionWindows.set(key, arr);
-    return false;
+    return actionWindows.limited(`${action}:${userId}`, cfg);
   }
 
   // Per-IP limiter for the unauthenticated, expensive read events.
@@ -214,22 +228,12 @@ module.exports = function attachSocket({
   const SOCKET_IP_LIMITS = {
     subscribe_venue: { limit: 30, windowMs: 60 * 1000 },
   };
-  const socketIpWindows = new Map();   // `${action}:${ip}` → [t,…]
+  const ipWindows = makeWindowLimiter();   // keyed `${action}:${ip}`
 
   function socketIpRateLimited(action, ip) {
     const cfg = SOCKET_IP_LIMITS[action];
     if (!cfg || !ip) return false;     // unknown IP → can't key, fail open
-    const key = `${action}:${ip}`;
-    const now = Date.now();
-    const cutoff = now - cfg.windowMs;
-    const arr = (socketIpWindows.get(key) || []).filter((t) => t > cutoff);
-    if (arr.length >= cfg.limit) {
-      socketIpWindows.set(key, arr);
-      return true;
-    }
-    arr.push(now);
-    socketIpWindows.set(key, arr);
-    return false;
+    return ipWindows.limited(`${action}:${ip}`, cfg);
   }
 
   // events.id is a UUID; reject anything else before doing DB work.
@@ -251,28 +255,55 @@ module.exports = function attachSocket({
   const socketIpConnCounts = new Map();   // ip → live socket count
 
   // Periodic cleanup so the maps don't grow forever.
+  const longestWindow = (limits) => Math.max(...Object.values(limits).map((c) => c.windowMs));
   setInterval(() => {
-    const cutoff = Date.now() - SCORE_WINDOW_MS;
-    for (const [judgeId, arr] of scoreSubmissions.entries()) {
-      const fresh = arr.filter((t) => t > cutoff);
-      if (fresh.length === 0) scoreSubmissions.delete(judgeId);
-      else scoreSubmissions.set(judgeId, fresh);
-    }
-    const maxWindow = Math.max(...Object.values(SOCKET_ACTION_LIMITS).map(c => c.windowMs));
-    const actionCutoff = Date.now() - maxWindow;
-    for (const [key, arr] of socketActionWindows.entries()) {
-      const fresh = arr.filter((t) => t > actionCutoff);
-      if (fresh.length === 0) socketActionWindows.delete(key);
-      else socketActionWindows.set(key, fresh);
-    }
-    const ipMaxWindow = Math.max(...Object.values(SOCKET_IP_LIMITS).map(c => c.windowMs));
-    const ipCutoff = Date.now() - ipMaxWindow;
-    for (const [key, arr] of socketIpWindows.entries()) {
-      const fresh = arr.filter((t) => t > ipCutoff);
-      if (fresh.length === 0) socketIpWindows.delete(key);
-      else socketIpWindows.set(key, fresh);
-    }
+    scoreWindows.prune(SCORE_LIMIT.windowMs);
+    actionWindows.prune(longestWindow(SOCKET_ACTION_LIMITS));
+    ipWindows.prune(longestWindow(SOCKET_IP_LIMITS));
   }, 5 * 60 * 1000).unref?.();
+
+  // Who may drive an event from the Control Room. Same list for every
+  // privileged event below; socketCanManageEvent only asks whether the
+  // caller holds any of them, so order doesn't matter.
+  const CONTROL_ROLES = ["meet_manager", "referee", "org_admin"];
+
+  function ackWith(ack, body) {
+    if (typeof ack === "function") ack(body);
+  }
+
+  // Front door for the Control Room events: can this socket drive the
+  // event, and is it inside its rate budget? Authz goes first so someone
+  // who can't drive the event never spends budget. Acks the refusal
+  // itself, the handler just returns on false. announce_score has always
+  // answered in its own words, hence `errors`.
+  const GUARD_ERRORS = { unauthorized: "unauthorized", rateLimited: "rate_limited" };
+  async function guardControl(socket, data, ack, action, errors = GUARD_ERRORS) {
+    if (!(await socketCanManageEvent(socket, data?.event_id, CONTROL_ROLES))) {
+      ackWith(ack, { ok: false, error: errors.unauthorized });
+      return false;
+    }
+    if (socketActionRateLimited(action, socket.userId)) {
+      ackWith(ack, { ok: false, error: errors.rateLimited });
+      return false;
+    }
+    return true;
+  }
+
+  // Push the event's current scoreboard_state to any venue bridge.
+  // emitVenueState catches its own build errors, but it's async and most
+  // callers don't await it, so a rejection used to go unhandled despite
+  // the try/catch around the call. Catching here covers both.
+  async function emitVenue(eventId, label) {
+    try {
+      await venueState.emitVenueState({
+        io, pool, eventId,
+        activePayload: activeDivers[eventId],
+        onHoldReason: meetHolds[eventId]?.reason || null,
+      });
+    } catch (err) {
+      console.error(`[${label}] venue emit failed`, err.message);
+    }
+  }
 
   // -----------------------------------------------------------
   // Connection
@@ -308,6 +339,7 @@ module.exports = function attachSocket({
       if (typeof clearEventControllersBySocket === "function") {
         clearEventControllersBySocket(socket.id);
       }
+      console.log(`[Socket] Disconnected: ${socket.id}`);
     });
 
     // Per-user room: the push engine `io.to(\`user:<id>\`)` fans
@@ -350,8 +382,7 @@ module.exports = function attachSocket({
       const eventId = data?.event_id;
       if (!eventId || !socket.userId) return;
       // Only real controllers can hold a lease (same gate as the actions).
-      if (!(await socketCanManageEvent(socket, eventId,
-                                       ["meet_manager", "referee", "org_admin"]))) return;
+      if (!(await socketCanManageEvent(socket, eventId, CONTROL_ROLES))) return;
       if (typeof getEventController !== "function") return;
       const cur = getEventController(eventId);
       const holderLive = cur && io.sockets.sockets.has(cur.socketId);
@@ -398,18 +429,7 @@ module.exports = function attachSocket({
       joinVenue(eventId);
       // Immediately emit a fresh snapshot so the bridge has full
       // state to render, important after a bridge restart.
-      try {
-        const { emitVenueState } = require("../lib/venue-state");
-        await emitVenueState({
-          io,
-          pool,
-          eventId,
-          activePayload: activeDivers[eventId],
-          onHoldReason: meetHolds[eventId]?.reason || null,
-        });
-      } catch (err) {
-        console.error("[subscribe_venue] initial snapshot failed", err.message);
-      }
+      await emitVenue(eventId, "subscribe_venue");
     });
 
     // Bring late-arriving clients up to speed with whatever's
@@ -421,15 +441,7 @@ module.exports = function attachSocket({
     }
 
     socket.on("set_active_diver", async (data, ack) => {
-      if (!(await socketCanManageEvent(socket, data?.event_id,
-                                       ["meet_manager", "referee", "org_admin"]))) {
-        if (typeof ack === "function") ack({ ok: false, error: "unauthorized" });
-        return;
-      }
-      if (socketActionRateLimited("set_active_diver", socket.userId)) {
-        if (typeof ack === "function") ack({ ok: false, error: "rate_limited" });
-        return;
-      }
+      if (!(await guardControl(socket, data, ack, "set_active_diver"))) return;
       if (data.event_id) {
         activeDivers[data.event_id] = data;
         // Write-through to event_live_state so a server
@@ -457,20 +469,10 @@ module.exports = function attachSocket({
 
       // Venue scoreboard state: fan out to any connected
       // hardware bridge in this event's venue room. See
-      // lib/venue-state.js for the wire shape.
-      if (data.event_id) {
-        try {
-          require("../lib/venue-state").emitVenueState({
-            io, pool,
-            eventId: data.event_id,
-            activePayload: data,
-            onHoldReason: meetHolds[data.event_id]?.reason || null,
-          });
-        } catch (err) {
-          console.error("[set_active_diver] venue emit failed", err.message);
-        }
-      }
-      if (typeof ack === "function") ack({ ok: true });
+      // lib/venue-state.js for the wire shape. activeDivers now holds
+      // `data`, so that's the active payload it sends.
+      if (data.event_id) emitVenue(data.event_id, "set_active_diver");
+      ackWith(ack, { ok: true });
     });
 
     socket.on("get_active_diver", (data) => {
@@ -674,21 +676,17 @@ module.exports = function attachSocket({
             // DON'T update the score; we audit-log the rejected
             // digital sync and emit conflict_pending for the
             // operator's review tray.
-            await client.query(
-              `INSERT INTO score_audit_log
-                 (score_id, event_id, competitor_id, judge_id, round_number,
-                  action, old_score, new_score, actor_user_id, ip_address, user_agent,
-                  reason, actor_local_time, server_committed_at)
-               VALUES ($1,$2,$3,$4,$5,'rejected_duplicate',$6,$7,$8,$9,$10,$11,$12,now())`,
-              [
-                existing.id, data.event_id, data.competitor_id, judgeId, round,
-                oldScore, score,  // old=operator's manual, new=judge's late sync (rejected)
-                socket.userId, clientIp(socket),
-                socket.handshake.headers["user-agent"] || null,
-                "P5 reconciliation: judge digital sync differs from manual entry; operator value retained",
-                actorLocalTime,
-              ],
-            );
+            await insertScoreAudit(client, {
+              scoreId: existing.id, eventId: data.event_id, competitorId: data.competitor_id,
+              judgeId, round, action: "rejected_duplicate",
+              // old = the operator's manual value, new = the judge's late
+              // sync, which is the one being rejected.
+              oldScore, newScore: score,
+              actorId: socket.userId, ip: clientIp(socket),
+              userAgent: socket.handshake.headers["user-agent"] || null,
+              reason: "P5 reconciliation: judge digital sync differs from manual entry; operator value retained",
+              actorLocalTime, committedNow: true,
+            });
             await client.query("COMMIT");
             // Emit conflict so the operator can see the mismatch.
             io.to(`event:${data.event_id}`).emit("conflict_pending", {
@@ -758,21 +756,14 @@ module.exports = function attachSocket({
           const auditAction = reconciledManual
             ? "reconcile_manual"
             : (isInsert ? "insert" : "update");
-          await client.query(
-            `INSERT INTO score_audit_log
-               (score_id, event_id, competitor_id, judge_id, round_number,
-                action, old_score, new_score, actor_user_id, ip_address, user_agent,
-                actor_local_time, server_committed_at)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,now())`,
-            [
-              scoreId, data.event_id, data.competitor_id, judgeId, round,
-              auditAction,
-              oldScore, score,
-              socket.userId, clientIp(socket),
-              socket.handshake.headers["user-agent"] || null,
-              actorLocalTime,
-            ],
-          );
+          await insertScoreAudit(client, {
+            scoreId, eventId: data.event_id, competitorId: data.competitor_id,
+            judgeId, round, action: auditAction,
+            oldScore, newScore: score,
+            actorId: socket.userId, ip: clientIp(socket),
+            userAgent: socket.handshake.headers["user-agent"] || null,
+            actorLocalTime, committedNow: true,
+          });
         }
 
         await client.query("COMMIT");
@@ -823,18 +814,7 @@ module.exports = function attachSocket({
 
       // Venue bridge fan-out: refresh the scoreboard_state for
       // hardware boards every time a judge submits.
-      if (data.event_id) {
-        try {
-          require("../lib/venue-state").emitVenueState({
-            io, pool,
-            eventId: data.event_id,
-            activePayload: activeDivers[data.event_id],
-            onHoldReason: meetHolds[data.event_id]?.reason || null,
-          });
-        } catch (err) {
-          console.error("[submit_score] venue emit failed", err.message);
-        }
-      }
+      if (data.event_id) emitVenue(data.event_id, "submit_score");
 
       // A new score can only raise a book. One that replaced a score
       // already there (a corrected score, a judge scoring again after a
@@ -851,31 +831,13 @@ module.exports = function attachSocket({
     });
 
     socket.on("announce_score", async (data, ack) => {
-      if (!(await socketCanManageEvent(socket, data?.event_id,
-                                       ["meet_manager", "referee", "org_admin"]))) {
-        if (typeof ack === "function") ack({ ok: false, error: "not authorised" });
-        return;
-      }
-      if (socketActionRateLimited("announce_score", socket.userId)) {
-        if (typeof ack === "function") ack({ ok: false, error: "rate limited" });
-        return;
-      }
+      if (!(await guardControl(socket, data, ack, "announce_score",
+                               { unauthorized: "not authorised", rateLimited: "rate limited" }))) return;
       io.to(`event:${data.event_id}`).emit("final_score_announced", data);
       // Venue bridges want the post-final state: dive_total is now
       // present, running_total + rank updated, leaderboard reshuffled.
-      if (data.event_id) {
-        try {
-          require("../lib/venue-state").emitVenueState({
-            io, pool,
-            eventId: data.event_id,
-            activePayload: activeDivers[data.event_id],
-            onHoldReason: meetHolds[data.event_id]?.reason || null,
-          });
-        } catch (err) {
-          console.error("[announce_score] venue emit failed", err.message);
-        }
-      }
-      if (typeof ack === "function") ack({ ok: true });
+      if (data.event_id) emitVenue(data.event_id, "announce_score");
+      ackWith(ack, { ok: true });
     });
 
     // -----------------------------------------------------------
@@ -1083,17 +1045,9 @@ module.exports = function attachSocket({
     }
 
     socket.on("referee_failed_dive", async (data, ack) => {
-      if (!(await socketCanManageEvent(socket, data?.event_id,
-                                       ["referee", "meet_manager", "org_admin"]))) {
-        if (typeof ack === "function") ack({ ok: false, error: "unauthorized" });
-        return;
-      }
-      if (socketActionRateLimited("referee_action", socket.userId)) {
-        if (typeof ack === "function") ack({ ok: false, error: "rate_limited" });
-        return;
-      }
+      if (!(await guardControl(socket, data, ack, "referee_action"))) return;
       if (!(await applyRefereeAction("failed", data, socket.userId))) {
-        if (typeof ack === "function") ack({ ok: false, error: "action_failed" });
+        ackWith(ack, { ok: false, error: "action_failed" });
         return;
       }
       io.to(`event:${data.event_id}`).emit("referee_action_failed", data);
@@ -1103,20 +1057,12 @@ module.exports = function attachSocket({
         round_number: data.round_number,
         reason: "referee:failed",
       });
-      if (typeof ack === "function") ack({ ok: true });
+      ackWith(ack, { ok: true });
     });
     socket.on("referee_cap_scores", async (data, ack) => {
-      if (!(await socketCanManageEvent(socket, data?.event_id,
-                                       ["referee", "meet_manager", "org_admin"]))) {
-        if (typeof ack === "function") ack({ ok: false, error: "unauthorized" });
-        return;
-      }
-      if (socketActionRateLimited("referee_action", socket.userId)) {
-        if (typeof ack === "function") ack({ ok: false, error: "rate_limited" });
-        return;
-      }
+      if (!(await guardControl(socket, data, ack, "referee_action"))) return;
       if (!(await applyRefereeAction("cap", data, socket.userId))) {
-        if (typeof ack === "function") ack({ ok: false, error: "action_failed" });
+        ackWith(ack, { ok: false, error: "action_failed" });
         return;
       }
       io.to(`event:${data.event_id}`).emit("referee_action_cap", data);
@@ -1126,39 +1072,23 @@ module.exports = function attachSocket({
         round_number: data.round_number,
         reason: `referee:cap(${data.cap_value || 2.0})`,
       });
-      if (typeof ack === "function") ack({ ok: true });
+      ackWith(ack, { ok: true });
     });
     socket.on("referee_redive", async (data, ack) => {
-      if (!(await socketCanManageEvent(socket, data?.event_id,
-                                       ["referee", "meet_manager", "org_admin"]))) {
-        if (typeof ack === "function") ack({ ok: false, error: "unauthorized" });
-        return;
-      }
-      if (socketActionRateLimited("referee_action", socket.userId)) {
-        if (typeof ack === "function") ack({ ok: false, error: "rate_limited" });
-        return;
-      }
+      if (!(await guardControl(socket, data, ack, "referee_action"))) return;
       if (!(await applyRefereeAction("redive", data, socket.userId))) {
-        if (typeof ack === "function") ack({ ok: false, error: "action_failed" });
+        ackWith(ack, { ok: false, error: "action_failed" });
         return;
       }
       io.to(`event:${data.event_id}`).emit("referee_action_redive", data);
-      if (typeof ack === "function") ack({ ok: true });
+      ackWith(ack, { ok: true });
     });
 
     // -----------------------------------------------------------
     // Hold / resume the meet
     // -----------------------------------------------------------
     socket.on("meet_hold", async (data, ack) => {
-      if (!(await socketCanManageEvent(socket, data?.event_id,
-                                       ["meet_manager", "referee", "org_admin"]))) {
-        if (typeof ack === "function") ack({ ok: false, error: "unauthorized" });
-        return;
-      }
-      if (socketActionRateLimited("meet_hold", socket.userId)) {
-        if (typeof ack === "function") ack({ ok: false, error: "rate_limited" });
-        return;
-      }
+      if (!(await guardControl(socket, data, ack, "meet_hold"))) return;
       meetHolds[data.event_id] = {
         reason: data.reason || null,
         since: Date.now(),
@@ -1173,44 +1103,19 @@ module.exports = function attachSocket({
       io.to(`event:${data.event_id}`).emit("meet_held",
         { event_id: data.event_id, ...meetHolds[data.event_id] });
       // Venue: flip on_hold=true so the bridge can flash a HOLD banner.
-      try {
-        require("../lib/venue-state").emitVenueState({
-          io, pool,
-          eventId: data.event_id,
-          activePayload: activeDivers[data.event_id],
-          onHoldReason: meetHolds[data.event_id].reason,
-        });
-      } catch (err) {
-        console.error("[meet_hold] venue emit failed", err.message);
-      }
-      if (typeof ack === "function") ack({ ok: true });
+      emitVenue(data.event_id, "meet_hold");
+      ackWith(ack, { ok: true });
     });
     socket.on("meet_resume", async (data, ack) => {
-      if (!(await socketCanManageEvent(socket, data?.event_id,
-                                       ["meet_manager", "referee", "org_admin"]))) {
-        if (typeof ack === "function") ack({ ok: false, error: "unauthorized" });
-        return;
-      }
-      if (socketActionRateLimited("meet_resume", socket.userId)) {
-        if (typeof ack === "function") ack({ ok: false, error: "rate_limited" });
-        return;
-      }
+      if (!(await guardControl(socket, data, ack, "meet_resume"))) return;
       delete meetHolds[data.event_id];
       if (typeof persistClearMeetHold === "function") {
         persistClearMeetHold(data.event_id);
       }
       io.to(`event:${data.event_id}`).emit("meet_resumed", { event_id: data.event_id });
-      try {
-        require("../lib/venue-state").emitVenueState({
-          io, pool,
-          eventId: data.event_id,
-          activePayload: activeDivers[data.event_id],
-          onHoldReason: null,
-        });
-      } catch (err) {
-        console.error("[meet_resume] venue emit failed", err.message);
-      }
-      if (typeof ack === "function") ack({ ok: true });
+      // The hold is gone by now, so this sends on_hold=false.
+      emitVenue(data.event_id, "meet_resume");
+      ackWith(ack, { ok: true });
     });
     socket.on("get_meet_hold", (data) => {
       if (!data?.event_id) return;
@@ -1218,9 +1123,5 @@ module.exports = function attachSocket({
       const state = meetHolds[data.event_id];
       if (state) socket.emit("meet_held", { event_id: data.event_id, ...state });
     });
-
-    socket.on("disconnect", () =>
-      console.log(`[Socket] Disconnected: ${socket.id}`),
-    );
   });
 };

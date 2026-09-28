@@ -21,7 +21,7 @@
 //
 // Extracted out of routes/events.js as part of the Phase-5 split,
 // once the file crossed 4,000 lines. Shares helpers with the
-// seed-semi / seed-final POST handlers that remain in index.js:
+// seed-semi / seed-final POST handlers in super-final-seeding.js:
 // loadH2hPairResults + loadSfCumulative live in
 // lib/super-final-helpers.js for that reason.
 
@@ -32,6 +32,7 @@ const {
   loadSfCumulative,
 } = require("../../lib/super-final-helpers");
 const { perDivePointsCte } = require("../../lib/scoring-sql");
+const { insertDiveListRows } = require("./stage-helpers");
 
 // World Aquatics Art 4.1.5 / Diving World Cup §3.1.2: within a Super-
 // Final tier (finalists at positions 1-4, SF non-finalists 5-6, H2H
@@ -309,16 +310,16 @@ module.exports = function createSuperFinalBridgeRoutes({ pool, requireEventManag
         // (group_number, display_order) slot, two divers
         // occupying one H2H slot. Filtering on withdrawn_at IS
         // NULL makes the second call a clean 404.
+        // The slot is read off their earliest round; one row per round.
         const withdrawRowsRes = await client.query(
-          `SELECT round_number, dive_id, group_number, MIN(display_order) OVER () AS first_order,
-                  MIN(display_order) AS d_order
+          `SELECT group_number, display_order
              FROM competitor_dive_lists
             WHERE event_id = $1
               AND competitor_id = $2
               AND is_reserve = FALSE
               AND withdrawn_at IS NULL
-            GROUP BY round_number, dive_id, group_number, display_order
-            ORDER BY round_number`,
+            ORDER BY round_number
+            LIMIT 1`,
           [eventId, withdraw_competitor_id],
         );
         if (!withdrawRowsRes.rows.length) {
@@ -329,7 +330,7 @@ module.exports = function createSuperFinalBridgeRoutes({ pool, requireEventManag
         }
         const withdrawSlot = {
           group_number:  withdrawRowsRes.rows[0].group_number,
-          display_order: withdrawRowsRes.rows[0].d_order,
+          display_order: withdrawRowsRes.rows[0].display_order,
         };
 
         // Verify the replacement org's individual count, and a
@@ -452,22 +453,13 @@ module.exports = function createSuperFinalBridgeRoutes({ pool, requireEventManag
 
         // Insert the replacement's 3 H2H rows in the same slot
         // (group_number + display_order) as the withdrawn diver.
-        for (let r = 1; r <= 3; r++) {
-          await client.query(
-            `INSERT INTO competitor_dive_lists
-                (event_id, competitor_id, dive_id, round_number,
-                 display_order, group_number, is_reserve)
-              VALUES ($1, $2, $3, $4, $5, $6, FALSE)`,
-            [
-              eventId,
-              replacement_competitor_id,
-              replByRound.get(r) || null,
-              r,
-              withdrawSlot.display_order,
-              withdrawSlot.group_number,
-            ],
-          );
-        }
+        await insertDiveListRows(client, eventId, [1, 2, 3].map((r) => ({
+          competitor_id: replacement_competitor_id,
+          dive_id: replByRound.get(r) || null,
+          round_number: r,
+          display_order: withdrawSlot.display_order,
+          group_number: withdrawSlot.group_number,
+        })));
 
         await recordAudit(client, {
           ...auditFromReq(req),
