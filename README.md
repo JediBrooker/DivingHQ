@@ -256,7 +256,7 @@ The referee's sign-off page. Pre-meet, the meet manager generates a 6-digit hand
 <summary><h2 id="tech-stack">Tech stack</h2></summary>
 
 - **Frontend**: Vue 3 (Composition API, `<script setup>`), Vite 6, Vue Router, Pinia, vue-i18n@11 (26 locales, build-time AST precompilation via `@intlify/unplugin-vue-i18n` so no eval-based message compiler ships to the browser — keeps the strict `script-src 'self'` CSP intact)
-- **Backend**: Node 18+, Express 5, Socket.IO 4, [`pg`](https://node-postgres.com/), `pdfkit`, `nodemailer`
+- **Backend**: Node 22, Express 5, Socket.IO 4, [`pg`](https://node-postgres.com/), `pdfkit`; email goes out through the Cloudflare Email Sending API (`lib/email.js`, `CF_ACCOUNT_ID` / `CF_EMAIL_TOKEN`), no SMTP
 - **Auth**: JSON Web Tokens, bcrypt password hashing, password-reset email flow with single-use tokens
 - **Database**: PostgreSQL 14+ with `uuid-ossp` and `pgcrypto`
 - **PWA**: service worker (network-first navigation + cache-first assets), web app manifest, IndexedDB-backed offline caching
@@ -343,7 +343,7 @@ For deeper detail (vue-i18n message format, the unplugin alternative builds, how
 
 ### 1. Prerequisites
 
-- **Node 18 or newer** (Vite 6 requires it)
+- **Node 22** (`package.json` engines is `>=22 <23`, matching `.nvmrc` and CI; `marked` alone needs 20+)
 - **PostgreSQL 14+** running locally
 - The `uuid-ossp` and `pgcrypto` extensions (PostgreSQL ships with them; `init.sql` enables both)
 
