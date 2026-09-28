@@ -261,6 +261,7 @@ everything beneath it, never sideways.
 | Create/edit meets hosted by… | own club | own region + its clubs | anything in org | n/a, no org admin exists |
 | Run the Control Room for those meets | yes | yes | yes | |
 | Approve role requests from… | own club's members | clubs in region | anyone in org | |
+| Approve guardian links for children in… (§21) | own club | clubs in region | anyone in org | |
 | Appoint club admins for… | own club (co-admins) | clubs in region | any club | |
 | See member data for… | own club | clubs in region | whole org | |
 | Set fees / take payments | own club | own region | org | |
@@ -806,3 +807,19 @@ The Meet Manager's saved event templates used to be the org's alone (`org_admin`
 **Manager.** Org editors see their org's templates, as before. In club mode (`useClubScope`) the strip comes back, pointed at whoever hosts the meet the new event is going into: the host club if they admin it, else the host region, else the region of the host club (a region admin stepping in on one of its clubs' meets uses the region's templates, not the club's). `templateScopeFor()` in `club-scope-core.js` makes that call and the strip reloads when the meet changes. No meet, no strip.
 
 **Tests.** Integration: the "event templates by owner" tests at the end of `test/integration.test.js` (every permission edge, the sysadmin, pending clubs, the CHECK, the cascade). Unit: `test/use-club-scope.test.js`. e2e: `test/e2e/club-templates.spec.js`, a club admin saving and applying one.
+
+## 22. Guardian links where there's no federation
+
+A parent links to a child's account to pay the child's fees (migration 083, `/guardians`). The link needed an org admin's approval, so in an unclaimed country it waited for the sysadmin. Product decision: the child's club approves it there.
+
+**Who decides.** `lib/guardian-requests.js`, same ladder as role requests and the same code: `nearestReviewers` in `lib/role-requests.js` now holds the routing both use. Under a claimed federation, the org admins (the sysadmin when it has no live one), unchanged. In an unclaimed org, the admins of the child's club (`users.club_id` of the dependent, active club, same org), then the admins of that club's region, then the sysadmin. It's the child's club, not the parent's: a parent often has no club. A region admin can act on any of their clubs' requests even when the club has an admin, as with role requests; notices go to the nearest level only.
+
+**Scope.** A club admin lists and decides only requests for children in a club they run, a region admin for children in their region's clubs, never another org's (`GET`/`POST /api/guardian-requests`, behind the same `requireRequestReviewer` gate as role requests). Nobody at the club levels sees or decides a request they're part of (guardian or child); a founder asking to pay for their own child goes to a co-admin, the region or DivingHQ. The check runs against where the child is at decision time, so a child who changes club takes the request to the new one. Club and region admins get `dependent_age`, not the date of birth; org admins still get both. Org admins decide as before.
+
+**Notices.** A new request tells the reviewers in-app (`guardian_request`, Action lane) and by email, linking to `/club`, `/region` or `/users` by level. The parent hears the decision (`guardian_decision`). Both through `lib/notices.js`. Since asking now emails someone, `POST /api/guardians/request` is rate-limited like role requests, a parent turned down waits a day before asking for the same child again (409 `recently_declined`), and withdrawing and re-asking notifies the reviewers at most once a day per parent and child (the request still lands in the queue).
+
+**Frontend.** `GuardianRequestQueue.vue` on My club and My region, shown where those pages review requests (no federation) and payments is on, the same gate as the rest of the guardian screens. `/guardians` asks for `?include=pending` (the old `include_pending=1` still works) and shows the pending link with Withdraw; the default response stays approved-only for the payments "Paying for" picker.
+
+**Not done.** The parent's search is unchanged (anyone in the org by name, with their club, not narrowed to children); a list of a club's under-18s for parents is a privacy call nobody has made. Club and region admins can't revoke an approved link (the parent, org admins and the sysadmin can). The dashboard's pending feed doesn't count guardian requests; the queue and the notices are where they show. The guardian endpoints still aren't gated on the payments flag server-side, only the screens are, so a request sent straight to the API while payments is off still notifies its reviewers, pointing at a queue that isn't showing.
+
+**Tests.** Integration: the guardian link tests at the end of `test/integration.test.js`. e2e: `test/e2e/guardian-club-approval.spec.js`.

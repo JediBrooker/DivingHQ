@@ -834,7 +834,8 @@
       "club_change": "Klubskifte",
       "region_request": "Region",
       "club_pending": "Ny klub",
-      "club_decision": "Klub"
+      "club_decision": "Klub",
+      "guardian_link": "Værgetilknytning"
     }
   },
   "compare": {
@@ -1947,7 +1948,10 @@
     "admins_intro_payments": "Klubadministratorer står for de stævner, klubben arrangerer, og tager sig af dens udbetalinger og medlemskontingenter. De får ingen adgang på forbundsniveau.",
     "last_admin_tip": "En klub skal have mindst én administrator. Tilføj en medadministrator, før du fjerner denne.",
     "intro_federation": "Din klubs invitationslink, kode og administratorer. Dit forbund udpeger administratorerne og behandler dine medlemmers rolleanmodninger.",
-    "requests_federation": "Dit forbund behandler dine medlemmers rolleanmodninger."
+    "requests_federation": "Dit forbund behandler dine medlemmers rolleanmodninger.",
+    "guardian_requests_hint": "En forælder eller værge beder om at betale for et af dine medlemmer. Godkend kun, hvis du ved, at det virkelig er barnets forælder eller værge: når de er tilknyttet, kan de betale barnets gebyrer og se, hvad barnet skylder.",
+    "no_guardian_requests_title": "Ingen værgeanmodninger venter",
+    "no_guardian_requests_body": "Når en forælder beder om at betale for et af dine unge medlemmer, vises det her."
   },
   "regions": {
     "label": {

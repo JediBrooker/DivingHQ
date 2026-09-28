@@ -834,7 +834,8 @@
       "club_change": "Vereinswechsel",
       "region_request": "Region",
       "club_pending": "Neuer Verein",
-      "club_decision": "Verein"
+      "club_decision": "Verein",
+      "guardian_link": "Erziehungsberechtigte"
     }
   },
   "compare": {
@@ -1947,7 +1948,10 @@
     "admins_intro_payments": "Vereinsadmins richten die Wettkämpfe aus, die ihr Verein veranstaltet, und kümmern sich um Auszahlungen und Mitgliedsbeiträge. Verbandsweite Rechte bekommen sie nicht.",
     "last_admin_tip": "Ein Verein braucht mindestens einen Admin. Fügen Sie einen weiteren Admin hinzu, bevor Sie diesen entfernen.",
     "intro_federation": "Einladungslink, Kürzel und Admins Ihres Vereins. Ihr Verband ernennt die Admins und bearbeitet die Rollenanfragen Ihrer Mitglieder.",
-    "requests_federation": "Ihr Verband bearbeitet die Rollenanfragen Ihrer Mitglieder."
+    "requests_federation": "Ihr Verband bearbeitet die Rollenanfragen Ihrer Mitglieder.",
+    "guardian_requests_hint": "Ein Elternteil oder Erziehungsberechtigter möchte für eines Ihrer Mitglieder zahlen. Genehmigen Sie das nur, wenn Sie wissen, dass die Person wirklich Elternteil oder Erziehungsberechtigter des Kindes ist: Nach der Verknüpfung kann sie die Gebühren des Kindes bezahlen und sehen, was das Kind schuldet.",
+    "no_guardian_requests_title": "Keine offenen Anfragen von Erziehungsberechtigten",
+    "no_guardian_requests_body": "Wenn ein Elternteil für eines Ihrer jungen Mitglieder zahlen möchte, erscheint das hier."
   },
   "regions": {
     "label": {

@@ -834,7 +834,8 @@
       "club_change": "Seuran vaihto",
       "region_request": "Alue",
       "club_pending": "Uusi seura",
-      "club_decision": "Seura"
+      "club_decision": "Seura",
+      "guardian_link": "Huoltajalinkitys"
     }
   },
   "compare": {
@@ -1947,7 +1948,10 @@
     "admins_intro_payments": "Seuran ylläpitäjät vetävät seuransa järjestämät kilpailut ja huolehtivat sen tilityksistä ja jäsenmaksuista. Heillä ei ole liittotason oikeuksia.",
     "last_admin_tip": "Seuralla on oltava vähintään yksi ylläpitäjä. Lisää toinen ylläpitäjä ennen kuin poistat tämän.",
     "intro_federation": "Seurasi kutsulinkki, tunnus ja ylläpitäjät. Liittosi nimeää ylläpitäjät ja käsittelee jäsentesi roolipyynnöt.",
-    "requests_federation": "Liittosi käsittelee jäsentesi roolipyynnöt."
+    "requests_federation": "Liittosi käsittelee jäsentesi roolipyynnöt.",
+    "guardian_requests_hint": "Vanhempi tai huoltaja pyytää saada maksaa yhden jäsenesi puolesta. Hyväksy vain, jos tiedät hänen todella olevan lapsen vanhempi tai huoltaja: linkityksen jälkeen hän voi maksaa lapsen maksut ja nähdä, mitä lapsi on velkaa.",
+    "no_guardian_requests_title": "Ei odottavia huoltajapyyntöjä",
+    "no_guardian_requests_body": "Kun vanhempi pyytää saada maksaa jonkun nuoren jäsenesi puolesta, pyyntö näkyy tässä."
   },
   "regions": {
     "label": {

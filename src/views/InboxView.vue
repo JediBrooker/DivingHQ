@@ -64,6 +64,10 @@ const CATEGORY_LANES = {
   region_request:           'action',
   club_change:              'ops',
   region_decision:          'ops',
+  // A parent asking to pay for a child is the reviewer's to decide; the
+  // parent hearing the answer is news.
+  guardian_request:         'action',
+  guardian_decision:        'ops',
   claim_vote:               'action',
   claim_review:             'action',
   claim_decided:            'ops',
@@ -203,6 +207,8 @@ const CATEGORY_LABEL_KEYS = {
   club_join_request:           'club_change',
   region_request:              'region_request',
   region_decision:             'region_request',
+  guardian_request:            'guardian_link',
+  guardian_decision:           'guardian_link',
   claim_vote:                  'claim_vote',
   claim_review:                'claim_review',
   claim_decided:               'claim_decided',

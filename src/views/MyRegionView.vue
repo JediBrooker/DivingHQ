@@ -11,17 +11,20 @@ import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { RouterLink, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useFeaturesStore } from '@/stores/features'
 import { usePlural } from '@/composables/usePlural'
 import { showError, showInfo } from '@/composables/useNotify'
 import { confirmAction } from '@/composables/useConfirm'
 import EmptyState from '@/components/EmptyState.vue'
 import RoleRequestQueue from '@/components/RoleRequestQueue.vue'
 import JoinRequestQueue from '@/components/JoinRequestQueue.vue'
+import GuardianRequestQueue from '@/components/GuardianRequestQueue.vue'
 import LoadError from '@/components/LoadError.vue'
 
 const { t } = useI18n()
 const { tn } = usePlural()
 const auth = useAuthStore()
+const features = useFeaturesStore()
 const router = useRouter()
 
 const regions = computed(() => auth.regionAdminOf)
@@ -177,6 +180,10 @@ async function removeAdmin(region, admin) {
 // country has no federation yet.
 const reviewsRequests = computed(() => regions.value.some(r => r.org_claim_state === 'unclaimed'))
 
+// Guardian link requests from the region's clubs, on the same terms as
+// My club: no federation, and payments switched on.
+const reviewsGuardians = computed(() => features.payments && reviewsRequests.value)
+
 // can_manage from the admins endpoint means "no federation here".
 const selfRun = computed(() => regions.value.some(r => detail.value[r.id]?.canManage))
 
@@ -208,6 +215,11 @@ onMounted(reloadAll)
     <section v-if="selfRun" class="block">
       <h2 class="block-title">{{ $t('my_club.join_requests') }}</h2>
       <JoinRequestQueue :key="`jq-${queueKey}`" show-club @decided="reloadAll" />
+    </section>
+
+    <section v-if="reviewsGuardians" class="block" data-testid="region-guardian-requests">
+      <h2 class="block-title">{{ $t('user_manager.guardian_requests_title') }}</h2>
+      <GuardianRequestQueue :key="`gq-${queueKey}`" show-club />
     </section>
 
     <section v-for="r in regions" :key="r.id" class="block">

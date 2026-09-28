@@ -823,7 +823,8 @@
       "club_change": "俱乐部变更",
       "region_request": "地区",
       "club_pending": "新俱乐部",
-      "club_decision": "俱乐部"
+      "club_decision": "俱乐部",
+      "guardian_link": "监护人关联"
     }
   },
   "compare": {
@@ -1947,7 +1948,10 @@
     "admins_intro_payments": "俱乐部管理员负责运营本俱乐部主办的比赛并管理其付款和会费，没有全联合会范围的权限。",
     "last_admin_tip": "每个俱乐部至少需要一名管理员。请先添加另一名管理员，再移除这一位。",
     "intro_federation": "您俱乐部的邀请链接、代码和管理员。管理员由您的联合会任命，会员的角色申请也由联合会审核。",
-    "requests_federation": "会员的角色申请由您的联合会审核。"
+    "requests_federation": "会员的角色申请由您的联合会审核。",
+    "guardian_requests_hint": "有家长或监护人请求为您的一名成员付款。只有在确定对方确实是孩子的家长或监护人时才批准：关联后，对方可以为孩子支付费用，并查看孩子的欠款。",
+    "no_guardian_requests_title": "暂无待处理的监护人请求",
+    "no_guardian_requests_body": "家长请求为您的年轻成员付款时，会显示在这里。"
   },
   "regions": {
     "label": {

@@ -823,7 +823,8 @@
       "club_change": "Změna klubu",
       "region_request": "Region",
       "club_pending": "Nový klub",
-      "club_decision": "Klub"
+      "club_decision": "Klub",
+      "guardian_link": "Propojení s opatrovníkem"
     }
   },
   "compare": {
@@ -1947,7 +1948,10 @@
     "admins_intro_payments": "Správci klubu řídí závody, které jejich klub pořádá, a starají se o jeho výplaty a členské příspěvky. Přístup v rámci celého svazu nemají.",
     "last_admin_tip": "Klub potřebuje alespoň jednoho správce. Než tohoto odeberete, přidejte dalšího správce.",
     "intro_federation": "Odkaz na pozvánku do vašeho klubu, jeho kód a správci. Správce jmenuje vaše federace, která také posuzuje žádosti vašich členů o role.",
-    "requests_federation": "Žádosti vašich členů o role posuzuje vaše federace."
+    "requests_federation": "Žádosti vašich členů o role posuzuje vaše federace.",
+    "guardian_requests_hint": "Rodič nebo opatrovník žádá o možnost platit za jednoho z vašich členů. Schvalte to jen tehdy, když víte, že jde skutečně o rodiče nebo opatrovníka dítěte: po propojení může platit poplatky dítěte a vidět, co dítě dluží.",
+    "no_guardian_requests_title": "Žádné žádosti opatrovníků nečekají",
+    "no_guardian_requests_body": "Když rodič požádá o možnost platit za některého z vašich mladých členů, objeví se to tady."
   },
   "regions": {
     "label": {

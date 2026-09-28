@@ -834,7 +834,8 @@
       "club_change": "Zmiana klubu",
       "region_request": "Region",
       "club_pending": "Nowy klub",
-      "club_decision": "Klub"
+      "club_decision": "Klub",
+      "guardian_link": "Połączenie z opiekunem"
     }
   },
   "compare": {
@@ -1947,7 +1948,10 @@
     "admins_intro_payments": "Administratorzy klubu prowadzą zawody organizowane przez swój klub i zajmują się jego wypłatami oraz składkami członkowskimi. Nie mają dostępu na poziomie całego związku.",
     "last_admin_tip": "Klub musi mieć co najmniej jednego administratora. Zanim usuniesz tego, dodaj innego administratora.",
     "intro_federation": "Link z zaproszeniem, kod i administratorzy twojego klubu. Twoja federacja wyznacza administratorów i rozpatruje prośby członków o role.",
-    "requests_federation": "Prośby twoich członków o role rozpatruje twoja federacja."
+    "requests_federation": "Prośby twoich członków o role rozpatruje twoja federacja.",
+    "guardian_requests_hint": "Rodzic lub opiekun prosi o możliwość płacenia za jednego z twoich członków. Zatwierdź tylko wtedy, gdy wiesz, że to naprawdę rodzic lub opiekun dziecka: po połączeniu będzie mógł opłacać należności dziecka i widzieć, ile dziecko jest winne.",
+    "no_guardian_requests_title": "Brak oczekujących próśb opiekunów",
+    "no_guardian_requests_body": "Gdy rodzic poprosi o możliwość płacenia za jednego z twoich młodych członków, pojawi się to tutaj."
   },
   "regions": {
     "label": {

@@ -130,6 +130,7 @@ Access follows the structure of your sport on DivingHQ. Each admin controls thei
 - **Federation admins** see and manage the accounts of everyone in their country's organisation on DivingHQ: names, usernames, email addresses, clubs, regions, roles, competition details, account status and competition entries. They approve role requests, appoint club admins, and can suspend accounts. They can also read the audit log for their organisation.
 - **Meet organisers and officials** see what they need to run a meet: entries, dive lists and scores for their events.
 - **Coaches** see the profiles and analytics of divers they're linked to as a coach.
+- **Guardian link requests** (a parent or guardian asking to pay on a child's behalf) go to whoever approves them: the federation's admins, or, where the clubs run the country, the admins of the child's club (or of its region, or DivingHQ if the club has nobody to ask). They see the parent's name and username and the child's name, club and age. Club and region admins get the child's age, not their date of birth, and never decide a request they're part of.
 
 ### Clubs that join before their federation (claims)
 

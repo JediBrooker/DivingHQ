@@ -401,6 +401,8 @@ until the operator has switched maintenance mode on and passed
 | Role gate that also lets the event's delegates in | `requireRoleOrEventDelegate(roles, eventIdOf)` | `lib/middleware.js` |
 | Meet routes open to club admins (then pin with `isMeetHostAdmin`) | `requireMeetEditorOrClubAdmin` / server.js `requireMeetOrClubEditor` | `lib/middleware.js` |
 | Who reviews a role request (federation vs club-first) | `listForOrgAdmin` / `listForDelegate` / `delegateCanReview` / `reviewersFor` | `lib/role-requests.js` |
+| The nearest level with someone live to ask about a member (org admins, else the member's club, its region, then the sysadmin), for any request a club can decide | `nearestReviewers(db, { orgId, memberId, clubCanDecide, except })` | `lib/role-requests.js` |
+| Who sees, decides and hears about a guardian link request (org admins, or the child's club / region where there's no federation) | `listForOrgAdmin` / `listForDelegate` / `delegateCanReview` / `reviewersFor` / `notifyReviewers` / `notifyDecision` | `lib/guardian-requests.js` |
 | Narrow a meet screen to a club admin's own meets (pass the org roles the screen admits on its own, e.g. `CONTROL_ROOM_ROLES`, so a referee who also admins a club isn't narrowed) | `useClubScope(screenRoles)` | `src/composables/useClubScope.js` + `club-scope-core.js` |
 | Count-aware UI string (`counts.<base>_zero` … `_other`, one key per CLDR category; locale values can't use vue-i18n's `\|` plurals) | `usePlural().tn(base, n)` | `src/composables/usePlural.js` + `src/lib/plural.js` |
 | "Couldn't load this" + Try again, for a failed fetch that must not read as an empty list or a permission refusal | `<LoadError @retry>` | `src/components/LoadError.vue` |

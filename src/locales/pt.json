@@ -834,7 +834,8 @@
       "club_change": "Mudança de clube",
       "region_request": "Região",
       "club_pending": "Novo clube",
-      "club_decision": "Clube"
+      "club_decision": "Clube",
+      "guardian_link": "Associação de responsável"
     }
   },
   "compare": {
@@ -1947,7 +1948,10 @@
     "admins_intro_payments": "Os administradores do clube gerem as provas que o clube organiza e tratam dos seus pagamentos e quotas de filiação. Não têm acesso ao nível da federação.",
     "last_admin_tip": "Um clube precisa de pelo menos um administrador. Adicione outro administrador antes de remover este.",
     "intro_federation": "A ligação de convite, o código e os administradores do seu clube. A sua federação nomeia os administradores e analisa os pedidos de função dos seus membros.",
-    "requests_federation": "A sua federação analisa os pedidos de função dos seus membros."
+    "requests_federation": "A sua federação analisa os pedidos de função dos seus membros.",
+    "guardian_requests_hint": "Um pai, uma mãe ou um responsável pede para pagar por um dos seus membros. Aprove apenas se souber que é mesmo o pai, a mãe ou o responsável da criança: depois da associação, poderá pagar as quotas da criança e ver o que a criança deve.",
+    "no_guardian_requests_title": "Nenhum pedido de responsáveis à espera",
+    "no_guardian_requests_body": "Quando um pai ou uma mãe pedir para pagar por um dos seus membros mais novos, o pedido aparece aqui."
   },
   "regions": {
     "label": {

@@ -70,7 +70,7 @@ Guardians can pay fees on behalf of minors they are linked to.
 
 1. Visit `/guardians` ("My Dependents").
 2. Search for the minor by name (anyone in your own federation) and pick them to send a link request. It shows on the page as **Waiting for approval**, and you can withdraw it from there.
-3. An org administrator approves the request under **User Manager → Pending requests**.
+3. Someone who knows the family approves it. Under a federation that's an org administrator, under **User Manager → Pending requests**. In a country whose federation isn't on DivingHQ yet it's the admins of the child's club, on **My club** (or of the club's region, on **My region**), and DivingHQ when the club has nobody to ask. They hear about it by email and in the app, and so do you once it's decided.
 4. Once linked, a **Paying for** dropdown appears at the top of the Membership page: *Yourself* or *[Dependent Name (age)]*.
 5. Select the dependent — the price resolves for them (for example, junior-tier membership pricing).
 6. At checkout, the session carries a `subject_user_id` so the server validates the guardian relationship before processing.

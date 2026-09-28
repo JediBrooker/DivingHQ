@@ -834,7 +834,8 @@
       "club_change": "Cambio club",
       "region_request": "Regione",
       "club_pending": "Nuovo club",
-      "club_decision": "Club"
+      "club_decision": "Club",
+      "guardian_link": "Collegamento tutore"
     }
   },
   "compare": {
@@ -1947,7 +1948,10 @@
     "admins_intro_payments": "Gli amministratori del club gestiscono le gare organizzate dal loro club e si occupano dei suoi pagamenti e delle quote di affiliazione. Non hanno accesso a livello di federazione.",
     "last_admin_tip": "Un club deve avere almeno un amministratore. Aggiungi un altro amministratore prima di rimuovere questo.",
     "intro_federation": "Il link di invito, il codice e gli amministratori del tuo club. La tua federazione nomina gli amministratori ed esamina le richieste di ruolo dei membri.",
-    "requests_federation": "La tua federazione esamina le richieste di ruolo dei tuoi membri."
+    "requests_federation": "La tua federazione esamina le richieste di ruolo dei tuoi membri.",
+    "guardian_requests_hint": "Un genitore o tutore chiede di pagare per uno dei tuoi iscritti. Approva solo se sai che è davvero il genitore o il tutore del minore: una volta collegato, potrà pagare le quote del minore e vedere cosa deve.",
+    "no_guardian_requests_title": "Nessuna richiesta di tutori in attesa",
+    "no_guardian_requests_body": "Quando un genitore chiede di pagare per uno dei tuoi giovani iscritti, la richiesta compare qui."
   },
   "regions": {
     "label": {

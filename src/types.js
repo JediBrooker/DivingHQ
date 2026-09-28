@@ -942,9 +942,12 @@
 
 /**
  * @typedef {Object} GuardianLink
- * GET /api/guardians/my-dependents. Approved links only, unless
- * ?include_pending=1, which the Dependents page passes (pending ones sort
- * last). POST /api/guardians/:id/revoke ends either kind.
+ * GET /api/guardians/my-dependents. Approved links only by default, which
+ * is what the payments "Paying for" picker wants. ?include=pending adds
+ * the ones still waiting for a decision (the Dependents page passes it;
+ * pending ones sort last, and include_pending=1 is the old spelling).
+ * POST /api/guardians/:id/revoke ends an approved link or withdraws a
+ * pending one.
  *
  * @property {string}  guardian_link_id
  * @property {'approved'|'pending'} status
@@ -952,6 +955,29 @@
  * @property {string}  username
  * @property {string}  full_name
  * @property {?string} date_of_birth
+ */
+
+/**
+ * @typedef {Object} GuardianRequest
+ * GET /api/guardian-requests. The pending links the caller decides with
+ * POST /api/guardian-requests/:id/review { decision }. An org admin gets
+ * their org's (the sysadmin every org's); where there's no federation a
+ * club admin gets the ones for children in their club and a region admin
+ * the ones for their region's clubs (lib/guardian-requests.js).
+ *
+ * @property {string}  id
+ * @property {'pending'} status
+ * @property {string}  requested_at
+ * @property {string}  org_id
+ * @property {string}  guardian_id
+ * @property {string}  guardian_name
+ * @property {string}  guardian_username
+ * @property {string}  dependent_id
+ * @property {string}  dependent_name
+ * @property {string}  dependent_username
+ * @property {?number} dependent_age    whole years, null without a birthday
+ * @property {?string} club_name        the child's club
+ * @property {?string} [dependent_dob]  org admins and the sysadmin only
  */
 
 // Force this file to be a module so import('@/types') works in
