@@ -327,7 +327,7 @@ After the F event completes, the public scoreboard shows a merged 1–12 ranking
 - **Positions 5–6** — H2H + SF cumulative
 - **Positions 7–12** — H2H scores only (3 dives)
 
-Within each tier, ties resolve via the standard WA tie-break (cumulative_total DESC, dives_desc DESC).
+Within each tier, equal totals share the place and the next place is skipped (WA Art 4.1.5: a tie is declared for that place).
 
 ## Confirm dialogs and toast feedback
 

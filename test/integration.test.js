@@ -7173,3 +7173,32 @@ test("a Super Final stage keeps its carried scores, and a withdrawn diver keeps 
     await teardownFixture(st);
   }
 });
+
+// WA 2026 CR Art 4.1.5: equal totals tie for the place. The analytics
+// ranking used to split a tie on the highest single dive, so a diver who
+// shared gold on the scoreboard was counted a silver on their dashboard.
+test("diver analytics treat a tie on total as a shared place", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const dive = await recordKit.threeMetreDive();
+    const p = await recordKit.diver(st.orgId, null, "female", "Tie Petra");
+    const q = await recordKit.diver(st.orgId, null, "female", "Tie Quinn");
+    const ev = await recordKit.event(st.orgId, { gender: "Female" });
+    await recordKit.dive(ev, p, 1, dive, 8);
+    await recordKit.dive(ev, p, 2, dive, 6);
+    await recordKit.dive(ev, q, 1, dive, 7);
+    await recordKit.dive(ev, q, 2, dive, 7);
+    for (const id of [p, q]) {
+      const a = await fetchJson("GET", `/api/divers/${id}/analytics`);
+      assert.equal(a.status, 200, JSON.stringify(a.body));
+      assert.equal(Number(a.body.recent_form[0].rank), 1, "both share first");
+      assert.equal(a.body.placings.gold, 1);
+      assert.equal(a.body.year_over_year[0].wins, 1);
+    }
+  } finally {
+    await recordKit.cleanup(st.orgId);
+    await teardownFixture(st);
+  }
+});

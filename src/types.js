@@ -609,8 +609,8 @@
  * @property {string}       [partner_country]
  * @property {number}       total
  * @property {string}       public_id          See RosterRow.public_id.
- * @property {boolean}      is_tied_on_total   True when 2+ rows share this total
- *                                             but were separated by World Aquatics tie-break.
+ * @property {boolean}      is_tied_on_total   True when 2+ rows share this total, and so
+ *                                             share the place (World Aquatics Art 4.1.5).
  */
 
 /**
