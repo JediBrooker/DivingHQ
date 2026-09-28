@@ -240,16 +240,33 @@ test("A6-05 a failure past the retention window doesn't keep the banner up", asy
     await page.goto("/competitor");
     await expect(page.locator(".offline-banner")).toHaveCount(0);
 
-    const seed = async (entries) => page.evaluate((rows) => new Promise((resolve, reject) => {
-      const req = indexedDB.open("divinghq-outbox");
+    // Straight into the app's IndexedDB. Opened at the app's version
+    // with the same schema, so it doesn't matter whether the page got
+    // there first: an unversioned open that wins the race creates an
+    // empty v1 database the app then never upgrades. op is "put" (rows)
+    // or "has" (one key).
+    const outboxIdb = (op, arg) => page.evaluate(([o, a]) => new Promise((resolve, reject) => {
+      const req = indexedDB.open("divinghq-outbox", 1);
+      req.onupgradeneeded = () => {
+        const store = req.result.createObjectStore("outbox", { keyPath: "idempotency_key" });
+        store.createIndex("by_status", "status", { unique: false });
+        store.createIndex("by_action_type", "action_type", { unique: false });
+        store.createIndex("by_created_at", "created_at", { unique: false });
+      };
       req.onerror = () => reject(req.error);
       req.onsuccess = () => {
-        const tx = req.result.transaction("outbox", "readwrite");
-        for (const r of rows) tx.objectStore("outbox").put(r);
-        tx.oncomplete = () => { req.result.close(); resolve(); };
-        tx.onerror = () => reject(tx.error);
+        try {
+          const tx = req.result.transaction("outbox", o === "put" ? "readwrite" : "readonly");
+          const store = tx.objectStore("outbox");
+          let out;
+          if (o === "put") for (const r of a) store.put(r);
+          else { const g = store.get(a); g.onsuccess = () => { out = !!g.result; }; }
+          tx.oncomplete = () => { req.result.close(); resolve(out); };
+          tx.onerror = () => reject(tx.error);
+        } catch (err) { reject(err); }
       };
-    }), entries);
+    }), [op, arg]);
+    const seed = (entries) => outboxIdb("put", entries);
     const entry = (key, ageMs) => {
       const at = new Date(Date.now() - ageMs).toISOString();
       return {
@@ -263,17 +280,10 @@ test("A6-05 a failure past the retention window doesn't keep the banner up", asy
     await seed([entry(old, 4 * 24 * 3600 * 1000)]);
     await page.reload();
     await expect(page.locator(".page-header")).toBeVisible();
-    // Give the startup scan its moment; the banner renders off it.
-    await page.waitForTimeout(500);
+    await expect.poll(() => outboxIdb("has", old), { message: "the stale entry is gone from IndexedDB" }).toBe(false);
+    // The first count only runs once gc() is done, so it never saw it.
+    await page.waitForTimeout(300);
     await expect(page.locator(".offline-banner")).toHaveCount(0);
-    const left = await page.evaluate((key) => new Promise((resolve) => {
-      const req = indexedDB.open("divinghq-outbox");
-      req.onsuccess = () => {
-        const get = req.result.transaction("outbox").objectStore("outbox").get(key);
-        get.onsuccess = () => { req.result.close(); resolve(!!get.result); };
-      };
-    }), old);
-    expect(left, "the stale entry is gone from IndexedDB").toBe(false);
 
     await seed([entry(`b6-new-${diver.userId}`, 60 * 60 * 1000)]);
     await page.reload();
