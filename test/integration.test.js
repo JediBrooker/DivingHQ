@@ -7389,3 +7389,23 @@ test("accepting a synchro pairing runs the same entry gate as submitting", async
     await teardownFixture(st);
   }
 });
+
+// Through the real server: the 2FA step-up token /api/auth/login hands
+// out for the password alone is not a session.
+test("the 2FA step-up token (and a reset link) can't be used as a session", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const jwt = require("jsonwebtoken");
+    for (const type of ["totp_pending", "password_reset", "email_verify"]) {
+      const token = jwt.sign({ sub: st.adminId, type }, process.env.JWT_SECRET, { expiresIn: "5m" });
+      for (const path of ["/api/dive-directory", "/api/divers/search?q=an", "/api/dashboard"]) {
+        const r = await fetchJson("GET", path, { token });
+        assert.equal(r.status, 401, `${type} on ${path}: ${r.status}`);
+      }
+    }
+  } finally {
+    await teardownFixture(st);
+  }
+});

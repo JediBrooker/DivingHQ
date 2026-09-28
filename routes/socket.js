@@ -167,9 +167,13 @@ module.exports = function attachSocket({
         : (authToken || readSessionCookie(socket.handshake.headers?.cookie));
       if (raw) {
         const decoded = jwt.verify(raw, JWT_SECRET, { algorithms: ["HS256"] });
+        // Sessions only, same rule as verifyToken: the 2FA step-up,
+        // password-reset and email-verify tokens share the secret but
+        // carry `type` and no `id`.
+        const isSession = decoded && decoded.type == null && typeof decoded.id === "string";
         // Validate tv via the same 30s cache the HTTP path uses.
         // A revoked session must lose its socket privileges too.
-        const tvOk = await isTokenVersionCurrent(decoded.id, decoded.tv);
+        const tvOk = isSession && await isTokenVersionCurrent(decoded.id, decoded.tv);
         if (tvOk) {
           socket.userId = decoded.id;
           socket.userOrgId = decoded.org_id;

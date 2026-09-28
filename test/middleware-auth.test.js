@@ -336,3 +336,29 @@ test("socketCanManageEvent: maintenance mode refuses a non-admin, lets a sysadmi
   assert.equal(socket.emits.at(-1).payload.reason, "maintenance");
   assert.equal(await socketCanManageEvent(fakeSocket({ sysadmin: true }), EVENT), true);
 });
+
+// Every JWT the app mints shares JWT_SECRET: sessions, but also the
+// 2FA step-up token (handed out for the password alone), password-reset
+// and email-verify links. Those carry `sub` and `type`, no `id`, and
+// verifyToken took any of them as a session with no identity, so a
+// password without the second factor opened the verifyToken reads.
+test("verifyToken / optionalAuth: purpose tokens and unknown users aren't sessions", async () => {
+  const { verifyToken, optionalAuth } = build({ token_version: 1 });
+  for (const payload of [
+    { sub: USER_ID, type: "totp_pending" },
+    { sub: USER_ID, type: "password_reset", fp: "x" },
+    { sub: USER_ID, type: "email_verify" },
+    { id: USER_ID, type: "totp_pending", tv: 1 },
+  ]) {
+    const out = await runVerify(verifyToken, sign(payload));
+    assert.equal(out.statusCode, 401, JSON.stringify(payload));
+    const guest = await runVerify(optionalAuth, sign(payload));
+    assert.equal(guest.type, "next");
+    assert.equal(guest.req.user, undefined, JSON.stringify(payload));
+  }
+  // A real session still gets in.
+  assert.equal((await runVerify(verifyToken, sign({ id: USER_ID, tv: 1 }))).type, "next");
+  // A session for a user row that's gone (hard-deleted) is revoked too.
+  const gone = createMiddleware({ pool: { async query() { return { rows: [] }; } }, JWT_SECRET });
+  assert.equal((await runVerify(gone.verifyToken, sign({ id: USER_ID, tv: 1 }))).statusCode, 401);
+});
