@@ -289,6 +289,9 @@ module.exports = function attachSocket({
     // uuid cast error it threw took the whole process down (nothing
     // catches a rejected socket listener). Refuse it up front.
     if (!EVENT_UUID_RE.test(String(data?.event_id ?? ""))) {
+      // Same 'unauthorized' event socketCanManageEvent sends for one, so
+      // a client listening for refusals hears about this too.
+      socket.emit("unauthorized", { reason: "bad_event_id" });
       ackWith(ack, { ok: false, error: errors.unauthorized });
       return false;
     }
@@ -465,7 +468,11 @@ module.exports = function attachSocket({
     // one warned. Both sides are notified so neither drives blind.
     on("claim_event_control", async (data) => {
       const eventId = data?.event_id;
-      if (!EVENT_UUID_RE.test(String(eventId ?? "")) || !socketRequireRole(socket)) return;
+      if (!socketRequireRole(socket)) return;
+      if (!EVENT_UUID_RE.test(String(eventId ?? ""))) {
+        socket.emit("unauthorized", { reason: "bad_event_id" });
+        return;
+      }
       // Only real controllers can hold a lease (same gate as the actions).
       if (!(await socketCanManageEvent(socket, eventId, CONTROL_ROLES))) return;
       if (typeof getEventController !== "function") return;
