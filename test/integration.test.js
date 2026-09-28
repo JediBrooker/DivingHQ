@@ -7552,3 +7552,34 @@ test("a visiting federation's divers see an Upcoming event's prescribed dives", 
     await compKit.cleanup(hostOrg, guestOrg, otherOrg);
   }
 });
+
+test("an event's dive-by-dive history is hidden while the scoreboard hides it", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const orgId = await compKit.org("hist");
+  const otherOrg = await compKit.org("histx");
+  try {
+    const manager = await compKit.user(orgId, "Hist Manager", ["meet_manager"]);
+    const outsider = await compKit.user(otherOrg, "Hist Outsider", ["meet_manager"]);
+    const judge = await compKit.user(orgId, "Hist Judge", ["judge"]);
+    const diver = await compKit.user(orgId, "Hist Diver", ["diver"]);
+    // A dry run: scored while Live, then flipped back to Upcoming.
+    const eventId = await compKit.event(orgId, { number_of_judges: 3 });
+    await compKit.enter(eventId, diver.id, await compKit.dives(3), { display_order: 1 });
+    await compKit.panel(eventId, [judge]);
+    await compKit.score(eventId, diver.id, 1, judge, 7);
+
+    assert.equal((await fetchJson("GET", `/api/scoreboard/${eventId}`)).status, 404, "the scoreboard hides it");
+    assert.equal((await fetchJson("GET", `/api/events/${eventId}/history`)).status, 404);
+    assert.equal((await fetchJson("GET", `/api/events/${eventId}/history`, { token: outsider.token })).status, 404);
+    const own = await fetchJson("GET", `/api/events/${eventId}/history`, { token: manager.token });
+    assert.equal(own.status, 200);
+    assert.equal(own.body.length, 1, "the host's staff still see the dry run");
+
+    await pool.query("UPDATE events SET status = 'Live' WHERE id = $1", [eventId]);
+    assert.equal((await fetchJson("GET", `/api/events/${eventId}/history`)).body.length, 1, "public once Live");
+    assert.equal((await fetchJson("GET", "/api/events/not-a-uuid/history")).status, 400);
+  } finally {
+    await compKit.cleanup(orgId, otherOrg);
+  }
+});

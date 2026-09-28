@@ -1058,6 +1058,9 @@ app.use(require("./routes/control-room")({
   // Club-hosted meets: event delegates get past the operator gates.
   requireRoleOrEventDelegate,
   requireTotpForPrivilegedRoles,
+  // The history read is public once an event is Live; before that it
+  // needs to know who's asking.
+  optionalAuth,
 }));
 
 // =============================================================
