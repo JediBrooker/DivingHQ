@@ -7692,3 +7692,37 @@ test("sockets: a new connection only hears its own events' live state", async (t
     await compKit.cleanup(orgId, otherOrg);
   }
 });
+
+test("score correction: the new score and its audit row land together", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const orgId = await compKit.org("corr");
+  try {
+    const admin = await compKit.user(orgId, "Corr Admin", ["org_admin"]);
+    const judge = await compKit.user(orgId, "Corr Judge", ["judge"]);
+    const diver = await compKit.user(orgId, "Corr Diver", ["diver"]);
+    const eventId = await compKit.event(orgId, { status: "Live", number_of_judges: 3 });
+    await compKit.enter(eventId, diver.id, await compKit.dives(3), { display_order: 1 });
+    await compKit.panel(eventId, [judge]);
+    await compKit.score(eventId, diver.id, 1, judge, 7);
+    const scoreId = (await pool.query("SELECT id FROM scores WHERE event_id = $1", [eventId])).rows[0].id;
+
+    // A half-filled form's null isn't a zero.
+    const bad = await fetchJson("PUT", `/api/scores/${scoreId}`, { token: admin.token, body: { score: null } });
+    assert.equal(bad.status, 400);
+
+    const r = await fetchJson("PUT", `/api/scores/${scoreId}`, {
+      token: admin.token, body: { score: 6.5, reason: "judge typo" },
+    });
+    assert.equal(r.status, 200, JSON.stringify(r.body));
+    assert.deepEqual([r.body.old_score, r.body.new_score], [7, 6.5]);
+    const audit = (await pool.query(
+      `SELECT old_score::float AS old_score, new_score::float AS new_score, reason,
+              server_committed_at IS NOT NULL AS committed
+         FROM score_audit_log WHERE score_id = $1`, [scoreId])).rows;
+    assert.deepEqual(audit, [{ old_score: 7, new_score: 6.5, reason: "judge typo", committed: true }]);
+    assert.equal((await pool.query("SELECT score::float AS s FROM scores WHERE id = $1", [scoreId])).rows[0].s, 6.5);
+  } finally {
+    await compKit.cleanup(orgId);
+  }
+});
