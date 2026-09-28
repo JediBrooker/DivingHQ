@@ -11877,3 +11877,45 @@ test("event templates: the sysadmin works in any scope, and bad or pending scope
     await tplKit.teardown(w);
   }
 });
+
+// A seat only counts while its holder is still in the club's (or region's)
+// org, same rule as the delegate helpers. Before routes/club-changes.js
+// started dropping them, a transfer left the old club_admins row behind,
+// and a template scope that just looked the row up would have kept
+// handing the old club's templates to somebody who'd left for another
+// federation. This pins that the route goes through the org-pinned seat
+// SQL rather than a bare lookup.
+test("event templates: a seat left behind by a transfer doesn't open the old club's or region's templates", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  let w, elsewhere;
+  try {
+    w = await tplKit.world();
+    elsewhere = await setupFixture({ withEvent: false });
+    const { list, save } = tplKit;
+    const qA = `?club_id=${w.clubA}`;
+    const qR = `?region_id=${w.regionR}`;
+
+    const mover = await sweepKit.member(w.st.orgId, "spectator", "Template mover");
+    await pool.query("INSERT INTO club_admins (club_id, user_id, org_id) VALUES ($1, $2, $3)", [w.clubA, mover.id, w.st.orgId]);
+    await pool.query("INSERT INTO region_admins (region_id, user_id, org_id) VALUES ($1, $2, $3)", [w.regionR, mover.id, w.st.orgId]);
+    assert.equal((await save(mover.token, qA, "Before the move")).status, 201);
+    assert.equal((await list(mover.token, qR)).status, 200);
+
+    // Off to another federation, with both rows stranded behind them.
+    await pool.query("UPDATE users SET org_id = $2 WHERE id = $1", [mover.id, elsewhere.orgId]);
+    const again = await fetchJson("POST", "/api/auth/login", { body: { username: mover.username, password: "not-used-here" } });
+    assert.equal(again.status, 200, JSON.stringify(again.body));
+    const token = again.body.token;
+    assert.equal((await list(token, qA)).status, 403);
+    assert.equal((await save(token, qA, "After the move")).status, 403);
+    assert.equal((await list(token, qR)).status, 403);
+    assert.equal((await save(token, qR, "After the move")).status, 403);
+
+    // The club's template is still the club's, for whoever admins it now.
+    assert.deepEqual(tplKit.names(await list(w.a, qA)), ["Before the move"]);
+  } finally {
+    await tplKit.teardown(w);
+    await teardownFixture(elsewhere);
+  }
+});
