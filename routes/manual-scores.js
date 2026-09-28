@@ -20,10 +20,13 @@
 //     reason? (free-text for the audit row)
 //   }
 //
-// Auth: org_admin, meet_manager, referee (same posture as score
-// correction). The operator is acting on the judge's behalf, so the
-// scores row records judge_id from the body so analytics + audit
-// trails still attribute the value to the right panel member.
+// Auth: whoever may change scores on the event, which is the host's meet
+// managers (scoreAuthority in lib/middleware.js: the host club's, the
+// host region's, or the org's for its own meets, never another level's).
+// Same rule as score correction and conflict resolution. The operator is
+// acting on the judge's behalf, so the scores row records judge_id from
+// the body so analytics + audit trails still attribute the value to the
+// right panel member.
 //
 // Mounted via:
 //   app.use(require('./routes/manual-scores')({ … }))
@@ -32,23 +35,30 @@ const express = require("express");
 const createIdempotency = require("../lib/idempotency");
 const { announceRecords } = require("../lib/records");
 const { scoreBodyError, insertScoreAudit } = require("../lib/score-audit");
+const { scoreAuthorityRefusal } = require("../lib/middleware");
+const { isUuid } = require("../lib/uuid");
 
 module.exports = function createManualScoresRouter({
-  pool, io, scoreboardCache, requireOrgRole,
-  requireRoleOrEventDelegate,   // optional, migration 087
+  pool, io, scoreboardCache,
+  verifyToken,
+  // lib/middleware.js. Required: there's no role-only fallback, a mount
+  // without it would let any meet manager in the org type scores in.
+  scoreAuthority,
   checkAndApplyRecords,         // optional; lib/records.js
   recomputeRecordKeys,          // optional; lib/records.js
 }) {
-  if (!pool || !io) throw new Error("createManualScoresRouter requires { pool, io, … }");
+  if (!pool || !io || !verifyToken || !scoreAuthority) {
+    throw new Error("createManualScoresRouter requires { pool, io, verifyToken, scoreAuthority, … }");
+  }
   const router = express.Router();
 
   const { httpMiddleware: idem } = createIdempotency({ pool });
 
   router.post(
     "/api/scores/manual-entry",
-    requireRoleOrEventDelegate
-      ? requireRoleOrEventDelegate(["org_admin", "meet_manager", "referee"], (req) => req.body?.event_id)
-      : requireOrgRole(["org_admin", "meet_manager", "referee"]),
+    // Signed in is all the route asks. Who may type a score in depends
+    // on the event's host, which the handler checks once it has the event.
+    verifyToken,
     idem("score_manual_entry"),
     async (req, res) => {
       const {
@@ -60,6 +70,9 @@ module.exports = function createManualScoresRouter({
       // 0.5-step constraint the scores table enforces.
       if (!event_id || !competitor_id || !judge_id) {
         return res.status(400).json({ error: "event_id, competitor_id, judge_id all required" });
+      }
+      if (![event_id, competitor_id, judge_id].every(isUuid)) {
+        return res.status(400).json({ error: "event_id, competitor_id and judge_id must be UUIDs" });
       }
       const round = Number(round_number);
       if (!Number.isInteger(round) || round < 1) {
@@ -81,19 +94,17 @@ module.exports = function createManualScoresRouter({
       try {
         await client.query("BEGIN");
 
-        // Event must belong to the caller's org. Sysadmin can act
-        // anywhere, same posture as routes/score-correction.js.
-        const ev = await client.query(
-          "SELECT id, org_id, name FROM events WHERE id = $1",
-          [event_id],
-        );
-        if (!ev.rows.length) {
+        // Only the host's meet managers type scores in (sysadmin can act
+        // anywhere). That also keeps out every other org, the rule never
+        // reaches past the event's own.
+        const authority = await scoreAuthority(client, event_id, req.user);
+        if (!authority.found) {
           await client.query("ROLLBACK");
           return res.status(404).json({ error: "Event not found" });
         }
-        if (!req.user.is_system_admin && ev.rows[0].org_id !== req.user.org_id) {
+        if (!authority.allowed) {
           await client.query("ROLLBACK");
-          return res.status(403).json({ error: "Cannot enter scores for other organisations" });
+          return res.status(403).json(scoreAuthorityRefusal(authority.host));
         }
 
         // Judge has to be on the panel. Without this gate a typo in

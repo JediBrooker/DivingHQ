@@ -52,6 +52,7 @@ Top of the food chain inside one country, the person whose name is on the record
 - Promote, demote, and remove org roles within their federation
 - Approve or reject coach⇄diver linking requests
 - Edit or delete any event in their org
+- Change scores at the federation's own meets, though not at a club's or a region's (see [Who can change a score](#who-can-change-a-score))
 - Set `entries_close_at` on events to enforce registration deadlines
 - Claim the country's account so its national record book reads as official (records themselves are automatic, there's nothing to sign off)
 - Manage clubs and teams within the federation, and appoint each club's and region's admins from **Clubs**
@@ -95,7 +96,7 @@ A completed transfer ends every role the person held in the federation they left
 Runs one club. In a country whose federation isn't on DivingHQ yet, a club admin is the person who created the club, plus the co-admins they add on **My club**. Under a federation, the federation appoints club admins. A club someone creates at signup there waits for the federation to approve it first, and approving it normally makes the founder its admin.
 
 **Can:**
-- Create meets hosted by their club and run them end to end: events, entries, judging panels, the schedule and the Control Room
+- Create meets hosted by their club and run them end to end: events, entries, judging panels, the schedule and the Control Room, correcting scores included
 - Where there's no federation yet, approve their members' requests to dive, judge or coach on **My club** (under a federation, its admins review them). Referee requests go to DivingHQ where the country has no federation yet, since a referee can act at any club's meet in the country. Nobody approves their own request for anything but diver: that goes to another admin, the region, or DivingHQ
 - Add and remove co-admins, and say which region the club is in (while the country has no federation; under one, the federation does both)
 - Vote on a [claim](#claims) when a federation or state body applies to take over
@@ -108,7 +109,7 @@ Looks after a state, province or home nation. The federation appoints region adm
 
 **Can:**
 - See every club in the region and who runs it, on **My region**
-- Create the region's championships in Meet Manager, hosted by the region, and step in on any of its clubs' meets
+- Create the region's championships in Meet Manager, hosted by the region, and step in on any of its clubs' meets (apart from changing their scores, which stays with the club: see [Who can change a score](#who-can-change-a-score))
 - Where there's no federation yet, approve role requests from members of the region's clubs (under a federation, its admins review them)
 - Vote on a national claim, once the region itself is claimed
 
@@ -140,6 +141,18 @@ Each meet decides what the chip next to a diver's name shows on the scoreboard, 
 
 A diver without a state or club code falls back to their country. What a diver represents is taken when they enter, so a later club move doesn't rewrite an old meet's results.
 
+## Who can change a score
+
+Judges score from their phones and the referee makes the Failed, cap and re-dive calls. Changing a score by hand after that (typing one in through manual entry, a score correction, settling a manual entry the judge's phone disagreed with, or recording a Super Final dive-off's result) belongs to whoever is hosting the meet, and only them:
+
+| The meet is hosted by | Who can change its scores |
+|---|---|
+| A club | The club's admins, and meet managers who are members of the club |
+| A region | The region's admins, and meet managers who are members of one of its clubs |
+| The federation, or the event isn't in a meet | The federation's admins and meet managers |
+
+Someone added as a manager of one event counts too, as long as they belong to the host: a member of the club, or of a club in the region. It doesn't run up or down the tree. The federation can't change a score at a club's meet or a region's championships, a region can't at one of its clubs' meets, and a club admin can't at a federation meet. Everyone else sees the Control Room's **History** column read-only.
+
 ## Meet manager
 
 The person actually running the meet on the day. Lives in the Control Room view for those eight hours.
@@ -154,6 +167,7 @@ The person actually running the meet on the day. Lives in the Control Room view 
 - Add a late-arriving diver via the late-entry override (works after entries close)
 - Edit a team's bulk dive list
 - Withdraw or scratch divers mid-event
+- Correct or type in scores on meets their own club, region or federation hosts (see [Who can change a score](#who-can-change-a-score))
 
 See [Running a Meet](/guide/running-a-meet) for the operator playbook.
 
@@ -164,7 +178,7 @@ The licensed official on deck. Doesn't score dives themselves — supervises the
 **Can:**
 - View the live scoreboard for any event they're assigned to
 - Read the per-event score audit log to see who entered or changed each score
-- Authorise a score correction (the audit row records them as the actor)
+- Authorise a score correction. The host's meet manager makes it (see [Who can change a score](#who-can-change-a-score)); a referee who is also a manager of the event can make it themselves, and the audit row records whoever did
 - Confirm synchro panels have valid Exec A / Exec B / Sync subgroups (7, 9, or 11 judges)
 - Edit the [Session Scheduler](/guide/session-scheduler) — same write access as a meet manager
 

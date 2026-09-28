@@ -22,6 +22,29 @@
 const express = require("express");
 const { recordAudit, auditFromReq } = require("../../lib/audit");
 const { perDivePointsCte } = require("../../lib/scoring-sql");
+const { scoreAuthorityRefusal } = require("../../lib/middleware");
+
+// A dive-off's two scores and its winner are a result somebody types in,
+// so they follow the host-org rule every other hand-entered score does
+// (scoreAuthority in lib/middleware.js). Setting one up, picking the dives
+// and the notes stay with the event's managers (requireEventManager).
+const RESULT_FIELDS = ["score_a", "score_b", "winner_id"];
+
+// Does this write set or change the result? On create any value counts; on
+// an update only a value that differs from what's stored, so a manager
+// fixing the notes on a settled dive-off isn't refused for re-sending the
+// scores the form already had.
+function touchesResult(body, existing = null) {
+  return RESULT_FIELDS.some((k) => {
+    if (!(k in (body || {}))) return false;
+    const next = body[k] === "" ? null : body[k];
+    if (!existing) return next != null;
+    const prev = existing[k];
+    if (k === "winner_id") return (next || null) !== (prev || null);
+    if (next == null || prev == null) return (next == null) !== (prev == null);
+    return Number(next) !== Number(prev);
+  });
+}
 
 // AUDIT FIX (Strong-6): Appendix 3 §6 says each diver picks one of their
 // previously performed dives for the dive-off. The schema only FKs
@@ -52,11 +75,24 @@ async function validateDiveOffChoice(client, eventId, competitorId, diveId, side
   return null;
 }
 
-module.exports = function createDiveOffsRoutes({ pool, requireEventManager }) {
+module.exports = function createDiveOffsRoutes({ pool, requireEventManager, scoreAuthority }) {
   if (!pool || !requireEventManager) {
     throw new Error("createDiveOffsRoutes requires { pool, requireEventManager }");
   }
   const router = express.Router();
+
+  // Refuses (and rolls back) when the caller can't record a result on this
+  // event. Mounted without scoreAuthority it refuses everyone: failing
+  // open here would hand dive-off results back to any event manager.
+  async function refuseResultWrite(client, res, eventId, user) {
+    const authority = scoreAuthority
+      ? await scoreAuthority(client, eventId, user)
+      : { allowed: false, host: null };
+    if (authority.allowed) return false;
+    await client.query("ROLLBACK");
+    res.status(403).json(scoreAuthorityRefusal(authority.host));
+    return true;
+  }
 
   // GET /api/events/:id/dive-offs: the list. Public readable,
   // since the official record needs to be transparent.
@@ -116,7 +152,8 @@ module.exports = function createDiveOffsRoutes({ pool, requireEventManager }) {
   //                                      both totals differ at
   //                                      query time)
   //
-  // Auth: event manager (event_managers row OR org_admin).
+  // Auth: event manager (event_managers row OR org_admin), and the
+  // host-org score rule too when the body carries scores or a winner.
   router.post(
     "/api/events/:id/dive-offs",
     requireEventManager(),
@@ -154,6 +191,7 @@ module.exports = function createDiveOffsRoutes({ pool, requireEventManager }) {
             error: "Dive-offs are only valid for super_final_h2h or super_final_semi events (Appendix 3 §6 — no dive-off after the Final)",
           });
         }
+        if (touchesResult(req.body) && await refuseResultWrite(client, res, eventId, req.user)) return;
 
         // Verify both competitors are on the event roster, AND
         // (for H2H) in the same pair / (for SF) the same group.
@@ -301,7 +339,8 @@ module.exports = function createDiveOffsRoutes({ pool, requireEventManager }) {
 
   // PATCH /api/events/:id/dive-offs/:diveOffId: update or resolve.
   // Setting winner_id (non-null) auto-stamps resolved_at if it's
-  // not already provided. Audits 'event.dive_off_resolved'.
+  // not already provided. Audits 'event.dive_off_resolved'. Changing
+  // a score or the winner needs the host-org score rule as well.
   router.patch(
     "/api/events/:id/dive-offs/:diveOffId",
     requireEventManager(),
@@ -328,6 +367,7 @@ module.exports = function createDiveOffsRoutes({ pool, requireEventManager }) {
           return res.status(404).json({ error: "Dive-off not found" });
         }
         const existing = exRes.rows[0];
+        if (touchesResult(updates, existing) && await refuseResultWrite(client, res, eventId, req.user)) return;
 
         if (updates.winner_id != null
             && updates.winner_id !== existing.competitor_a_id

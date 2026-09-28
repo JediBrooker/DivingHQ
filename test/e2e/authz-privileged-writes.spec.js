@@ -41,9 +41,10 @@ async function buildTwoOrgFixture(request) {
 
 test.describe.serial("Privileged writes — authz boundary", () => {
   // -------------------------------------------------------------
-  // 1. PUT /api/scores/:id: referee/meet-manager can amend a
-  //    finalized score within their org + event. Diver hitting it
-  //    gets 403; referee from another org gets 403.
+  // 1. PUT /api/scores/:id: someone the host-org score rule lets in
+  //    (here a referee added as a manager of an event the org hosts)
+  //    can amend a finalized score. Diver hitting it gets 403; referee
+  //    from another org gets 403.
   // -------------------------------------------------------------
   test.describe("PUT /api/scores/:id score correction", () => {
     let orgA, orgB;
@@ -76,8 +77,9 @@ test.describe.serial("Privileged writes — authz boundary", () => {
         judgeId: judge.userId, diveId, roundNumber: 1, score: 7.0,
       });
 
-      // Org A's referee is added to the event manager list, since the
-      // per-event check beyond requireOrgRole is what gates this.
+      // Org A's referee is added to the event manager list. The event is
+      // the org's own (no meet), so its managers are among the people
+      // who can change its scores (scoreAuthority in lib/middleware.js).
       const referee = await setup.insertUser({ orgId: orgA.orgId, role: "referee", fullName: "Authz Referee" });
       await setup.addEventManager({ eventId: event.id, userId: referee.userId });
       ({ token: refereeToken } = await setup.loginAs(request, referee.username));
@@ -150,12 +152,16 @@ test.describe.serial("Privileged writes — authz boundary", () => {
       });
       expect(r.status()).toBe(403);
       const body = await r.json();
-      expect(body.error).toMatch(/other organisations|not a manager/i);
+      // The host-org rule answers for other orgs too now; it used to be
+      // a separate "other organisations" check ahead of the role gate.
+      expect(body.code).toBe("score_authority");
+      expect(body.error).toMatch(/can change scores on this event/i);
     });
 
     test("same-org referee NOT on this event gets 403", async ({ request }) => {
-      // Referee role in the right org but no event_managers row →
-      // requireOrgRole passes, per-event check fails.
+      // Referee role in the right org but no event_managers row. The
+      // role alone was never enough; the refusal now comes from the
+      // host-org score rule and names who can.
       const stray = await setup.insertUser({
         orgId: orgA.orgId, role: "referee", fullName: "Stray Referee",
       });
@@ -165,7 +171,7 @@ test.describe.serial("Privileged writes — authz boundary", () => {
         data: { score: 6.0, reason: "no event_managers row" },
       });
       expect(r.status()).toBe(403);
-      expect((await r.json()).error).toMatch(/not a manager/i);
+      expect((await r.json()).error).toMatch(/admins and meet managers, and this event's managers/i);
     });
   });
 

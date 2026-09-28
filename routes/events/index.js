@@ -38,6 +38,7 @@ const {
   refuseIfScoresExist,
 } = require("./stage-helpers");
 const { canSeeEvent } = require("../../lib/event-visibility");
+const { scoreAuthoritySql } = require("../../lib/middleware");
 
 // Migration 039: shape-check operator-prescribed round_dives. We
 // only validate structure here (round numbering 1..N contiguous,
@@ -133,6 +134,9 @@ module.exports = function createEventsRouter({
   isMeetHostAdmin,
   isEventDelegate,
   requireTotpForPrivilegedRoles,
+  // lib/middleware.js. The dive-offs sub-router needs it to record a
+  // result; without it nobody can (it fails closed).
+  scoreAuthority,
 }) {
   if (!pool || !optionalAuth) {
     throw new Error("createEventsRouter requires { pool, optionalAuth, … }");
@@ -294,6 +298,17 @@ module.exports = function createEventsRouter({
         limit = Math.min(n, 500);
       }
 
+      const where = [];
+      const params = [];
+      // can_change_scores: may the caller type in or correct a score here
+      // (the host-org rule in lib/middleware.js, one EXISTS per row). The
+      // Control Room hides its amend controls on false; the server still
+      // checks every write. Anonymous callers get false.
+      let canChangeScores = "FALSE";
+      if (req.user) {
+        params.push(req.user.id, !!req.user.is_system_admin);
+        canChangeScores = `($${params.length}::boolean OR ${scoreAuthoritySql({ userParam: `$${params.length - 1}` })})`;
+      }
       // participating_orgs_count > 0 → international event (the
       // SPA renders a globe chip and the federations modal
       // pre-loads the invited list). Subselect rather than LEFT
@@ -305,13 +320,12 @@ module.exports = function createEventsRouter({
                  (SELECT COUNT(*) FROM event_participating_orgs epo
                    WHERE epo.event_id = e.id),
                  0
-               )::int AS participating_orgs_count
+               )::int AS participating_orgs_count,
+               ${canChangeScores} AS can_change_scores
         FROM events e
         JOIN organisations o ON o.id = e.org_id
         LEFT JOIN meets m ON m.id = e.meet_id
       `;
-      const where = [];
-      const params = [];
       if (req.user?.is_system_admin) {
         // Sysadmin sees every event in every org, no scope clause needed.
       } else if (req.user) {
@@ -1598,7 +1612,7 @@ module.exports = function createEventsRouter({
   // sub-router so this file stays scannable. See
   // routes/events/dive-offs.js for the GET / POST / PATCH
   // handlers.
-  router.use(require("./dive-offs")({ pool, requireEventManager }));
+  router.use(require("./dive-offs")({ pool, requireEventManager, scoreAuthority }));
 
   // Super-Final synchro reserve + merged-rankings routes moved
   // into a sub-router. See routes/events/super-final-bridge.js.

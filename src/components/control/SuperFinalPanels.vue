@@ -49,6 +49,13 @@ const diveOffForm        = ref({
 const diveOffBusy        = ref(false)
 const diveOffErr         = ref('')
 
+// A dive-off's scores and winner are a result, so only whoever may change
+// scores on this event records them (/api/events can_change_scores, the
+// host-org rule). Anyone else running the event can still set one up,
+// pick the dives and keep notes; the result fields stay locked for them
+// and don't go in the request, which the server would refuse.
+const canRecordResult = computed(() => props.event?.can_change_scores === true)
+
 const isSuperFinalH2hOrSemi = computed(() => {
   const fmt = props.event?.event_format
   return fmt === 'super_final_h2h' || fmt === 'super_final_semi'
@@ -131,6 +138,11 @@ async function saveDiveOff() {
       winner_id:       winnerId || null,
       notes:           f.notes || null,
       confirm_tied:    !!f.confirm_tied,
+    }
+    if (!canRecordResult.value) {
+      delete body.score_a
+      delete body.score_b
+      delete body.winner_id
     }
     if (diveOffEditing.value) {
       // PATCH: drop competitors from body, they're immutable
@@ -420,20 +432,23 @@ defineExpose({ reload })
           </label>
         </div>
 
+        <p v-if="!canRecordResult" class="hint" style="margin:0 0 0.5rem">
+          Only the meet managers of whoever is hosting this meet can record the dive-off's scores and winner.
+        </p>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:0.75rem">
           <label>
             <span class="hint">Score A</span>
-            <input class="input" type="number" step="0.01" v-model="diveOffForm.score_a">
+            <input class="input" type="number" step="0.01" v-model="diveOffForm.score_a" :disabled="!canRecordResult">
           </label>
           <label>
             <span class="hint">Score B</span>
-            <input class="input" type="number" step="0.01" v-model="diveOffForm.score_b">
+            <input class="input" type="number" step="0.01" v-model="diveOffForm.score_b" :disabled="!canRecordResult">
           </label>
         </div>
 
         <label style="display:block;margin-bottom:0.75rem">
           <span class="hint">Winner — defaults to higher score if blank</span>
-          <select class="select" v-model="diveOffForm.winner_id">
+          <select class="select" v-model="diveOffForm.winner_id" :disabled="!canRecordResult">
             <option value="">— Auto from scores —</option>
             <option :value="diveOffForm.competitor_a_id">A wins</option>
             <option :value="diveOffForm.competitor_b_id">B wins</option>

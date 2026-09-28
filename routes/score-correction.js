@@ -2,9 +2,10 @@
 //
 // The live scoring path lives in the socket layer (submit_score
 // in routes/socket.js); this module covers the HTTP-side workflow
-// where a meet manager / referee amends a previously-submitted
-// score after the dive completed (judge typo, scoring dispute
-// resolution).
+// where a meet manager amends a previously-submitted score after
+// the dive completed (judge typo, scoring dispute resolution).
+// Who may is the host-org rule (scoreAuthority in lib/middleware.js),
+// the same one manual entry and conflict resolution use.
 //
 //   PUT /api/scores/:id              correct one score
 //   GET /api/events/:id/score-audit  chronological audit trail
@@ -26,20 +27,24 @@ const express = require("express");
 const createIdempotency = require("../lib/idempotency");
 const { announceRecords } = require("../lib/records");
 const { scoreBodyError, insertScoreAudit } = require("../lib/score-audit");
+const { scoreAuthorityRefusal } = require("../lib/middleware");
+const { isUuid } = require("../lib/uuid");
 
 module.exports = function createScoreCorrectionRouter({
   pool,
   io,
   scoreboardCache,
-  requireOrgRole,
+  verifyToken,
   requireEventManager,
-  // Optional, migration 087. Without them this is the old role-only gate.
-  requireRoleOrEventDelegate,
-  isEventDelegate,
+  // lib/middleware.js, required. There's deliberately no role-only
+  // fallback: that's the gate the host-org rule replaced.
+  scoreAuthority,
   // Optional; lib/records.js. A corrected score can move a record.
   recomputeRecordKeys,
 }) {
-  if (!pool || !io) throw new Error("createScoreCorrectionRouter requires { pool, io, … }");
+  if (!pool || !io || !verifyToken || !scoreAuthority) {
+    throw new Error("createScoreCorrectionRouter requires { pool, io, verifyToken, scoreAuthority, … }");
+  }
   const router = express.Router();
 
   // Idempotency for the score-correction write. Outbox clients
@@ -53,20 +58,16 @@ module.exports = function createScoreCorrectionRouter({
 
   router.put(
     "/api/scores/:id",
-    requireRoleOrEventDelegate
-      ? requireRoleOrEventDelegate(["org_admin", "meet_manager", "referee"], async (req) => {
-          if (!/^[0-9a-f-]{36}$/i.test(String(req.params.id))) return null;
-          const r = await pool.query("SELECT event_id FROM scores WHERE id = $1", [req.params.id]);
-          return r.rows[0]?.event_id || null;
-        })
-      : requireOrgRole(["org_admin", "meet_manager", "referee"]),
+    // Signed in, then the handler asks the event's host (it needs the
+    // score row first to know which event that is).
+    verifyToken,
     httpMiddleware("score_correction"),
     async (req, res) => {
       // Validate the score id shape before it reaches the query.
       // A non-UUID would otherwise surface as a Postgres "invalid
       // input syntax for type uuid" 500 instead of a clean 400
       // (matches the sibling conflicts.js guard).
-      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(req.params.id))) {
+      if (!isUuid(req.params.id)) {
         return res.status(400).json({ error: "Invalid score id" });
       }
       const { score, reason } = req.body || {};
@@ -95,43 +96,17 @@ module.exports = function createScoreCorrectionRouter({
         }
         existing = prior.rows[0];
 
-        // Org guard: the score must belong to an event in the
-        // caller's org. sysadmin can correct scores in any org.
-        const ev = await client.query(
-          "SELECT org_id FROM events WHERE id = $1",
-          [existing.event_id],
-        );
-        if (!ev.rows.length) {
+        // The host's meet managers correct scores, nobody from the level
+        // above or below (sysadmin excepted). Out-of-org callers never
+        // pass either.
+        const authority = await scoreAuthority(client, existing.event_id, req.user);
+        if (!authority.found) {
           await client.query("ROLLBACK");
           return res.status(404).json({ error: "Event not found" });
         }
-        if (!req.user.is_system_admin && ev.rows[0].org_id !== req.user.org_id) {
+        if (!authority.allowed) {
           await client.query("ROLLBACK");
-          return res.status(403).json({ error: "Cannot correct scores in other organisations" });
-        }
-
-        // Per-event authorisation: org_admin (or sysadmin) can
-        // correct any event in the org; everyone else (meet_manager,
-        // referee role) must be a registered manager of THIS event.
-        // Without this check, anyone holding `referee` anywhere in
-        // the org could rewrite scores on meets they aren't on.
-        const isOrgAdmin = req.user.is_system_admin
-          || (req.user.org_roles || []).includes("org_admin");
-        if (!isOrgAdmin) {
-          // Delegate = event_managers row, or admin of the club hosting
-          // the meet. Falls back to the plain row check for old mounts.
-          const ok = isEventDelegate
-            ? await isEventDelegate(existing.event_id, req.user.id)
-            : (await client.query(
-                "SELECT 1 FROM event_managers WHERE event_id = $1 AND user_id = $2",
-                [existing.event_id, req.user.id],
-              )).rows.length > 0;
-          if (!ok) {
-            await client.query("ROLLBACK");
-            return res.status(403).json({
-              error: "You are not a manager of this event",
-            });
-          }
+          return res.status(403).json(scoreAuthorityRefusal(authority.host));
         }
 
         oldScore = Number(existing.score);

@@ -150,6 +150,8 @@ Each button acts on **that card's** active diver and broadcasts to the judges' p
 
 ## Correcting a score
 
+Changing a score by hand belongs to whoever is hosting the meet: at a club's meet, that club's admins and its members who are meet managers; at a region's meet, the region's admins and meet managers from its clubs; at the federation's own meets, the federation's admins and meet managers and anyone added as a manager of the event. It doesn't reach up or down, so a federation meet manager can't change a score at a club night and a club admin can't at the national championships. The same goes for scores typed in through manual entry, settling a manual entry a judge's phone disagreed with, and a Super Final dive-off's result. If that isn't you, the History column is read-only and says so. [Roles & Permissions](/guide/roles-and-permissions#who-can-change-a-score) has the table.
+
 Click any completed dive card in the left column. The **Score Correction** modal opens with:
 
 - The list of judges and their original scores
@@ -293,7 +295,7 @@ Score H2H normally — same Control Room flow as any individual event. The pair 
 
 1. Click **+ Create** (the tied-pair hint above the list says how many pairs need one).
 2. Pick which dive each tied diver will redo (any of their previously-performed dives this stage).
-3. Enter the resulting scores after they dive.
+3. Enter the resulting scores after they dive (the host's meet managers only, the same people who can [correct a score](#correcting-a-score); anyone else running the event sees those fields locked).
 4. Pick the winner (auto-defaults to the higher score).
 5. Save → the dive-off result advances the winner. The dive-off itself **doesn't affect official scores** (Appendix 3 §6).
 

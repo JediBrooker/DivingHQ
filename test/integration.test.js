@@ -11653,3 +11653,322 @@ test("the sysadmin can remove a coach link in another org", async (t) => {
     await teardownFixture(st);
   }
 });
+
+// =====================================================================
+// Who changes a score by hand: the host's meet managers, never another
+// level's (product decision, 2026-09). scoreAuthority in lib/middleware.js
+// decides for manual entry, corrections, conflict resolution and dive-off
+// results. One country (South Georgia, a code nothing else in the suite
+// touches) with a region, two clubs in it, one outside it and a pending
+// one, and a meet hosted at each level.
+// =====================================================================
+const hostKit = {
+  async org(tag) {
+    const slug = `sgs-${tag}-${crypto.randomBytes(3).toString("hex")}`;
+    return (await pool.query(
+      `INSERT INTO organisations (name, country_code, slug, status, claim_state)
+       VALUES ($1, 'SGS', $2, 'active', 'claimed') RETURNING id`,
+      [`South Georgia ${slug}`, slug],
+    )).rows[0].id;
+  },
+  async world() {
+    const orgId = await hostKit.org("host");
+    const otherOrgId = await hostKit.org("away");
+    const q = async (sql, params) => (await pool.query(sql, params)).rows[0]?.id;
+    const region = await q(
+      "INSERT INTO regions (org_id, name, short_code) VALUES ($1, 'Cumberland Bay', 'CBY') RETURNING id", [orgId]);
+    const club = (name, code, regionId, status = "active") => q(
+      "INSERT INTO clubs (org_id, name, short_code, region_id, status) VALUES ($1, $2, $3, $4, $5) RETURNING id",
+      [orgId, name, code, regionId, status]);
+    const c1 = await club("Grytviken Divers", "GRY", region);
+    const c2 = await club("King Edward Point", "KEP", region);
+    const c3 = await club("Stromness Swim", "STR", null);
+    const pending = await club("Leith Harbour", "LEH", region, "pending");
+    const meet = (name, hostClub, hostRegion) => q(
+      "INSERT INTO meets (org_id, name, host_club_id, host_region_id) VALUES ($1, $2, $3, $4) RETURNING id",
+      [orgId, name, hostClub, hostRegion]);
+    const meets = {
+      club: await meet("Club night", c1, null),
+      region: await meet("Region champs", null, region),
+      org: await meet("Nationals", null, null),
+    };
+
+    const u = (name, roles, clubId = null, extra = {}) =>
+      compKit.user(orgId, name, roles, { clubId, ...extra });
+    const users = {
+      sysadmin: await u("SGS Sysadmin", [], null, { sysadmin: true }),
+      orgAdmin: await u("SGS Org Admin", ["org_admin"]),
+      fedMM: await u("SGS Fed MM", ["meet_manager"]),
+      fedMMC3: await u("SGS Stromness MM", ["meet_manager"], c3),
+      c1Admin: await u("SGS Grytviken Admin", ["diver"], c1),
+      c1MM: await u("SGS Grytviken MM", ["meet_manager"], c1),
+      c1Ref: await u("SGS Grytviken Ref", ["referee"], c1),
+      c2MM: await u("SGS KEP MM", ["meet_manager"], c2),
+      c3Ref: await u("SGS Stromness Ref", ["referee"], c3),
+      pendingMM: await u("SGS Leith MM", ["meet_manager"], pending),
+      regionAdmin: await u("SGS Region Admin", ["diver"]),
+      orgRef: await u("SGS Org Ref", ["referee"]),
+      referee: await u("SGS Referee", ["referee"], c1),
+      away: await compKit.user(otherOrgId, "SGS Away Admin", ["org_admin"]),
+    };
+    await pool.query("INSERT INTO club_admins (club_id, user_id, org_id) VALUES ($1, $2, $3)",
+      [c1, users.c1Admin.id, orgId]);
+    await pool.query("INSERT INTO region_admins (region_id, user_id, org_id) VALUES ($1, $2, $3)",
+      [region, users.regionAdmin.id, orgId]);
+
+    // One Live event per meet (plus one with no meet), each with one
+    // judge seated and a scored dive to correct.
+    const judge = await u("SGS Judge", ["judge"]);
+    const diver = await u("SGS Diver", ["diver"], c1);
+    const dives = await compKit.dives(3);
+    const events = {};
+    for (const [kind, meetId] of [["club", meets.club], ["region", meets.region], ["org", meets.org], ["nomeet", null]]) {
+      const id = await compKit.event(orgId, { name: `SGS ${kind}`, status: "Live", number_of_judges: 3, meet_id: meetId });
+      await compKit.enter(id, diver.id, dives, { display_order: 1 });
+      await compKit.panel(id, [judge]);
+      await compKit.score(id, diver.id, 1, judge, 6);
+      const scoreId = (await pool.query("SELECT id FROM scores WHERE event_id = $1", [id])).rows[0].id;
+      events[kind] = { id, scoreId };
+    }
+    // Event managers: two on the club's event (one from the club, one
+    // from outside it) and one on the federation's.
+    const addManager = (eventId, userId) => pool.query(
+      "INSERT INTO event_managers (event_id, user_id) VALUES ($1, $2)", [eventId, userId]);
+    await addManager(events.club.id, users.c1Ref.id);
+    await addManager(events.club.id, users.c3Ref.id);
+    await addManager(events.region.id, users.c3Ref.id);
+    await addManager(events.org.id, users.orgRef.id);
+    return { orgId, otherOrgId, region, clubs: { c1, c2, c3, pending }, meets, users, events, judge, diver };
+  },
+  async cleanup(w) {
+    if (!w) return;
+    await compKit.cleanup(w.orgId, w.otherOrgId);
+  },
+};
+
+test("score authority: the host's meet managers can correct a score, nobody from another level", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  let w;
+  try {
+    w = await hostKit.world();
+    const U = w.users;
+    // [event, who, allowed]. Every row is a PUT /api/scores/:id.
+    const matrix = [
+      // A club's meet: its admins, its members who manage meets, its
+      // members added to the event. Nobody above or beside it.
+      ["club", "c1Admin", true],
+      ["club", "c1MM", true],
+      ["club", "c1Ref", true],
+      ["club", "sysadmin", true],
+      ["club", "orgAdmin", false],
+      ["club", "fedMM", false],
+      ["club", "regionAdmin", false],
+      ["club", "c2MM", false],
+      ["club", "c3Ref", false],
+      ["club", "referee", false],
+      ["club", "away", false],
+      // A region's meet: its admins and meet managers from its clubs.
+      // Not the clubs' own admins, not the federation, not a club
+      // that's still waiting on approval, not a club outside it.
+      ["region", "regionAdmin", true],
+      ["region", "c1MM", true],
+      ["region", "c2MM", true],
+      ["region", "c1Admin", false],
+      ["region", "pendingMM", false],
+      ["region", "fedMMC3", false],
+      ["region", "c3Ref", false],
+      ["region", "orgAdmin", false],
+      ["region", "fedMM", false],
+      // The federation's own meet, and an event with no meet at all:
+      // the org's admins and meet managers and the event's managers.
+      // A club or region admin gets nowhere.
+      ["org", "orgAdmin", true],
+      ["org", "fedMM", true],
+      ["org", "fedMMC3", true],
+      ["org", "orgRef", true],
+      ["org", "c1Admin", false],
+      ["org", "regionAdmin", false],
+      ["org", "referee", false],
+      ["org", "away", false],
+      ["nomeet", "orgAdmin", true],
+      ["nomeet", "c1MM", true],
+      ["nomeet", "c1Admin", false],
+      ["nomeet", "orgRef", false],
+    ];
+    let next = 6;
+    for (const [kind, who, allowed] of matrix) {
+      next = next === 9 ? 6.5 : next + 0.5;
+      const r = await fetchJson("PUT", `/api/scores/${w.events[kind].scoreId}`, {
+        token: U[who].token, body: { score: next, reason: `${who} on ${kind}` },
+      });
+      if (allowed) {
+        assert.equal(r.status, 200, `${who} on the ${kind} event: ${JSON.stringify(r.body)}`);
+      } else {
+        assert.equal(r.status, 403, `${who} on the ${kind} event: ${r.status} ${JSON.stringify(r.body)}`);
+        assert.equal(r.body.code, "score_authority");
+        assert.equal(r.body.host, kind === "nomeet" ? "org" : kind);
+      }
+    }
+    // The refusal names who can.
+    const club = await fetchJson("PUT", `/api/scores/${w.events.club.scoreId}`, {
+      token: U.orgAdmin.token, body: { score: 5 },
+    });
+    assert.match(club.body.error, /host club's admins and meet managers/);
+    const region = await fetchJson("PUT", `/api/scores/${w.events.region.scoreId}`, {
+      token: U.c1Admin.token, body: { score: 5 },
+    });
+    assert.match(region.body.error, /host region's admins and meet managers/);
+  } finally {
+    await hostKit.cleanup(w);
+  }
+});
+
+test("score authority: manual entry and conflict resolution follow the host too", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  let w;
+  try {
+    w = await hostKit.world();
+    const U = w.users;
+    const manual = (kind, who, score, round = 2) => fetchJson("POST", "/api/scores/manual-entry", {
+      token: U[who].token,
+      body: { event_id: w.events[kind].id, competitor_id: w.diver.id, round_number: round, judge_id: w.judge.id, score },
+    });
+    const stored = async (kind, round = 2) => (await pool.query(
+      "SELECT score::float AS s, score_source FROM scores WHERE event_id = $1 AND round_number = $2",
+      [w.events[kind].id, round])).rows[0];
+
+    // Club night: the federation can't type a score in, the club can.
+    let r = await manual("club", "orgAdmin", 7);
+    assert.equal(r.status, 403, JSON.stringify(r.body));
+    assert.equal(r.body.host, "club");
+    assert.equal(await stored("club"), undefined, "nothing written");
+    r = await manual("club", "c1MM", 7);
+    assert.equal(r.status, 200, JSON.stringify(r.body));
+    assert.deepEqual(await stored("club"), { s: 7, score_source: "manual_entry" });
+
+    // Region champs: the region yes, a club admin in the region no.
+    assert.equal((await manual("region", "c1Admin", 7)).status, 403);
+    assert.equal((await manual("region", "regionAdmin", 7)).status, 200);
+
+    // The federation's meet: a club admin no, a federation meet manager yes.
+    assert.equal((await manual("org", "c1Admin", 7)).status, 403);
+    assert.equal((await manual("org", "fedMM", 7)).status, 200);
+
+    // An event that doesn't exist is a 404, not a refusal.
+    const ghost = await fetchJson("POST", "/api/scores/manual-entry", {
+      token: U.orgAdmin.token,
+      body: { event_id: crypto.randomUUID(), competitor_id: w.diver.id, round_number: 1, judge_id: w.judge.id, score: 7 },
+    });
+    assert.equal(ghost.status, 404);
+
+    // A judge's late sync disagreed with the club's manual entry. Settling
+    // it picks the score that stands, so the same rule applies.
+    const { insertScoreAudit } = require("../lib/score-audit");
+    const row = (await pool.query(
+      "SELECT id FROM scores WHERE event_id = $1 AND round_number = 2", [w.events.club.id])).rows[0];
+    await insertScoreAudit(pool, {
+      scoreId: row.id, eventId: w.events.club.id, competitorId: w.diver.id, judgeId: w.judge.id,
+      round: 2, action: "rejected_duplicate", oldScore: 7, newScore: 7.5,
+    });
+    const resolve = (who) => fetchJson("POST", `/api/conflicts/${row.id}/resolve`, {
+      token: U[who].token, body: { decision: "accept_proposed", proposed_score: 7.5 },
+    });
+    for (const who of ["orgAdmin", "fedMM", "regionAdmin", "c3Ref"]) {
+      const no = await resolve(who);
+      assert.equal(no.status, 403, `${who}: ${JSON.stringify(no.body)}`);
+      assert.equal(no.body.code, "score_authority");
+    }
+    assert.deepEqual(await stored("club"), { s: 7, score_source: "manual_entry" }, "still the operator's value");
+    const yes = await resolve("c1Admin");
+    assert.equal(yes.status, 200, JSON.stringify(yes.body));
+    assert.deepEqual(await stored("club"), { s: 7.5, score_source: "manual_then_reconciled" });
+  } finally {
+    await hostKit.cleanup(w);
+  }
+});
+
+test("score authority: the events list says who can change scores, per event", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  let w;
+  try {
+    w = await hostKit.world();
+    const flags = async (who) => {
+      const r = await fetchJson("GET", "/api/events", { token: w.users[who].token });
+      assert.equal(r.status, 200, JSON.stringify(r.body));
+      const out = {};
+      for (const [kind, ev] of Object.entries(w.events)) {
+        out[kind] = r.body.find((e) => e.id === ev.id)?.can_change_scores;
+      }
+      return out;
+    };
+    assert.deepEqual(await flags("c1Admin"), { club: true, region: false, org: false, nomeet: false });
+    assert.deepEqual(await flags("c1MM"), { club: true, region: true, org: true, nomeet: true });
+    assert.deepEqual(await flags("regionAdmin"), { club: false, region: true, org: false, nomeet: false });
+    assert.deepEqual(await flags("orgAdmin"), { club: false, region: false, org: true, nomeet: true });
+    assert.deepEqual(await flags("sysadmin"), { club: true, region: true, org: true, nomeet: true });
+    // Spectators see Live events, never with the flag up.
+    const anon = await fetchJson("GET", "/api/events");
+    const mine = anon.body.filter((e) => Object.values(w.events).some((ev) => ev.id === e.id));
+    assert.equal(mine.length, 4);
+    assert.ok(mine.every((e) => e.can_change_scores === false));
+  } finally {
+    await hostKit.cleanup(w);
+  }
+});
+
+test("score authority: a dive-off's scores and winner are the host's to record", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  let w;
+  try {
+    w = await hostKit.world();
+    const U = w.users;
+    // A club-hosted Super Final head-to-head with one tied pair (nobody
+    // has scored, so both are on 0).
+    const h2h = await compKit.event(w.orgId, {
+      name: "SGS H2H", status: "Live", number_of_judges: 3, meet_id: w.meets.club, event_format: "super_final_h2h",
+    });
+    const a = await compKit.user(w.orgId, "SGS Pair A", ["diver"], { clubId: w.clubs.c1 });
+    const b = await compKit.user(w.orgId, "SGS Pair B", ["diver"], { clubId: w.clubs.c1 });
+    const dive = (await compKit.dives(1))[0];
+    for (const [who, order] of [[a, 1], [b, 2]]) {
+      await pool.query(
+        `INSERT INTO competitor_dive_lists (event_id, competitor_id, round_number, dive_id, display_order, group_number)
+         VALUES ($1, $2, 1, $3, $4, 1)`,
+        [h2h, who.id, dive, order]);
+    }
+    // The federation's org admin can still set one up (that's running the
+    // event, not scoring it), but not with a result in it.
+    const create = (who, extra = {}) => fetchJson("POST", `/api/events/${h2h}/dive-offs`, {
+      token: U[who].token, body: { competitor_a_id: a.id, competitor_b_id: b.id, ...extra },
+    });
+    const withScores = await create("orgAdmin", { score_a: 8, score_b: 7, winner_id: a.id });
+    assert.equal(withScores.status, 403, JSON.stringify(withScores.body));
+    assert.equal(withScores.body.code, "score_authority");
+    const made = await create("orgAdmin", { score_a: null, score_b: null, winner_id: null, notes: "set up" });
+    assert.equal(made.status, 201, JSON.stringify(made.body));
+    const id = made.body.dive_off.id;
+
+    const patch = (who, body) => fetchJson("PATCH", `/api/events/${h2h}/dive-offs/${id}`, { token: U[who].token, body });
+    const refused = await patch("orgAdmin", { score_a: 8.5, score_b: 8, winner_id: a.id });
+    assert.equal(refused.status, 403, JSON.stringify(refused.body));
+    // Re-sending the same (empty) result with new notes isn't a change.
+    assert.equal((await patch("orgAdmin", { score_a: null, score_b: null, winner_id: null, notes: "dives picked" })).status, 200);
+
+    const ok = await patch("c1Admin", { score_a: 8.5, score_b: 8, winner_id: a.id });
+    assert.equal(ok.status, 200, JSON.stringify(ok.body));
+    assert.equal(ok.body.dive_off.winner_id, a.id);
+    // Now there's a result, the federation can still touch the notes as
+    // long as it sends the stored result back unchanged, but it can't
+    // flip the winner.
+    assert.equal((await patch("orgAdmin", { score_a: "8.50", score_b: 8, winner_id: a.id, notes: "checked" })).status, 200);
+    assert.equal((await patch("orgAdmin", { winner_id: b.id })).status, 403);
+    const stored = (await pool.query("SELECT winner_id, notes FROM tiebreak_dive_offs WHERE id = $1", [id])).rows[0];
+    assert.deepEqual(stored, { winner_id: a.id, notes: "checked" });
+  } finally {
+    await hostKit.cleanup(w);
+  }
+});

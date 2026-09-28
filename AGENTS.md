@@ -178,6 +178,21 @@ that's intentional, but they can only listen, never emit. **Don't fall back
 to `data.judge_id`** — that's the spoof the audit closed.
 `docs/socket-events.md` has the per-event gates.
 
+### Hand-entered scores follow the host
+
+Only the meet managers of whoever hosts the meet change a score by hand:
+manual entry, `PUT /api/scores/:id`, conflict resolution and a dive-off's
+scores or winner all ask `scoreAuthority` (`lib/middleware.js`) inside
+their transaction. A club's meet is its club admins plus meet managers and
+event managers who are members of the club; a region's meet is its region
+admins plus meet managers and event managers from its clubs; anything else
+is the org's admins and meet managers plus the event's managers. It does
+not inherit up or down (the federation can't retype a club night's score).
+Judges' own `submit_score` and the referee calls keep their own gates. A
+new path that writes a score value goes through the same helper, not a
+role list, and the Control Room reads `can_change_scores` off
+`/api/events` to hide what the caller can't do.
+
 ### Score validation
 
 Any code path that accepts a score must validate `0 ≤ n ≤ 10` in 0.5
@@ -389,6 +404,7 @@ until the operator has switched maintenance mode on and passed
 | Shared frontend tokens and primitives | Design-system guide | `docs/design-system.md` + `src/styles/app.css` |
 | "Does this person run this event?" (event_managers row, or admin of the club / region hosting its meet, or of the host club's region) | `isEventDelegate(eventId, userId)` | `lib/middleware.js` |
 | Role gate that also lets the event's delegates in | `requireRoleOrEventDelegate(roles, eventIdOf)` | `lib/middleware.js` |
+| May this caller change a score by hand on this event? (manual entry, corrections, conflicts, dive-off results: the host club's / region's / org's meet managers, never another level; sysadmin always) | `scoreAuthority(db, eventId, user)` → `{ found, allowed, host }` / `canChangeEventScores(...)`; the 403 body is `scoreAuthorityRefusal(host)`; as a per-row SQL predicate, `scoreAuthoritySql({ userParam })` (the events list's `can_change_scores`) | `lib/middleware.js` |
 | Meet routes open to club admins (then pin with `isMeetHostAdmin`) | `requireMeetEditorOrClubAdmin` / server.js `requireMeetOrClubEditor` | `lib/middleware.js` |
 | Who reviews a role request (federation vs club-first) | `listForOrgAdmin` / `listForDelegate` / `delegateCanReview` / `reviewersFor` | `lib/role-requests.js` |
 | Narrow a meet screen to a club admin's own meets (pass the org roles the screen admits on its own, e.g. `CONTROL_ROOM_ROLES`, so a referee who also admins a club isn't narrowed) | `useClubScope(screenRoles)` | `src/composables/useClubScope.js` + `club-scope-core.js` |

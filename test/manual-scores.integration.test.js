@@ -47,6 +47,8 @@ let harnessPort;
 let testOrgId, testEventId, testOperatorId, testJudgeId, testCompetitorId;
 let recordEventId;
 let testDiveId;
+// The production score rule (lib/middleware.js), built on the test pool.
+let scoreAuthority;
 // Everything the stub io was asked to broadcast.
 const emitted = [];
 
@@ -85,6 +87,8 @@ before(async () => {
     console.warn(`[skip] migration check failed: ${err.message}`);
     return;
   }
+
+  ({ scoreAuthority } = require("../lib/middleware")({ pool, JWT_SECRET: "manual-scores-harness-only" }));
 
   // Provision fixtures. Minimum bones for the manual-entry path:
   // org → users (operator + judge + competitor) → event → panel
@@ -175,18 +179,6 @@ before(async () => {
     next();
   });
 
-  // Minimal requireOrgRole shim. The real middleware checks JWT
-  // + DB, but we trust the X-Test-Roles header here since the
-  // X-Test-User indirection is the same pattern other integration
-  // tests use.
-  const requireOrgRole = (allowed) => (req, res, next) => {
-    if (!req.user) return res.status(401).json({ error: "no user" });
-    if (req.user.is_system_admin) return next();
-    const hasRole = (req.user.org_roles || []).some((r) => allowed.includes(r));
-    if (!hasRole) return res.status(403).json({ error: "insufficient_role" });
-    next();
-  };
-
   // Stub io that just remembers what it was asked to send, so the
   // records test below can look for record_broken. Cache drops go in
   // the same log so the order of the two can be checked.
@@ -196,11 +188,16 @@ before(async () => {
   };
   const { checkAndApplyRecords } = require("../lib/records")({ pool, verifyToken: (_q, _s, n) => n() });
 
+  // The routes only ask for a signed-in user up front; who may write the
+  // score is the real host-org rule, read from the database (the operator
+  // is an org_admin there, and these events have no meet, so the org hosts
+  // them). The X-Test-Roles header doesn't come into it.
+  const verifyToken = (req, res, next) => (req.user ? next() : res.status(401).json({ error: "no user" }));
   app.use(require("../routes/manual-scores")({
-    pool, io, scoreboardCache, requireOrgRole, checkAndApplyRecords,
+    pool, io, scoreboardCache, verifyToken, scoreAuthority, checkAndApplyRecords,
   }));
   app.use(require("../routes/conflicts")({
-    pool, io, scoreboardCache, requireOrgRole,
+    pool, io, scoreboardCache, verifyToken, scoreAuthority,
   }));
 
   httpServer = http.createServer(app);
@@ -393,8 +390,10 @@ test("POST /api/scores/manual-entry rejects when judge is not on panel", async (
 // What the socket's P5 reconciliation leaves behind when a judge's late
 // sync disagrees with a manual entry: a 'rejected_duplicate' audit row
 // carrying the judge's value. The resolve endpoint only acts on a row
-// with one. The referee in these tests runs the event (event_managers),
-// which is the other thing it checks now.
+// with one. Who may settle it is the host-org score rule: the operator
+// here is an org_admin and the event is the org's own, so that passes on
+// its own; the event_managers row is left over from the older per-event
+// check and does no harm.
 async function openConflict(scoreId, manualScore, judgeScore) {
   const { insertScoreAudit } = require("../lib/score-audit");
   await insertScoreAudit(pool, {
@@ -630,7 +629,10 @@ test("manual entry gives its connection back before the records check takes one"
       pool: tight,
       io: { to: () => ({ emit: () => {} }) },
       scoreboardCache: { invalidate: () => {} },
-      requireOrgRole: () => (_req, _res, next) => next(),
+      verifyToken: (_req, _res, next) => next(),
+      // Asks on the handler's own client, so it doesn't need a second
+      // connection from the one-connection pool.
+      scoreAuthority,
       checkAndApplyRecords,
     }));
     server = http.createServer(tightApp);
