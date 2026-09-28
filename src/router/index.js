@@ -399,6 +399,13 @@ const routes = [
     component: () => import('@/views/SignOffCodeView.vue'),
     meta: { requiresAuth: true, requiresRole: ['referee', 'org_admin'] },
   },
+  {
+    // Anything else (an old link, a typo, the palette's old '/dives')
+    // used to render an empty RouterView: a blank page with no way
+    // out. Send it home; '/' forwards signed-in users to the dashboard.
+    path: '/:pathMatch(.*)*',
+    redirect: '/',
+  },
 ]
 
 const router = createRouter({
