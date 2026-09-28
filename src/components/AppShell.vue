@@ -389,6 +389,12 @@ function closeMobile(restoreFocus = false) {
   grid-template-columns: 244px 1fr;
   transition: grid-template-columns var(--dur-slow) var(--ease);
   background: var(--bg);
+  /* The installed iOS app draws edge to edge (index.html asks for
+     viewport-fit=cover + a black-translucent status bar), so keep the
+     chrome out of the notch in landscape. Physical sides because
+     that's what the insets are. 0 everywhere else. */
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
 }
 /* Desktop collapse = a slim icon rail (mobile is handled off-canvas
    in the media query below, where this width is overridden to 1fr). */
@@ -397,6 +403,8 @@ function closeMobile(restoreFocus = false) {
 /* ── Sidebar ── */
 .sidebar {
   background: var(--surface);
+  /* Status-bar band, see .topbar. */
+  border-top: env(safe-area-inset-top, 0px) solid var(--status-band);
   border-right: 1px solid var(--border);
   display: flex; flex-direction: column;
   min-width: 0; overflow: hidden;
@@ -510,7 +518,12 @@ function closeMobile(restoreFocus = false) {
 /* ── Main column ── */
 .shell-main { display: flex; flex-direction: column; min-width: 0; height: 100dvh; overflow: hidden; }
 .topbar {
-  height: 56px; flex-shrink: 0;
+  /* Grows by the status-bar inset in the installed iOS app, where the
+     page runs up under the clock. The band is a border in the brand
+     blue (the theme-color) because iOS draws that status text white
+     and it vanished against the light topbar. */
+  height: calc(56px + env(safe-area-inset-top, 0px)); flex-shrink: 0;
+  border-top: env(safe-area-inset-top, 0px) solid var(--status-band);
   background: var(--surface); border-bottom: 1px solid var(--border);
   display: flex; align-items: center; gap: 12px; padding: 0 16px;
 }
@@ -575,7 +588,11 @@ function closeMobile(restoreFocus = false) {
 @media (max-width: 860px) {
   .app-shell, .app-shell.collapsed { grid-template-columns: 1fr; }
   .sidebar {
-    position: fixed; inset: 0 auto 0 0; width: 244px; z-index: 60;
+    position: fixed; inset: 0 auto 0 0; z-index: 60;
+    /* Wider by the landscape notch so the links clear it; translateX
+       below still takes the whole thing off-screen. */
+    width: calc(244px + env(safe-area-inset-left, 0px));
+    padding-left: env(safe-area-inset-left, 0px);
     transform: translateX(-100%); transition: transform var(--dur-slow) var(--ease);
     box-shadow: var(--shadow-lg);
   }

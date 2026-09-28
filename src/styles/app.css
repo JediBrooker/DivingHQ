@@ -66,6 +66,9 @@
   --accent-soft:   var(--blue-50);
   --accent-soft-2: var(--blue-100);
   --accent-ring:   rgba(11, 97, 145, 0.18);
+  /* Band behind the iOS status bar in the installed app (see AppShell's
+     .topbar). Brand blue, same as the theme-color, in both themes. */
+  --status-band:   var(--blue-600);
 
   /* ── SEMANTIC · Status (bg / fg / solid) ────────────────── */
   --ok-bg:var(--green-50);   --ok-fg:var(--green-700);   --ok-solid:var(--green-600);

@@ -730,6 +730,12 @@ const submitLabel = computed(() => {
   overflow: hidden;
   touch-action: manipulation;
   user-select: none;
+  /* Installed on an iPhone the pad runs up under the status bar and,
+     in landscape, the notch. Same brand band as the app shell's topbar
+     so the white status text stays readable. */
+  border-top: env(safe-area-inset-top, 0px) solid var(--status-band);
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
 }
 
 .btn-back-judge {

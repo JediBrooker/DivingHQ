@@ -189,3 +189,47 @@ test("the closed mobile drawer is out of the tab order", async ({ page }) => {
   await link.focus();
   expect(await link.evaluate((el) => el === document.activeElement)).toBe(true);
 });
+
+test("an installed iPhone app keeps the chrome clear of the notch and status bar", async ({ page }) => {
+  // Chromium can fake the insets iOS reports in standalone mode with
+  // black-translucent + viewport-fit=cover (index.html). WebKit in
+  // Playwright can't, so this is the only place the layout gets checked.
+  const cdp = await page.context().newCDPSession(page);
+  const insets = (top, right, bottom, left) =>
+    cdp.send("Emulation.setSafeAreaInsetsOverride", { insets: { top, right, bottom, left } });
+  const judge = await setup.insertUser({ orgId: world.orgId, role: "judge", fullName: "Nadia Judge" });
+
+  // Portrait: the status bar and notch sit across the top.
+  await page.setViewportSize({ width: 390, height: 844 });
+  await insets(47, 0, 34, 0);
+  await signIn(page, world.diver.username);
+  await page.goto("/dashboard");
+  const toggle = page.locator(".topbar .icon-btn").first();
+  await expect(toggle).toBeVisible();
+  expect((await toggle.boundingBox()).y).toBeGreaterThanOrEqual(47);
+  expect((await page.locator(".topbar .crumb").boundingBox()).y).toBeGreaterThanOrEqual(47);
+  await toggle.click();
+  await expect(page.locator(".app-shell.mobile-open")).toBeVisible();
+  await expect.poll(async () => (await page.locator("aside.sidebar .sb-brand").boundingBox()).y).toBeGreaterThanOrEqual(47);
+
+  // Landscape: the notch is on a side now.
+  await page.setViewportSize({ width: 844, height: 390 });
+  await insets(0, 47, 21, 47);
+  await page.goto("/dashboard");
+  await expect(toggle).toBeVisible();
+  expect((await toggle.boundingBox()).x).toBeGreaterThanOrEqual(47);
+  const last = await page.locator(".topbar .icon-btn").last().boundingBox();
+  expect(last.x + last.width).toBeLessThanOrEqual(844 - 47);
+
+  // The judge pad is full-screen on its own, outside the shell.
+  await page.setViewportSize({ width: 390, height: 844 });
+  await insets(47, 0, 34, 0);
+  await page.request.post("/api/auth/logout");
+  await signIn(page, judge.username);
+  await page.goto("/judge");
+  const header = page.locator(".judge-header");
+  await expect(header).toBeVisible({ timeout: 10_000 });
+  const layoutTop = await page.evaluate(() => document.querySelector(".judge-layout").firstElementChild.getBoundingClientRect().top);
+  expect(layoutTop).toBeGreaterThanOrEqual(47);
+  expect((await header.boundingBox()).y).toBeGreaterThanOrEqual(47);
+});
