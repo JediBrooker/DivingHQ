@@ -901,6 +901,10 @@ module.exports = function createEventsRouter({
         }
       }
       await pool.query("DELETE FROM events WHERE id = $1", [ev.id]);
+      // Its live state goes with it (the event_live_state row cascades),
+      // same as the Completed flip below does.
+      if (activeDivers) delete activeDivers[ev.id];
+      if (meetHolds) delete meetHolds[ev.id];
       // A Live/Completed event may sit in the cached public
       // archive listing for up to 60s, bust it so the deleted
       // event drops out immediately.

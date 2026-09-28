@@ -1089,7 +1089,10 @@ test("judge: judge.png", async ({ page, baseURL }) => {
     eventName:     world.liveEvent.name,
   });
 
-  await page.goto("/judge");
+  // With the event named, the way the dashboard links it: the server
+  // no longer replays every event's live state on connect, so the
+  // keypad asks for this one (get_active_diver).
+  await page.goto(`/judge?event=${world.liveEvent.id}`);
   // The active-diver banner shows up once the judge socket
   // subscribes and replays the current state, so give it room.
   await page.waitForTimeout(2000);

@@ -16,7 +16,7 @@ that's intentional, but every privileged event must call
 
 | Event | Payload | Sent when |
 |---|---|---|
-| `state_update`            | `{ event_id, diverName, country_code, club_name, club_code, diveCode, description, round_number, status, … }` | A diver becomes active in the Control Room, or a new client connects (rebroadcast on demand). |
+| `state_update`            | `{ event_id, diverName, country_code, club_name, club_code, diveCode, description, round_number, status, … }` | A diver becomes active in the Control Room (to `event:<event_id>`), or in reply to `get_active_diver` for that one event. Nothing is replayed on connect. |
 | `score_received`          | `{ event_id, competitor_id, round_number, score, judge_id, judge_number }`, built from the checked values (never an echo of the client's object; `score` is the stored number) | A judge submits a score. Broadcast to everyone watching the meet. When the judge's value lost to an earlier manual entry, only the judge's own socket gets it, with the operator's `score` and `superseded_by: 'manual_entry'`. |
 | `score_rejected`          | `{ reason: 'not_authenticated' \| 'maintenance' \| 'insufficient_role' \| 'token_revoked' \| 'not_on_panel' \| 'event_not_live' \| 'bad_payload' \| 'bad_round' \| 'bad_score' \| 'rate_limited' \| 'server_error', message?: string }` | A submit_score from this socket failed validation. Sent only to the offending socket. |
 | `score_corrected`         | The new score row from `PUT /api/scores/:id` | A referee corrects a score via HTTP (the socket bus rebroadcasts so other operators see it live). |

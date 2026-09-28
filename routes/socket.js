@@ -7,8 +7,9 @@
 //   * io.use(handshake)          : soft JWT verify, stash userId,
 //                                   org_id, roles, sysadmin flag,
 //                                   honour token_version (Migration 021)
-//   * connection                 : broadcast current activeDivers,
-//                                   join event rooms, register events
+//   * connection                 : per-IP cap, per-user room,
+//                                   register events (no state replay,
+//                                   see get_active_diver)
 //   * subscribe_event            : explicit room join
 //   * set_active_diver           : driven by Control Room
 //   * get_active_diver           : on-demand pull for late joiners
@@ -490,13 +491,11 @@ module.exports = function attachSocket({
       await emitVenue(eventId, "subscribe_venue");
     });
 
-    // Bring late-arriving clients up to speed with whatever's
-    // currently live.
-    if (Object.keys(activeDivers).length > 0) {
-      Object.values(activeDivers).forEach((state) => {
-        socket.emit("state_update", state);
-      });
-    }
+    // No replay of live state on connect. This used to send every
+    // event's active diver (every org, rehearsals, deleted events) to
+    // every new socket, anonymous ones too, and a judge's keypad would
+    // adopt whichever came last. Late joiners ask for their own event
+    // with get_active_diver / get_meet_hold, which replay just that one.
 
     on("set_active_diver", async (data, ack) => {
       if (!(await guardControl(socket, data, ack, "set_active_diver"))) return;

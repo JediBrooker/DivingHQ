@@ -371,3 +371,21 @@ test("event rooms: only UUIDs, and a cap per socket", async () => {
   await c.fire("get_active_diver", { event_id: "00000000-0000-4000-8000-000000000000" });
   assert.equal(eventRooms().length, 50);
 });
+
+// Every new socket, anonymous ones included, used to get a state_update
+// for every event with an active diver, across every org (rehearsals and
+// deleted events too). A judge reconnecting on venue Wi-Fi had the
+// keypad jump to some other event's diver. Clients ask for their own
+// event with get_active_diver, which still replays it.
+test("connecting doesn't replay other events' live state; get_active_diver does for its own", async () => {
+  const other = "44444444-4444-4444-8444-444444444444";
+  const activeDivers = {
+    [VALID_ID]: { event_id: VALID_ID, diverName: "Mine" },
+    [other]: { event_id: other, diverName: "Someone else's rehearsal" },
+  };
+  const h = makeHarness({ deps: { activeDivers } });
+  const c = await h.connect("198.51.100.36");
+  assert.deepEqual(c.emitted.filter((e) => e.name === "state_update"), []);
+  await c.fire("get_active_diver", { event_id: VALID_ID });
+  assert.deepEqual(c.emitted.filter((e) => e.name === "state_update").map((e) => e.payload.diverName), ["Mine"]);
+});

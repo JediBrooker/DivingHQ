@@ -299,6 +299,10 @@ useSocketEvent(socket, 'meet_resumed', (data) => {
 })
 
 useSocketEvent(socket, 'state_update', async (data) => {
+  // The pooled socket can still be in another event's room (a
+  // scoreboard opened earlier in this tab), so only take this judge's
+  // own event when the URL names one.
+  if (eventIdFromUrl.value && data?.event_id !== eventIdFromUrl.value) return
   activeDiver.value = data
   resetScore()
   // New diver / round: previous panel + referee signal are both
