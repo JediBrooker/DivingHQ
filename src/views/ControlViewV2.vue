@@ -481,11 +481,35 @@ function numberOfJudgesFor(eventId) {
 //      still no emit, so the judges are never reset;
 //   3. only when the server has NO diver (a freshly-Live event nobody has
 //      started yet) do we announce roster[0], the one load path that emits.
-async function setupLivePool(ev) {
-  socket.emit('subscribe_event', { event_id: ev.id })
+// Join an event's room and claim its lease. Also asks whether it's held:
+// the server only replays a hold to a socket that asks, so without this a
+// second operator (or a reload) mid-hold saw no banner, a running clock
+// and an enabled Next.
+function joinPoolRooms(eventId) {
+  socket.emit('subscribe_event', { event_id: eventId })
   // Claim the control lease so a second operator/window driving this same
   // event gets warned (advisory; never blocks).
-  socket.emit('claim_event_control', { event_id: ev.id })
+  socket.emit('claim_event_control', { event_id: eventId })
+  socket.emit('get_meet_hold', { event_id: eventId })
+}
+
+// The server keeps no room membership across a reconnect, and it drops
+// this socket's leases when it disconnects. score_received and
+// judge_signal only go to event:<id>, so after a wifi blip or a deploy
+// every pool went deaf until someone reloaded. Rejoin each wired Live
+// pool. get_active_diver just refreshes what the server has on record;
+// pendingSeed isn't touched, so a routine reconnect never snaps the
+// operator's cursor or announces over it.
+useSocketEvent(socket, 'connect', () => {
+  for (const ev of events.value) {
+    if (ev.status !== 'Live' || !wiredPools.has(ev.id)) continue
+    joinPoolRooms(ev.id)
+    socket.emit('get_active_diver', { event_id: ev.id })
+  }
+})
+
+async function setupLivePool(ev) {
+  joinPoolRooms(ev.id)
   const pool = poolFor(ev.id)
   try {
     const roster = await auth.apiFetch(`/api/events/${ev.id}/roster`)

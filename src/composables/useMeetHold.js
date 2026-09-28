@@ -3,7 +3,8 @@
 // (meet_hold / meet_resume) and mirrors server-pushed hold state for
 // multi-operator setups. The server only replays an existing hold to a
 // socket that asks with get_meet_hold, and asking is the caller's job:
-// the judge screen and the scoreboard do, the Control Room doesn't yet.
+// the judge screen and the scoreboard do, and the Control Room asks for
+// every live pool it wires up (and again after a reconnect).
 //
 // Must be called synchronously during component setup: the
 // meet_held / meet_resumed listeners register via useSocketEvent,

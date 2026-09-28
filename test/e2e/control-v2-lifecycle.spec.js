@@ -3,7 +3,7 @@
 // drops and comes back, a hold that was already on when the page opened.
 const { test, expect } = require("@playwright/test");
 const setup = require("./_setup");
-const { signIn, liveEvent, roomWatcher } = require("./_meetday");
+const { signIn, liveEvent, roomWatcher, emitAck } = require("./_meetday");
 
 test.describe.configure({ mode: "serial" });
 
@@ -60,5 +60,62 @@ test("an event another operator starts shows up as a live pool", async ({ page, 
   // ...and finalised elsewhere, it drops off the live board again
   await setup.setEventStatus(request, { adminToken, eventId: B.event.id, status: "Completed" });
   await expect(cardB).toHaveCount(0, { timeout: 10_000 });
+  await setup.deleteOrg(orgId);
+});
+
+test("a hold that was already on shows when the Control Room opens", async ({ page, request, baseURL }) => {
+  test.setTimeout(90_000);
+  const { orgId, username, adminToken } = await setup.createOrgAndAdmin(request, { countryCode: "AUS", orgName: "Lifecycle Held" });
+  const { event } = await liveEvent(request, { orgId, adminToken, name: "Held Before", diverNames: ["AAA Held"] });
+  expect(await emitAck(baseURL, adminToken, "meet_hold", { event_id: event.id, reason: "lightning" })).toMatchObject({ ok: true });
+
+  await signIn(page, username);
+  await page.goto(`/control?event=${event.id}`);
+  const card = page.locator(`.cv2-pool[data-event-id="${event.id}"]`);
+  await expect(card.locator(".cv2-live-diver")).toContainText("AAA Held", { timeout: 10_000 });
+  await expect(card.locator(".cv2-pool-heldbar")).toContainText("lightning", { timeout: 6_000 });
+  await expect(page.locator(".cv2-hold-banner")).toBeVisible();
+  // Held means held: the toggle offers Resume, not a second hold
+  await expect(card.locator(".cv2-pool-hold")).toContainText(/Resume/);
+  await setup.deleteOrg(orgId);
+});
+
+test("after the socket drops and reconnects, judge scores still reach the pool", async ({ page, request, baseURL }) => {
+  test.setTimeout(120_000);
+  const { orgId, username, adminToken } = await setup.createOrgAndAdmin(request, { countryCode: "AUS", orgName: "Lifecycle Reconnect" });
+  const { event, divers, diveId, judges } = await liveEvent(request, {
+    orgId, adminToken, name: "Wifi Blip", diverNames: ["AAA Blip", "BBB Blip"],
+  });
+  const room = await roomWatcher(baseURL, event.id);
+
+  // Put the page's socket.io websocket behind a route we can cut, which is
+  // what a venue wifi drop or a server restart looks like from the page.
+  const links = [];
+  await page.routeWebSocket(/\/socket\.io\//, (ws) => {
+    const server = ws.connectToServer();
+    links.push({ ws, server });
+  });
+
+  await signIn(page, username);
+  await page.goto(`/control?event=${event.id}`);
+  const card = page.locator(`.cv2-pool[data-event-id="${event.id}"]`);
+  await expect(card.locator(".cv2-live-diver")).toContainText("AAA Blip", { timeout: 10_000 });
+  await expect.poll(() => room.seen.state.length, { timeout: 8_000 }).toBeGreaterThan(0);
+  await expect.poll(() => links.length, { timeout: 8_000 }).toBeGreaterThan(0);
+
+  const before = links.length;
+  for (const { ws, server } of links.splice(0)) {
+    await server.close().catch(() => {});
+    await ws.close().catch(() => {});
+  }
+  // socket.io reconnects on its own; wait for the fresh transport
+  await expect.poll(() => links.length, { timeout: 15_000 }).toBeGreaterThan(0);
+  expect(before).toBeGreaterThan(0);
+  await page.waitForTimeout(1500);
+
+  await setup.submitPanelScores({ baseURL, judges, eventId: event.id, competitorId: divers[0].userId, roundNumber: 1, diveId });
+  await expect(card.locator(".cv2-tile.scored")).toHaveCount(5, { timeout: 8_000 });
+  await expect(card.locator(".cv2-primary")).toBeEnabled();
+  room.close();
   await setup.deleteOrg(orgId);
 });
