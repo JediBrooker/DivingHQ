@@ -32,7 +32,7 @@ const { recordAudit, auditFromReq } = require("../lib/audit");
 const createIdempotency = require("../lib/idempotency");
 const { perDiveSelect, eventRepCodesCte } = require("../lib/scoring-sql");
 const { PUBLIC_CLUB_JOIN } = require("../lib/club-approvals");
-const { canSeeEvent } = require("./events/visibility");
+const { canSeeEvent } = require("../lib/event-visibility");
 
 const EVENT_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
