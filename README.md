@@ -882,8 +882,15 @@ It excludes only the documentation screenshot generator
 
 ### Running
 
-The spec runs use the same Postgres test database as `npm test`
-(`divinghq_test` by default — override with `DB_DATABASE`).
+The spec runs use the same Postgres test database as `npm test`:
+`DATABASE_URL` or `DB_DATABASE` from your shell, then from `.env`, and
+`divinghq_test` if neither names one. The e2e server and the fixtures
+resolve it the same way (`test/support/test-db.js`), and `npm test`,
+the integration suite and Playwright all refuse to run against a
+database whose name doesn't contain `test`. `.env.example` points the
+app at `divinghq`, so run the suites with
+`DB_DATABASE=divinghq_test` (or set `ALLOW_NON_TEST_DB=1` if you really
+mean to).
 
 ```bash
 # Default automatic suite (parallel, headless). Excludes only the

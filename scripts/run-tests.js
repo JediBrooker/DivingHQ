@@ -39,6 +39,23 @@ function main() {
     console.error("Usage: node scripts/run-tests.js <full|safe>");
     process.exit(2);
   }
+  if (mode === "full") {
+    // The full run includes the integration suites, which create orgs,
+    // flip feature flags and re-run migrations. Resolve the database the
+    // way server.js will (shell, then .env, then divinghq_test) and stop
+    // here if it isn't a test DB, rather than let .env.example's
+    // DB_DATABASE=divinghq send all that to the dev database. Not for
+    // "safe", which deploy.sh runs with the production .env.
+    require("dotenv").config({ quiet: true });
+    const { applyTestDbDefault, assertTestDatabase } = require("../test/support/test-db");
+    applyTestDbDefault();
+    try {
+      assertTestDatabase();
+    } catch (err) {
+      console.error(`[run-tests] ${err.message}`);
+      process.exit(2);
+    }
+  }
   const files = discover(mode);
   if (!files.length) {
     console.error(`[run-tests] no test files found for mode=${mode}`);

@@ -12,6 +12,16 @@
 // don't interfere.
 
 const { defineConfig, devices } = require("@playwright/test");
+const { applyTestDbDefault, assertTestDatabase } = require("./test/support/test-db");
+
+// Read .env here too. The fixtures in test/e2e/_setup.js always did, the
+// webServer below didn't, so with .env saying DB_DATABASE=divinghq the
+// server ran on divinghq_test while the fixtures wrote to divinghq. Now
+// both see the same value (shell, then .env, then divinghq_test), the
+// workers inherit it, and a non-test database stops the run here.
+require("dotenv").config({ quiet: true });
+applyTestDbDefault();
+assertTestDatabase();
 
 const DOCS_E2E = process.env.E2E_DOCS === "1";
 // E2E_PORT moves the auto-booted server off 3097, so two checkouts (git
@@ -193,7 +203,9 @@ module.exports = defineConfig({
     stderr: "pipe",
     env: {
       PORT: E2E_PORT,
-      // Point at the local test DB created in `npm test` setup.
+      // Resolved and checked at the top of this file, so the server and
+      // the fixtures agree on it. A DATABASE_URL in .env still wins in
+      // both, same as it does in server.js.
       DB_DATABASE: process.env.DB_DATABASE || "divinghq_test",
       // Disable the auth + bulk-write rate limiters for the suite.
       // Every request comes from 127.0.0.1 so the production limit

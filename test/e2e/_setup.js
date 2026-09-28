@@ -27,7 +27,9 @@ const pool = process.env.DATABASE_URL
   : new Pool({
       user:     process.env.DB_USER     || process.env.PGUSER,
       host:     process.env.DB_HOST     || process.env.PGHOST,
-      database: process.env.DB_DATABASE || process.env.PGDATABASE,
+      // playwright.config.js resolves and checks this before any worker
+      // starts; the fallback only matters if this file is loaded on its own.
+      database: process.env.DB_DATABASE || process.env.PGDATABASE || "divinghq_test",
       password: process.env.DB_PASSWORD || process.env.PGPASSWORD,
       port:     process.env.DB_PORT     || process.env.PGPORT,
     });

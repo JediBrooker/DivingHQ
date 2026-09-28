@@ -70,6 +70,10 @@ let baseUrl;
 let pool;
 
 before(async () => {
+  // Run straight through `node --test` this file skips scripts/run-tests.js,
+  // so it checks for itself that it isn't about to fill a real database
+  // with fixture orgs (test/support/test-db.js).
+  require("./support/test-db").assertTestDatabase();
   // Prefer the app's documented DB_* env vars; fall back to
   // libpq's PG* names so CI's Postgres service container keeps
   // working unchanged. Without this, an empty `new Pool()` would
