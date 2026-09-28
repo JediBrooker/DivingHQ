@@ -7645,3 +7645,37 @@ test("role requests in an unclaimed country skip a suspended club admin and reac
     await teardownFixture(st);
   }
 });
+
+test("the inbox pages newest-first without skipping or repeating, and bad paging input is a 400", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    // Ids are random uuids, so their order has nothing to do with time.
+    for (let i = 0; i < 7; i++) {
+      await pool.query(
+        `INSERT INTO notifications (user_id, category, title, created_at)
+         VALUES ($1, 'generic', $2, now() - make_interval(mins => $3::int))`,
+        [st.adminId, `note ${i}`, i],
+      );
+    }
+    const seen = [];
+    let cursor = null;
+    for (let page = 0; page < 5; page++) {
+      const r = await fetchJson("GET", `/api/notifications/me?limit=3${cursor ? `&before_id=${cursor}` : ""}`, { token: st.adminToken });
+      assert.equal(r.status, 200, JSON.stringify(r.body));
+      if (!r.body.length) break;
+      seen.push(...r.body.map((n) => n.title));
+      cursor = r.body[r.body.length - 1].id;
+    }
+    assert.deepEqual(seen, [0, 1, 2, 3, 4, 5, 6].map((i) => `note ${i}`));
+
+    const one = await fetchJson("GET", "/api/notifications/me?limit=-1", { token: st.adminToken });
+    assert.equal(one.status, 200);
+    assert.equal(one.body.length, 1, "a silly limit is clamped, not passed to Postgres");
+    assert.equal((await fetchJson("GET", "/api/notifications/me?before_id=nope", { token: st.adminToken })).status, 400);
+    assert.equal((await fetchJson("GET", "/api/notifications/me?since_id=nope", { token: st.adminToken })).status, 400);
+  } finally {
+    await teardownFixture(st);
+  }
+});
