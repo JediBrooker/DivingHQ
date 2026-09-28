@@ -29,6 +29,7 @@
 const jwt = require("jsonwebtoken");
 const createIdempotency = require("../lib/idempotency");
 const { readSessionCookie } = require("../lib/session-cookie");
+const { trustProxyHops } = require("../lib/trust-proxy");
 const { announceRecords } = require("../lib/records");
 const { insertScoreAudit } = require("../lib/score-audit");
 // Held as the module object and called through it, never destructured:
@@ -169,16 +170,11 @@ module.exports = function attachSocket({
   });
 
   // -----------------------------------------------------------
-  // XFF / IP: mirror the Express side's TRUST_PROXY chain
-  // length so audit-log IPs aren't trivially forgeable.
+  // XFF / IP: the same TRUST_PROXY chain length the Express side
+  // uses (one parser, lib/trust-proxy.js) so audit-log IPs aren't
+  // trivially forgeable.
   // -----------------------------------------------------------
-  const TRUST_PROXY_HOPS = (() => {
-    const raw = process.env.TRUST_PROXY;
-    if (raw === undefined || raw === "" || raw === "true") return 1;
-    if (raw === "false" || raw === "0") return 0;
-    const n = parseInt(raw, 10);
-    return Number.isFinite(n) && n >= 0 ? n : 1;
-  })();
+  const TRUST_PROXY_HOPS = trustProxyHops();
 
   function clientIp(socket) {
     const fwd = socket.handshake.headers["x-forwarded-for"];

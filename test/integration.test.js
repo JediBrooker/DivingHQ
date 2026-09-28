@@ -7753,3 +7753,14 @@ test("a missing /assets file is a 404, never the SPA shell", async (t) => {
     assert.doesNotMatch(r.headers["content-type"] || "", /text\/html/, p);
   }
 });
+
+test("TRUST_PROXY=true boots, the way the socket layer already read it", { timeout: 60000 }, async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const srv = await b1Boot.spawn({ TRUST_PROXY: "true" });
+  try {
+    await b1Boot.waitHealthy(srv);
+  } finally {
+    await srv.stop();
+  }
+});

@@ -103,11 +103,9 @@ app.use(metrics.httpMetricsMiddleware);
 //   * req.ip is the proxy address, not the real client.
 // `1` trusts ONE hop, which is exactly what we want behind a single
 // edge proxy. Override via TRUST_PROXY env if you need more hops
-// (or set to 'false' for a no-proxy setup).
-const TRUST_PROXY = process.env.TRUST_PROXY ?? "1";
-app.set("trust proxy", TRUST_PROXY === "false" ? false
-  : /^\d+$/.test(TRUST_PROXY) ? Number(TRUST_PROXY)
-  : TRUST_PROXY);
+// (or set to 'false' for a no-proxy setup). lib/trust-proxy.js reads it
+// for the socket layer too, so the two agree on what a client's IP is.
+app.set("trust proxy", require("./lib/trust-proxy").expressTrustProxy());
 
 const server = http.createServer(app);
 // credentials: true so the browser sends the httpOnly session cookie
