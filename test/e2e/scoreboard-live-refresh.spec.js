@@ -119,3 +119,25 @@ test("tied divers share the place everywhere it's shown", async ({ browser, requ
   await sctx.close(); await cctx.close();
   await setup.deleteOrg(orgId);
 });
+
+// A deep link has to wait for /api/archive before it knows its event, and
+// it used to show the meets list while it waited: an OBS overlay or a
+// venue projector flashed the whole list on air at every load.
+test("a broadcast deep link never flashes the meets list while it loads", async ({ page, request }) => {
+  test.setTimeout(60_000);
+  const { orgId, adminToken } = await setup.createOrgAndAdmin(request, { countryCode: "AUS", orgName: "Scoreboard Deep Link" });
+  const { event } = await liveEvent(request, { orgId, adminToken, name: "Deep Link Event", diverNames: ["AAA Deep"] });
+  await page.route(/\/api\/archive(\?.*)?$/, async (route) => {
+    await new Promise((r) => setTimeout(r, 2000));
+    await route.continue().catch(() => {});
+  });
+  await page.goto(`/scoreboard/${event.id}/broadcast`);
+  // Sample while /api/archive is still held back (a web-first assertion
+  // would just wait the flash out).
+  for (let i = 0; i < 4; i++) {
+    await page.waitForTimeout(300);
+    expect(await page.locator(".meets-mode").count()).toBe(0);
+  }
+  await expect(page.locator(".sb-body")).toBeVisible({ timeout: 10_000 });
+  await setup.deleteOrg(orgId);
+});

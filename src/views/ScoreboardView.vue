@@ -113,6 +113,10 @@ function ensureListData() {
 
 const currentEventId = ref(null)
 const currentEvent = computed(() => events.value.find(e => String(e.id) === String(currentEventId.value)) || null)
+// The URL names an event but selectEvent hasn't run yet (it waits for the
+// /api/archive list, which is where currentEvent comes from). Neither the
+// meets list nor its header belongs on screen in the meantime.
+const deepLinkPending = computed(() => !currentEventId.value && !!route.params.eventId)
 
 // Filter state (search / country / year / height / club / status,
 // plus the sort + view-mode preferences) and the meets-browsing
@@ -1194,7 +1198,7 @@ onMounted(async () => {
          breadcrumb so the user can jump back to the list. Hidden
          entirely in broadcast mode so a venue projector shows only
          the live scoring content. -->
-    <div v-if="!broadcastMode" class="sb-header">
+    <div v-if="!broadcastMode && !deepLinkPending" class="sb-header">
       <template v-if="!currentEventId">
         <div class="header-left">
           <span v-if="!auth.isLoggedIn" class="sb-page-title">Scoreboard &amp; Results</span>
@@ -1264,8 +1268,16 @@ onMounted(async () => {
          event list + filter source data and listens for a
          selection.
          ========================================================= -->
+    <!-- A deep link (/scoreboard/:id, its /broadcast, an OBS overlay)
+         waits here for /api/archive before selectEvent can run. That used
+         to be the meets list, which an overlay or a venue projector then
+         flashed on air at every load. Blank on those screens, a quiet
+         Loading on the ordinary one. -->
+    <div v-if="deepLinkPending" class="sb-deeplink-pending" aria-busy="true">
+      <span v-if="!broadcastMode && !overlayMode">Loading…</span>
+    </div>
     <MeetsBrowser
-      v-if="!currentEventId"
+      v-else-if="!currentEventId"
       :events="events"
       :live-events="liveEvents"
       :upcoming-events="upcomingEvents"
