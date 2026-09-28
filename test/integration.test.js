@@ -7444,3 +7444,77 @@ test("no request is served before the feature flags have loaded", { timeout: 600
     await srv.stop();
   }
 });
+
+test("an unwritable AUDIT_SNAPSHOT_DIR only logs a warning, the server stays up", { timeout: 60000 }, async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const fs = require("node:fs");
+  const os = require("node:os");
+  const dir = fs.mkdtempSync(b1Boot.path.join(os.tmpdir(), "b1-snap-"));
+  fs.chmodSync(dir, 0o555);
+  // Something to write, so the snapshot really opens a file.
+  const st = await setupFixture({ withEvent: false });
+  await pool.query(
+    "INSERT INTO audit_log (org_id, entity_type, action, created_at) VALUES ($1, 'org', 'org.poked', now() - interval '1 hour')",
+    [st.orgId],
+  );
+  const srv = await b1Boot.spawn({ AUDIT_SNAPSHOT_DIR: dir });
+  try {
+    await b1Boot.waitHealthy(srv);
+    const until = Date.now() + 5000;
+    while (Date.now() < until && !srv.gone && !/audit snapshot failed/.test(srv.log())) {
+      await new Promise((res) => setTimeout(res, 50));
+    }
+    assert.equal(srv.gone, false, `server died:\n${srv.log()}`);
+    assert.match(srv.log(), /audit snapshot failed/);
+    const r = await b1Boot.get(srv.url, "/api/health");
+    assert.equal(r?.status, 200);
+  } finally {
+    await srv.stop();
+    fs.chmodSync(dir, 0o755);
+    fs.rmSync(dir, { recursive: true, force: true });
+    await pool.query("DELETE FROM audit_log WHERE org_id = $1", [st.orgId]);
+    await teardownFixture(st);
+  }
+});
+
+test("audit snapshots pick up where the last one stopped, with no gaps and no repeats", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const fs = require("node:fs");
+  const os = require("node:os");
+  const dir = fs.mkdtempSync(b1Boot.path.join(os.tmpdir(), "b1-snap-"));
+  const st = await setupFixture({ withEvent: false });
+  const add = async (action, age) => (await pool.query(
+    `INSERT INTO audit_log (org_id, entity_type, action, created_at)
+     VALUES ($1, 'org', $2, now() - $3::interval) RETURNING id`,
+    [st.orgId, action, age],
+  )).rows[0].id;
+  const lines = () => fs.readdirSync(dir).filter((f) => f.startsWith("audit_") && f.endsWith(".jsonl"))
+    .flatMap((f) => fs.readFileSync(b1Boot.path.join(dir, f), "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l)))
+    .filter((r) => r.org_id === st.orgId);
+  try {
+    // A one-second settle window instead of five minutes, so the test
+    // doesn't have to wait.
+    const snap = require("../lib/audit-snapshot")({ pool, dir, settleSeconds: 1 });
+    // Three days old: the boot-time version only ever looked back 24h.
+    const old = await add("org.old", "3 days");
+    const settled = await add("org.settled", "1 hour");
+    await snap.snapshot();
+    assert.deepEqual(lines().map((r) => r.id).sort(), [old, settled].sort());
+    assert.ok(JSON.parse(fs.readFileSync(b1Boot.path.join(dir, ".snapshot-marks.json"), "utf8")).audit_log);
+
+    const later = await add("org.later", "0 seconds");
+    await new Promise((r) => setTimeout(r, 1200));
+    const fresh = await add("org.fresh", "0 seconds");
+    await snap.snapshot();
+    const ids = lines().map((r) => r.id);
+    assert.equal(ids.filter((id) => id === old).length, 1, "nothing copied twice");
+    assert.ok(ids.includes(later));
+    assert.ok(!ids.includes(fresh), "rows younger than the settle window wait for the next run");
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+    await pool.query("DELETE FROM audit_log WHERE org_id = $1", [st.orgId]);
+    await teardownFixture(st);
+  }
+});

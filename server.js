@@ -1494,7 +1494,7 @@ async function bootChecks() {
   }
 }
 
-async function startBackgroundJobs() {
+function startBackgroundJobs() {
   // Start the idempotency-keys TTL sweeper (migration 054).
   // Background interval inside this Node process; deletes rows
   // older than 72 hours every hour. Safe to call before any
@@ -1532,87 +1532,25 @@ async function startBackgroundJobs() {
       logger.warn({ err: err.message }, "auto-withdraw sweeper start failed");
     }
   }
-  try {
-    const v = await pool.query("SELECT version, applied_at FROM schema_meta WHERE id = 1");
-    if (v.rows[0]) {
-      logger.info(
-        { schema_version: v.rows[0].version, applied_at: v.rows[0].applied_at },
-        "schema_meta loaded",
-      );
-    } else {
-      logger.warn("schema_meta has no rows — run migration 008");
-    }
-  } catch (err) {
-    logger.warn({ err: err.message }, "couldn't read schema_meta");
-  }
-  // Snapshot the past 24 h of audit rows to AUDIT_SNAPSHOT_DIR
-  // BEFORE the purge runs, so legal-retention archives outlive
-  // the 30-day DB window. No-op when AUDIT_SNAPSHOT_DIR isn't
-  // set (dev / single-node deployments don't need it).
-  if (process.env.AUDIT_SNAPSHOT_DIR) {
-    try {
-      await snapshotAuditTables();
-    } catch (err) {
-      logger.warn(
-        { err: err.message },
-        "audit snapshot failed; purge will continue",
-      );
-    }
-  }
-  try {
-    const purge = await pool.query("SELECT * FROM purge_audit_logs(30)");
-    const total = purge.rows.reduce((sum, r) => sum + Number(r.deleted_rows), 0);
-    if (total > 0) logger.info({ deleted_rows: total }, "purged audit log");
-  } catch (err) {
-    logger.warn({ err: err.message }, "purge_audit_logs failed (run migration 008?)");
-  }
-}
-
-// Writes the 24 h of audit rows before now to JSONL files in
-// AUDIT_SNAPSHOT_DIR (one file per table per day). Only called from
-// bootChecks, before the purge, so it runs once per server start
-// rather than on a timer. The operator is expected to push the dir to
-// S3 / off-site backup via a separate cron / systemd job.
-async function snapshotAuditTables() {
-  const fs = require("node:fs");
-  const path = require("node:path");
-  const dir = process.env.AUDIT_SNAPSHOT_DIR;
-  if (!dir) return;
-  fs.mkdirSync(dir, { recursive: true });
-  const stamp = new Date().toISOString().slice(0, 10);
-  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-
-  for (const [table, file] of [
-    ["score_audit_log", `score_audit_${stamp}.jsonl`],
-    ["role_audit_log",  `role_audit_${stamp}.jsonl`],
-    ["audit_log",       `audit_${stamp}.jsonl`],
-  ]) {
-    try {
-      const r = await pool.query(
-        `SELECT * FROM ${table} WHERE created_at >= $1 ORDER BY created_at`,
-        [since],
-      );
-      const out = path.join(dir, file);
-      // Append mode so multiple snapshots in the same day
-      // accumulate rather than overwrite, dedupe is the
-      // operator's problem if they run this manually.
-      const stream = fs.createWriteStream(out, { flags: "a" });
-      for (const row of r.rows) {
-        stream.write(JSON.stringify(row) + "\n");
-      }
-      stream.end();
-      if (r.rows.length) {
+  pool.query("SELECT version, applied_at FROM schema_meta WHERE id = 1")
+    .then((v) => {
+      if (v.rows[0]) {
         logger.info(
-          { table, file, rows: r.rows.length },
-          "audit snapshot written",
+          { schema_version: v.rows[0].version, applied_at: v.rows[0].applied_at },
+          "schema_meta loaded",
         );
+      } else {
+        logger.warn("schema_meta has no rows — run migration 008");
       }
-    } catch (err) {
-      logger.warn(
-        { table, err: err.message },
-        "audit snapshot failed for one table; continuing",
-      );
-    }
+    })
+    .catch((err) => logger.warn({ err: err.message }, "couldn't read schema_meta"));
+  // Audit retention: snapshot the audit tables to AUDIT_SNAPSHOT_DIR (when
+  // set) and then purge rows past 30 days. Now and daily after that, see
+  // lib/audit-snapshot.js.
+  try {
+    require("./lib/audit-snapshot")({ pool, logger }).start();
+  } catch (err) {
+    logger.warn({ err: err.message }, "audit retention job start failed");
   }
 }
 
