@@ -7334,3 +7334,37 @@ test("forgot-password finds an account whatever case its email was typed in, and
     await teardownFixture(st);
   }
 });
+
+test("deleting a club closes requests to join it instead of turning them into 'leave your club'", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const club = async (name) => (await pool.query(
+      "INSERT INTO clubs (org_id, name) VALUES ($1, $2) RETURNING id", [st.orgId, name],
+    )).rows[0].id;
+    const home = await club("Home Divers");
+    const doomed = await club("Doomed Divers");
+    const uname = `int-b3dc-${st.slug}`;
+    const diver = await insertUser({ orgId: st.orgId, role: "diver", username: uname, fullName: "Hopeful Diver" });
+    await pool.query("UPDATE users SET club_id = $1 WHERE id = $2", [home, diver]);
+    const made = await fetchJson("POST", "/api/club-change-requests", { token: await b3Login(uname), body: { to_club_id: doomed } });
+    assert.equal(made.status, 201, JSON.stringify(made.body));
+
+    const del = await fetchJson("DELETE", `/api/clubs/${doomed}`, { token: st.adminToken });
+    assert.equal(del.status, 200, JSON.stringify(del.body));
+    const rq = (await pool.query("SELECT status::text FROM club_change_requests WHERE id = $1", [made.body.id])).rows[0];
+    assert.equal(rq.status, "rejected");
+    const late = await fetchJson("POST", `/api/club-change-requests/${made.body.id}/review`, { token: st.adminToken, body: { decision: "approved" } });
+    assert.equal(late.status, 409, JSON.stringify(late.body));
+    assert.equal((await pool.query("SELECT club_id FROM users WHERE id = $1", [diver])).rows[0].club_id, home, "still in their own club");
+    const told = (await pool.query(
+      "SELECT title, body FROM notifications WHERE user_id = $1 AND category = 'club_change'", [diver],
+    )).rows;
+    assert.equal(told.length, 1);
+    assert.match(told[0].body, /Doomed Divers/);
+  } finally {
+    await pool.query("DELETE FROM clubs WHERE org_id = $1", [st.orgId]);
+    await teardownFixture(st);
+  }
+});

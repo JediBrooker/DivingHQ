@@ -483,7 +483,8 @@ module.exports = function createOrgsRouter({
   // Delete a club. users.club_id is ON DELETE SET NULL, so members
   // keep their accounts but become "no club" until reassigned. We
   // surface the affected member count in the response so the UI
-  // can confirm what just happened.
+  // can confirm what just happened. Pending requests to join it are
+  // closed and their divers told.
   router.delete("/api/clubs/:id", requireMeetEditor, async (req, res) => {
     try {
       // Pull org_id + name in one read so the audit row has both
@@ -506,23 +507,47 @@ module.exports = function createOrgsRouter({
       // Deleting a waiting club would be a rejection nobody hears about.
       // Reject says why, can move the founder, and tells them.
       if (club.status === "pending") return pendingConflict(res);
-      const memberCount = await pool.query(
-        "SELECT COUNT(*)::int AS n FROM users WHERE club_id = $1",
-        [req.params.id],
-      );
-      await pool.query("DELETE FROM clubs WHERE id = $1", [req.params.id]);
-      await recordAudit(pool, {
-        ...auditFromReq(req),
-        org_id:      club.org_id,
-        entity_type: "club",
-        entity_id:   club.id,
-        entity_name: club.name,
-        action:      "club.deleted",
-        metadata: {
-          short_code:         club.short_code,
-          unassigned_members: memberCount.rows[0].n,
-        },
+      const { memberCount, closed } = await clubApprovals.withTx(pool, async (client) => {
+        const memberCount = await client.query(
+          "SELECT COUNT(*)::int AS n FROM users WHERE club_id = $1",
+          [club.id],
+        );
+        // club_change_requests.to_club_id is ON DELETE SET NULL, so a
+        // pending "join this club" request used to turn into "leave your
+        // club", and approving it later took the diver out of the club
+        // they were in. Close them first, in the same transaction.
+        const closed = (await client.query(
+          `UPDATE club_change_requests SET status = 'rejected', reviewed_by = $2, reviewed_at = now()
+            WHERE to_club_id = $1 AND status = 'pending'
+            RETURNING user_id`,
+          [club.id, req.user.id],
+        )).rows;
+        await client.query("DELETE FROM clubs WHERE id = $1", [club.id]);
+        await recordAudit(client, {
+          ...auditFromReq(req),
+          org_id:      club.org_id,
+          entity_type: "club",
+          entity_id:   club.id,
+          entity_name: club.name,
+          action:      "club.deleted",
+          metadata: {
+            short_code:         club.short_code,
+            unassigned_members: memberCount.rows[0].n,
+            requests_closed:    closed.length,
+          },
+        });
+        return { memberCount, closed };
       });
+      // After the commit, so a failed notice can't undo the delete.
+      if (closed.length) {
+        await notices.insertInApp(pool, closed.map((r) => r.user_id), {
+          category: "club_change",
+          title: "Your club change was declined",
+          body: `${club.name} was removed from DivingHQ, so your request to join it was closed.`,
+          action_url: "/profile",
+          data: { club_id: club.id },
+        }).catch((err) => console.error("[Delete Club Notify]", err.message));
+      }
       res.json({
         message: "Club deleted",
         unassigned_members: memberCount.rows[0].n,
