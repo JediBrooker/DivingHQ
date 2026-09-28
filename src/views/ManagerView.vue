@@ -4,6 +4,7 @@ import { RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useClubScope } from '@/composables/useClubScope'
+import { localInputToIso, isoToLocalInput } from '@/lib/dateInputs'
 import { idbInvalidate } from '@/lib/idbCache'
 import { DIVE_DIRECTORY_TTL_MS } from '@/lib/cache-policy'
 import { confirmAction } from '@/composables/useConfirm'
@@ -1049,8 +1050,11 @@ async function createEvent() {
         event_type: createType.value,
         meet_id: createMeetId.value || null,
         age_group: createAgeGroup.value || null,
-        scheduled_at: createScheduledAt.value || null,
-        entries_close_at: createEntriesCloseAt.value || null,
+        // datetime-local is a zone-less wall clock and the server would
+        // read it in the database's zone, so send the instant the manager
+        // meant (src/lib/dateInputs.js).
+        scheduled_at: localInputToIso(createScheduledAt.value),
+        entries_close_at: localInputToIso(createEntriesCloseAt.value),
         event_format: createFormat.value,
         // Parent link matters for downstream stages: semifinals
         // always feed from a preliminary, finals may feed from
@@ -1118,18 +1122,10 @@ async function openEdit(ev) {
   editAgeChoice.value  = ageParts.choice
   editAgeMasters.value = ageParts.masters
   editAgeOther.value   = ageParts.other
-  // entries_close_at comes back as an ISO string from the server.
-  // <input type="datetime-local"> wants 'YYYY-MM-DDTHH:mm' in local
-  // time, no zone, no seconds, so format it for display.
-  if (ev.entries_close_at) {
-    const d = new Date(ev.entries_close_at)
-    const pad = (n) => String(n).padStart(2, '0')
-    editEntriesCloseAt.value =
-      `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` +
-      `T${pad(d.getHours())}:${pad(d.getMinutes())}`
-  } else {
-    editEntriesCloseAt.value = ''
-  }
+  // entries_close_at comes back as an ISO instant. <input
+  // type="datetime-local"> wants 'YYYY-MM-DDTHH:mm' in local time, and
+  // saveEdit turns it back into the same instant.
+  editEntriesCloseAt.value = isoToLocalInput(ev.entries_close_at)
   editErr.value = ''
   // Hydrate round_rules sections from the event row.
   editRoundSections.value = sectionsFromRoundRules(ev.round_rules)
@@ -1194,8 +1190,10 @@ async function saveEdit() {
         // Send '' as null so the server clears the deadline, an ISO
         // string sets it. Server treats undefined (absent key) as
         // "leave untouched", but we always send the field because
-        // the user might have just blanked it.
-        entries_close_at: editEntriesCloseAt.value || null,
+        // the user might have just blanked it. The value is converted
+        // to an instant first: sent raw, the server read the wall clock
+        // in its own zone and a no-op save moved the deadline.
+        entries_close_at: localInputToIso(editEntriesCloseAt.value),
         enforce_referee_signoff: editEnforceSignoff.value,
         is_mixed_height:         editMixedHeight.value,
         is_rehearsal:            editIsRehearsal.value,
