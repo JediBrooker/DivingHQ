@@ -7103,3 +7103,141 @@ test("sitemap.xml lists the payments and classes guides only while they're switc
     await features.set("classes", saved.classes);
   }
 });
+
+// =====================================================================
+// Competition fixtures (Control Room, sockets, stages). One BRN org
+// per test, built straight in SQL with signed tokens, so the socket
+// tests don't spend the login limiter or wait on bcrypt. BRN isn't
+// used by any other suite, so a stray row can't leak into someone
+// else's country lookups.
+// =====================================================================
+const compKit = {
+  jwt: require("jsonwebtoken"),
+  ioClient: require("socket.io-client").io,
+  async org(tag) {
+    const slug = `brn-${tag}-${crypto.randomBytes(3).toString("hex")}`;
+    const r = await pool.query(
+      `INSERT INTO organisations (name, country_code, slug, status, claim_state)
+       VALUES ($1, 'BRN', $2, 'active', 'claimed') RETURNING id`,
+      [`Brunei ${slug}`, slug],
+    );
+    return r.rows[0].id;
+  },
+  async user(orgId, name, roles, { sysadmin = false, clubId = null } = {}) {
+    const r = await pool.query(
+      `INSERT INTO users (username, full_name, org_id, email_verified_at, is_system_admin, club_id)
+       VALUES ($1, $2, $3, now(), $4, $5) RETURNING id, token_version`,
+      [`${name}-${crypto.randomBytes(4).toString("hex")}`.slice(0, 50), name, orgId, sysadmin, clubId],
+    );
+    for (const role of roles) {
+      await pool.query("INSERT INTO user_org_roles (user_id, org_id, role) VALUES ($1, $2, $3)", [r.rows[0].id, orgId, role]);
+    }
+    const u = { id: r.rows[0].id, full_name: name, org_id: orgId, org_roles: roles, is_system_admin: sysadmin, tv: r.rows[0].token_version };
+    u.token = compKit.jwt.sign(
+      { id: u.id, username: name, full_name: name, org_id: orgId, org_roles: roles, is_system_admin: sysadmin, tv: u.tv },
+      process.env.JWT_SECRET, { algorithm: "HS256", expiresIn: "1h" },
+    );
+    return u;
+  },
+  async event(orgId, fields = {}) {
+    const f = {
+      name: "BRN event", gender: "Mixed", height: 3, number_of_judges: 5, total_rounds: 3,
+      event_type: "individual", event_format: "final", status: "Upcoming", ...fields,
+    };
+    const cols = Object.keys(f);
+    const r = await pool.query(
+      `INSERT INTO events (org_id, ${cols.join(", ")})
+       VALUES ($1, ${cols.map((_, i) => `$${i + 2}`).join(", ")}) RETURNING id`,
+      [orgId, ...cols.map((c) => f[c])],
+    );
+    return r.rows[0].id;
+  },
+  async dives(n) {
+    return (await pool.query("SELECT id FROM dive_directory WHERE height = 3 ORDER BY dive_code, id LIMIT $1", [n]))
+      .rows.map((r) => r.id);
+  },
+  // One competitor_dive_lists row per round.
+  async enter(eventId, competitorId, diveIds, extra = {}) {
+    for (let i = 0; i < diveIds.length; i++) {
+      await pool.query(
+        `INSERT INTO competitor_dive_lists (event_id, competitor_id, round_number, dive_id, display_order, partner_id, team_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [eventId, competitorId, i + 1, diveIds[i], extra.display_order ?? null, extra.partner_id ?? null, extra.team_id ?? null],
+      );
+    }
+  },
+  async panel(eventId, judges) {
+    for (let i = 0; i < judges.length; i++) {
+      await pool.query("INSERT INTO event_judges (event_id, judge_id, judge_number) VALUES ($1, $2, $3)",
+        [eventId, judges[i].id, i + 1]);
+    }
+  },
+  async score(eventId, competitorId, round, judge, score) {
+    await pool.query(
+      `INSERT INTO scores (event_id, competitor_id, judge_id, round_number, score)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [eventId, competitorId, judge.id, round, score],
+    );
+  },
+  socket(token) {
+    const s = compKit.ioClient(baseUrl, {
+      auth: { token: token || "spectator" }, transports: ["websocket"], reconnection: false, forceNew: true,
+    });
+    return new Promise((resolve, reject) => {
+      s.once("connect", () => resolve(s));
+      s.once("connect_error", reject);
+    });
+  },
+  // Emit and resolve with the ack, or "timeout" if none comes.
+  ask(sock, name, data, ms = 3000) {
+    return new Promise((resolve) => {
+      const timer = setTimeout(() => resolve("timeout"), ms);
+      sock.emit(name, data, (reply) => { clearTimeout(timer); resolve(reply); });
+    });
+  },
+  // Collect every payload of one event a socket hears for `ms`.
+  listen(sock, name, ms = 400) {
+    const got = [];
+    const fn = (p) => got.push(p);
+    sock.on(name, fn);
+    return new Promise((resolve) => setTimeout(() => { sock.off(name, fn); resolve(got); }, ms));
+  },
+  async cleanup(...orgIds) {
+    const ids = orgIds.filter(Boolean);
+    if (!ids.length) return;
+    try {
+      await pool.query("DELETE FROM events WHERE org_id = ANY($1::uuid[])", [ids]);
+      await pool.query("DELETE FROM users WHERE org_id = ANY($1::uuid[])", [ids]);
+      await pool.query("DELETE FROM organisations WHERE id = ANY($1::uuid[])", [ids]);
+    } catch (err) {
+      console.warn(`[cleanup] BRN orgs: ${err.message}`);
+    }
+  },
+};
+
+test("sockets: a junk event id is refused and the server stays up", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const orgId = await compKit.org("junk");
+  const socks = [];
+  try {
+    // A plain diver, no Control Room role at all.
+    const diver = await compKit.user(orgId, "Junk Diver", ["diver"]);
+    const s = await compKit.socket(diver.token);
+    socks.push(s);
+    for (const ev of ["set_active_diver", "meet_hold", "meet_resume", "announce_score",
+      "referee_failed_dive", "referee_cap_scores", "referee_redive"]) {
+      const reply = await compKit.ask(s, ev, { event_id: "not-a-uuid", competitor_id: "x", round_number: 1 });
+      assert.equal(reply?.ok, false, `${ev} answers, and says no`);
+    }
+    s.emit("claim_event_control", { event_id: "not-a-uuid" });
+    await new Promise((r) => setTimeout(r, 200));
+    assert.ok(s.connected, "still connected after every junk emit");
+    // The server's still there to answer an ordinary request.
+    const health = await fetchJson("GET", "/api/health");
+    assert.equal(health.status, 200);
+  } finally {
+    socks.forEach((s) => s.close());
+    await compKit.cleanup(orgId);
+  }
+});

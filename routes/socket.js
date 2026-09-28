@@ -278,7 +278,24 @@ module.exports = function attachSocket({
   // answered in its own words, hence `errors`.
   const GUARD_ERRORS = { unauthorized: "unauthorized", rateLimited: "rate_limited" };
   async function guardControl(socket, data, ack, action, errors = GUARD_ERRORS) {
-    if (!(await socketCanManageEvent(socket, data?.event_id, CONTROL_ROLES))) {
+    // A junk id used to go straight into the events lookup, and the
+    // uuid cast error it threw took the whole process down (nothing
+    // catches a rejected socket listener). Refuse it up front.
+    if (!EVENT_UUID_RE.test(String(data?.event_id ?? ""))) {
+      ackWith(ack, { ok: false, error: errors.unauthorized });
+      return false;
+    }
+    let allowed;
+    try {
+      allowed = await socketCanManageEvent(socket, data.event_id, CONTROL_ROLES);
+    } catch (err) {
+      // DB trouble (pool exhausted, say) mid-meet: refuse this one
+      // action rather than let it bubble up and kill the server.
+      console.error(`[${action}] authz check failed`, err.message);
+      ackWith(ack, { ok: false, error: "server_error" });
+      return false;
+    }
+    if (!allowed) {
       ackWith(ack, { ok: false, error: errors.unauthorized });
       return false;
     }
@@ -309,6 +326,31 @@ module.exports = function attachSocket({
   // Connection
   // -----------------------------------------------------------
   io.on("connection", (socket) => {
+    // Every async listener below goes through this. socket.io drops the
+    // promise a listener returns, so a throw anywhere in a handler
+    // (a DB error, a bad cast) became an unhandled rejection, and on
+    // Node 20 that ends the process: every judge and Control Room
+    // dropped at once. Now it's logged, and a caller that sent an ack
+    // callback hears server_error instead of waiting for a timeout.
+    // The ack is wrapped so a handler that already answered can't be
+    // answered twice.
+    function on(name, handler) {
+      socket.on(name, async (data, ack) => {
+        let answered = false;
+        const once = typeof ack === "function"
+          ? (body) => { if (answered) return; answered = true; ack(body); }
+          : undefined;
+        try {
+          await handler(data, once);
+        } catch (err) {
+          console.error(`[socket ${name}]`, err.message);
+          if (once && !answered) {
+            try { once({ ok: false, error: "server_error" }); } catch { /* client gone */ }
+          }
+        }
+      });
+    }
+
     // Per-IP concurrent connection cap (defence-in-depth; 0 disables).
     // Count + reject before any wiring so a flood can't accumulate
     // handlers/rooms. The symmetric inc-here / dec-on-disconnect keeps
@@ -353,7 +395,7 @@ module.exports = function attachSocket({
     // SPA banner click → mark the notifications row 'acknowledged'
     // via the engine. Idempotent; cross-user attempts no-op
     // because the engine scopes the UPDATE to user_id.
-    socket.on("notification:ack", async (data) => {
+    on("notification:ack", async (data) => {
       if (!socket.userId || !data?.id || !push) return;
       try {
         await push.acknowledgeNotification(data.id, socket.userId);
@@ -378,9 +420,9 @@ module.exports = function attachSocket({
     // is also driving the same event, so set_active_diver clobbering is
     // surfaced instead of silent. First claim wins; the claimant is the
     // one warned. Both sides are notified so neither drives blind.
-    socket.on("claim_event_control", async (data) => {
+    on("claim_event_control", async (data) => {
       const eventId = data?.event_id;
-      if (!eventId || !socket.userId) return;
+      if (!socket.userId || !EVENT_UUID_RE.test(String(eventId ?? ""))) return;
       // Only real controllers can hold a lease (same gate as the actions).
       if (!(await socketCanManageEvent(socket, eventId, CONTROL_ROLES))) return;
       if (typeof getEventController !== "function") return;
@@ -412,7 +454,7 @@ module.exports = function attachSocket({
       if (!eventId) return;
       socket.join(`venue:${eventId}`);
     }
-    socket.on("subscribe_venue", async (data) => {
+    on("subscribe_venue", async (data) => {
       const eventId = data?.event_id;
       // Validate shape before any work: events.id is a UUID, so a
       // malformed id is junk, reject it without joining a room or
@@ -440,7 +482,7 @@ module.exports = function attachSocket({
       });
     }
 
-    socket.on("set_active_diver", async (data, ack) => {
+    on("set_active_diver", async (data, ack) => {
       if (!(await guardControl(socket, data, ack, "set_active_diver"))) return;
       if (data.event_id) {
         activeDivers[data.event_id] = data;
@@ -498,7 +540,7 @@ module.exports = function attachSocket({
     // and the audit row records both clocks (migration 054). See
     // docs/offline-p1-design.md §2 for the full design.
     // -----------------------------------------------------------
-    socket.on("submit_score", async (data, ack) => {
+    on("submit_score", async (data, ack) => {
       // Socket.IO ack callback (3rd argument). When the client
       // uses the outbox drain protocol, it provides a callback to
       // correlate "my submit" with "the server confirmed mine",
@@ -546,7 +588,10 @@ module.exports = function attachSocket({
         socket.disconnect(true);
         return;
       }
-      if (!data?.event_id || !data?.competitor_id) {
+      // Both ids are uuids; a malformed one is a bad payload, not a
+      // server_error out of the cast inside the transaction.
+      if (!EVENT_UUID_RE.test(String(data?.event_id ?? ""))
+          || !EVENT_UUID_RE.test(String(data?.competitor_id ?? ""))) {
         reject("bad_payload");
         return;
       }
@@ -830,7 +875,7 @@ module.exports = function attachSocket({
       });
     });
 
-    socket.on("announce_score", async (data, ack) => {
+    on("announce_score", async (data, ack) => {
       if (!(await guardControl(socket, data, ack, "announce_score",
                                { unauthorized: "not authorised", rateLimited: "rate limited" }))) return;
       io.to(`event:${data.event_id}`).emit("final_score_announced", data);
@@ -853,7 +898,7 @@ module.exports = function attachSocket({
     // event_judges, never from the wire, same posture as
     // submit_score.
     // -----------------------------------------------------------
-    socket.on("judge_signal", async (data) => {
+    on("judge_signal", async (data) => {
       if (!socket.userId) return;
       if (socketActionRateLimited("judge_signal", socket.userId)) return;
       if (typeof socket.userTokenVersion === "number"
@@ -1021,7 +1066,7 @@ module.exports = function attachSocket({
         }
         await client.query("COMMIT");
       } catch (err) {
-        await client.query("ROLLBACK");
+        await client.query("ROLLBACK").catch(() => {});
         console.error("[Referee Action Failed]", err.message);
         socket.emit("referee_action_rejected", { reason: "server_error" });
         return;
@@ -1044,7 +1089,7 @@ module.exports = function attachSocket({
       return true;
     }
 
-    socket.on("referee_failed_dive", async (data, ack) => {
+    on("referee_failed_dive", async (data, ack) => {
       if (!(await guardControl(socket, data, ack, "referee_action"))) return;
       if (!(await applyRefereeAction("failed", data, socket.userId))) {
         ackWith(ack, { ok: false, error: "action_failed" });
@@ -1059,7 +1104,7 @@ module.exports = function attachSocket({
       });
       ackWith(ack, { ok: true });
     });
-    socket.on("referee_cap_scores", async (data, ack) => {
+    on("referee_cap_scores", async (data, ack) => {
       if (!(await guardControl(socket, data, ack, "referee_action"))) return;
       if (!(await applyRefereeAction("cap", data, socket.userId))) {
         ackWith(ack, { ok: false, error: "action_failed" });
@@ -1074,7 +1119,7 @@ module.exports = function attachSocket({
       });
       ackWith(ack, { ok: true });
     });
-    socket.on("referee_redive", async (data, ack) => {
+    on("referee_redive", async (data, ack) => {
       if (!(await guardControl(socket, data, ack, "referee_action"))) return;
       if (!(await applyRefereeAction("redive", data, socket.userId))) {
         ackWith(ack, { ok: false, error: "action_failed" });
@@ -1087,7 +1132,7 @@ module.exports = function attachSocket({
     // -----------------------------------------------------------
     // Hold / resume the meet
     // -----------------------------------------------------------
-    socket.on("meet_hold", async (data, ack) => {
+    on("meet_hold", async (data, ack) => {
       if (!(await guardControl(socket, data, ack, "meet_hold"))) return;
       meetHolds[data.event_id] = {
         reason: data.reason || null,
@@ -1106,7 +1151,7 @@ module.exports = function attachSocket({
       emitVenue(data.event_id, "meet_hold");
       ackWith(ack, { ok: true });
     });
-    socket.on("meet_resume", async (data, ack) => {
+    on("meet_resume", async (data, ack) => {
       if (!(await guardControl(socket, data, ack, "meet_resume"))) return;
       delete meetHolds[data.event_id];
       if (typeof persistClearMeetHold === "function") {

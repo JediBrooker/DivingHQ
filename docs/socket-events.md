@@ -47,6 +47,14 @@ event: an `event_managers` row, or admin of the club hosting the event's
 meet (`meets.host_club_id`, migration 087). That second path is how a club
 in a country with no federation on DivingHQ runs its own meets.
 
+Every async handler runs through a small wrapper in `routes/socket.js`
+(`on(name, handler)`): a throw is logged and, when the client passed an
+ack callback, answered with `{ ok: false, error: 'server_error' }`. A
+malformed `event_id` (not a UUID) is refused before any DB work, as
+`unauthorized` on the Control Room events and `bad_payload` on
+`submit_score`. A rejected socket listener used to be an unhandled
+rejection, which ends a Node 20 process.
+
 | Event | Required role | Payload | Notes |
 |---|---|---|---|
 | `set_active_diver`        | meet_manager / referee / org_admin / sysadmin | Roster row + status | Persists to in-memory `activeDivers[event_id]` so late-joiners see it. |
