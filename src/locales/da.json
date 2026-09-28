@@ -1111,9 +1111,7 @@
     "orgs_need_country_title": "Organisationer uden land ({n})",
     "orgs_need_country_hint": "Tilmeldinger finder deres forbund efter land, så ingen kan blive medlem af disse, før de har et.",
     "org_suspended": "Suspenderet",
-    "orgs_show_all": "Vis alle {n}",
-    "guardian_requests_title": "Anmodninger om værgetilknytning",
-    "guardian_request_for": "Vil være værge for {name}"
+    "orgs_show_all": "Vis alle {n}"
   },
   "setup": {
     "title": "Forbundsopsætning",

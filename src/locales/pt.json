@@ -1111,9 +1111,7 @@
     "orgs_need_country_title": "Organizações sem país ({n})",
     "orgs_need_country_hint": "Os registos encontram a sua federação pelo país, por isso ninguém se pode juntar a estas enquanto não tiverem um.",
     "org_suspended": "Suspensa",
-    "orgs_show_all": "Mostrar todas ({n})",
-    "guardian_requests_title": "Pedidos de ligação de encarregado de educação",
-    "guardian_request_for": "Pretende ser encarregado de educação de {name}"
+    "orgs_show_all": "Mostrar todas ({n})"
   },
   "setup": {
     "title": "Configuração da Federação",

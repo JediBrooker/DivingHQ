@@ -1111,9 +1111,7 @@
     "orgs_need_country_title": "Organisaatiot ilman maata ({n})",
     "orgs_need_country_hint": "Rekisteröityjät löytävät liittonsa maan perusteella, joten kukaan ei voi liittyä näihin ennen kuin niille on asetettu maa.",
     "org_suspended": "Keskeytetty",
-    "orgs_show_all": "Näytä kaikki {n}",
-    "guardian_requests_title": "Huoltajalinkitysten pyynnöt",
-    "guardian_request_for": "Haluaa toimia huoltajana henkilölle {name}"
+    "orgs_show_all": "Näytä kaikki {n}"
   },
   "setup": {
     "title": "Liiton käyttöönotto",

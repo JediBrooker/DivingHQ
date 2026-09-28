@@ -1111,9 +1111,7 @@
     "orgs_need_country_title": "Organisationen ohne Land ({n})",
     "orgs_need_country_hint": "Bei der Registrierung wird der Verband über das Land gefunden, daher kann niemand diesen Organisationen beitreten, bevor ein Land festgelegt ist.",
     "org_suspended": "Gesperrt",
-    "orgs_show_all": "Alle {n} anzeigen",
-    "guardian_requests_title": "Anfragen zur Verknüpfung als Erziehungsberechtigte",
-    "guardian_request_for": "Möchte als erziehungsberechtigte Person für {name} handeln"
+    "orgs_show_all": "Alle {n} anzeigen"
   },
   "setup": {
     "title": "Verbands-Einrichtung",

@@ -1100,9 +1100,7 @@
     "orgs_need_country_title": "국가가 없는 조직 ({n})",
     "orgs_need_country_hint": "가입자는 국가로 연맹을 찾기 때문에 국가가 설정될 때까지 아무도 이 조직들에 가입할 수 없습니다.",
     "org_suspended": "정지됨",
-    "orgs_show_all": "모두 보기 ({n})",
-    "guardian_requests_title": "보호자 연결 요청",
-    "guardian_request_for": "{name}의 보호자가 되기를 요청했습니다"
+    "orgs_show_all": "모두 보기 ({n})"
   },
   "setup": {
     "title": "연맹 설정",

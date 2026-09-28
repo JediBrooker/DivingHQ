@@ -1100,9 +1100,7 @@
     "orgs_need_country_title": "Organisations without a country ({n})",
     "orgs_need_country_hint": "Signups find their federation by country, so nobody can join these until they have one.",
     "org_suspended": "Suspended",
-    "orgs_show_all": "Show all {n}",
-    "guardian_requests_title": "Guardian link requests",
-    "guardian_request_for": "Wants to act as guardian for {name}"
+    "orgs_show_all": "Show all {n}"
   },
   "audit": {
     "page_label": "Audit Log",

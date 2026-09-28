@@ -4,7 +4,6 @@ import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 import { RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
-import { useFeaturesStore } from '@/stores/features'
 import { confirmAction } from '@/composables/useConfirm'
 import { showSuccess, showError } from '@/composables/useNotify'
 import { useCountryOptions, isKnownCountry } from '@/composables/useCountryOptions'
@@ -15,13 +14,6 @@ const { countryOptions, countryName } = useCountryOptions()
 
 const requests = ref([])
 const clubRequests = ref([])     // club-change / org-transfer requests
-// Pending guardian links (migration 083). A parent asks at /guardians
-// and nothing but this list ever approved one, so without it every
-// request sat 'pending' for good. Guardians exist for payments, so the
-// list follows that flag.
-const guardianRequests = ref([])
-const features = useFeaturesStore()
-const guardiansOn = computed(() => features.enabled('payments'))
 const pendingOrgs = ref([])      // federations awaiting approval (system admin only)
 const allOrgList = ref([])       // every org, for the pending cards' country checks (system admin only)
 const orgsNeedingCountry = ref([])  // live orgs signups can't find by country (system admin only)
@@ -103,8 +95,7 @@ const pendingClubRequests = computed(() =>
 const stats = computed(() => {
   const counts = {
     total: allUsers.value.length,
-    pending: requests.value.length + pendingClubRequests.value.length + pendingOrgs.value.length
-      + guardianRequests.value.length,
+    pending: requests.value.length + pendingClubRequests.value.length + pendingOrgs.value.length,
   }
   PRIMARY_ROLES.forEach(r => { counts[r] = 0 })
   for (const u of allUsers.value) {
@@ -533,26 +524,6 @@ async function loadRequests() {
   catch { requests.value = [] }
 }
 
-async function loadGuardianRequests() {
-  if (!guardiansOn.value) { guardianRequests.value = []; return }
-  try {
-    const rows = await auth.apiFetch('/api/guardian-requests')
-    guardianRequests.value = Array.isArray(rows) ? rows : []
-  } catch { guardianRequests.value = [] }
-}
-
-async function reviewGuardianRequest(id, decision) {
-  try {
-    await auth.apiFetch(`/api/guardian-requests/${id}/review`, {
-      method: 'POST',
-      body: JSON.stringify({ decision }),
-    })
-    await loadGuardianRequests()
-  } catch (err) {
-    showError(err.message)
-  }
-}
-
 async function loadClubRequests() {
   try {
     const rows = await auth.apiFetch('/api/club-change-requests')
@@ -930,7 +901,7 @@ function pageNums() {
 
 onMounted(async () => {
   window.addEventListener('keydown', onKeyDown)
-  await Promise.all([loadRequests(), loadClubRequests(), loadGuardianRequests(), loadPendingOrgs(), loadUsers()])
+  await Promise.all([loadRequests(), loadClubRequests(), loadPendingOrgs(), loadUsers()])
 })
 
 onUnmounted(() => {
@@ -978,7 +949,7 @@ onUnmounted(() => {
 
     <!-- Requests tab -->
     <div v-if="activeTab === 'requests'" class="card">
-      <div v-if="!requests.length && !pendingClubRequests.length && !pendingOrgs.length && !guardianRequests.length" class="empty-state">{{ $t('user_manager.no_pending') }}</div>
+      <div v-if="!requests.length && !pendingClubRequests.length && !pendingOrgs.length" class="empty-state">{{ $t('user_manager.no_pending') }}</div>
 
       <!-- Pending federation registrations (system admin only) -->
       <div v-if="pendingOrgs.length" class="club-requests-block">
@@ -1070,26 +1041,6 @@ onUnmounted(() => {
           <div class="request-actions">
             <button class="btn btn-sm btn-approve" @click="reviewRequest(rq.id, 'approved')">{{ $t('user_manager.approve') }}</button>
             <button class="btn btn-danger btn-sm" @click="reviewRequest(rq.id, 'rejected')">{{ $t('user_manager.deny') }}</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Guardian link requests -->
-      <div v-if="guardianRequests.length" class="club-requests-block" data-testid="guardian-requests">
-        <div class="club-requests-head">{{ $t('user_manager.guardian_requests_title') }}</div>
-        <div class="requests-grid">
-          <div v-for="rq in guardianRequests" :key="rq.id" class="request-card">
-            <div style="flex:1;min-width:0">
-              <div class="request-name">{{ rq.guardian_name }}</div>
-              <div class="request-meta">
-                @{{ rq.guardian_username }} ·
-                {{ $t('user_manager.guardian_request_for', { name: rq.dependent_name }) }}
-              </div>
-            </div>
-            <div class="request-actions">
-              <button class="btn btn-sm btn-approve" @click="reviewGuardianRequest(rq.id, 'approved')">{{ $t('user_manager.approve') }}</button>
-              <button class="btn btn-danger btn-sm" @click="reviewGuardianRequest(rq.id, 'rejected')">{{ $t('user_manager.deny') }}</button>
-            </div>
           </div>
         </div>
       </div>

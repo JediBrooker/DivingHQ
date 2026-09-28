@@ -1100,9 +1100,7 @@
     "orgs_need_country_title": "Organisasi tanpa negara ({n})",
     "orgs_need_country_hint": "Pendaftar menemukan federasi mereka berdasarkan negara, jadi tidak ada yang bisa bergabung dengan organisasi ini sampai negaranya ditetapkan.",
     "org_suspended": "Ditangguhkan",
-    "orgs_show_all": "Tampilkan semua {n}",
-    "guardian_requests_title": "Permintaan tautan wali",
-    "guardian_request_for": "Ingin menjadi wali untuk {name}"
+    "orgs_show_all": "Tampilkan semua {n}"
   },
   "setup": {
     "title": "Penyiapan federasi",

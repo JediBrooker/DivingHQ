@@ -1111,9 +1111,7 @@
     "orgs_need_country_title": "Organizacje bez kraju ({n})",
     "orgs_need_country_hint": "Rejestrujący znajdują swoją federację po kraju, więc nikt nie może dołączyć do tych organizacji, dopóki nie mają kraju.",
     "org_suspended": "Zawieszona",
-    "orgs_show_all": "Pokaż wszystkie ({n})",
-    "guardian_requests_title": "Prośby o powiązanie opiekuna",
-    "guardian_request_for": "Chce być opiekunem dla: {name}"
+    "orgs_show_all": "Pokaż wszystkie ({n})"
   },
   "setup": {
     "title": "Konfiguracja federacji",

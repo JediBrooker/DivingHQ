@@ -1100,9 +1100,7 @@
     "orgs_need_country_title": "منظمات بلا دولة ({n})",
     "orgs_need_country_hint": "يجد المسجّلون اتحادهم حسب الدولة، لذا لا يمكن لأحد الانضمام إلى هذه المنظمات حتى تُحدَّد دولتها.",
     "org_suspended": "معلّقة",
-    "orgs_show_all": "عرض الكل ({n})",
-    "guardian_requests_title": "طلبات ربط ولي الأمر",
-    "guardian_request_for": "يرغب في أن يكون ولي أمر {name}"
+    "orgs_show_all": "عرض الكل ({n})"
   },
   "setup": {
     "title": "إعداد الاتحاد",

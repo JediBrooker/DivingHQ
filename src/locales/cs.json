@@ -1100,9 +1100,7 @@
     "orgs_need_country_title": "Organizace bez země ({n})",
     "orgs_need_country_hint": "Registrace hledají svou federaci podle země, takže se k těmto organizacím nikdo nepřipojí, dokud ji nebudou mít.",
     "org_suspended": "Pozastaveno",
-    "orgs_show_all": "Zobrazit všech {n}",
-    "guardian_requests_title": "Žádosti o propojení zákonného zástupce",
-    "guardian_request_for": "Chce být zákonným zástupcem pro {name}"
+    "orgs_show_all": "Zobrazit všech {n}"
   },
   "audit": {
     "page_label": "Protokol auditu",

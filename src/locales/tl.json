@@ -1100,9 +1100,7 @@
     "orgs_need_country_title": "Mga organisasyong walang bansa ({n})",
     "orgs_need_country_hint": "Hinahanap ng mga nagsa-sign up ang kanilang federation ayon sa bansa, kaya walang makakasali sa mga ito hangga't wala silang bansa.",
     "org_suspended": "Suspendido",
-    "orgs_show_all": "Ipakita lahat ({n})",
-    "guardian_requests_title": "Mga kahilingan sa pag-link ng guardian",
-    "guardian_request_for": "Gustong maging guardian ni {name}"
+    "orgs_show_all": "Ipakita lahat ({n})"
   },
   "setup": {
     "title": "Federation Setup",

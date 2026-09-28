@@ -1100,9 +1100,7 @@
     "orgs_need_country_title": "国が未設定の組織（{n}）",
     "orgs_need_country_hint": "登録者は国で連盟を探すため、国が設定されるまで誰もこれらの組織に参加できません。",
     "org_suspended": "停止中",
-    "orgs_show_all": "すべて表示（{n}）",
-    "guardian_requests_title": "保護者リンクのリクエスト",
-    "guardian_request_for": "{name} の保護者として登録を希望しています"
+    "orgs_show_all": "すべて表示（{n}）"
   },
   "setup": {
     "title": "連盟のセットアップ",

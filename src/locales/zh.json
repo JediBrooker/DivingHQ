@@ -1100,9 +1100,7 @@
     "orgs_need_country_title": "未设置国家的机构（{n}）",
     "orgs_need_country_hint": "注册者按国家查找所属协会，因此在设置国家之前，没有人能加入这些机构。",
     "org_suspended": "已暂停",
-    "orgs_show_all": "显示全部（{n}）",
-    "guardian_requests_title": "监护人关联申请",
-    "guardian_request_for": "希望成为 {name} 的监护人"
+    "orgs_show_all": "显示全部（{n}）"
   },
   "setup": {
     "title": "联合会初始化设置",

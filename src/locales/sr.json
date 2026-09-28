@@ -1100,9 +1100,7 @@
     "orgs_need_country_title": "Организације без државе ({n})",
     "orgs_need_country_hint": "Пријаве проналазе свој савез према држави, па нико не може да им се придружи док је немају.",
     "org_suspended": "Суспендовано",
-    "orgs_show_all": "Прикажи свих {n}",
-    "guardian_requests_title": "Захтеви за повезивање старатеља",
-    "guardian_request_for": "Жели да буде старатељ за {name}"
+    "orgs_show_all": "Прикажи свих {n}"
   },
   "setup": {
     "title": "Постављање федерације",

@@ -1111,9 +1111,7 @@
     "orgs_need_country_title": "Organisations sans pays ({n})",
     "orgs_need_country_hint": "Les inscriptions trouvent leur fédération par pays, donc personne ne peut rejoindre celles-ci tant qu'elles n'en ont pas.",
     "org_suspended": "Suspendue",
-    "orgs_show_all": "Tout afficher ({n})",
-    "guardian_requests_title": "Demandes de lien de tuteur",
-    "guardian_request_for": "Souhaite agir comme tuteur de {name}"
+    "orgs_show_all": "Tout afficher ({n})"
   },
   "setup": {
     "title": "Configuration de la fédération",
