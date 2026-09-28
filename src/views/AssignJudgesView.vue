@@ -1,11 +1,9 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
-import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
-const { t } = useI18n()
 
 const events = ref([])
 const allJudges = ref([])
@@ -107,11 +105,6 @@ function assignJudge(judge) {
 
 function removeFromSlot(idx) {
   panel.value[idx] = null
-}
-
-function slotLabel(idx) {
-  const j = panel.value[idx]
-  return j ? j.full_name : null
 }
 
 function judgeSlotNum(judgeId) {

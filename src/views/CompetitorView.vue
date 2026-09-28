@@ -3,9 +3,9 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter, RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
-import { DIVE_DIRECTORY_TTL_MS } from '@/lib/cache-policy'
 import { diveDescription } from '@/composables/useDiveLabel'
 import { useDiveSearch } from '@/composables/useDiveSearch'
+import { useDiveDirectory } from '@/composables/useDiveDirectory'
 import { confirmAction } from '@/composables/useConfirm'
 import { showSuccess, showError } from '@/composables/useNotify'
 import { validateDiveList } from '@/lib/round-rules'
@@ -21,7 +21,7 @@ const auth = useAuthStore()
 const features = useFeaturesStore()
 
 const events = ref([])
-const diveDirectory = ref([])
+const { dives: diveDirectory, reload: loadDiveDirectory } = useDiveDirectory(auth)
 const selectedEventId = ref('')
 const currentEvent = ref(null)
 const selectedDives = ref([]) // array of null | dive object
@@ -798,20 +798,15 @@ async function loadEntryData() {
   eventLoading.value = true
   eventLoadError.value = ''
   try {
-    const [evs, dirResult] = await Promise.all([
+    const [evs] = await Promise.all([
       auth.apiFetch('/api/events'),
-      auth.cachedApiFetch('/api/dive-directory', {
-        cache: { maxAgeMs: DIVE_DIRECTORY_TTL_MS, onUpdate: (fresh) => {
-          if (Array.isArray(fresh)) diveDirectory.value = fresh
-        } },
-      }),
+      loadDiveDirectory(),
       loadTemplates(),
       loadPendingPairings(),
       loadOrgClubs(),
       loadMyClubRequests(),
     ])
     events.value = Array.isArray(evs) ? evs : []
-    diveDirectory.value = Array.isArray(dirResult.data) ? dirResult.data : []
   } catch (err) {
     eventLoadError.value = err.message || 'Could not load events for entries.'
     events.value = []

@@ -1,8 +1,9 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute, RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
+import { useFeaturesStore } from '@/stores/features'
 import { showWarning } from '@/composables/useNotify'
 import LocaleSwitcher from '@/components/LocaleSwitcher.vue'
 import ThemeToggle from '@/components/ThemeToggle.vue'
@@ -55,18 +56,13 @@ function safeNextPath() {
 }
 
 // Hide the sign-up links while public account creation is closed
-// (coming-soon launch). Defaults to hidden until confirmed open; login
-// itself is never gated.
-const signupsEnabled = ref(false)
+// (coming-soon launch). The flag comes from the features store main.js
+// loads before mount, which fails closed; login itself is never gated.
+const features = useFeaturesStore()
+const signupsEnabled = computed(() => features.signups)
 
-onMounted(async () => {
-  if (auth.isLoggedIn) { router.push(safeNextPath()); return }
-  try {
-    const res = await fetch('/api/auth/signups-status')
-    signupsEnabled.value = !!(await res.json()).enabled
-  } catch {
-    signupsEnabled.value = false
-  }
+onMounted(() => {
+  if (auth.isLoggedIn) router.push(safeNextPath())
 })
 
 // Claim-candidates state (Migration 053). When non-empty, the

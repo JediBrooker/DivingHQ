@@ -1,6 +1,6 @@
 // Unit tests for src/lib/idbCache.js pure helpers.
 //
-// IDB-touching code paths (cachedFetch, idbInvalidate, prefetch)
+// IDB-touching code paths (cachedFetch, idbInvalidate)
 // are exercised via the existing integration / e2e suites, since
 // adding fake-indexeddb just for the SWR layer would balloon the
 // devDep set for marginal extra coverage. This file just covers the

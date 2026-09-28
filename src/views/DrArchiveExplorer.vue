@@ -241,13 +241,20 @@ function applySliderToFilters() {
 }
 
 // Keep the two thumbs from crossing, then push to the query (debounced).
+// Only reload when the date filter really moved. loadDateRange parks the
+// thumbs on the full range at mount, which leaves from/to at '' and
+// used to refetch the first page onMounted had just asked for. Resets
+// and the snap below also land here with nothing new, and a reload
+// that's already pending is left to run.
 let sliderTimer = null
 watch([fromIdx, toIdx], ([f, t]) => {
   if (f > t) {
     // snap the thumb that moved past the other back to meet it
     if (f !== t) toIdx.value = f
   }
+  const { from, to } = filters.value
   applySliderToFilters()
+  if (filters.value.from === from && filters.value.to === to) return
   clearTimeout(sliderTimer)
   sliderTimer = setTimeout(reloadFirstPage, 200)
 })

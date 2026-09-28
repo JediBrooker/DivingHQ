@@ -20,8 +20,8 @@
 // also wipes the store via clearSessionCache().
 //
 // Phase 3 of the offline-resilience work (docs/offline-p1-design.md
-// references P3) adds TTL, invalidate, and prefetch helpers on top
-// of the SWR base:
+// references P3) adds TTL and invalidate helpers on top of the SWR
+// base:
 //
 //   * cachedFetch(…, { maxAgeMs }): hard age boundary. If the cached
 //     entry is older than maxAgeMs we DON'T serve it, we await the
@@ -31,14 +31,6 @@
 //     URL matches the predicate. Wired to socket events
 //     (score_received → invalidate /api/scoreboard/:id; state_update
 //     → invalidate event metadata).
-//   * prefetch(urls, fetchOpts): fan-out cachedFetch over a list of
-//     URLs. Used at meet-load time to warm caches for dive directory,
-//     roster, panel, and schedule before the user lands on any view
-//     that consumes them.
-
-// Explicit .js extension: this module is also loaded by the node:test
-// suite, where extensionless ESM specifiers don't resolve.
-import { fingerprintFromToken } from './userFingerprint.js'
 
 const DB_NAME = 'dive-recorder-cache'
 const STORE   = 'api'
@@ -137,19 +129,12 @@ export function isCacheExpired(cached, maxAgeMs, now = Date.now()) {
 // scoreboard, judge panel state).
 export async function cachedFetch(url, fetchOptions = {}, { onUpdate, maxAgeMs, fingerprint } = {}) {
   // Per-user cache key so user A's cached responses are invisible to
-  // user B. Since the cookie migration the auth store passes the
-  // identity fingerprint in explicitly (the JWT is no longer readable
-  // from JS to derive one); fall back to the Authorization header for
-  // any caller that still sends a Bearer token, then 'anon' for public
-  // reads.
-  let fp = fingerprint
-  if (fp == null) {
-    const authHeader =
-      (fetchOptions.headers && (fetchOptions.headers.Authorization
-        || fetchOptions.headers.authorization)) || ''
-    fp = fingerprintFromToken(String(authHeader).replace(/^Bearer\s+/i, ''))
-  }
-  const key = `${fp}:${url}`
+  // user B. Signed-in reads pass the identity fingerprint (the auth
+  // store's cachedApiFetch does it for you); anything else is a public
+  // read and shares the 'anon' keyspace. There used to be a fallback
+  // that sliced one out of an Authorization: Bearer header, but since
+  // the cookie migration nothing in the SPA sends one.
+  const key = `${fingerprint ?? 'anon'}:${url}`
   const cached = await idbGet(key)
   const expired = isCacheExpired(cached, maxAgeMs)
   let returned = false
@@ -251,19 +236,4 @@ export async function idbInvalidate(predicate) {
     tx.oncomplete = () => resolve(deleted)
     tx.onerror = () => resolve(deleted)
   })
-}
-
-// Pre-fetch a list of URLs into the cache. Fire-and-forget;
-// failures are swallowed. Called at meet-load time so the
-// downstream views (judge, scoreboard, control room) all hit
-// warm cache instead of cold network.
-//
-// Each url can be either a string or a { url, fetchOptions } pair.
-// fetchOptions defaults to the shared `fetchOptions` arg.
-export async function prefetch(urls, fetchOptions = {}) {
-  await Promise.all((urls || []).map((entry) => {
-    const url = typeof entry === 'string' ? entry : entry.url
-    const opts = (typeof entry === 'object' && entry.fetchOptions) || fetchOptions
-    return cachedFetch(url, opts).catch(() => null)
-  }))
 }

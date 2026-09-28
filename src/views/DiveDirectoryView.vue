@@ -17,11 +17,11 @@ import { useAuthStore } from '@/stores/auth'
 import { confirmAction } from '@/composables/useConfirm'
 import { showSuccess, showError } from '@/composables/useNotify'
 import { idbInvalidate } from '@/lib/idbCache'
-import { DIVE_DIRECTORY_TTL_MS } from '@/lib/cache-policy'
+import { useDiveDirectory } from '@/composables/useDiveDirectory'
 
 const auth = useAuthStore()
 
-const dives = ref([])
+const { dives, reload: reloadDirectory } = useDiveDirectory(auth)
 const loading = ref(false)
 const errorMsg = ref('')
 
@@ -127,15 +127,9 @@ async function loadDives() {
   errorMsg.value = ''
   try {
     // Cached read: serves the previous fetch instantly while a
-    // background revalidation runs. 24h TTL because the catalog is
-    // basically static, only changes when an org adds a custom dive
-    // (POST below invalidates manually).
-    const result = await auth.cachedApiFetch('/api/dive-directory', {
-      cache: { maxAgeMs: DIVE_DIRECTORY_TTL_MS, onUpdate: (fresh) => {
-        if (Array.isArray(fresh)) dives.value = fresh
-      } },
-    })
-    dives.value = Array.isArray(result.data) ? result.data : []
+    // background revalidation runs. The writes below invalidate the
+    // cache themselves before reloading.
+    await reloadDirectory()
   } catch (err) {
     errorMsg.value = err.message
     dives.value = []

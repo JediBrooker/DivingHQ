@@ -137,42 +137,22 @@ function allowedBy(entry) {
   if (entry.allowClaimant && auth.hasClaim) return true
   return Boolean(entry.allowGuardian && auth.hasDependents)
 }
-function childVisible(c) {
-  return featureOn(c) && allowedBy(c)
+// Groups and items share one test: the feature is on and the user gets
+// past the entry's gate.
+function visible(entry) {
+  return featureOn(entry) && allowedBy(entry)
 }
-function itemVisible(it) {
-  if (!featureOn(it)) return false
-  if (it.children) return it.children.some(childVisible)
-  return allowedBy(it)
-}
-// A nested item (children) is shown if any child is visible; its child
-// list is filtered to the roles the user actually has.
 // Groups drop out either because their own gate says so (a switched-off
 // feature, a sysadmin-only section) or because every item inside them was
 // filtered away, which is what keeps an empty section header off the rail.
 const visibleGroups = computed(() =>
-  NAV.filter((g) => featureOn(g) && allowedBy(g))
-    .map((g) => ({
-      ...g,
-      items: g.items
-        .filter(itemVisible)
-        .map((it) => (it.children ? { ...it, children: it.children.filter(childVisible) } : it)),
-    }))
+  NAV.filter(visible)
+    .map((g) => ({ ...g, items: g.items.filter(visible) }))
     .filter((g) => g.items.length),
 )
 
-// Nested-menu expansion. Hover expands it on desktop (CSS); this click
-// state keeps it open on touch and after a tap.
-const openMenu = ref(null)
-function toggleMenu(key) {
-  openMenu.value = openMenu.value === key ? null : key
-}
-
 function isActive(to) {
   return route.path === to || route.path.startsWith(to + '/')
-}
-function isParentActive(it) {
-  return !!it.children && it.children.some((c) => isActive(c.to))
 }
 // A whole group is "active" (highlights its rail icon) when the current
 // route is one of its items.
@@ -187,13 +167,7 @@ const SUBROUTE_LABELS = {
   '/inbox': 'dashboard.inbox',
 }
 const currentLabel = computed(() => {
-  for (const g of NAV) for (const it of g.items) {
-    if (it.children) {
-      for (const c of it.children) if (isActive(c.to)) return navLabel(c)
-    } else if (isActive(it.to)) {
-      return navLabel(it)
-    }
-  }
+  for (const g of NAV) for (const it of g.items) if (isActive(it.to)) return navLabel(it)
   for (const [p, k] of Object.entries(SUBROUTE_LABELS)) if (route.path.startsWith(p)) return t(k)
   return 'DivingHQ'
 })
@@ -298,45 +272,17 @@ function closeMobile() { mobileOpen.value = false }
         <template v-else>
         <template v-for="g in visibleGroups" :key="g.group || 'root'">
           <div v-if="g.group" class="sb-group">{{ groupLabel(g) }}</div>
-          <template v-for="it in g.items" :key="it.to || it.menu">
-            <!-- Nested menu: hover (desktop) or tap expands the sub-items -->
-            <div v-if="it.children" class="sb-parent" :class="{ open: openMenu === it.menu }">
-              <button
-                type="button"
-                class="sb-item sb-parent-btn"
-                :class="{ active: isParentActive(it) }"
-                :aria-expanded="openMenu === it.menu ? 'true' : 'false'"
-                @click="toggleMenu(it.menu)"
-              >
-                <component :is="it.icon" class="sb-ic" />
-                <span class="sb-label">{{ navLabel(it) }}</span>
-                <ChevronRight class="sb-caret" />
-              </button>
-              <div class="sb-sub">
-                <RouterLink
-                  v-for="c in it.children"
-                  :key="c.to"
-                  :to="c.to"
-                  class="sb-item sb-subitem"
-                  :class="{ active: isActive(c.to) }"
-                  @click="closeMobile"
-                >
-                  <component :is="c.icon" class="sb-ic" />
-                  <span class="sb-label">{{ navLabel(c) }}</span>
-                </RouterLink>
-              </div>
-            </div>
-            <RouterLink
-              v-else
-              :to="it.to"
-              class="sb-item"
-              :class="{ active: isActive(it.to) }"
-              @click="closeMobile"
-            >
-              <component :is="it.icon" class="sb-ic" />
-              <span class="sb-label">{{ navLabel(it) }}</span>
-            </RouterLink>
-          </template>
+          <RouterLink
+            v-for="it in g.items"
+            :key="it.to"
+            :to="it.to"
+            class="sb-item"
+            :class="{ active: isActive(it.to) }"
+            @click="closeMobile"
+          >
+            <component :is="it.icon" class="sb-ic" />
+            <span class="sb-label">{{ navLabel(it) }}</span>
+          </RouterLink>
         </template>
         </template>
       </nav>
@@ -463,20 +409,6 @@ function closeMobile() { mobileOpen.value = false }
 .sb-item .sb-ic { width: 17px; height: 17px; flex-shrink: 0; stroke-width: 1.9; }
 .sb-item:hover { background: var(--surface-hover); color: var(--fg); }
 .sb-item.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
-
-/* Nested 'User Payments' menu: inline accordion, opens on hover or tap. */
-.sb-parent { display: flex; flex-direction: column; }
-.sb-parent-btn { border: none; background: none; cursor: pointer; font: inherit; text-align: left; }
-.sb-caret { width: 15px; height: 15px; margin-left: auto; flex-shrink: 0; stroke-width: 2;
-  color: var(--fg-3); transition: transform var(--dur-fast) var(--ease); }
-.sb-parent:hover .sb-caret,
-.sb-parent.open .sb-caret { transform: rotate(90deg); }
-.sb-sub { display: none; flex-direction: column; gap: 1px;
-  margin: 2px 0 4px 16px; padding-left: 8px; border-left: 1px solid var(--border); }
-.sb-parent:hover .sb-sub,
-.sb-parent.open .sb-sub { display: flex; }
-.sb-subitem { font-size: 12.5px; padding: 6px 10px; }
-.sb-subitem .sb-ic { width: 15px; height: 15px; }
 
 /* ── Collapsed icon rail + hover/focus flyouts ── */
 .sb-nav.rail { overflow: visible; padding: 6px 8px; }

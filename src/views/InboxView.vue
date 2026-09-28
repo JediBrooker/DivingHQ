@@ -14,13 +14,13 @@
 // Categories so far: signoff_request, role_decision,
 // event_started, event_results_posted, generic. Each row
 // carries a title + body + optional action_url; clicking the
-// row opens action_url (in-app via RouterLink when local,
+// row opens action_url (in-app via the router when local,
 // otherwise window.open) AND marks the row acknowledged.
 //
 // Filter chips: All / Unread / By category. Pagination via
 // ?since_id=<uuid>.
 import { ref, computed, onMounted } from 'vue'
-import { RouterLink, useRouter } from 'vue-router'
+import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { showError, showSuccess } from '@/composables/useNotify'

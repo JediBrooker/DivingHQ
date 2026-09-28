@@ -5,16 +5,8 @@
 // year-over-year delta calc, for instance) live next to their
 // widget instead of here.
 
-/**
- * "1st", "2nd", "3rd", "11th", "21st", … for a place number.
- * Returns '' for null/undefined.
- */
-export function placeOrdinal(n) {
-  if (n == null) return ''
-  const s = ['th', 'st', 'nd', 'rd']
-  const v = n % 100
-  return n + (s[(v - 20) % 10] || s[v] || s[0])
-}
+// Place ordinals ("1st", "21st") come from ordinal() in lib/format.js,
+// the same helper the rest of the app uses.
 
 /**
  * CSS class for a place 1/2/3 chip, used by score-trend and

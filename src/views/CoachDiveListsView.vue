@@ -23,8 +23,8 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { DIVE_DIRECTORY_TTL_MS } from '@/lib/cache-policy'
 import { useDiveSearch } from '@/composables/useDiveSearch'
+import { useDiveDirectory } from '@/composables/useDiveDirectory'
 import { showSuccess, showError } from '@/composables/useNotify'
 import { confirmAction } from '@/composables/useConfirm'
 import EmptyState from '@/components/EmptyState.vue'
@@ -35,7 +35,7 @@ const auth = useAuthStore()
 const eventId = computed(() => route.params.event_id)
 const event = ref(null)
 const divers = ref([])
-const diveDirectory = ref([])
+const { dives: diveDirectory, reload: loadDiveDirectory } = useDiveDirectory(auth)
 const loading = ref(false)
 const error = ref('')
 
@@ -49,17 +49,12 @@ async function load() {
   loading.value = true
   error.value = ''
   try {
-    const [data, dirResult] = await Promise.all([
+    const [data] = await Promise.all([
       auth.apiFetch(`/api/coach/dive-lists/${eventId.value}`),
-      auth.cachedApiFetch('/api/dive-directory', {
-        cache: { maxAgeMs: DIVE_DIRECTORY_TTL_MS, onUpdate: (fresh) => {
-          if (Array.isArray(fresh)) diveDirectory.value = fresh
-        } },
-      }),
+      loadDiveDirectory(),
     ])
     event.value = data.event
     divers.value = data.divers
-    diveDirectory.value = Array.isArray(dirResult.data) ? dirResult.data : []
   } catch (err) {
     error.value = err.message || 'Failed to load dive lists'
   } finally {

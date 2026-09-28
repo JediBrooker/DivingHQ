@@ -112,10 +112,6 @@ This is the deliberate "safer, noisier" design: every materially new conflict su
 
 Dismissals can be undone — flip the drawer's **Show dismissed** toggle on, find the row, click **Un-dismiss**.
 
-### Conflicts from the Judge Panel Modal
-
-When you assign judges to an event from the Control Room's `JudgePanelModal`, the scheduler runs the detector immediately after save. If the new panel introduces a conflict, the modal shows a non-blocking warning with a **View in schedule** link. The save still goes through — warnings only, no veto. You can also see each judge's availability badge (green = available in this block's window; amber = busy with another panel) right in the picker.
-
 ## Live re-flow
 
 The hardest part of running a championship day is that the schedule slips. An event runs 20 minutes long; suddenly every downstream warmup time is wrong, every coach is asking when their diver is on, and the printed program is fiction.

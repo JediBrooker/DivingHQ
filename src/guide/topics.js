@@ -1,67 +1,63 @@
-import quickStart from './content/quick-start.md?raw'
-import features from './content/features.md?raw'
-import rolesAndPermissions from './content/roles-and-permissions.md?raw'
-import settingUpAMeet from './content/setting-up-a-meet.md?raw'
-import sessionScheduler from './content/session-scheduler.md?raw'
-import runningAMeet from './content/running-a-meet.md?raw'
-import keyboardShortcuts from './content/keyboard-shortcuts.md?raw'
-import judging from './content/judging.md?raw'
-import diverPortal from './content/diver-portal.md?raw'
-import scoreboard from './content/scoreboard.md?raw'
-import adminTasks from './content/admin-tasks.md?raw'
-import languages from './content/languages.md?raw'
-import payments from './content/payments.md?raw'
-import classes from './content/classes.md?raw'
-import offlineCompetitions from './content/offline-competitions.md?raw'
-import venueIntegration from './content/venue-integration.md?raw'
-import faq from './content/faq.md?raw'
+// Topic bodies load on demand, one small chunk per topic. Importing them
+// all with ?raw put every topic's markdown (about 300KB) into the chunk you
+// download to read just one of them. Filenames match slugs, which
+// test/guide-anchors.test.js checks.
+//
+// Keep each topic literal on one line with slug before feature:
+// lib/spa-shell.js reads this file as text to find the gated ones.
+const BODIES = import.meta.glob('./content/*.md', { query: '?raw', import: 'default' })
+
+export function loadTopicBody(slug) {
+  const load = BODIES[`./content/${slug}.md`]
+  return load ? load() : Promise.resolve(null)
+}
 
 export const GUIDE_SECTIONS = [
   {
     label: 'Start here',
     topics: [
-      { slug: 'quick-start', title: 'Quick Start', md: quickStart },
-      { slug: 'features', title: 'Features', md: features },
+      { slug: 'quick-start', title: 'Quick Start' },
+      { slug: 'features', title: 'Features' },
     ],
   },
   {
     label: 'Meet managers',
     topics: [
-      { slug: 'setting-up-a-meet', title: 'Setting Up a Meet', md: settingUpAMeet },
-      { slug: 'session-scheduler', title: 'Session Scheduler', md: sessionScheduler },
-      { slug: 'running-a-meet', title: 'Running a Meet', md: runningAMeet },
-      { slug: 'keyboard-shortcuts', title: 'Keyboard Shortcuts', md: keyboardShortcuts },
-      { slug: 'offline-competitions', title: 'Offline Competitions', md: offlineCompetitions },
+      { slug: 'setting-up-a-meet', title: 'Setting Up a Meet' },
+      { slug: 'session-scheduler', title: 'Session Scheduler' },
+      { slug: 'running-a-meet', title: 'Running a Meet' },
+      { slug: 'keyboard-shortcuts', title: 'Keyboard Shortcuts' },
+      { slug: 'offline-competitions', title: 'Offline Competitions' },
     ],
   },
   {
     label: 'Officials, divers, spectators',
     topics: [
-      { slug: 'judging', title: 'Judging', md: judging },
-      { slug: 'diver-portal', title: 'Diver Portal', md: diverPortal },
-      { slug: 'scoreboard', title: 'Scoreboard', md: scoreboard },
+      { slug: 'judging', title: 'Judging' },
+      { slug: 'diver-portal', title: 'Diver Portal' },
+      { slug: 'scoreboard', title: 'Scoreboard' },
     ],
   },
   {
     label: 'Payments & classes',
     topics: [
-      { slug: 'payments', title: 'Payments', md: payments, feature: 'payments' },
-      { slug: 'classes', title: 'Classes', md: classes, feature: 'classes' },
+      { slug: 'payments', title: 'Payments', feature: 'payments' },
+      { slug: 'classes', title: 'Classes', feature: 'classes' },
     ],
   },
   {
     label: 'Administration',
     topics: [
-      { slug: 'roles-and-permissions', title: 'Roles & Permissions', md: rolesAndPermissions },
-      { slug: 'admin-tasks', title: 'Admin Tasks', md: adminTasks },
-      { slug: 'languages', title: 'Languages & Translation', md: languages },
+      { slug: 'roles-and-permissions', title: 'Roles & Permissions' },
+      { slug: 'admin-tasks', title: 'Admin Tasks' },
+      { slug: 'languages', title: 'Languages & Translation' },
     ],
   },
   {
     label: 'Reference',
     topics: [
-      { slug: 'venue-integration', title: 'Venue Integration', md: venueIntegration },
-      { slug: 'faq', title: 'FAQ & Troubleshooting', md: faq },
+      { slug: 'venue-integration', title: 'Venue Integration' },
+      { slug: 'faq', title: 'FAQ & Troubleshooting' },
     ],
   },
 ]

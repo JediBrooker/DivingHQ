@@ -3,6 +3,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useCountryOptions } from '@/composables/useCountryOptions'
+import { useFeaturesStore } from '@/stores/features'
 import CheckInboxPanel from '@/components/CheckInboxPanel.vue'
 // Same file the server validates against (lib/countries.js). The picker
 // comes from useCountryOptions; this is for the locale guess and the
@@ -128,9 +129,11 @@ const loading = ref(false)
 // federation to approve it (migration 096).
 const registered = ref(null)   // { email, username, clubPending }
 
-// Public signups are gated off by default (coming-soon launch). null means
-// still checking, true is open (show the form), false is closed (show the notice).
-const signupsEnabled = ref(null)
+// Public signups are gated off by default (coming-soon launch): open shows
+// the form, closed shows the notice. The flag is already in the features
+// store, loaded before the app mounted.
+const features = useFeaturesStore()
+const signupsEnabled = computed(() => features.signups)
 
 // Best guess at the registrant's country from the browser locale
 // ("en-AU" -> AUS). Only a starting value, the select is theirs.
@@ -139,13 +142,7 @@ function guessCountry() {
   return COUNTRIES.find(c => c.a2 === region)?.a3 || ''
 }
 
-onMounted(async () => {
-  try {
-    const res = await fetch('/api/auth/signups-status')
-    signupsEnabled.value = !!(await res.json()).enabled
-  } catch {
-    signupsEnabled.value = false
-  }
+onMounted(() => {
   if (!signupsEnabled.value) return
   countryCode.value = invite.country || guessCountry()
 })
@@ -302,14 +299,14 @@ async function handleSubmit() {
   <div class="wrap">
     <div class="login-mark brand-wordmark">DIVING<span>HQ</span></div>
 
-    <template v-if="signupsEnabled === false">
+    <template v-if="!signupsEnabled">
       <h1>{{ $t('auth.register.title') }}</h1>
       <p class="subtitle">{{ $t('auth.register.coming_soon') }}</p>
       <p class="note">{{ $t('auth.register.coming_soon_note') }}</p>
       <p class="footer-link">{{ $t('auth.register.already_have_account') }} <RouterLink to="/login">{{ $t('auth.register.sign_in_link') }}</RouterLink></p>
     </template>
 
-    <template v-else-if="signupsEnabled === true">
+    <template v-else>
     <h1>{{ $t('auth.register.title') }}</h1>
     <p class="subtitle">{{ $t('auth.register.subtitle') }}</p>
 

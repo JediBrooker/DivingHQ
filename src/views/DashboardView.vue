@@ -20,9 +20,9 @@
 //      still a valid tab for this user → that tab.
 //   4. Else fallback to most-privileged role.
 //
-// Each tab loads its own data lazily on first activation, once
-// loaded, switches are instant. Pulse data loads up front since
-// it's needed for the strip and for the smart-pick computation.
+// Every tab's data comes from one /api/dashboard bundle, loaded up
+// front (the strip and smart-pick need it anyway) and refreshed by the
+// poll and socket signals, so switching tabs never fetches.
 //
 // Brand-new org admins (zero clubs, zero events, no
 // dismiss/complete stamp) still get the auto-redirect to
@@ -32,6 +32,7 @@ import { useRouter, RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useSocket } from '@/composables/useSocket'
+import { useDiverSearch } from '@/composables/useDiverSearch'
 import { contributesToDiverChip, rankAttentionChips } from '@/composables/useAttention'
 import AttentionLane from '@/components/dashboard/AttentionLane.vue'
 import { fmtCloses, fmtDate, fmtRelative } from '@/lib/format'
@@ -93,14 +94,11 @@ function writeStoredTab(id) {
 function setTab(id) {
   activeTab.value = id
   writeStoredTab(id)
-  // Lazy-load data for the new tab if we haven't yet.
-  ensureTabDataLoaded(id)
 }
 
 // ---- Pulse + per-tab data refs -----------------------------
-// Loaded lazily; first hit triggers fetch, then cached. The
-// `loaded` map prevents double-fetch on re-tab visits.
-const events             = ref([])     // /api/events, used by org_admin + meet_manager + diver
+// All hydrated from the /api/dashboard bundle (loadDashboardBundle).
+const events             = ref([])     // used by org_admin + meet_manager + diver
 const roleRequests       = ref([])     // /api/role-requests
 const pendingOrgs        = ref([])     // /api/orgs filtered to pending (sysadmin)
 const claimsToAct        = ref(0)      // claims waiting on my vote / decision (phase 3)
@@ -117,13 +115,25 @@ const diverEventIds      = ref(null)   // event ids the caller has an entry in
                                        // [] = loaded + zero entries). Lets
                                        // the diver-tab cards skip events
                                        // /me-meet-day will 403 on.
-const tabsLoaded         = ref(new Set())  // tab ids whose data is loaded
+
+// Live events, and upcoming ones soonest-closing first (no close date
+// sorts last). Shared by the pulse chips, the attention cards, the meet
+// manager rows and the diver's next meet, which all used to filter and
+// sort their own copy.
+const liveEvents = computed(() => events.value.filter((e) => e.status === 'Live'))
+const upcomingByClose = computed(() =>
+  events.value
+    .filter((e) => e.status === 'Upcoming')
+    .sort((a, b) => {
+      const ad = a.entries_close_at ? +new Date(a.entries_close_at) : Infinity
+      const bd = b.entries_close_at ? +new Date(b.entries_close_at) : Infinity
+      return ad - bd
+    }),
+)
 
 // Pulse derived from currently-loaded data. Each entry is
 // optional (zero / null for users who don't have that role).
-const liveCount = computed(() =>
-  events.value.filter((e) => e.status === 'Live').length,
-)
+const liveCount = computed(() => liveEvents.value.length)
 const upcomingCount = computed(() =>
   events.value.filter((e) => e.status === 'Upcoming').length,
 )
@@ -200,7 +210,6 @@ const pulseChips = computed(() => {
 
   // Live events, operator chip
   if (liveCount.value && auth.hasAnyRole(['org_admin', 'meet_manager'])) {
-    const liveEvents = events.value.filter((e) => e.status === 'Live')
     chips.push({
       id:           'live',
       kind:         'live',
@@ -210,7 +219,7 @@ const pulseChips = computed(() => {
       layout:       'count-first',
       targetTab:    auth.hasRole('org_admin') ? 'org_admin' : 'meet_manager',
       popoverTitle: liveCount.value === 1 ? '1 live event' : `${liveCount.value} live events`,
-      items: liveEvents.map((e) => ({
+      items: liveEvents.value.map((e) => ({
         id:    'ev-' + e.id,
         title: e.name,
         meta:  'Open Control Room',
@@ -224,13 +233,6 @@ const pulseChips = computed(() => {
   // marker if the entries-close window is under 24h.
   if (upcomingCount.value && auth.hasAnyRole(['org_admin', 'meet_manager'])) {
     const now = Date.now()
-    const upcomingEvents = events.value
-      .filter((e) => e.status === 'Upcoming')
-      .sort((a, b) => {
-        const ad = a.entries_close_at ? +new Date(a.entries_close_at) : Infinity
-        const bd = b.entries_close_at ? +new Date(b.entries_close_at) : Infinity
-        return ad - bd
-      })
     chips.push({
       id:           'upcoming',
       kind:         'upcoming',
@@ -240,7 +242,7 @@ const pulseChips = computed(() => {
       layout:       'count-first',
       targetTab:    auth.hasRole('org_admin') ? 'org_admin' : 'meet_manager',
       popoverTitle: upcomingCount.value === 1 ? '1 upcoming event' : `${upcomingCount.value} upcoming events`,
-      items: upcomingEvents.slice(0, 8).map((e) => {
+      items: upcomingByClose.value.slice(0, 8).map((e) => {
         const closeMs = e.entries_close_at ? +new Date(e.entries_close_at) - now : null
         return {
           id:    'up-' + e.id,
@@ -617,7 +619,6 @@ watch(
 // Called after the initial pulse fetch. Returns a tab id that
 // the user should see first.
 function pickInitialTab() {
-  const roles = auth.user?.org_roles || []
   const visible = new Set(visibleTabs.value.map((t) => t.id))
   const has = (r) => visible.has(r) || (auth.user?.is_system_admin && TABS.some((t) => t.id === r))
 
@@ -644,70 +645,37 @@ function pickInitialTab() {
   return 'other'
 }
 
-// ---- Loaders -----------------------------------------------
-// Each loader is idempotent, the `tabsLoaded` set prevents
-// re-fetch on re-tab visits. Errors just get swallowed, just in
-// case, and the panel renders an empty state if its data is missing.
-async function loadOperatorEvents() {
-  if (events.value.length || tabsLoaded.value.has('events')) return
-  try {
-    events.value = await auth.apiFetch('/api/events')
-  } catch { /* silent */ }
-  tabsLoaded.value.add('events')
-}
-async function loadRoleRequests() {
-  if (tabsLoaded.value.has('role-requests')) return
-  if (!auth.hasRole('org_admin') && !delegateReviewPath.value) return
-  try {
-    roleRequests.value = await auth.apiFetch('/api/role-requests')
-  } catch { /* silent */ }
-  tabsLoaded.value.add('role-requests')
-}
-async function loadPendingOrgs() {
-  if (tabsLoaded.value.has('pending-orgs')) return
-  if (!auth.user?.is_system_admin) return
-  try {
-    const orgs = await auth.apiFetch('/api/orgs')
-    pendingOrgs.value = (orgs || []).filter((o) => o.status === 'pending')
-  } catch { /* silent */ }
-  tabsLoaded.value.add('pending-orgs')
-}
-async function loadRecentActivity() {
-  if (tabsLoaded.value.has('activity')) return
-  if (!auth.hasRole('org_admin')) return
-  try {
-    recentActivity.value = await auth.apiFetch('/api/audit/recent?limit=10&days=7')
-  } catch { /* silent */ }
-  tabsLoaded.value.add('activity')
-}
-async function loadJudgeEvents() {
-  if (tabsLoaded.value.has('judge')) return
-  if (!auth.hasRole('judge')) return
-  try {
-    judgeEvents.value = await auth.apiFetch('/api/judge/my-events')
-  } catch { /* silent */ }
-  tabsLoaded.value.add('judge')
-}
-async function loadCoachData() {
-  if (tabsLoaded.value.has('coach')) return
-  if (!auth.hasRole('coach')) return
-  try {
-    coachData.value = await auth.apiFetch('/api/coach/dashboard')
-  } catch { /* silent */ }
-  tabsLoaded.value.add('coach')
-}
-
 // One-shot bundle endpoint that returns every role-scoped slice
 // the dashboard needs in a single round trip. Hydrates all
-// the per-role refs simultaneously, marks the corresponding
-// tabsLoaded flags so per-tab loaders short-circuit, and the
-// pulse strip + smart-pick can act on the data right away.
+// the per-role refs simultaneously, so the pulse strip +
+// smart-pick can act on the data right away.
 //
-// Used on initial mount and on every poll/socket-driven
-// refresh. The per-tab loaders (loadOperatorEvents, etc.) are
-// kept as a fallback for any code path that doesn't go through
-// the bundle.
-async function loadDashboardBundle() {
+// Used on initial mount and on every poll/socket-driven refresh.
+// Returns false when the call failed, so the mount can tell "no
+// events" apart from "couldn't ask".
+//
+// Only one request is ever out at a time. A poll tick or socket signal
+// that lands while one is in flight queues a single follow-up rather
+// than a parallel call, so two responses can't land out of order and
+// the follow-up still sees whatever the signal was about.
+let bundleInFlight = null
+let bundleQueued = false
+let unmounted = false
+function loadDashboardBundle() {
+  if (bundleInFlight) {
+    bundleQueued = true
+    return bundleInFlight
+  }
+  bundleInFlight = fetchDashboardBundle().finally(() => {
+    bundleInFlight = null
+    if (bundleQueued && !unmounted) {
+      bundleQueued = false
+      loadDashboardBundle()
+    }
+  })
+  return bundleInFlight
+}
+async function fetchDashboardBundle() {
   let bundle = null
   try {
     bundle = await auth.apiFetch('/api/dashboard')
@@ -732,69 +700,26 @@ async function loadDashboardBundle() {
   if (Array.isArray(bundle.diver_event_ids)) {
     diverEventIds.value = bundle.diver_event_ids
   }
-  // mark tabsLoaded so per-tab loaders don't refetch what we
-  // already have. Recent-activity is the only org-admin slice
-  // that has a separate tabsLoaded key.
-  tabsLoaded.value.add('events')
-  tabsLoaded.value.add('role-requests')
-  tabsLoaded.value.add('pending-orgs')
-  tabsLoaded.value.add('activity')
-  tabsLoaded.value.add('judge')
-  tabsLoaded.value.add('coach')
   return true
-}
-
-// Per-tab dispatcher. Org admin wants events + role requests +
-// pending orgs (sysadmin) + recent activity. Meet manager
-// reuses events. Judge / Coach are independent.
-async function ensureTabDataLoaded(tab) {
-  if (tab === 'org_admin') {
-    await Promise.all([
-      loadOperatorEvents(),
-      loadRoleRequests(),
-      loadPendingOrgs(),
-      loadRecentActivity(),
-    ])
-  } else if (tab === 'meet_manager') {
-    await loadOperatorEvents()
-  } else if (tab === 'judge') {
-    await loadJudgeEvents()
-  } else if (tab === 'coach') {
-    await loadCoachData()
-  } else if (tab === 'diver') {
-    await loadOperatorEvents()  // for "your next meet", heuristic
-  }
-  // 'referee' and 'other' need no extra data right now.
 }
 
 // ---- Find Diver typeahead (preserved) -----------------------
 const diverSearch    = ref('')
-const diverResults   = ref([])
-const diverSearching = ref(false)
 const diverDropdown  = ref(false)
-let   diverSearchT   = null
+const {
+  results: diverResults,
+  loading: diverSearching,
+  search: searchDivers,
+  clear: clearDiverSearch,
+} = useDiverSearch(auth)
 function onDiverSearchInput() {
   diverDropdown.value = true
-  if (diverSearchT) clearTimeout(diverSearchT)
-  const q = diverSearch.value.trim()
-  if (q.length < 2) { diverResults.value = []; return }
-  diverSearchT = setTimeout(async () => {
-    diverSearching.value = true
-    try {
-      diverResults.value = await auth.apiFetch(
-        `/api/divers/search?q=${encodeURIComponent(q)}`,
-      )
-    } catch {
-      diverResults.value = []
-    } finally {
-      diverSearching.value = false
-    }
-  }, 200)
+  searchDivers(diverSearch.value)
 }
 function openDiverProfile(id) {
   diverDropdown.value = false
   diverSearch.value = ''
-  diverResults.value = []
+  clearDiverSearch()
   router.push(`/profile/${id}`)
 }
 function onDiverSearchBlur() {
@@ -816,17 +741,12 @@ function onDiverSearchBlur() {
 const welcomeName = computed(() => auth.user?.full_name?.toUpperCase() || '—')
 const roleLine    = computed(() => auth.formatRoles(auth.user?.org_roles || []))
 
-function logout() {
-  auth.clearSession()
-  router.push('/login')
-}
-
 // Org-admin's "what needs your attention" cards, preserved
 // from the old action-strip but now scoped inside the org_admin
 // panel. Each card is one row.
 const attentionCards = computed(() => {
   const cards = []
-  for (const ev of events.value.filter((e) => e.status === 'Live')) {
+  for (const ev of liveEvents.value) {
     cards.push({
       id: 'live-' + ev.id,
       kind: 'live',
@@ -836,14 +756,7 @@ const attentionCards = computed(() => {
       to: `/control?event=${ev.id}`,
     })
   }
-  const upcoming = events.value
-    .filter((e) => e.status === 'Upcoming')
-    .sort((a, b) => {
-      const ad = a.entries_close_at ? +new Date(a.entries_close_at) : Infinity
-      const bd = b.entries_close_at ? +new Date(b.entries_close_at) : Infinity
-      return ad - bd
-    })
-  for (const ev of upcoming) {
+  for (const ev of upcomingByClose.value) {
     cards.push({
       id: 'upcoming-' + ev.id,
       kind: 'upcoming',
@@ -901,23 +814,15 @@ const attentionCards = computed(() => {
   return cards
 })
 
-// Meet Manager events, same /api/events fetch but presented
+// Meet Manager events, the same bundle events but presented
 // as compact rows instead of attention cards.
 const operatorEvents = computed(() => {
   // sorted: live first, then upcoming by entries_close_at, then completed by date desc
-  const live = events.value.filter((e) => e.status === 'Live')
-  const upcoming = events.value
-    .filter((e) => e.status === 'Upcoming')
-    .sort((a, b) => {
-      const ad = a.entries_close_at ? +new Date(a.entries_close_at) : Infinity
-      const bd = b.entries_close_at ? +new Date(b.entries_close_at) : Infinity
-      return ad - bd
-    })
   const completed = events.value
     .filter((e) => e.status === 'Completed')
     .sort((a, b) => +new Date(b.scheduled_at || 0) - +new Date(a.scheduled_at || 0))
     .slice(0, 3)
-  return [...live, ...upcoming, ...completed]
+  return [...liveEvents.value, ...upcomingByClose.value, ...completed]
 })
 
 // Diver next-meet heuristic, closest upcoming event by entries.
@@ -925,30 +830,12 @@ const operatorEvents = computed(() => {
 // row for, sourced from the dashboard bundle's `diver_event_ids`
 // slice. Same gate as /api/events/:id/me-meet-day, so a card
 // surfaced here always opens cleanly. While the bundle is in
-// flight (diverEventIds === null) we fall back to the legacy
-// "any event in the org" pool so the card doesn't blink during
-// the first frame.
-const diverEnteredSet = computed(() => {
-  if (!Array.isArray(diverEventIds.value)) return null
-  return new Set(diverEventIds.value)
-})
-function diverIsEntered(eventId) {
-  const set = diverEnteredSet.value
-  if (set === null) return true   // bundle not back yet, don't hide
-  return set.has(eventId)
-}
-
-const diverNextMeet = computed(() => {
-  const upcoming = events.value
-    .filter((e) => e.status === 'Upcoming')
-    .filter((e) => diverIsEntered(e.id))
-    .sort((a, b) => {
-      const ad = a.entries_close_at ? +new Date(a.entries_close_at) : Infinity
-      const bd = b.entries_close_at ? +new Date(b.entries_close_at) : Infinity
-      return ad - bd
-    })
-  return upcoming[0] || null
-})
+// flight (diverEventIds === null) contributesToDiverChip counts
+// every event as entered so the card doesn't blink during the
+// first frame.
+const diverNextMeet = computed(() =>
+  upcomingByClose.value.find((e) => contributesToDiverChip(e.id, diverEventIds.value)) || null,
+)
 
 // Live event the diver is currently competing in. Surfaces the
 // meet-day CTA at the top of the diver panel when relevant.
@@ -956,9 +843,8 @@ const diverNextMeet = computed(() => {
 // gate as /api/events/:id/me-meet-day) so clicking the card
 // never dead-ends at "You're not entered in this event".
 const diverLiveMeet = computed(() => {
-  const live = events.value
-    .filter((e) => e.status === 'Live')
-    .filter((e) => diverIsEntered(e.id))
+  const live = liveEvents.value
+    .filter((e) => contributesToDiverChip(e.id, diverEventIds.value))
     .sort((a, b) => (b.created_at ? +new Date(b.created_at) : 0)
                   - (a.created_at ? +new Date(a.created_at) : 0))
   return live[0] || null
@@ -989,61 +875,51 @@ function badgeFor(id) {
 
 // ---- Mount -------------------------------------------------
 onMounted(async () => {
-  // First-run wizard auto-redirect (preserved). Triggers BEFORE
-  // we touch tab logic, so a fresh org admin doesn't briefly
-  // see the empty dashboard before bouncing.
-  if (auth.hasRole('org_admin')) {
+  // One-shot bundle endpoint that returns every role-scoped
+  // slice in a single round trip.
+  const bundled = await loadDashboardBundle()
+  // Someone who clicks away before the first bundle is back has already
+  // unmounted us. Carrying on from here would bounce them to /setup from
+  // whatever page they went to, and start a poll, socket handlers and a
+  // visibility listener that onUnmounted has already run past (so nothing
+  // would ever remove them).
+  if (unmounted) return
+
+  // First-run wizard auto-redirect (preserved). Runs BEFORE we
+  // touch tab logic, so a fresh org admin doesn't briefly see the
+  // empty dashboard before bouncing. The bundle's events are the
+  // same set /api/events would list for an org admin (same scope,
+  // capped at 100), so "none at all" is the same answer without a
+  // second, unbounded request. A failed bundle proves nothing, so
+  // no redirect then.
+  if (bundled && events.value.length === 0 && auth.hasRole('org_admin')) {
     let dismissed = false, completed = false
     try {
       dismissed = localStorage.getItem('setup.wizardDismissed.v1') === '1'
       completed = localStorage.getItem('setup.wizardCompleted.v1') === '1'
     } catch { /* localStorage blocked */ }
     if (!dismissed && !completed) {
-      // Need event count to decide; load events first.
-      await loadOperatorEvents()
-      if (events.value.length === 0) {
-        let clubCount = 0
-        try {
-          const clubs = await auth.apiFetch('/api/clubs')
-          // Clubs waiting on approval count too (migration 096): the
-          // dashboard is where their chip is, the wizard would hide it.
-          clubCount = (clubs || []).length
-        } catch { /* leave 0 */ }
-        if (clubCount === 0) {
-          router.replace('/setup')
-          return
-        }
+      let clubCount = 0
+      try {
+        const clubs = await auth.apiFetch('/api/clubs')
+        // Clubs waiting on approval count too (migration 096): the
+        // dashboard is where their chip is, the wizard would hide it.
+        clubCount = (clubs || []).length
+      } catch { /* leave 0 */ }
+      if (unmounted) return
+      if (clubCount === 0) {
+        router.replace('/setup')
+        return
       }
     }
   }
 
-  // One-shot bundle endpoint that returns every role-scoped
-  // slice in a single round trip. Replaces the previous
-  // 5-6 parallel API calls, much nicer on the network tab. If
-  // the bundle endpoint isn't available (older server, network
-  // glitch), fall back to the per-source loaders.
-  const bundled = await loadDashboardBundle()
-  if (!bundled) {
-    await Promise.all([
-      auth.hasAnyRole(['org_admin', 'meet_manager']) ? loadOperatorEvents() : Promise.resolve(),
-      // loadRoleRequests does its own org_admin / club admin check.
-      loadRoleRequests(),
-      auth.hasRole('org_admin')   ? loadRecentActivity()  : Promise.resolve(),
-      auth.user?.is_system_admin  ? loadPendingOrgs()     : Promise.resolve(),
-      auth.hasRole('judge')       ? loadJudgeEvents()     : Promise.resolve(),
-      auth.hasRole('coach')       ? loadCoachData()       : Promise.resolve(),
-      auth.hasRole('diver')       ? loadOperatorEvents()  : Promise.resolve(),
-    ])
-  }
   // Initial fetch settled, flip the skeleton off so the real
   // chips render.
   pulseInitiallyLoaded.value = true
 
   // Now smart-pick has the signals it needs.
   activeTab.value = pickInitialTab()
-  // Make sure the picked tab's data is fully loaded (some need
-  // fetches the pulse step skipped, e.g. recent activity).
-  await ensureTabDataLoaded(activeTab.value)
 
   // Live polling, refetch the pulse-driving sources every
   // POLL_MS so the strip stays current without a full page
@@ -1056,14 +932,21 @@ onMounted(async () => {
   // emits so the strip updates the moment something happens.
   // Polling continues as a fallback.
   attachSocketHandlers()
+  document.addEventListener('visibilitychange', onVisibilityChange)
   // (P4) the activity ticker was removed, nothing to start here.
 })
 onUnmounted(() => {
+  unmounted = true
   stopPulsePolling()
   detachSocketHandlers()
+  document.removeEventListener('visibilitychange', onVisibilityChange)
 })
 
 // ---- Live polling ------------------------------------------
+// A tab nobody is looking at doesn't need fresh counts, and each bundle
+// is about a dozen queries, so ticks and socket signals are skipped
+// while the page is hidden. Coming back refetches once (the count
+// watchers still flash whatever changed) and restarts the 30 s clock.
 const POLL_MS = 30_000
 let pollTimer = null
 function startPulsePolling() {
@@ -1076,11 +959,17 @@ function stopPulsePolling() {
     pollTimer = null
   }
 }
+function onVisibilityChange() {
+  if (document.hidden || !pollTimer) return
+  loadDashboardBundle()
+  startPulsePolling()
+}
 // Refetch the data the pulse depends on. Now goes through the
 // /api/dashboard bundle so a poll tick is one HTTP round trip
 // rather than 5–6. Watchers on the underlying refs flash the
 // chips when counts change.
 async function refetchPulseData() {
+  if (document.hidden) return
   await loadDashboardBundle()
 }
 
@@ -1115,8 +1004,11 @@ const dashboardSocket = useSocket()
 // creation). Keeps the chip counts in sync without client-side
 // polling latency.
 function onPulseSignal() { refetchPulseData() }
-// Score events also bump recent-activity for the ticker; they
-// don't move the count chips but they keep the ticker current.
+// A score correction lands in the audit log, so refresh the recent
+// activity list OrgAdminPanel shows. It only arrives for events this
+// socket has joined (event:<id> rooms), which in practice means ones the
+// admin had open in the Control Room earlier in the session: the socket
+// is pooled per user and never leaves a room.
 function onScoreActivity() {
   if (auth.hasRole('org_admin')) {
     auth.apiFetch('/api/audit/recent?limit=10&days=7')
@@ -1129,7 +1021,6 @@ function attachSocketHandlers() {
   if (!dashboardSocket) return
   dashboardSocket.on('event_status_changed', onPulseSignal)
   dashboardSocket.on('role_request_created', onPulseSignal)
-  dashboardSocket.on('score_committed', onScoreActivity)
   dashboardSocket.on('score_corrected', onScoreActivity)
 }
 
@@ -1137,7 +1028,6 @@ function detachSocketHandlers() {
   if (!dashboardSocket) return
   dashboardSocket.off('event_status_changed', onPulseSignal)
   dashboardSocket.off('role_request_created', onPulseSignal)
-  dashboardSocket.off('score_committed', onScoreActivity)
   dashboardSocket.off('score_corrected', onScoreActivity)
 }
 </script>
@@ -1341,69 +1231,14 @@ function detachSocketHandlers() {
   white-space: normal; word-break: break-word;
 }
 
-/* Secondary nav row, sits inside .header-inner as a third flex
-   item that consumes full width, so it stacks below the
-   welcome/account row even though they're in the same flex
-   container. Right-aligned per the spec; reads as a quiet
-   strip of "always-on" destinations. Currently just Scoreboard,
-   easy to grow as more cross-role surfaces land. */
-.header-secondary-nav {
-  flex: 1 0 100%;
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.85rem;
-  margin-top: 0.5rem;
-}
-.header-secondary-link-icon { display: inline-flex; align-items: center; }
-.hs-ic { width: 16px; height: 16px; }
-.header-secondary-link {
-  display: inline-flex; align-items: center; gap: 0.5rem;
-  font-family: var(--font-sans);
-  font-size: 12.5px; font-weight: 600;
-  letter-spacing: 0; text-transform: none;
-  color: var(--accent);
-  text-decoration: none;
-  padding: 0.55rem 1rem;
-  border: 1px solid rgba(6,182,212,0.45);
-  border-radius: var(--radius);
-  background: rgba(6,182,212,0.08);
-  transition: background 0.12s, border-color 0.12s, transform 0.1s, box-shadow 0.12s;
-}
-.header-secondary-link:hover,
-.header-secondary-link:focus-visible {
-  background: rgba(6,182,212,0.18);
-  border-color: var(--cyan);
-  box-shadow: 0 0 14px rgba(6,182,212,0.35);
-  transform: translateY(-1px);
-  outline: none;
-}
-.header-secondary-link.router-link-active {
-  color: var(--bg);
-  background: var(--cyan);
-  border-color: var(--cyan);
-}
-.header-secondary-link-icon {
-  font-size: 14px; line-height: 1;
-  /* Emojis carry their own colour, so neutralise the cyan tint
-     that bleeds in from the parent. */
-  filter: none;
-}
-
-/* Account-area buttons (and the diver-search input) in the
-   top-right of the header. Search + My Profile + Sign Out stay
-   on a single line within this block; the parent .header-inner
-   wraps the whole block below the welcome on narrow viewports
-   if needed. */
+/* Account area (the diver-search input) in the top-right of the
+   header. The parent .header-inner wraps the whole block below the
+   welcome on narrow viewports if needed. */
 .header-account {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   flex-shrink: 0;
-}
-.header-account .btn {
-  /* Redundant inside the app shell, Inbox, My Profile, User Guide
-     and Sign Out are provided by the sidebar + topbar user menu. */
-  display: none;
 }
 
 /* Find Diver, typeahead lives in the top-right account row.
@@ -1565,26 +1400,6 @@ function detachSocketHandlers() {
     flex: 1 1 100%;
     min-width: 0;
   }
-  .header-secondary-nav {
-    /* Buttons themselves can shrink + wrap onto a second line
-       if "SCOREBOARD & RESULTS" + "JUDGE ANALYSIS" can't fit. */
-    flex-wrap: wrap;
-    justify-content: flex-start;
-    gap: 0.5rem;
-  }
-  .header-secondary-link {
-    /* Shrink the chunky letter-spacing on phones, the desktop
-       0.18em + 12px makes "SCOREBOARD & RESULTS" ~210px wide on
-       its own. 0.08em + 11px keeps the affordance readable but
-       fits comfortably alongside its sibling at 360px+. */
-    font-size: 11px;
-    letter-spacing: 0.08em;
-    padding: 0.5rem 0.75rem;
-    flex: 1 1 auto;
-    text-align: center;
-    justify-content: center;
-    min-width: 0;
-  }
   .tab-strip {
     padding: 0 1.25rem;
     /* Horizontal scroll instead of wrap, keeps the strip a
@@ -1631,12 +1446,6 @@ function detachSocketHandlers() {
   }
   .header-account {
     width: 100%;
-  }
-  .header-account .btn {
-    flex: 1 1 auto;
-    text-align: center;
-    font-size: 11px;
-    padding: 0.5rem 0.75rem;
   }
   .find-diver-wrapper { flex: 1 1 100%; }
   .tab-strip { padding: 0 1rem; }

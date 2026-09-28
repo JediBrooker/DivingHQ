@@ -3,7 +3,7 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { fmtDate } from '@/lib/format'
+import { useDiverSearch } from '@/composables/useDiverSearch'
 
 // Side-by-side comparison of two divers across ANY organisation.
 // Each side uses an autocomplete typeahead or a "Browse" modal that
@@ -115,45 +115,22 @@ watch(idB, (v) => loadOne(v, 'b'), { immediate: true })
 
 // =========================================================
 // Autocomplete state per side. The text the user typed lives in
-// queryA/queryB; a debounced watch fires the search and writes the
-// results into resultsA/resultsB. The dropdown is shown when the
-// input is focused AND there are >= 2 typed chars.
+// queryA/queryB; typing fires a debounced search per side that
+// writes into resultsA/resultsB. The dropdown is shown when the
+// input is focused AND there are >= 2 typed chars. It's driven off
+// @input, not a watch, because syncDisplayName writes the picked
+// diver's name into the same box.
 // =========================================================
 const queryA   = ref('')
 const queryB   = ref('')
-const resultsA = ref([])
-const resultsB = ref([])
 const openA    = ref(false)
 const openB    = ref(false)
-let debounceA = null
-let debounceB = null
+const { results: resultsA, search: searchA } = useDiverSearch(auth)
+const { results: resultsB, search: searchB } = useDiverSearch(auth)
 
 function onInput(side) {
-  const q = side === 'a' ? queryA.value : queryB.value
-  const setOpen = (v) => side === 'a' ? openA.value = v : openB.value = v
-  setOpen(true)
-  if (side === 'a') clearTimeout(debounceA)
-  else              clearTimeout(debounceB)
-  // Empty query just clears; <2 chars doesn't fire a request.
-  if (q.trim().length < 2) {
-    if (side === 'a') resultsA.value = []
-    else              resultsB.value = []
-    return
-  }
-  const fire = () => runSearch(side, q.trim())
-  if (side === 'a') debounceA = setTimeout(fire, 200)
-  else              debounceB = setTimeout(fire, 200)
-}
-
-async function runSearch(side, q) {
-  try {
-    const rows = await auth.apiFetch(`/api/divers/search?q=${encodeURIComponent(q)}`)
-    if (side === 'a') resultsA.value = Array.isArray(rows) ? rows : []
-    else              resultsB.value = Array.isArray(rows) ? rows : []
-  } catch {
-    if (side === 'a') resultsA.value = []
-    else              resultsB.value = []
-  }
+  if (side === 'a') { openA.value = true; searchA(queryA.value) }
+  else              { openB.value = true; searchB(queryB.value) }
 }
 
 function closeAutocomplete(side) {

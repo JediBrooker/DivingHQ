@@ -16,6 +16,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useJudgeDirectory } from '@/composables/useJudgeDirectory'
 import JudgeRankingTable from '@/components/JudgeRankingTable.vue'
 
 const route = useRoute()
@@ -38,14 +39,15 @@ const completedEvents = computed(() =>
 async function loadEvents() {
   eventsError.value = ''
   try {
-    // Signed-in users get their org's events (every status) from the
-    // authed list. The public can't see that endpoint, so they fall
-    // back to the open archive, every federation's Live + Completed
-    // events, which is exactly the public transparency surface this
-    // page is meant to be. Both shapes carry id / name / status /
+    // Signed-in users get their org's Completed events from the authed
+    // list (asking the server for just those, the full list is every
+    // event with every column). The public can't see that endpoint, so
+    // they fall back to the open archive, every federation's Live +
+    // Completed events, which is exactly the public transparency surface
+    // this page is meant to be. Both shapes carry id / name / status /
     // created_at, so completedEvents filters to Completed either way.
     const list = auth.isLoggedIn
-      ? await auth.apiFetch('/api/events')
+      ? await auth.apiFetch('/api/events?status=Completed')
       : await auth.apiFetch('/api/archive')
     events.value = Array.isArray(list) ? list : []
     // Honour ?event=<id> so a user can be deep-linked to a specific
@@ -73,94 +75,25 @@ watch(selectedEventId, (id) => {
 })
 
 // ── By Judge ──────────────────────────────────────────────────
-const q = ref('')
-const orgId = ref('')
-const countryCode = ref('')
-const rows = ref([])
-const total = ref(0)
-const offset = ref(0)
-const limit = ref(50)
-const loadingJudges = ref(false)
-const judgesError = ref('')
-const orgs = ref([])
+const {
+  q, orgId, countryCode, rows, total, offset, orgs, pageInfo,
+  loading: loadingJudges, error: judgesError,
+  load: loadJudges, loadOrgs, nextPage, prevPage,
+  applyFilters: applyJudgeFilters, clearFilters: clearJudgeFilters,
+} = useJudgeDirectory(auth, { errorText: 'Could not load judges' })
 
-function buildQS() {
-  const parts = []
-  if (q.value.trim()) parts.push(`q=${encodeURIComponent(q.value.trim())}`)
-  if (orgId.value) parts.push(`org_id=${encodeURIComponent(orgId.value)}`)
-  if (countryCode.value.trim()) {
-    parts.push(`country_code=${encodeURIComponent(countryCode.value.trim().toUpperCase())}`)
-  }
-  parts.push(`limit=${limit.value}`)
-  parts.push(`offset=${offset.value}`)
-  return `?${parts.join('&')}`
-}
-
-async function loadJudges() {
-  loadingJudges.value = true
-  judgesError.value = ''
-  try {
-    const body = await auth.apiFetch(`/api/judges/directory${buildQS()}`)
-    rows.value = body.rows || []
-    total.value = body.total ?? 0
-  } catch (err) {
-    judgesError.value = err.message || 'Could not load judges'
-    rows.value = []
-    total.value = 0
-  } finally {
-    loadingJudges.value = false
-  }
-}
-
-async function loadOrgs() {
-  // The org list route requires a session; anonymous viewers just
-  // get the free-text country filter instead.
-  if (!auth.isLoggedIn) return
-  try {
-    orgs.value = await auth.apiFetch('/api/orgs/all')
-  } catch { /* dropdown stays empty */ }
-}
-
-function applyJudgeFilters() {
-  offset.value = 0
-  loadJudges()
-}
-function clearJudgeFilters() {
-  q.value = ''
-  orgId.value = ''
-  countryCode.value = ''
-  offset.value = 0
-  loadJudges()
-}
-function nextPage() {
-  if (offset.value + limit.value >= total.value) return
-  offset.value += limit.value
-  loadJudges()
-}
-function prevPage() {
-  offset.value = Math.max(0, offset.value - limit.value)
-  loadJudges()
-}
-
-const pageInfo = computed(() => {
-  if (!total.value) return ''
-  const from = offset.value + 1
-  const to = Math.min(offset.value + rows.value.length, total.value)
-  return `Showing ${from}–${to} of ${total.value}`
-})
-
-// Apply org/country filters on change (q has its own Apply button
-// so it doesn't fire per-keystroke).
-watch([orgId, countryCode], () => {
-  offset.value = 0
-  loadJudges()
-})
-
-onMounted(() => {
-  loadEvents()
+// The judge list and federation dropdown are only for the By Judge tab,
+// so they load the first time someone opens it rather than on every
+// visit to the default By Event tab.
+let judgeTabLoaded = false
+watch(tab, (t) => {
+  if (t !== 'judge' || judgeTabLoaded) return
+  judgeTabLoaded = true
   loadOrgs()
   loadJudges()
 })
+
+onMounted(loadEvents)
 </script>
 
 <template>

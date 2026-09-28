@@ -1624,14 +1624,6 @@ onUnmounted(() => {
 .user-name { font-family: var(--font-display); font-size: 16px; font-weight: 700; }
 .dim { color: var(--text-3); }
 
-.roles-checkboxes { display: flex; flex-wrap: wrap; gap: 0.6rem; }
-.role-label {
-  display: flex; align-items: center; gap: 0.35rem; cursor: pointer;
-  font-family: var(--font-display); font-size: 11px; font-weight: 700;
-  letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-2);
-}
-.role-label input { accent-color: var(--cyan); width: 14px; height: 14px; }
-.role-label:has(input:checked) { color: var(--cyan); }
 .empty-state { color: var(--text-3); font-size: 12px; padding: 1.5rem 0; text-align: center; }
 
 .status-col { width: 110px; text-align: end; }

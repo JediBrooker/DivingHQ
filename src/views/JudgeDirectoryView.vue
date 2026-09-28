@@ -13,85 +13,23 @@
 // remove a judge whose judgement is unsatisfactory); this page
 // gives the spectator their own evidence trail.
 
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
+import { useJudgeDirectory } from '@/composables/useJudgeDirectory'
 
 const auth = useAuthStore()
 
-const q             = ref('')
-const orgId         = ref('')
-const countryCode   = ref('')
-const minScores     = ref(0)
-const offset        = ref(0)
-const limit         = ref(50)
-const rows          = ref([])
-const total         = ref(0)
-const loading       = ref(false)
-const error         = ref('')
+const {
+  q, orgId, countryCode, offset, rows, total, loading, error, orgs,
+  load, loadOrgs, applyFilters, nextPage, prevPage, pageInfo,
+  clearFilters: clearDirectoryFilters,
+} = useJudgeDirectory(auth, { errorText: 'Could not load directory' })
 
-const orgs          = ref([])
+const minScores = ref(0)
 
-// Builds the query string for /api/judges. Empty entries get
-// dropped so the URL stays minimal.
-function buildQS() {
-  const parts = []
-  if (q.value.trim())          parts.push(`q=${encodeURIComponent(q.value.trim())}`)
-  if (orgId.value)             parts.push(`org_id=${encodeURIComponent(orgId.value)}`)
-  if (countryCode.value.trim()) {
-    parts.push(`country_code=${encodeURIComponent(countryCode.value.trim().toUpperCase())}`)
-  }
-  parts.push(`limit=${limit.value}`)
-  parts.push(`offset=${offset.value}`)
-  return parts.length ? `?${parts.join('&')}` : ''
-}
-
-async function load() {
-  loading.value = true
-  error.value = ''
-  try {
-    const body = await auth.apiFetch(`/api/judges/directory${buildQS()}`)
-    rows.value  = body.rows || []
-    total.value = body.total ?? 0
-  } catch (err) {
-    error.value = err.message || 'Could not load directory'
-    rows.value  = []
-    total.value = 0
-  } finally {
-    loading.value = false
-  }
-}
-
-async function loadOrgs() {
-  // /api/orgs/all is the existing diver-search org list, auth
-  // required by the existing route. Skip for anonymous viewers
-  // (the org dropdown gracefully falls back to a dash placeholder plus free-text
-  // country code in that case).
-  if (!auth.isLoggedIn) return
-  try {
-    orgs.value = await auth.apiFetch('/api/orgs/all')
-  } catch { /* dropdown stays empty */ }
-}
-
-function applyFilters() {
-  offset.value = 0
-  load()
-}
 function clearFilters() {
-  q.value = ''
-  orgId.value = ''
-  countryCode.value = ''
+  clearDirectoryFilters()
   minScores.value = 0
-  offset.value = 0
-  load()
-}
-function nextPage() {
-  if (offset.value + limit.value >= total.value) return
-  offset.value += limit.value
-  load()
-}
-function prevPage() {
-  offset.value = Math.max(0, offset.value - limit.value)
-  load()
 }
 
 // Client-side trim by minimum-scores threshold. Keeps the
@@ -103,22 +41,8 @@ const visibleRows = computed(() => {
   return rows.value.filter(r => Number(r.total_scores) >= Number(minScores.value))
 })
 
-const pageInfo = computed(() => {
-  if (!total.value) return ''
-  const from = total.value === 0 ? 0 : offset.value + 1
-  const to   = Math.min(offset.value + rows.value.length, total.value)
-  return `Showing ${from}–${to} of ${total.value}`
-})
-
 onMounted(() => {
   loadOrgs()
-  load()
-})
-
-// Re-run the search once filters settle. q gets its own button so
-// it doesn't fire per-keystroke; org / country apply on change.
-watch([orgId, countryCode], () => {
-  offset.value = 0
   load()
 })
 </script>

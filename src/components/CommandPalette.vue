@@ -9,13 +9,12 @@
  * Searches across, in priority order:
  *   1. Static destinations (dashboard, inbox, my profile, …)
  *   2. Events the user has access to (live → upcoming → completed)
- *   3. Clubs in the user's federation
- *   4. Divers (typeahead via /api/users/search?q=)
+ *   3. Divers (typeahead via /api/divers/search?q=)
  *
- * Static + events + clubs come from a single /api/dashboard call
- * that the dashboard already loads on mount; we cache the slice
- * client-side so opening the palette feels instant. Diver search
- * fans out per-keystroke once the query is 2+ chars.
+ * Events come from /api/events?limit=100, the same newest-first 100
+ * the dashboard bundle carries, cached client-side so opening the
+ * palette feels instant. Diver search fans out per-keystroke once the
+ * query is 2+ chars.
  *
  * Keyboard: ↑/↓ to move, Enter to jump, Esc to close.
  */
@@ -24,6 +23,7 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 import { onOpenCommandPalette, replayRoleTour } from '@/composables/useAppChannel'
+import { useDiverSearch } from '@/composables/useDiverSearch'
 
 const router = useRouter()
 const auth   = useAuthStore()
@@ -61,15 +61,19 @@ const STATIC_ENTRIES = [
     action: () => { auth.clearSession(); router.push('/login') } },
 ]
 
-// Cached slices populated from /api/dashboard on first open.
+// Events cached on first open (see primeCache).
 const events = ref([])
-const clubs  = ref([])
 const cachedAt = ref(0)
 
-// Diver search results (live keystroke).
-const divers = ref([])
-const diverLoading = ref(false)
-const diverAbort = ref(null)
+// Diver search results (live keystroke). The palette has always sent
+// the query untrimmed, a bit quicker than the other typeaheads, and
+// kept the last results up if a request fails.
+const {
+  results: divers,
+  search: searchDivers,
+  clear: clearDivers,
+  cancel: cancelDiverSearch,
+} = useDiverSearch(auth, { delay: 180, trim: false, keepOnError: true })
 
 // ----- Open / close --------------------------------------------
 async function openPalette() {
@@ -78,7 +82,7 @@ async function openPalette() {
   cursor.value = 0
   await nextTick()
   inputEl.value?.focus()
-  // Prime cache (events + clubs) once per 60s. Cmd-K should
+  // Prime the event cache once per 60s. Cmd-K should
   // feel instant, so we accept slightly-stale data over a
   // round-trip on every open.
   if (Date.now() - cachedAt.value > 60_000) primeCache()
@@ -87,16 +91,24 @@ async function openPalette() {
 function closePalette() {
   open.value = false
   query.value = ''
-  diverAbort.value?.abort()
-  diverAbort.value = null
+  cancelDiverSearch()
 }
 
+// This used to pull the whole /api/dashboard bundle (a dozen queries)
+// for its events slice alone. /api/events with the same limit returns
+// the same rows in the same order, and only the roles the bundle
+// fills events for ask, so a judge- or coach-only palette stays
+// event-free like before.
 async function primeCache() {
   if (!auth.isLoggedIn) return
+  if (!auth.hasAnyRole(['org_admin', 'meet_manager', 'diver'])) {
+    events.value = []
+    cachedAt.value = Date.now()
+    return
+  }
   try {
-    const data = await auth.apiFetch('/api/dashboard')
-    events.value = Array.isArray(data.events) ? data.events : []
-    clubs.value  = Array.isArray(data.clubs)  ? data.clubs  : []
+    const data = await auth.apiFetch('/api/events?limit=100')
+    events.value = Array.isArray(data) ? data : []
     cachedAt.value = Date.now()
   } catch { /* silent, palette still works fine with static entries */ }
 }
@@ -181,19 +193,7 @@ const results = computed(() => {
       _score: s,
     })
   }
-  // 3. Clubs
-  for (const c of clubs.value) {
-    const s = Math.max(score(c.name || '', q), score(c.short_code || '', q))
-    if (s > 0) out.push({
-      kind:'club',
-      label: c.name,
-      sub: c.short_code || 'Club',
-      icon:'🏛',
-      to: '/clubs',
-      _score: s - 5,    // Slightly de-prioritised vs events
-    })
-  }
-  // 4. Divers (only when q is non-empty, typeahead populates
+  // 3. Divers (only when q is non-empty, typeahead populates
   //    `divers.value`)
   for (const d of divers.value) {
     out.push({
@@ -210,32 +210,13 @@ const results = computed(() => {
   return out.slice(0, 20)
 })
 
-// Diver typeahead: debounced fetch as the user types.
-let diverDebounce = null
+// Diver typeahead: debounced fetch as the user types. It goes through
+// auth.apiFetch, so a stale session gets bounced to /login rather than
+// seeing a silently-empty palette.
 watch(query, (q) => {
   cursor.value = 0
-  clearTimeout(diverDebounce)
-  diverAbort.value?.abort()
-  diverAbort.value = null
-  if (!q || q.length < 2 || !auth.isLoggedIn) {
-    divers.value = []
-    return
-  }
-  diverDebounce = setTimeout(async () => {
-    diverLoading.value = true
-    const ctrl = new AbortController()
-    diverAbort.value = ctrl
-    try {
-      // auth.apiFetch routes through the central 401-handler so a
-      // stale-token user gets bounced to /login rather than seeing
-      // a silently-empty palette.
-      divers.value = await auth.apiFetch(
-        `/api/divers/search?q=${encodeURIComponent(q)}`,
-        { signal: ctrl.signal },
-      )
-    } catch { /* aborted, 401, or network, just ignore it */ }
-    diverLoading.value = false
-  }, 180)
+  if (!auth.isLoggedIn) { clearDivers(); return }
+  searchDivers(q)
 })
 
 function pick(entry) {

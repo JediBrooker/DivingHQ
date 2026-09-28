@@ -126,7 +126,6 @@ The first section groups features **by persona** — pick your role to see what 
 | Schedule | Edit mode — drag to move, drag edges to resize, click empty cell to insert, hover-× to delete | [Session Scheduler → Edit mode](/guide/session-scheduler#edit-mode) |
 | Schedule | Conflict warnings — judge / board / diver / referee double-bookings, hard (red) vs soft (amber) | [Session Scheduler → Conflict detection](/guide/session-scheduler#conflict-detection) |
 | Schedule | Per-conflict dismissal with audit trail; resurfaces if windows or resource membership change | [Session Scheduler → Dismissing a conflict](/guide/session-scheduler#dismissing-a-conflict) |
-| Schedule | Judge availability badge in the Judge Panel Modal (green available / amber busy) | [Session Scheduler → Conflicts from the Judge Panel Modal](/guide/session-scheduler#conflicts-from-the-judge-panel-modal) |
 | Schedule | Live re-flow on event completion — "Reschedule downstream" modal with per-block checkboxes | [Session Scheduler → Live re-flow](/guide/session-scheduler#live-re-flow) |
 | Schedule | Duplicate session to next day (preserves shape, clears event references) | [Session Scheduler → Duplicate to next day](/guide/session-scheduler#duplicate-to-next-day) |
 | Schedule | Public iCal feed per meet (`/api/meets/<id>/schedule.ics`) — coaches / federations subscribe | [Session Scheduler → iCal export](/guide/session-scheduler#ical-export) |

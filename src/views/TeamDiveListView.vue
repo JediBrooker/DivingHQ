@@ -2,16 +2,14 @@
 import { ref, computed, onMounted } from 'vue'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
-import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
-import { DIVE_DIRECTORY_TTL_MS } from '@/lib/cache-policy'
 import { diveDescription } from '@/composables/useDiveLabel'
 import { useDiveSearch } from '@/composables/useDiveSearch'
+import { useDiveDirectory } from '@/composables/useDiveDirectory'
 
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
-const { t } = useI18n()
 
 const teamId  = computed(() => route.params.teamId)
 const eventId = computed(() => route.params.eventId)
@@ -19,7 +17,7 @@ const eventId = computed(() => route.params.eventId)
 const team = ref(null)            // { id, name, short_code, org_id, ... }
 const members = ref([])           // [{ id, full_name, ... }]
 const event = ref(null)           // event metadata
-const directory = ref([])         // dive_directory rows
+const { dives: directory, reload: loadDiveDirectory } = useDiveDirectory(auth)
 const rounds = ref([])            // editor state per round
 const loading = ref(true)
 const saving = ref(false)
@@ -83,17 +81,15 @@ async function load() {
   loading.value = true
   errorMsg.value = ''
   try {
-    const [allEvents, teamMembers, existingList, allDives, allTeamsInOrg] = await Promise.all([
+    const [allEvents, teamMembers, existingList, allTeamsInOrg] = await Promise.all([
       auth.apiFetch('/api/events'),
       auth.apiFetch(`/api/teams/${teamId.value}/members`),
       auth.apiFetch(`/api/teams/${teamId.value}/events/${eventId.value}/dive-list`),
-      auth.cachedApiFetch('/api/dive-directory', {
-        cache: { maxAgeMs: DIVE_DIRECTORY_TTL_MS },
-      }),
       // Load the team itself by listing the user's org teams; we
       // don't have a direct GET /api/teams/:id endpoint, but we
       // can locate the team via the org listing.
       auth.apiFetch(`/api/orgs/${auth.user.org_id}/teams`),
+      loadDiveDirectory(),
     ])
 
     event.value = allEvents.find(e => e.id === eventId.value) || null
@@ -102,7 +98,6 @@ async function load() {
       return
     }
     members.value = teamMembers
-    directory.value = allDives
 
     // Try to find the team in the user's org; fall back to a
     // synthetic placeholder if the team is in another org and

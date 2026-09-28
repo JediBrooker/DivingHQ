@@ -9,8 +9,7 @@ const { t } = useI18n()
 import { confirmAction } from '@/composables/useConfirm'
 import { showSuccess, showError } from '@/composables/useNotify'
 import { fmtDate } from '@/lib/format'
-import ClubAdminsModal from '@/components/ClubAdminsModal.vue'
-import RegionAdminsModal from '@/components/RegionAdminsModal.vue'
+import AdminRosterModal from '@/components/AdminRosterModal.vue'
 import ClubApproveModal from '@/components/ClubApproveModal.vue'
 import ClubRejectModal from '@/components/ClubRejectModal.vue'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
@@ -624,8 +623,8 @@ onMounted(async () => {
     </div>
   </div>
 
-  <ClubAdminsModal v-if="adminsFor" :club="adminsFor" @close="adminsFor = null" />
-  <RegionAdminsModal v-if="regionAdminsFor" :region="regionAdminsFor" @close="regionAdminsFor = null" />
+  <AdminRosterModal v-if="adminsFor" kind="club" :target="adminsFor" @close="adminsFor = null" />
+  <AdminRosterModal v-if="regionAdminsFor" kind="region" :target="regionAdminsFor" @close="regionAdminsFor = null" />
   <ClubApproveModal v-if="approving" :club="approving" @close="approving = null" @done="onApproved" />
   <ClubRejectModal v-if="rejecting" :club="rejecting" :candidates="rejectCandidates(rejecting)"
                    :suggested="lookalikes.get(rejecting.id)?.id || ''"
