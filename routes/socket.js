@@ -87,11 +87,11 @@ module.exports = function attachSocket({
   io,
   pool,
   JWT_SECRET,
-  // From lib/middleware. socketRequireRole is passed in but nothing
-  // here calls it: submit_score does its own role check and the
-  // Control Room events go through socketCanManageEvent. Heads up,
-  // that means the maintenance-mode check that lives in
-  // socketRequireRole doesn't run for any socket write today.
+  // From lib/middleware. submit_score and judge_signal call
+  // socketRequireRole(socket) with no roles, which is the signed-in +
+  // maintenance-mode check (they do their own role and panel checks).
+  // The Control Room events go through socketCanManageEvent, which runs
+  // the same maintenance check.
   socketRequireRole,
   socketCanManageEvent,
   isValidScore,
@@ -130,9 +130,6 @@ module.exports = function attachSocket({
   if (!io || !pool || !JWT_SECRET) {
     throw new Error("attachSocket requires { io, pool, JWT_SECRET, … }");
   }
-  // Not called yet (see the note on the parameter), void keeps lint
-  // quiet without dropping it from the mount.
-  void socketRequireRole;
 
   // Idempotency layer (migration 054 + lib/idempotency.js).
   // Socket handlers that accept writes call `idem.socketCheck`
@@ -560,6 +557,12 @@ module.exports = function attachSocket({
         reject("not_authenticated", { message: "You must be signed in to submit scores." });
         return;
       }
+      // Maintenance mode freezes writes for everyone but a sysadmin, the
+      // socket half of server.js's maintenanceGate.
+      if (!socketRequireRole(socket)) {
+        reject("maintenance", { message: "DivingHQ is in maintenance mode, scores can't be saved right now." });
+        return;
+      }
       const judgeId = socket.userId;
       const roles = socket.userOrgRoles || [];
       if (!socket.userIsSystemAdmin
@@ -904,6 +907,7 @@ module.exports = function attachSocket({
     // -----------------------------------------------------------
     on("judge_signal", async (data) => {
       if (!socket.userId) return;
+      if (!socketRequireRole(socket)) return;     // maintenance mode
       if (socketActionRateLimited("judge_signal", socket.userId)) return;
       if (typeof socket.userTokenVersion === "number"
           && !(await isTokenVersionCurrent(socket.userId, socket.userTokenVersion))) {

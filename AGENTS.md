@@ -218,9 +218,9 @@ existing-account flow stay open regardless.
 **Maintenance mode** (`maintenance`, migration 086, seeded off) is a global
 read-only lockdown. `maintenanceGate` in `server.js` refuses non-sysadmin
 write-method requests (allowlist: login, logout, health, `/webhooks/`); the
-socket side is one check in `socketRequireRole` (`lib/middleware.js`), which is
-why every mutating socket event has to route through that gate and not roll its
-own. `MaintenanceBanner.vue` shows the notice, suppressed in the chromeless
+socket side is the same check in `socketRequireRole` and `socketCanManageEvent`
+(`lib/middleware.js`), which is why every mutating socket event has to route
+through one of those two gates and not roll its own. `MaintenanceBanner.vue` shows the notice, suppressed in the chromeless
 broadcast/overlay modes. `bootChecks()` loads flags before `listen()`, so a
 test that `require()`s `server.js` (only `integration.test.js` does) must call
 `features.load()` itself, everything reads fail-closed until it does.

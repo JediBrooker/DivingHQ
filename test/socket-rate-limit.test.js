@@ -311,3 +311,21 @@ test("submit_score only hashes and rebroadcasts the fields that define a submiss
   assert.deepEqual(Object.keys(sent.payload).sort(),
     ["competitor_id", "event_id", "judge_id", "judge_number", "round_number", "score"]);
 });
+
+// The socket half of maintenance mode. socketRequireRole holds the check
+// (lib/middleware.js); submit_score and judge_signal never called it.
+test("maintenance mode stops judges scoring and signalling over the socket", async () => {
+  const createMiddleware = require("../lib/middleware");
+  const { socketRequireRole } = createMiddleware({
+    pool: { query: async () => ({ rows: [] }) }, JWT_SECRET: "test-secret", isMaintenance: () => true,
+  });
+  const pool = scoringPool();
+  const h = makeHarness({ deps: { pool, socketRequireRole } });
+  const c = await h.connect("198.51.100.34", judgeToken("judge-maint"));
+  const reply = await c.ask("submit_score", { event_id: VALID_ID, competitor_id: VALID_ID, round_number: 1, score: 7 });
+  assert.equal(reply.ok, false);
+  assert.equal(reply.error, "maintenance");
+  await c.fire("judge_signal", { event_id: VALID_ID, competitor_id: VALID_ID, round_number: 1, signaled: true });
+  assert.equal(h.broadcasts.length, 0, "nothing reaches the room");
+  assert.ok(!pool.writes.some((sql) => /INSERT INTO scores/.test(sql)));
+});

@@ -18,7 +18,7 @@ that's intentional, but every privileged event must call
 |---|---|---|
 | `state_update`            | `{ event_id, diverName, country_code, club_name, club_code, diveCode, description, round_number, status, … }` | A diver becomes active in the Control Room, or a new client connects (rebroadcast on demand). |
 | `score_received`          | `{ event_id, competitor_id, round_number, score, judge_id, judge_number }`, built from the checked values (never an echo of the client's object; `score` is the stored number) | A judge submits a score. Broadcast to everyone watching the meet. When the judge's value lost to an earlier manual entry, only the judge's own socket gets it, with the operator's `score` and `superseded_by: 'manual_entry'`. |
-| `score_rejected`          | `{ reason: 'not_authenticated' \| 'insufficient_role' \| 'not_on_panel' \| 'bad_payload' \| 'bad_round' \| 'bad_score' \| 'rate_limited', message?: string }` | A submit_score from this socket failed validation. Sent only to the offending socket. |
+| `score_rejected`          | `{ reason: 'not_authenticated' \| 'maintenance' \| 'insufficient_role' \| 'token_revoked' \| 'not_on_panel' \| 'event_not_live' \| 'bad_payload' \| 'bad_round' \| 'bad_score' \| 'rate_limited' \| 'server_error', message?: string }` | A submit_score from this socket failed validation. Sent only to the offending socket. |
 | `score_corrected`         | The new score row from `PUT /api/scores/:id` | A referee corrects a score via HTTP (the socket bus rebroadcasts so other operators see it live). |
 | `final_score_announced`   | Whatever the announcer sent | Announcer presses "Announce" in the Control Room. |
 | `referee_action_failed`   | `{ event_id, competitor_id, round_number, … }` | Referee marks a dive failed. |
@@ -28,7 +28,7 @@ that's intentional, but every privileged event must call
 | `meet_held`               | `{ event_id, reason \| null, since: <ms epoch> }` | Operator holds the meet, or a new client joins while a hold is active. |
 | `meet_resumed`            | `{ event_id }` | Operator resumes the meet. |
 | `venue.scoreboard_state`  | Canonical venue payload from `lib/venue-state.js` | Emitted to `venue:<event_id>` subscribers after subscribe, active-diver changes, score changes, score announce, hold, and resume. Used by hardware bridges. |
-| `unauthorized`            | `{ reason: 'not_authenticated' \| 'insufficient_role' \| 'missing_event_id' \| 'event_not_found' \| 'wrong_org' \| 'token_revoked' }` | A privileged event was attempted by an anonymous or under-roled socket, or for an event the socket can't drive. |
+| `unauthorized`            | `{ reason: 'not_authenticated' \| 'maintenance' \| 'insufficient_role' \| 'missing_event_id' \| 'event_not_found' \| 'wrong_org' \| 'token_revoked' }` | A privileged event was attempted by an anonymous or under-roled socket, or for an event the socket can't drive. |
 | `schedule:conflict_dismissed` | `{ meet_id, action: 'dismiss' \| 'undismiss' }` | A scheduler conflict was dismissed or un-dismissed via the editor-only API. Drawer clients refetch `/api/meets/:id/conflicts` on receipt. The broadcast is intentionally minimal and does not include personnel labels. |
 | `schedule:block_updated`      | `{ meet_id, session_id, block_id?, created?, session_updated? }` | A Phase 3 manual edit landed (`PUT /api/blocks/:id`, `POST /api/sessions/:sessionId/blocks`, or `PUT /api/sessions/:id`). Other timeline tabs refetch `/sessions` and update inline. The broadcast is intentionally minimal; conflict details stay behind `/api/meets/:id/conflicts`. |
 | `schedule:block_deleted`      | `{ meet_id, session_id, block_id }` | A schedule block was deleted via `DELETE /api/blocks/:id`. Other tabs refetch the schedule. |
@@ -48,6 +48,12 @@ meet (`meets.host_club_id`, migration 087). That second path is how a club
 in a country with no federation on DivingHQ runs its own meets. An
 `event_id` that isn't a UUID is refused up front (`unauthorized`,
 `event_not_found`) and never reaches the database.
+
+Maintenance mode (the `maintenance` feature flag) refuses every write
+here for anyone but a sysadmin: `socketCanManageEvent` checks it for
+the Control Room events, and `submit_score` / `judge_signal` call
+`socketRequireRole(socket)` for it (`score_rejected` / `unauthorized`
+with reason `maintenance`).
 
 Every handler runs inside a guard (`guarded()` in `routes/socket.js`):
 if it throws, the error is logged and a client that passed an ack

@@ -324,3 +324,15 @@ test("socketCanManageEvent: a non-UUID event id is refused without touching the 
     assert.equal(socket.emits.at(-1).payload.reason, "event_not_found");
   }
 });
+
+// Maintenance lived only in socketRequireRole, which nothing on the
+// socket side called, so judges kept scoring and operators kept driving
+// events while every HTTP write got a 503.
+test("socketCanManageEvent: maintenance mode refuses a non-admin, lets a sysadmin through", async () => {
+  const { socketCanManageEvent } = buildWithMaintenance(() => true);
+  const EVENT = "33333333-3333-3333-3333-333333333333";
+  const socket = fakeSocket({ sysadmin: false });
+  assert.equal(await socketCanManageEvent(socket, EVENT), false);
+  assert.equal(socket.emits.at(-1).payload.reason, "maintenance");
+  assert.equal(await socketCanManageEvent(fakeSocket({ sysadmin: true }), EVENT), true);
+});
