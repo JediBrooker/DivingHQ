@@ -204,6 +204,31 @@ test("A6-05 the offline banner shows when the connection drops", async ({ page, 
   });
 });
 
+// With the banner back, every page load flashed "Offline for 0s": the
+// socket hadn't connected yet and that first look counted as an outage.
+// A socket that never gets through is still reported, after a grace.
+test("A6-05 the banner doesn't flash 'offline' while the socket is still connecting", async ({ page, request }) => {
+  await withOrg(request, async (org) => {
+    const diver = await setup.insertUser({ orgId: org.orgId, role: "diver", fullName: "Fay Flash" });
+    await quiet(page);
+    await page.addInitScript(() => {
+      window.__bannerSeen = false;
+      new MutationObserver(() => {
+        if (document.querySelector(".offline-banner")) window.__bannerSeen = true;
+      }).observe(document, { childList: true, subtree: true });
+    });
+    await signIn(page, diver.username);
+    await page.goto("/competitor");
+    await expect(page.locator(".page-header")).toBeVisible();
+    await page.waitForTimeout(1500);
+    expect(await page.evaluate(() => window.__bannerSeen), "no banner on a normal load").toBe(false);
+
+    await page.route("**/socket.io/**", (route) => route.abort());
+    await page.reload();
+    await expect(page.locator(".offline-banner")).toContainText(/Offline/, { timeout: 10_000 });
+  });
+});
+
 // With the banner back, an action that failed days ago would pin it up
 // for good: nothing ever ran the outbox's gc(), so finished entries past
 // the 72h retention never left IndexedDB. A recent failure still shows.

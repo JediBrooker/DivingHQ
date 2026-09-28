@@ -11,7 +11,7 @@
 // out to multiple IDB scans, one 'change' event triggers one refresh
 // and every consumer sees the same value.
 //
-import { ref, computed, watch, effectScope } from 'vue'
+import { ref, computed, watch, effectScope, onScopeDispose } from 'vue'
 import { createOutbox, createIdbBackend, STATUSES } from '@/lib/outbox'
 import { fingerprintFromUser } from '@/lib/userFingerprint'
 import { useSocket } from './useSocket'
@@ -26,6 +26,11 @@ let instanceFingerprint = null   // whose queue the singleton is scoped to
 let refreshTimer = null
 let offlineScope = null   // detached effectScope owning the socket watch
 let offlineUserId = null  // whose socket that watch is on
+
+// How long a socket that has never connected gets before the banner
+// calls it offline (see the watch in useOutbox). A normal connect on
+// venue wifi lands well inside this.
+const FIRST_CONNECT_GRACE_MS = 4000
 
 const counts = ref({ pending: 0, inflight: 0, synced: 0, conflict: 0, failed: 0 })
 const offlineSince = ref(null)        // Date | null, set on disconnect, cleared on reconnect
@@ -120,13 +125,31 @@ export function useOutbox() {
     // unmounts while the singleton state lives on, silently killing
     // offline tracking for every later consumer. Learned that one
     // the hard way.
+    //
+    // A socket that hasn't connected YET isn't an outage. On a fresh
+    // page load it's still dialling in, and reading that as offline
+    // put "Offline for 0s" up on every load of the judge, diver and
+    // coach screens once the banner showed again. So the first look
+    // gets a grace period; a real drop (connected, then not) counts
+    // straight away, and a page opened with no network still says so,
+    // dated from when it opened.
     offlineScope = effectScope(true)
     offlineScope.run(() => {
+      let graceTimer = null
+      onScopeDispose(() => clearTimeout(graceTimer))
       watch(socket.isConnected, (connected, was) => {
-        if (!connected && was !== false) {
-          offlineSince.value = new Date()
-        } else if (connected) {
+        clearTimeout(graceTimer)
+        graceTimer = null
+        if (connected) {
           offlineSince.value = null
+        } else if (was === true) {
+          offlineSince.value = new Date()
+        } else if (offlineSince.value === null) {
+          const since = new Date()
+          graceTimer = setTimeout(() => {
+            graceTimer = null
+            if (!socket.isConnected.value) offlineSince.value = since
+          }, FIRST_CONNECT_GRACE_MS)
         }
       }, { immediate: true })
     })
