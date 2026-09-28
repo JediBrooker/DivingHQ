@@ -400,7 +400,7 @@ until the operator has switched maintenance mode on and passed
 | May this caller see an event's scores? (Live/Completed public, else host or participating org) | `ensureEventVisible(pool, req, res, eventId)`, or `canSeeEvent(db, eventRow, user)` when the handler already has the row | `lib/event-visibility.js` |
 | Is this id a UUID string? (the one test, sockets and gates included) | `isUuid(v)` / `router.param("id", requireUuidParam)` | `lib/uuid.js` |
 | Malformed id in a path (404) or a filter (400), not a Postgres 500 | `uuidParams(router, ...names)` / `rejectBadUuidQuery(req, res, ...names)` | `lib/uuid-params.js` (built on `lib/uuid.js`) |
-| A PDF export (Unicode font if configured, else WinAnsi folding) | `createPdfDocument()` / `pdfTranslate()` | `lib/pdf-document.js` |
+| A PDF export (each script in its own Noto font when the box has it, WinAnsi folding for the rest). Keep asking for `Helvetica` / `-Bold` / `-Oblique`; the document maps those onto the fonts, measures and draws per run. Tests that read PDF text pin `PDF_FONT_DIR=none` | `createPdfDocument()` / `pdfTranslate()` | `lib/pdf-document.js` (files: `lib/pdf-fonts.js`, runs and bidi: `lib/pdf-scripts.js`, folding: `lib/pdf-fold.js`) |
 | The Control Room's live queue (competing rows only, swap in a fresh roster, next diver) | `competingQueue` / `rebaseQueue` / `nextQueueIndex` | `src/composables/useLivePools.js` |
 | Computed dive points (server) | `calc_event_dive_points(...)` SQL function | `init.sql` |
 | Auth-aware fetch with auto-redirect on 401 | `auth.apiFetch(url, opts)` | `src/stores/auth.js` |

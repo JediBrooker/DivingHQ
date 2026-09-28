@@ -54,6 +54,15 @@ const crypto = require("node:crypto");
 // in scripts/run-tests.js, since `node --test` on this file skips that.
 process.env.VAPID_PUBLIC_KEY = "";
 process.env.VAPID_PRIVATE_KEY = "";
+// Same trick for the PDF fonts. pdfText() below reads the WinAnsi bytes
+// Helvetica writes; once lib/pdf-fonts finds Noto on the box (it looks in
+// the Debian paths by default) text goes out as glyph ids instead, and
+// every PDF assertion in here would fail on a server that has the fonts.
+// The font path is tested DB-less in test/pdf-document.test.js.
+process.env.PDF_FONT_DIR = "none";
+process.env.PDF_FONT_REGULAR = "";
+process.env.PDF_FONT_BOLD = "";
+process.env.PDF_FONT_ITALIC = "";
 
 require("dotenv").config();
 // Public signups are now a feature flag ('signups', migration 086), not an env
@@ -10212,7 +10221,7 @@ test("a synchro partner's profile, analytics, public card and score sheet show t
 test("program.pdf in Russian prints readable headers and names", async (t) => {
   if (!dbReachable) return t.skip("DB not reachable");
   if (!serverReady) return t.skip("server didn't boot — see warning above");
-  if (process.env.PDF_FONT_REGULAR) return t.skip("Unicode PDF font configured, text isn't folded");
+  if (require("../lib/pdf-fonts").anyFontFile()) return t.skip("PDF fonts found, text isn't folded");
   const st = await setupFixture({ withEvent: false });
   try {
     const meet = (await pool.query(
@@ -13201,5 +13210,53 @@ test("custom dives: a team's dive list won't take one whose DD is outside the of
     await pool.query("DELETE FROM events WHERE org_id = $1", [orgId]).catch(() => {});
     await pool.query("DELETE FROM teams WHERE org_id = $1", [orgId]).catch(() => {});
     await compKit.cleanup(orgId);
+  }
+});
+
+// PDFs through the real route with a name in every script the per-script
+// font fallback knows about. This suite runs with PDF_FONT_DIR=none (top
+// of the file), which is a box without fonts-noto-core or fonts-noto-cjk:
+// every row still prints, Cyrillic and Latin-extended names are spelled
+// out and the scripts with no Latin form come out as "?", never mojibake
+// or a 500. With the fonts installed the same rows print in their own
+// scripts; that path is tested without a database in
+// test/pdf-document.test.js.
+test("start-list.pdf prints a row for every script, folded when there's no font", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  if (require("../lib/pdf-fonts").anyFontFile()) return t.skip("PDF fonts found, text isn't folded");
+  const st = await setupFixture({ withEvent: true });
+  try {
+    const dive = await recordKit.threeMetreDive();
+    const names = {
+      "Иван Петров": "Ivan Petrov",
+      "Łukasz Świątek": "Lukasz Swiatek",
+      "Γιώργος Παπαδόπουλος": "Giorgos Papadopoulos",
+      "李娜": "??",
+      "山田はなこ": "?????",
+      "김연아": "???",
+      "محمد علي": "???? ???",
+      "רחל כהן": "??? ???",
+    };
+    let order = 0;
+    for (const fullName of Object.keys(names)) {
+      const id = await insertUser({
+        orgId: st.orgId, role: "diver", fullName,
+        username: `int-scr-${order}-${st.slug}`,
+      });
+      await pool.query(
+        `INSERT INTO competitor_dive_lists (event_id, competitor_id, dive_id, round_number, display_order)
+         VALUES ($1, $2, $3, 1, $4)`,
+        [st.eventId, id, dive, ++order],
+      );
+    }
+    const res = await fetch(`${baseUrl}/api/events/${st.eventId}/start-list.pdf`);
+    assert.equal(res.status, 200);
+    const text = pdfText(Buffer.from(await res.arrayBuffer())).join("\n");
+    for (const [name, folded] of Object.entries(names)) {
+      assert.ok(text.includes(`${folded}  TST`), `${name} prints as ${folded}\n${text}`);
+    }
+  } finally {
+    await teardownFixture(st);
   }
 });

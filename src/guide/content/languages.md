@@ -8,6 +8,7 @@ This page covers:
 - How to switch language in the app
 - What persists, where, and across what
 - Right-to-left (RTL) support
+- Names in other scripts on the PDF exports
 - How federation admins / developers can add new languages or refresh existing ones via the AI translation pipeline
 
 If you only want to use DivingHQ in another language, read [Supported languages](#supported-languages), [Switching language](#switching-language), and [Right-to-left](#right-to-left-arabic). The translation-runner sections are for maintainers.
@@ -66,6 +67,18 @@ Here is the login page in Arabic. Nothing on it was written twice: the same mark
 This is achieved with CSS *logical properties* (`padding-inline-end`, `inset-inline-end`, `margin-inline-start`, etc.) throughout the layout, so no per-component RTL stylesheet is needed. Per-page chrome (event-picker chevrons, arrow indicators, menu pop-out direction) all flip correctly.
 
 If you spot a layout glitch in Arabic that doesn't flip cleanly, file a bug and tag it `bug` + `rtl`.
+
+## Names in PDF exports
+
+The PDFs (meet program, start list, score sheet, results, judge ranking) print every diver, judge, club and meet name in its own script: Latin with any accent, Cyrillic, Greek, Arabic, Hebrew, Chinese, Japanese and Korean, all on the same page. Each script comes from its own font, so 李娜, Иван Петров and محمد علي can sit in one start list. The translated section headings print in your language the same way.
+
+A few things work differently from the screens:
+
+- **The page stays left to right**, even in Arabic. Arabic and Hebrew names read right to left and Arabic letters join up as they should, with numbers and brackets where a reader expects them, but tables and columns don't mirror the way the app does.
+- **Chinese characters use the Simplified Chinese letterforms** unless the name has kana in it (then Japanese) or Hangul (Korean). On a server set up for a Taiwanese, Hong Kong, Japanese or Korean federation the default can be changed.
+- **If the server is missing the fonts for a script**, that script prints the way DivingHQ's PDFs always have: Cyrillic and Greek names are spelled out in Latin letters (Иван becomes Ivan), accents outside Western European are dropped (Ł becomes L), and scripts with no Latin spelling print as `?`. Headings in a language the PDF can't print come out in English. Everything else on the PDF is unaffected.
+
+Self-hosting? The fonts are two Debian packages; the README's *PDF fonts* section lists them.
 
 ## Adding a new language
 

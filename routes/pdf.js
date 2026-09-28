@@ -17,10 +17,10 @@
 //
 // Each handler streams the bytes straight back via doc.pipe(res)
 // (or res.write for CSV) so a 500-row meet doesn't buffer in
-// memory before sending. Documents come from lib/pdf-document:
-// PDFKit's bundled Helvetica by default, with names folded to
-// what it can print, or Unicode fonts when PDF_FONT_REGULAR
-// points at one.
+// memory before sending. Documents come from lib/pdf-document,
+// which draws each script in its own Noto font when the box has
+// it (lib/pdf-fonts) and folds the rest to what Helvetica can
+// print. The handlers just ask for Helvetica.
 //
 // Mounted via:
 //   app.use(require('./routes/pdf')({ pool }))

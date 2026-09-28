@@ -532,6 +532,28 @@ A federation or state body registering at `/register-org` from a listed country 
 
 Without `CF_ACCOUNT_ID` and `CF_EMAIL_TOKEN` every email helper silently does nothing, which means nobody can confirm their address and sign in except accounts you verify by hand. Set up Cloudflare Email Sending as described in [Local setup → Configure environment](#local-setup), and set `SUPPORT_EMAIL` to an inbox you read: it's the Reply-To on every email and the contact address the app shows people.
 
+### PDF fonts
+
+The PDF exports print every name in its own script, as long as the box has the fonts. No single font covers them all, so each script gets its own Noto file, looked up where the Debian packages install them:
+
+```bash
+sudo apt install fonts-noto-core fonts-noto-cjk
+pm2 restart dive-recorder     # fonts are looked up once per process
+```
+
+| Package | Directory | Files used | Covers |
+|---|---|---|---|
+| `fonts-noto-core` | `/usr/share/fonts/truetype/noto` | `NotoSans-Regular/Bold/Italic.ttf` | Latin (every accent), Cyrillic, Greek |
+| | | `NotoSansArabic-Regular/Bold.ttf` | Arabic |
+| | | `NotoSansHebrew-Regular/Bold.ttf` | Hebrew |
+| `fonts-noto-cjk` | `/usr/share/fonts/opentype/noto` | `NotoSansCJK-Regular/Bold.ttc` | Chinese, Japanese, Korean (one collection, a face per region) |
+
+Nothing breaks without them. Whatever a missing package would have drawn falls back to PDFKit's built-in Helvetica the way every PDF did before: accents outside Western European are dropped, Cyrillic and Greek are transliterated (Иван Петров becomes Ivan Petrov), CJK, Arabic and Hebrew print as `?`, and a section header in a language the fonts can't print comes out in English. So `fonts-noto-core` alone gets Latin, Cyrillic, Greek, Arabic and Hebrew names right, and `fonts-noto-cjk` (about 90 MB installed on bookworm) adds Chinese, Japanese and Korean. Other scripts (Georgian, Armenian, Thai, Devanagari and so on) still print as `?` even though fonts-noto-core has files for them; adding one is a `FILE_NAMES` entry in `lib/pdf-fonts.js` plus its code point ranges and slot in `lib/pdf-scripts.js`. PDFKit only embeds the glyphs a document uses, so the PDFs stay small either way.
+
+Arabic and Hebrew names are shaped and read right to left, with numbers and brackets in the right place, inside what is still a left-to-right page: the tables don't mirror the way the app does in Arabic, and the letter-spaced section headers aren't letter-spaced in Arabic (it would pull the joined letters apart).
+
+`PDF_FONT_DIR` points at other directories instead (or `none` to switch the fonts off), `PDF_FONT_REGULAR` / `_BOLD` / `_ITALIC` still pick the Latin files by hand, and `PDF_FONT_CJK_REGION` picks the face used for Chinese characters (SC by default; TC, HK, JP, KR). See `.env.example`. The code is `lib/pdf-fonts.js` (finding the files), `lib/pdf-scripts.js` (splitting text into runs) and `lib/pdf-document.js` (drawing them).
+
 ---
 
 </details>
