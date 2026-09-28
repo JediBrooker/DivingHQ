@@ -20,7 +20,8 @@
 const express = require("express");
 const { publicId } = require("../lib/public-id");
 const {
-  perDiveSelect, perDivePointsCte, teamStandingsCte, compStandingsCte, PUBLIC_PANEL_SQL,
+  perDiveSelect, perDivePointsCte, teamStandingsCte, compStandingsCte,
+  eventRepCodesCte, PUBLIC_PANEL_SQL,
 } = require("../lib/scoring-sql");
 const { eventRecordMarks } = require("../lib/records");
 const { PUBLIC_CLUB_JOIN } = require("../lib/club-approvals");
@@ -235,24 +236,27 @@ ${perDiveSelect({
              /* Migration 040: reserves don't appear in the
                 upcoming-dives queue. */
              AND cdl.is_reserve = FALSE
-         )
+         ),
+         ${eventRepCodesCte()}
          SELECT ordered.round_number, ordered.round_order::int AS round_order,
                 ordered.competitor_id, ordered.partner_id,
                 u.full_name,
-                event_rep_code($1, ordered.competitor_id, o.country_code) AS country_code,
+                rc.code AS country_code,
                 cl.name AS club_name,
                 pu.full_name AS partner_name,
-                event_rep_code($1, ordered.partner_id, pl.country_code) AS partner_country,
+                rp.code AS partner_country,
                 t.name AS team_name,
                 d.dive_code, d.position, d.description, d.dd
          FROM ordered
          JOIN users u ON u.id = ordered.competitor_id
-         JOIN organisations o ON o.id = u.org_id
          ${PUBLIC_CLUB_JOIN}
          LEFT JOIN users pu ON pu.id = ordered.partner_id
-         LEFT JOIN organisations pl ON pl.id = pu.org_id
          LEFT JOIN teams t ON t.id = ordered.team_id
          LEFT JOIN dive_directory d ON d.id = ordered.dive_id
+         /* The queue repeats each diver once per round left, so the
+            rep codes come from reps, one call per person. */
+         LEFT JOIN reps rc ON rc.id = ordered.competitor_id
+         LEFT JOIN reps rp ON rp.id = ordered.partner_id
          WHERE NOT EXISTS (
            SELECT 1 FROM scores s
            WHERE s.event_id = $1
@@ -387,9 +391,10 @@ ${perDiveSelect({
          SELECT r.*,
                 LAG(r.rnk) OVER (PARTITION BY r.competitor_id ORDER BY r.round_number) AS prev_rnk
          FROM ranked r
-       )
+       ),
+       ${eventRepCodesCte()}
        SELECT wp.competitor_id, u.full_name,
-              event_rep_code($1, wp.competitor_id, o.country_code) AS country_code,
+              rc.code AS country_code,
               cl.name AS club_name,
               wp.round_number,
               wp.round_total,
@@ -400,8 +405,11 @@ ${perDiveSelect({
                    ELSE (wp.prev_rnk - wp.rnk) END AS movement
        FROM with_prev wp
        JOIN users u ON u.id = wp.competitor_id
-       JOIN organisations o ON o.id = u.org_id
        ${PUBLIC_CLUB_JOIN}
+       /* One row per diver per round, so rep codes come from reps,
+          once per diver. Carried rounds are limited to this event's
+          roster above, so every diver here is in it. */
+       LEFT JOIN reps rc ON rc.id = wp.competitor_id
        /* Filter the synthetic carry-row (round_number=0) out of
           the rendered leaderboard. Its contribution survives in
           cumulative_total via the SUM OVER above. */

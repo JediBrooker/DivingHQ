@@ -362,6 +362,7 @@ until the operator has switched maintenance mode on and passed
 | "Couldn't load this" + Try again, for a failed fetch that must not read as an empty list or a permission refusal | `<LoadError @retry>` | `src/components/LoadError.vue` |
 | ISO country list (server validation + signup picker) | `countryByCode(a3)` / `countryFromStored(dbCode)` / `countries.json` | `lib/countries.js` |
 | What a diver represents in an event (country / state / club code) | `event_rep_code(event_id, user_id, home_country)` SQL function | `migrations/090_representation.sql`, `095_team_rep_code.sql` |
+| Those codes for everyone on an event, one call per person (for lists that repeat a diver per round or per dive) | `eventRepCodesCte()` | `lib/scoring-sql.js` |
 | The club / region / country ids an entry resolves to (snapshot first, partner snapshot next) | `event_rep_ids(event_id, user_id)` SQL function | `migrations/095_team_rep_code.sql` |
 | What a team represents in an event (the code its divers share, else the team org's country) | `event_team_rep_code(event_id, team_id)` SQL function | `migrations/095_team_rep_code.sql` |
 | Team-event standings rows (scoreboard, recap, results.pdf) | `teamStandingsCte()` | `lib/scoring-sql.js` |
