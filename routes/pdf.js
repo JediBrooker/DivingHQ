@@ -35,6 +35,16 @@ const { PUBLIC_CLUB_JOIN } = require("../lib/club-approvals");
 // lib/csv.js.
 const { csvRow, slugify } = require("../lib/csv");
 
+// The trim that marks judges' scores kept or dropped lives in the SPA
+// (src/composables/useScoreTrim.js, ESM) and AGENTS.md wants one copy of
+// it, so the score sheet imports that rather than keeping its own. Loaded
+// on first use and cached.
+let scoreTrim;
+function loadScoreTrim() {
+  if (!scoreTrim) scoreTrim = import("../src/composables/useScoreTrim.js");
+  return scoreTrim;
+}
+
 module.exports = function createPdfRouter({ pool }) {
   if (!pool) throw new Error("createPdfRouter requires { pool }");
   const router = express.Router();
@@ -982,35 +992,12 @@ module.exports = function createPdfRouter({ pool }) {
       const dives = divesRes.rows;
       const totals = totalRes.rows[0] || {};
 
-      // World Aquatics trim: apply the same algorithm the frontend uses
-      // (lib/score-trim semantics) so the dropped marks line up.
-      function trimCount(n) {
-        if (!n || n <= 3) return 0;
-        if (n === 5)  return 1;
-        if (n === 7)  return 2;
-        if (n === 9)  return 2;
-        if (n === 11) return 3;
-        return 0;
-      }
-      function annotateDrops(judges, n /*, eventType */) {
-        // For synchro 9/11 we'd need the sub-panel logic. For the
-        // score sheet we keep things simple: the canonical
-        // dive_total comes from the SQL function, and we just need
-        // the visual "what was dropped" markup. Falls back to
-        // individual trim for synchro panels we don't fully model
-        // here, hacky but it works.
-        const flagged = judges.map((j) => ({ ...j, dropped: false }));
-        const k = trimCount(n);
-        if (!k || flagged.length <= k * 2) return flagged;
-        const sorted = flagged
-          .map((j, i) => ({ idx: i, score: Number(j.score), jn: j.judge_number }))
-          .sort((a, b) => a.score - b.score || a.jn - b.jn);
-        for (let i = 0; i < k; i++) {
-          flagged[sorted[i].idx].dropped = true;
-          flagged[sorted[sorted.length - 1 - i].idx].dropped = true;
-        }
-        return flagged;
-      }
+      // World Aquatics trim marks, from the scoreboard's own helper (see
+      // loadScoreTrim) so a synchro panel is trimmed within its
+      // execution and sync sub-panels here too. The printed dive_total
+      // comes from calc_event_dive_points either way; this is only the
+      // brackets, and they used to disagree with both.
+      const { annotateJudgeRows } = await loadScoreTrim();
 
       const slug = slugify(diver.full_name, "diver");
       const doc = createPdfDocument({ margin: 50, size: "A4" });
@@ -1090,7 +1077,7 @@ module.exports = function createPdfRouter({ pool }) {
         }
         doc.moveDown(0.2);
 
-        const annotated = annotateDrops(d.judges_json || [], d.number_of_judges, d.event_type);
+        const annotated = annotateJudgeRows(d.judges_json || [], d.number_of_judges, d.event_type);
         const lineParts = annotated.map((j) =>
           j.dropped
             ? `[${Number(j.score).toFixed(1)}]`     // brackets = dropped

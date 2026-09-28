@@ -7563,3 +7563,41 @@ test("program timing counts synchro pairs once, however the roster stores them",
     await teardownFixture(st);
   }
 });
+
+// A synchro panel trims within its sub-panels (WA Art 9.1.5.4: execution
+// high and low across both athletes' marks, then the sync group), the way
+// the scoreboard and calc_event_dive_points do. The score sheet bracketed
+// a flat two-high, two-low across all nine judges instead.
+test("the score sheet brackets the synchro sub-panel trim the scoreboard shows", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const dive = await recordKit.threeMetreDive();
+    const lead = await recordKit.diver(st.orgId, null, "female", "Sheet Lead");
+    const partner = await recordKit.diver(st.orgId, null, "female", "Sheet Partner");
+    const ev = (await pool.query(
+      `INSERT INTO events (org_id, name, gender, height, number_of_judges, total_rounds, event_type, status)
+       VALUES ($1, 'Sync sheet', 'Female', '3m', 9, 5, 'synchro_pair', 'Live') RETURNING id`, [st.orgId],
+    )).rows[0].id;
+    await pool.query(
+      "INSERT INTO competitor_dive_lists (event_id, competitor_id, partner_id, dive_id, round_number) VALUES ($1, $2, $3, $4, 1)",
+      [ev, lead, partner, dive],
+    );
+    const scores = [5, 6, 7, 8, 9, 9.5, 9.5, 10, 10];
+    for (let i = 0; i < 9; i++) {
+      const j = await insertUser({ orgId: st.orgId, role: "judge", fullName: `Sync Judge ${i + 1}`, username: `int-sj-${crypto.randomBytes(4).toString("hex")}` });
+      await pool.query("INSERT INTO event_judges (event_id, judge_id, judge_number) VALUES ($1, $2, $3)", [ev, j, i + 1]);
+      await pool.query(
+        "INSERT INTO scores (event_id, competitor_id, judge_id, dive_id, round_number, score) VALUES ($1, $2, $3, $4, 1, $5)",
+        [ev, lead, j, dive, scores[i]],
+      );
+    }
+    const res = await fetch(`${baseUrl}/api/events/${ev}/divers/${lead}/score-sheet.pdf`);
+    assert.equal(res.status, 200);
+    const line = pdfText(Buffer.from(await res.arrayBuffer())).find((l) => l.startsWith("Judges:"));
+    assert.equal(line, "Judges: [5.0]  6.0  7.0  [8.0]  [9.0]  9.5  9.5  10.0  [10.0]");
+  } finally {
+    await teardownFixture(st);
+  }
+});
