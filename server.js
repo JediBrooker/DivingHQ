@@ -1487,6 +1487,37 @@ app.use((req, res) => {
   res.status(404).send('Not found');
 });
 
+// Last stop for anything passed to next(err): the JSON body parser's 400
+// (malformed JSON) and 413 (over the 256kb limit), a failed read of the
+// SPA shell, an async route handler that rejected (Express 5 forwards
+// those). Without this they fell through to Express's own handler, which
+// answers with an HTML error page (not the { error } the SPA and API
+// clients read) and prints a full stack trace for every junk request.
+// A client's mistake is one warn line; a real failure is logged in full.
+const { t: serverT } = require("./lib/server-i18n");
+app.use((err, req, res, next) => {
+  const raw = Number(err.status || err.statusCode);
+  const status = raw >= 400 && raw < 600 ? raw : 500;
+  if (status >= 500) {
+    logger.error({ err, method: req.method, path: req.path }, "request failed");
+  } else {
+    logger.warn({ status, method: req.method, path: req.path, reason: err.type || err.message }, "request refused");
+  }
+  // Headers already out: all Express can do is drop the connection, and
+  // its default handler knows how.
+  if (res.headersSent) return next(err);
+  const code = err.type === "entity.parse.failed" ? "bad_json"
+    : err.type === "entity.too.large" ? "body_too_large"
+    : undefined;
+  const message = status >= 500 ? serverT(req, "errors.server_error")
+    : status === 404 ? serverT(req, "errors.not_found")
+    : serverT(req, "errors.validation_failed");
+  if (req.path.startsWith("/api/") || req.path.startsWith("/webhooks/")) {
+    return res.status(status).json({ error: message, ...(code ? { code } : {}) });
+  }
+  res.status(status).type("text").send(message);
+});
+
 // =============================================================
 // START
 // =============================================================

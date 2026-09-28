@@ -7724,3 +7724,19 @@ test("an impossible from_date is a 400 on the diver profile and analytics", asyn
     await teardownFixture(st);
   }
 });
+
+test("a malformed or oversized JSON body gets a JSON error, not Express's HTML page", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const bad = await b1Kit.request("POST", "/api/auth/login", { body: "{bad" });
+  assert.equal(bad.status, 400);
+  assert.match(bad.headers["content-type"], /application\/json/);
+  assert.equal(typeof bad.body.error, "string");
+  assert.equal(bad.body.code, "bad_json");
+
+  const big = await b1Kit.request("POST", "/api/auth/login", { body: JSON.stringify({ username: "x".repeat(300 * 1024) }) });
+  assert.equal(big.status, 413);
+  assert.match(big.headers["content-type"], /application\/json/);
+  assert.equal(big.body.code, "body_too_large");
+  assert.doesNotMatch(big.text, /<html|at \w+ \(/i, "no HTML page, no stack trace");
+});
