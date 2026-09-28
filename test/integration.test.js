@@ -7583,3 +7583,51 @@ test("an event's dive-by-dive history is hidden while the scoreboard hides it", 
     await compKit.cleanup(orgId, otherOrg);
   }
 });
+
+test("sockets: the live diver goes out without payment or pending-club details", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const orgId = await compKit.org("pay");
+  const socks = [];
+  try {
+    const manager = await compKit.user(orgId, "Pay Manager", ["meet_manager"]);
+    const club = (await pool.query(
+      "INSERT INTO clubs (org_id, name, short_code, status) VALUES ($1, 'Waiting Club', $2, 'pending') RETURNING id",
+      [orgId, `W${crypto.randomBytes(2).toString("hex")}`.toUpperCase()],
+    )).rows[0].id;
+    const diver = await compKit.user(orgId, "Pay Diver", ["diver"], { clubId: club });
+    const eventId = await compKit.event(orgId, { status: "Live" });
+    await compKit.enter(eventId, diver.id, await compKit.dives(3), { display_order: 1 });
+    const roster = await fetchJson("GET", `/api/events/${eventId}/roster`, { token: manager.token });
+    const row = roster.body[0];
+    assert.equal(row.club_name, "Waiting Club", "staff see the pending club, on purpose");
+
+    const [ms, spectator] = await Promise.all([compKit.socket(manager.token), compKit.socket()]);
+    socks.push(ms, spectator);
+    spectator.emit("subscribe_event", { event_id: eventId });
+    await new Promise((r) => setTimeout(r, 100));
+    const heard = compKit.listen(spectator, "state_update");
+    // What ControlViewV2 sends: the roster row as it came.
+    assert.deepEqual(await compKit.ask(ms, "set_active_diver", { ...row, status: "ready" }), { ok: true });
+    const [payload] = await heard;
+    assert.ok(payload, "the spectator hears the new diver");
+    assert.equal(payload.competitor_id, diver.id);
+    assert.equal(payload.full_name, "Pay Diver");
+    for (const k of ["paid_entry", "competitor_org_id", "competitor_org_name", "dive_list_id"]) {
+      assert.ok(!(k in payload), `${k} stays in the Control Room`);
+    }
+    assert.equal(payload.club_name, null);
+    assert.equal(payload.club_code, null);
+    // Same on the copy kept for late joiners (and event_live_state).
+    const late = await compKit.socket();
+    socks.push(late);
+    const replay = compKit.listen(late, "state_update");
+    late.emit("get_active_diver", { event_id: eventId });
+    const [kept] = await replay;
+    assert.ok(kept && !("paid_entry" in kept));
+    assert.equal(kept.club_name, null);
+  } finally {
+    socks.forEach((s) => s.close());
+    await compKit.cleanup(orgId);
+  }
+});

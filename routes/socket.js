@@ -307,6 +307,34 @@ module.exports = function attachSocket({
     return true;
   }
 
+  // The Control Room sends its roster row as the active diver, and the
+  // roster is staff data: whether the entry is paid, the diver's org
+  // ids, the dive-list row id, and the club name even while that club
+  // is still waiting for its federation (lib/club-approvals.js keeps
+  // those private until approved). This payload goes to every
+  // spectator in the event room, so those come off here, server-side,
+  // whatever a client sends.
+  const PRIVATE_ACTIVE_FIELDS = ["paid_entry", "competitor_org_id", "competitor_org_name", "dive_list_id"];
+  async function publicActivePayload(data) {
+    const out = { ...data };
+    for (const k of PRIVATE_ACTIVE_FIELDS) delete out[k];
+    if (out.club_name != null || out.club_code != null) {
+      let clubPublic = false;
+      if (EVENT_UUID_RE.test(String(out.competitor_id ?? ""))) {
+        const r = await pool.query(
+          `SELECT cl.status FROM users u JOIN clubs cl ON cl.id = u.club_id WHERE u.id = $1`,
+          [out.competitor_id],
+        );
+        clubPublic = r.rows[0]?.status === "active";
+      }
+      if (!clubPublic) {
+        out.club_name = null;
+        out.club_code = null;
+      }
+    }
+    return out;
+  }
+
   // Push the event's current scoreboard_state to any venue bridge.
   // emitVenueState catches its own build errors, but it's async and most
   // callers don't await it, so a rejection used to go unhandled despite
@@ -485,15 +513,17 @@ module.exports = function attachSocket({
 
     on("set_active_diver", async (data, ack) => {
       if (!(await guardControl(socket, data, ack, "set_active_diver"))) return;
-      if (data.event_id) {
-        activeDivers[data.event_id] = data;
-        // Write-through to event_live_state so a server
-        // restart picks the same diver back up on rehydrate.
-        if (typeof persistActiveDiver === "function") {
-          persistActiveDiver(data.event_id, data);
-        }
+      // What goes out, gets replayed to late joiners and is kept in
+      // event_live_state is the public copy, not the Control Room's
+      // roster row as sent.
+      const payload = await publicActivePayload(data);
+      activeDivers[payload.event_id] = payload;
+      // Write-through to event_live_state so a server
+      // restart picks the same diver back up on rehydrate.
+      if (typeof persistActiveDiver === "function") {
+        persistActiveDiver(payload.event_id, payload);
       }
-      io.to(`event:${data.event_id}`).emit("state_update", data);
+      io.to(`event:${payload.event_id}`).emit("state_update", payload);
 
       // Fire-and-forget coach alerts. The fan-out helper looks
       // ahead N=dives_ahead slots from this new active diver and
@@ -501,10 +531,10 @@ module.exports = function attachSocket({
       // divers land in the window. Per-process in-memory dedupe
       // prevents double-fires when the operator re-emits state.
       // Errors logged but never propagate, score path stays clean.
-      if (data.event_id && push) {
+      if (push) {
         try {
           require("../lib/coach-alerts")
-            .maybeNotifyCoachesOfNextDivers({ pool, push }, data.event_id, data);
+            .maybeNotifyCoachesOfNextDivers({ pool, push }, payload.event_id, payload);
         } catch (err) {
           console.error("[set_active_diver] coach alert hook failed", err.message);
         }
@@ -513,8 +543,8 @@ module.exports = function attachSocket({
       // Venue scoreboard state: fan out to any connected
       // hardware bridge in this event's venue room. See
       // lib/venue-state.js for the wire shape. activeDivers now holds
-      // `data`, so that's the active payload it sends.
-      if (data.event_id) emitVenue(data.event_id, "set_active_diver");
+      // the payload, so that's the active diver it sends.
+      emitVenue(payload.event_id, "set_active_diver");
       ackWith(ack, { ok: true });
     });
 
