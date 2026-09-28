@@ -169,11 +169,14 @@ self.addEventListener("fetch", (event) => {
  *     action_url,          // SPA route to open on tap
  *   }
  *
- * On notificationclick we focus an existing SPA tab if one's
- * open (the in-app banner has likely already handled it), only
- * spinning up a new tab when no SPA window is around. Either
- * way we POST /api/notifications/:id/acknowledge so the inbox
- * row clears.
+ * On notificationclick:
+ *   - Approve / Deny on a referee sign-off answers it straight
+ *     away and acks the row. If the server won't take the answer
+ *     we open the request in the app instead.
+ *   - Any other tap acks the row (a sign-off stays until it's
+ *     answered), then routes an open SPA tab to action_url via
+ *     postMessage, or opens a new window when there isn't one we
+ *     can use. Broadcast/overlay windows are never taken over.
  * ============================================================= */
 
 self.addEventListener("push", (event) => {
@@ -207,45 +210,78 @@ self.addEventListener("push", (event) => {
   event.waitUntil(self.registration.showNotification(title, options));
 });
 
-self.addEventListener("notificationclick", (event) => {
-  event.notification.close();
-  const { id, action_url } = event.notification.data || {};
-  const action = event.action;       // empty string when body tapped
+// A window we may take over for a notification. Broadcast and overlay
+// screens (the projector, the OBS source) are left alone: yanking the
+// live scoreboard to someone's inbox mid-meet would be worse than
+// opening a second window.
+function isChromeless(url) {
+  return /[?&](overlay|broadcast)=/.test(url.search);
+}
 
-  // Build the URL to open. Append ?notif=<id>&action=<approve|deny>
-  // so the SPA knows which row to ack + (for action buttons) which
-  // outcome to record.
-  let target = action_url || "/";
-  const sep = target.includes("?") ? "&" : "?";
-  const params = [];
-  if (id)     params.push(`notif=${encodeURIComponent(id)}`);
-  if (action) params.push(`action=${encodeURIComponent(action)}`);
-  if (params.length) target += sep + params.join("&");
+function ack(id) {
+  if (!id) return Promise.resolve();
+  return fetch(`/api/notifications/${encodeURIComponent(id)}/acknowledge`, {
+    method: "POST",
+    credentials: "same-origin",
+  }).catch(() => {});
+}
 
-  event.waitUntil((async () => {
-    // Best-effort ack so a tapped notification clears from the
-    // inbox even if the SPA never opens (offline, blocked popup,
-    // etc.). The SPA also acks on render so this is belt+braces.
-    if (id) {
-      fetch(`/api/notifications/${encodeURIComponent(id)}/acknowledge`, {
+// Approve / Deny on the referee sign-off notification answers the request
+// right here, the same call the in-app banner makes. True only when the
+// server recorded it; anything else (session expired, request gone or
+// already answered) falls back to opening the app so the referee can see
+// what happened and answer there.
+async function answerSignoff(data, decision) {
+  if (!data.event_id || !data.request_id) return false;
+  try {
+    const res = await fetch(
+      `/api/events/${encodeURIComponent(data.event_id)}/dive-order/sign-off/respond`,
+      {
         method: "POST",
         credentials: "same-origin",
-      }).catch(() => {});
-    }
-    const clientsList = await self.clients.matchAll({
-      type: "window",
-      includeUncontrolled: true,
-    });
-    // Focus the first same-origin SPA tab + post a message so it
-    // can react in-place rather than navigating away.
-    for (const client of clientsList) {
-      const url = new URL(client.url);
-      if (url.origin === self.location.origin) {
-        client.postMessage({ type: "notification-click", id, action, action_url: target });
-        return client.focus();
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ request_id: data.request_id, decision }),
+      },
+    );
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const data = event.notification.data || {};
+  const { id, category } = data;
+  const target = data.action_url || "/";
+  const action = event.action;       // empty string when body tapped
+
+  event.waitUntil((async () => {
+    if (category === "referee_signoff" && (action === "approve" || action === "deny")) {
+      if (await answerSignoff(data, action)) {
+        await ack(id);
+        return;
       }
+    } else if (category !== "referee_signoff") {
+      // Tapping it counts as reading it. A sign-off is different: it
+      // stays in the inbox until it's actually answered.
+      ack(id);
     }
-    // No SPA tab open, fall back to opening the action URL.
+
+    const all = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+    const ours = all.filter((c) => {
+      const u = new URL(c.url);
+      return u.origin === self.location.origin && !isChromeless(u);
+    });
+    const client = ours.find((c) => c.focused)
+      || ours.find((c) => c.visibilityState === "visible")
+      || ours[0];
+    if (client) {
+      // The SPA routes itself to action_url (usePush), which keeps the
+      // tab's state instead of reloading it.
+      client.postMessage({ type: "notification-click", id, action, action_url: target });
+      return client.focus();
+    }
     return self.clients.openWindow(target);
   })());
 });

@@ -151,3 +151,69 @@ test("activate drops the old v7 cache, which may hold HTML under .js names", asy
   assert.ok(!sw.cacheName().includes("divinghq-shell-v7"));
   assert.equal(await sw.cached("/assets/GuideView-abc12345.js"), undefined);
 });
+
+// ---------------------------------------------------------------------
+// Notification taps
+// ---------------------------------------------------------------------
+
+const SIGNOFF = {
+  id: "n-1",
+  category: "referee_signoff",
+  action_url: "/control?signoff_request=r-1",
+  event_id: "e-1",
+  request_id: "r-1",
+};
+const tap = (data, action = "") => ({ action, notification: { data, close() {} } });
+
+test("Approve on the sign-off notification records the answer, then acks", async () => {
+  const sw = loadSw({
+    routes: {
+      "/api/events/e-1/dive-order/sign-off/respond": () => new Response('{"ok":true}', { status: 200 }),
+      "/api/notifications/n-1/acknowledge": () => new Response('{"ok":true}'),
+    },
+  });
+  await sw.dispatch("notificationclick", tap(SIGNOFF, "approve"));
+  const respond = sw.fetches.find((f) => f.url.endsWith("/sign-off/respond"));
+  assert.ok(respond, "respond was never called");
+  assert.equal(respond.method, "POST");
+  assert.deepEqual(JSON.parse(respond.body), { request_id: "r-1", decision: "approve" });
+  assert.ok(sw.fetches.some((f) => f.url === "/api/notifications/n-1/acknowledge"));
+  assert.deepEqual(sw.opened, [], "nothing to open once it's answered");
+});
+
+test("Deny that can't be recorded opens the request instead and leaves it unacked", async () => {
+  const sw = loadSw({
+    routes: {
+      "/api/events/e-1/dive-order/sign-off/respond": () => new Response('{"error":"Unauthorized"}', { status: 401 }),
+    },
+  });
+  await sw.dispatch("notificationclick", tap(SIGNOFF, "deny"));
+  assert.ok(sw.fetches.some((f) => f.url.endsWith("/sign-off/respond")));
+  assert.ok(!sw.fetches.some((f) => f.url.includes("/acknowledge")), "an unanswered request must stay in the inbox");
+  assert.deepEqual(sw.opened, ["/control?signoff_request=r-1"]);
+});
+
+test("a body tap with the app open routes that tab, preferring the one in view", async () => {
+  const sw = loadSw({
+    routes: { "/api/notifications/n-2/acknowledge": () => new Response("{}") },
+    windows: [
+      { url: ORIGIN + "/scoreboard/abc?overlay=1", visibilityState: "visible" },
+      { url: ORIGIN + "/dashboard", visibilityState: "hidden" },
+      { url: ORIGIN + "/manager", visibilityState: "visible", focused: true },
+    ],
+  });
+  await sw.dispatch("notificationclick", tap({ id: "n-2", category: "judge_call", action_url: "/judge?event=e-9" }));
+  const [overlay, hidden, inView] = sw.clients;
+  assert.equal(inView.didFocus, true);
+  // JSON round trip: the message was built inside the vm, a different realm.
+  assert.deepEqual(JSON.parse(JSON.stringify(inView.messages)), [{ type: "notification-click", id: "n-2", action: "", action_url: "/judge?event=e-9" }]);
+  assert.equal(overlay.messages.length + hidden.messages.length, 0, "a broadcast overlay is never hijacked");
+  assert.deepEqual(sw.opened, []);
+});
+
+test("with only a broadcast overlay open, a tap opens a new window", async () => {
+  const sw = loadSw({ windows: [{ url: ORIGIN + "/scoreboard/abc?overlay=minimal" }] });
+  await sw.dispatch("notificationclick", tap({ id: "n-3", category: "judge_call", action_url: "/judge?event=e-9" }));
+  assert.equal(sw.clients[0].messages.length, 0);
+  assert.deepEqual(sw.opened, ["/judge?event=e-9"]);
+});
