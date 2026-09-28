@@ -192,10 +192,10 @@ async function confirmAdvance() {
 <style scoped>
 /* Advance styles MOVED from ManagerView.css (exclusive to this
    modal, .modal-advance / .advance-field* / .advance-radio /
-   .advance-preview*; NOT .advance-btn, which is the green
-   event-row button and stays with the view). The .hint block is
-   COPIED from ManagerView.css (shared with the rest of the
-   manager page); .modal/.modal-backdrop are global (app.css). */
+   .advance-preview*). The old green .advance-btn row button is
+   gone from the view too, nothing renders it any more. The .hint
+   block is COPIED from ManagerView.css (shared with the rest of
+   the manager page); .modal/.modal-backdrop are global (app.css). */
 
 /* Advance to next stage modal layout. The right side surfaces
    a live preview of the ranked divers split into Primaries /

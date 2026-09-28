@@ -25,8 +25,7 @@
 /* Advance-stage modal styles: the .modal-advance / .advance-field*
    / .advance-radio / .advance-preview* rules moved into
    src/components/manager/AdvanceStageModal.vue (scoped) when the
-   modal was extracted from this view. The .advance-btn event-row
-   button (below) stays put. */
+   modal was extracted from this view. */
 .form-stack{display:flex;flex-direction:column;gap:1rem;}
 .event-item{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:1.25rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-xs);transition:border-color 0.2s;animation:fadeUp 0.25s ease;}
 

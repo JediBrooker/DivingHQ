@@ -13,8 +13,9 @@
  *   * `height` / `mixedHeight` come in as props, they shape the
  *     picker filter (mixed-board events let any height through;
  *     single-board events only surface dives at that height).
- *   * `diveDirectory` comes in as a prop, the parent already loads
- *     it once on mount and reuses it across modals.
+ *   * `diveDirectory` comes in as a prop. The parent fetches it the
+ *     first time the create or edit form opens and shares it between
+ *     both, so it can still be [] for a moment right after opening.
  *   * Dive-picker dropdown state (open idx, query, results computed)
  *     is owned here. Nothing outside needs it.
  *
