@@ -7103,3 +7103,76 @@ test("sitemap.xml lists the payments and classes guides only while they're switc
     await features.set("classes", saved.classes);
   }
 });
+
+// =====================================================================
+// Security and integrity sweep (area 7, 2026-09). Each test starts from
+// its own setupFixture org, so nothing here leans on shared rows.
+// =====================================================================
+const sweepKit = {
+  // A member of `orgId` with one role, signed in. insertUser's password
+  // is "not-used-here".
+  async member(orgId, role, fullName = `Sweep ${role}`) {
+    const username = `int-sw-${role.replace(/_/g, "")}-${crypto.randomBytes(4).toString("hex")}`;
+    const id = await insertUser({ orgId, username, fullName, role });
+    const login = await fetchJson("POST", "/api/auth/login", { body: { username, password: "not-used-here" } });
+    if (login.status !== 200) throw new Error(`sweepKit.member login ${login.status} ${JSON.stringify(login.body)}`);
+    return { id, username, token: login.body.token };
+  },
+  // One scored dive (a full panel) in a Live event of the org. Returns
+  // the event, the diver and the first judge's score row.
+  async scoredDive(orgId, score = 6) {
+    const ev = await recordKit.event(orgId, { gender: "Female" });
+    const diver = await recordKit.diver(orgId, null, "female", "Sweep Diver");
+    await recordKit.dive(ev, diver, 1, await recordKit.threeMetreDive(), score);
+    const row = (await pool.query(
+      "SELECT id FROM scores WHERE event_id = $1 AND judge_id = $2", [ev.id, ev.judges[0]],
+    )).rows[0];
+    return { ev, diver, scoreId: row.id };
+  },
+};
+
+// The conflict endpoint wrote any body-supplied value to any score in the
+// caller's org, finished events included, and skipped the per-event check
+// PUT /api/scores/:id does. It only exists to settle a manual entry the
+// judge's late sync disagreed with.
+test("conflict resolve only settles a real conflict, for someone who runs the event", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const referee = await sweepKit.member(st.orgId, "referee");
+    const { ev, scoreId } = await sweepKit.scoredDive(st.orgId, 6);
+    await pool.query("UPDATE events SET status = 'Completed' WHERE id = $1", [ev.id]);
+    const resolve = (token, body) => fetchJson("POST", `/api/conflicts/${scoreId}/resolve`, { token, body });
+    const current = async () => (await pool.query("SELECT score::float AS score, score_source FROM scores WHERE id = $1", [scoreId])).rows[0];
+
+    // A referee who isn't on the event: refused, same as PUT /api/scores/:id.
+    const outsider = await resolve(referee.token, { decision: "accept_proposed", proposed_score: 10 });
+    assert.equal(outsider.status, 403, JSON.stringify(outsider.body));
+    // Even the org admin can't use it on a score nobody disputed.
+    const noConflict = await resolve(st.adminToken, { decision: "accept_proposed", proposed_score: 10 });
+    assert.equal(noConflict.status, 409, JSON.stringify(noConflict.body));
+    assert.deepEqual(await current(), { score: 6, score_source: "judge_direct" });
+
+    // A real one: the operator typed 6, the judge's late sync said 7.5.
+    await pool.query("UPDATE scores SET score_source = 'manual_entry' WHERE id = $1", [scoreId]);
+    const { insertScoreAudit } = require("../lib/score-audit");
+    const s = (await pool.query("SELECT * FROM scores WHERE id = $1", [scoreId])).rows[0];
+    await insertScoreAudit(pool, {
+      scoreId, eventId: s.event_id, competitorId: s.competitor_id, judgeId: s.judge_id,
+      round: s.round_number, action: "rejected_duplicate", oldScore: 6, newScore: 7.5,
+    });
+    await pool.query("INSERT INTO event_managers (event_id, user_id) VALUES ($1, $2)", [ev.id, referee.id]);
+    const invented = await resolve(referee.token, { decision: "accept_proposed", proposed_score: 10 });
+    assert.equal(invented.status, 409, "only the judge's own value can be accepted");
+    const ok = await resolve(referee.token, { decision: "accept_proposed", proposed_score: 7.5 });
+    assert.equal(ok.status, 200, JSON.stringify(ok.body));
+    assert.deepEqual(await current(), { score: 7.5, score_source: "manual_then_reconciled" });
+    // Settled, so there's nothing left to resolve.
+    const again = await resolve(referee.token, { decision: "keep_existing" });
+    assert.equal(again.status, 409);
+  } finally {
+    await recordKit.cleanup(st.orgId);
+    await teardownFixture(st);
+  }
+});

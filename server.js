@@ -1150,6 +1150,7 @@ app.use(require("./routes/templates")({ pool, verifyToken }));
 // =============================================================
 app.use(require("./routes/conflicts")({
   pool, io, scoreboardCache, requireOrgRole, requireRoleOrEventDelegate, recomputeRecordKeys,
+  isEventDelegate,
 }));
 
 // =============================================================
