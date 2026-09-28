@@ -366,9 +366,9 @@ until the operator has switched maintenance mode on and passed
 | Rate-limit one router's routes (never `app.use(limiter, router)`, that counts every later request too) | `limitRoutes(limiter, router)` | `lib/scoped-limiter.js` |
 | Per-query catch-and-log (analytics) | `runQuery(label, sql, params)` | inline in `/api/divers/:id/analytics` |
 | Standard analytics CTE for per-dive rows | `PER_DIVE` | `db/queries.js` |
-| Standard analytics CTE for full-field ranking (a team event ranks the team; `latest: n` ranks only the n newest events) | `FULL_FIELD_RANKING` / `fullFieldRanking({ latest })` | `db/queries.js` |
-| A diver's scored dives, a synchro pair stored under the lead included (WHERE fragment) | `diverDivesWhere(param)` | `db/queries.js` |
-| Which scores make an event's standings (withdrawn divers keep theirs, reserves out, Super Final carry for divers in the stage) | `standingsScoreScope()`; as a per_dive CTE, `standingsPerDiveCte({ select })` (UNION form, keeps the event-id pushdown) | `lib/scoring-sql.js` |
+| Standard analytics CTE for full-field ranking (the standings' scope, so a team event ranks the team, reserves stay out and a Super Final semi keeps its carry; `latest: n` ranks only the n newest events by event date) | `FULL_FIELD_RANKING` / `fullFieldRanking({ latest })` | `db/queries.js` |
+| A diver's scored dives, a synchro pair stored under the lead included (WHERE fragment; `competing: true` drops reserve rows, for places) | `diverDivesWhere(param, { competing })` | `db/queries.js` |
+| Which scores make an event's standings (withdrawn divers keep theirs, reserves out, Super Final carry for divers in the stage) | `standingsScoreScope()`; as a per_dive CTE, `standingsPerDiveCte({ select })` (UNION form, keeps the event-id pushdown); over many events at once, `standingsPerDiveForEventsCte({ events })`; who's in a stage, `stageMembers()` | `lib/scoring-sql.js` |
 | May this caller see an event's scores? (Live/Completed public, else host or participating org) | `ensureEventVisible(pool, req, res, eventId)` | `lib/event-visibility.js` |
 | Malformed id in a path (404) or a filter (400), not a Postgres 500 | `uuidParams(router, ...names)` / `rejectBadUuidQuery(req, res, ...names)` | `lib/uuid-params.js` |
 | A PDF export (Unicode font if configured, else WinAnsi folding) | `createPdfDocument()` / `pdfTranslate()` | `lib/pdf-document.js` |

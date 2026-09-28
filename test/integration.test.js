@@ -10913,3 +10913,91 @@ test("the public profile's last five meets are the dashboard's five, dated when 
     await teardownFixture(st);
   }
 });
+
+// A place on a diver's profile, analytics and public card is the place on
+// the event's standings (FULL_FIELD_RANKING reads standingsPerDiveForEventsCte).
+// The ranking used to sum every score in the event: a reserve's scored
+// try-out counted, even for their team, and put the reserve in the field,
+// and a Super Final semi's place left out the H2H carry the scoreboard adds.
+test("profile and analytics places match the standings: reserves out, Super Final carry in", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const dive = await recordKit.threeMetreDive();
+    const reserve = async (ev, who) => pool.query(
+      "UPDATE competitor_dive_lists SET is_reserve = TRUE, reserve_position = 1 WHERE event_id = $1 AND competitor_id = $2",
+      [ev.id, who],
+    );
+    const place = (body, eventId) => {
+      const r = body.recent_form.find((x) => x.event_id === eventId);
+      return r && [Number(r.rank), r.field_size, Number(r.total).toFixed(2)];
+    };
+    const standing = async (eventId, name) => {
+      const sb = await fetchJson("GET", `/api/scoreboard/${eventId}?cache=skip`);
+      const r = sb.body.standings.find((x) => x.full_name === name);
+      return [Number(r.rank), sb.body.standings.length, Number(r.total).toFixed(2)];
+    };
+
+    // Team event: Alpha beats Bravo, unless Bravo's reserve's try-out counts.
+    const teamEv = await recordKit.event(st.orgId, { gender: "Female", eventType: "team" });
+    await pool.query("UPDATE events SET status = 'Completed' WHERE id = $1", [teamEv.id]);
+    const team = async (name) => (await pool.query(
+      "INSERT INTO teams (org_id, name, short_code) VALUES ($1, $2, 'PLC') RETURNING id", [st.orgId, name],
+    )).rows[0].id;
+    const alpha = await team("Place Alpha");
+    const bravo = await team("Place Bravo");
+    const a1 = await recordKit.diver(st.orgId, null, "female", "Place A1");
+    const b1 = await recordKit.diver(st.orgId, null, "female", "Place B1");
+    const br = await recordKit.diver(st.orgId, null, "female", "Place Bravo Reserve");
+    await recordKit.dive(teamEv, a1, 1, dive, 8);
+    await recordKit.dive(teamEv, b1, 1, dive, 6);
+    await recordKit.dive(teamEv, br, 1, dive, 10);
+    await pool.query("UPDATE competitor_dive_lists SET team_id = $2 WHERE event_id = $1 AND competitor_id = $3", [teamEv.id, alpha, a1]);
+    await pool.query("UPDATE competitor_dive_lists SET team_id = $2 WHERE event_id = $1 AND competitor_id = ANY($3::uuid[])", [teamEv.id, bravo, [b1, br]]);
+    await reserve(teamEv, br);
+
+    const aA1 = await fetchJson("GET", `/api/divers/${a1}/analytics`);
+    assert.equal(aA1.status, 200, JSON.stringify(aA1.body));
+    assert.deepEqual(place(aA1.body, teamEv.id), await standing(teamEv.id, "Place Alpha"));
+    assert.equal(place(aA1.body, teamEv.id)[0], 1, "Alpha first, the reserve's 10s don't count for Bravo");
+    const pA1 = await fetchJson("GET", `/api/divers/${a1}/profile`);
+    assert.deepEqual(pA1.body.score_trend.map((r) => [r.final_rank, r.team_name]), [[1, "Place Alpha"]]);
+    const aBr = await fetchJson("GET", `/api/divers/${br}/analytics`);
+    assert.equal(place(aBr.body, teamEv.id), undefined, "a reserve has no place to show");
+
+    // Super Final: H2H then an SF carrying it (Appendix 3 §3.1).
+    const x = await recordKit.diver(st.orgId, null, "female", "Place Xena");
+    const y = await recordKit.diver(st.orgId, null, "female", "Place Yara");
+    const r = await recordKit.diver(st.orgId, null, "female", "Place Rhea");
+    const h2h = await recordKit.event(st.orgId, { gender: "Female" });
+    await recordKit.dive(h2h, x, 1, dive, 9);
+    await recordKit.dive(h2h, y, 1, dive, 5);
+    await recordKit.dive(h2h, r, 1, dive, 9.5);
+    const sf = await recordKit.event(st.orgId, { gender: "Female" });
+    await pool.query("UPDATE events SET score_carry_from = $1, status = 'Completed' WHERE id = $2", [h2h.id, sf.id]);
+    // Yara wins the SF round, Xena wins it overall on her H2H carry.
+    await recordKit.dive(sf, x, 1, dive, 6);
+    await recordKit.dive(sf, y, 1, dive, 7);
+    await recordKit.dive(sf, r, 1, dive, 10);
+    await reserve(sf, r);
+
+    for (const [who, name] of [[x, "Place Xena"], [y, "Place Yara"]]) {
+      const a = await fetchJson("GET", `/api/divers/${who}/analytics`);
+      assert.deepEqual(place(a.body, sf.id), await standing(sf.id, name), name);
+    }
+    const aX = await fetchJson("GET", `/api/divers/${x}/analytics`);
+    assert.equal(place(aX.body, sf.id)[0], 1, "the carry puts Xena first");
+    const aR = await fetchJson("GET", `/api/divers/${r}/analytics`);
+    assert.equal(place(aR.body, sf.id), undefined, "the SF reserve has no SF place");
+    assert.ok(place(aR.body, h2h.id), "her H2H is still hers");
+    const slug = crypto.randomBytes(16).toString("hex");
+    await pool.query("UPDATE users SET public_slug = $1 WHERE id = $2", [slug, x]);
+    const pub = await fetchJson("GET", `/api/public/divers/${slug}`);
+    const pubSf = pub.body.recent_meets.find((m) => m.event_id === sf.id);
+    assert.deepEqual([pubSf.rank, pubSf.field_size, Number(pubSf.total).toFixed(2)], await standing(sf.id, "Place Xena"));
+  } finally {
+    await recordKit.cleanup(st.orgId);
+    await teardownFixture(st);
+  }
+});

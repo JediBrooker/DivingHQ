@@ -14,7 +14,7 @@
 // numbering. See /api/divers/:id/analytics in routes/diver-profile.js
 // for usage.
 
-const { perDiveSelect, perDivePointsCte } = require("../lib/scoring-sql");
+const { perDiveSelect, standingsPerDiveForEventsCte } = require("../lib/scoring-sql");
 
 // =====================================================================
 // EVENT_DATE: when an event took place, for every analytics date range,
@@ -61,15 +61,20 @@ const EVENT_DATE_FILTER = `
 // plain `s.competitor_id = $1` did. It doesn't read cdl, so callers don't
 // need the canonical join for it. `param` is the placeholder bound to the
 // diver id.
+//
+// { competing: true } leaves out reserve rows, for the ranking: a reserve's
+// scored try-out isn't on the standings, so it can't be a result to place.
+// The stats and personal bests still count every dive the diver did.
 // =====================================================================
-function diverDivesWhere(param = "$1") {
+function diverDivesWhere(param = "$1", { competing = false } = {}) {
+  const rows = `l.competitor_id = ${param}
+          OR (l.partner_id = ${param}
+              AND NOT EXISTS (SELECT 1 FROM scores own
+                               WHERE own.event_id = l.event_id AND own.competitor_id = ${param}))`;
   return `(s.event_id, s.competitor_id, s.round_number) IN (
       SELECT l.event_id, l.competitor_id, l.round_number
         FROM competitor_dive_lists l
-       WHERE l.competitor_id = ${param}
-          OR (l.partner_id = ${param}
-              AND NOT EXISTS (SELECT 1 FROM scores own
-                               WHERE own.event_id = l.event_id AND own.competitor_id = ${param})))`;
+       WHERE ${competing ? `(${rows})\n         AND l.is_reserve = FALSE` : rows})`;
 }
 
 // =====================================================================
@@ -119,8 +124,13 @@ const PER_DIVE = perDiveSelect({
 //   diver_events  : { event_id, scored_as } the events the diver has a
 //                   result in, and whose rows carry it: the diver's own,
 //                   or the lead's for a synchro pair stored under the
-//                   lead (see diverDivesWhere)
-//   all_per_dive  : every dive in those events, by every competitor
+//                   lead (see diverDivesWhere). Reserve rows aren't a
+//                   result.
+//   all_per_dive  : every dive that counts towards those events'
+//                   standings, by every competitor: the scoreboard's
+//                   scope (standingsPerDiveForEventsCte), so reserves'
+//                   try-outs stay out and a Super Final semi gets its
+//                   H2H carry, and the place here is the place there
 //   unit_totals   : per-(event, unit) sum of dive points. The unit is
 //                   what the event ranks: the team in a team event,
 //                   the diver otherwise.
@@ -161,7 +171,7 @@ function fullFieldRanking({ latest = null } = {}) {
     SELECT DISTINCT s.event_id, s.competitor_id AS scored_as
     FROM scores s
     JOIN events e ON e.id = s.event_id
-    WHERE ${diverDivesWhere("$1")}
+    WHERE ${diverDivesWhere("$1", { competing: true })}
       AND COALESCE(e.is_rehearsal, FALSE) = FALSE${EVENT_DATE_FILTER}`;
   let diverEvents = scoredIn;
   if (latest != null) {
@@ -179,10 +189,9 @@ function fullFieldRanking({ latest = null } = {}) {
   return `
   diver_events AS (${diverEvents}
   ),
-  ${perDivePointsCte({
+  ${standingsPerDiveForEventsCte({
     name:   "all_per_dive",
-    select: ["s.event_id", "s.competitor_id", "cdl.team_id", "s.round_number"],
-    where:  "s.event_id IN (SELECT event_id FROM diver_events)",
+    events: "SELECT event_id FROM diver_events",
   })},
   unit_totals AS (
     SELECT apd.event_id,

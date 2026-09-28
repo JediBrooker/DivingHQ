@@ -32,6 +32,7 @@ const {
   carriedStageScores,
   standingsScoreScope,
   standingsPerDiveCte,
+  standingsPerDiveForEventsCte,
 } = require("../lib/scoring-sql");
 
 // ---------------------------------------------------------------
@@ -256,17 +257,29 @@ const CALL_SITES = [
       assert.ok(sql.endsWith("e.number_of_judges, e.event_type, e.created_at"));
     },
   },
+  // FULL_FIELD_RANKING's all_per_dive is standingsPerDiveForEventsCte, two
+  // branches; each is checked on its own. team_id so unit_totals can rank
+  // the team in a team event.
   {
-    site: "db/queries.js FULL_FIELD_RANKING all_per_dive",
-    sql: () => perDivePointsCte({
-      name:   "all_per_dive",
-      // team_id so unit_totals can rank the team in a team event.
-      select: ["s.event_id", "s.competitor_id", "cdl.team_id", "s.round_number"],
-      where:  "s.event_id IN (SELECT event_id FROM diver_events)",
-    }),
+    site: "db/queries.js FULL_FIELD_RANKING all_per_dive, own-stage branch",
+    sql: () => standingsPerDiveForEventsCte({ name: "all_per_dive", events: "SELECT event_id FROM diver_events" })
+      .slice("all_per_dive AS (\n".length, -2).split("\nUNION ALL\n")[0],
     pointsAlias: "dive_points",
-    where: "s.event_id IN (SELECT event_id FROM diver_events)",
-    expect: (sql) => assert.ok(sql.startsWith("all_per_dive AS (")),
+    where: "s.event_id IN (SELECT event_id FROM diver_events)\n  AND COALESCE(cdl.is_reserve, FALSE) = FALSE",
+    expect: (sql) => assert.ok(sql.includes(
+      "GROUP BY s.event_id, s.competitor_id, cdl.team_id, s.round_number, e.number_of_judges, e.event_type")),
+  },
+  {
+    site: "db/queries.js FULL_FIELD_RANKING all_per_dive, carried-stage branch",
+    sql: () => standingsPerDiveForEventsCte({ name: "all_per_dive", events: "SELECT event_id FROM diver_events" })
+      .slice("all_per_dive AS (\n".length, -2).split("\nUNION ALL\n")[1],
+    pointsAlias: "dive_points",
+    where: "JOIN events x ON x.score_carry_from = s.event_id",
+    expect: (sql) => {
+      assert.ok(sql.startsWith("SELECT x.id AS event_id,"));
+      assert.ok(sql.includes(
+        "GROUP BY x.id, s.competitor_id, cdl.team_id, s.round_number, e.number_of_judges, e.event_type"));
+    },
   },
   {
     site: "routes/events/super-final-bridge.js synchro pair standings",
@@ -953,14 +966,23 @@ test("standingsScoreScope: own dives (withdrawn included), plus the carried stag
   assert.ok(carried.includes(stageMembers({ eventId: "$3" })));
   assert.ok(!carried.includes("$1"));
   // In the stage: an active non-reserve row, or a non-reserve row that's
-  // been scored. A reserve's scored try-out isn't a way in.
+  // been scored (only a withdrawn one can add anyone). A reserve's scored
+  // try-out isn't a way in.
   const [active, scored] = stageMembers({ eventId: "$3" }).split("\n   UNION\n");
+  assert.ok(active.startsWith("SELECT r.competitor_id FROM competitor_dive_lists r"));
   assert.ok(active.includes("r.event_id = $3 AND r.is_reserve = FALSE AND r.withdrawn_at IS NULL"), "on this stage's active roster");
-  assert.ok(scored.includes("JOIN scores sc ON sc.event_id = r.event_id AND sc.competitor_id = r.competitor_id"), "or already scored in it");
+  assert.ok(scored.includes("r.event_id = $3 AND r.is_reserve = FALSE AND r.withdrawn_at IS NOT NULL"), "withdrawn mid-stage, not a reserve");
+  assert.ok(scored.includes("EXISTS (SELECT 1 FROM scores sc"), "and already scored in it");
+  assert.ok(scored.includes("sc.event_id = r.event_id AND sc.competitor_id = r.competitor_id"));
   assert.ok(scored.includes("sc.round_number = r.round_number"));
-  assert.ok(scored.includes("r.event_id = $3 AND r.is_reserve = FALSE"), "on a row that isn't a reserve's");
-  assert.ok(!scored.includes("withdrawn_at"), "withdrawn mid-stage still counts");
   assert.ok(!/\bOR\b/.test(stageMembers()));
+  // Several stages at once: (event, competitor) pairs, same rule.
+  const many = stageMembers({ events: "SELECT id FROM kids" });
+  const [manyActive, manyScored] = many.split("\n   UNION\n");
+  assert.ok(manyActive.startsWith("SELECT r.event_id, r.competitor_id FROM competitor_dive_lists r"));
+  assert.ok(manyActive.includes("r.event_id IN (SELECT id FROM kids) AND r.is_reserve = FALSE AND r.withdrawn_at IS NULL"));
+  assert.ok(manyScored.includes("r.event_id IN (SELECT id FROM kids) AND r.is_reserve = FALSE AND r.withdrawn_at IS NOT NULL"));
+  assert.ok(!many.includes("$1"));
   const both = standingsScoreScope();
   assert.ok(both.includes(own) && both.includes(carriedStageScores()));
   assert.ok(/\)\n OR \(/.test(both));
@@ -992,6 +1014,35 @@ test("standingsPerDiveCte: the scope as a UNION of the own and carried stages", 
   assert.throws(() => standingsPerDiveCte({ select: ["s.competitor_id", "s.round_number"] }), /s\.event_id/);
 });
 
+// The same scope across many events, for the analytics ranking: an
+// event's own dives without reserves, plus a carrying stage's parent
+// dives for the divers in it, filed under the carrying stage.
+test("standingsPerDiveForEventsCte: own stages without reserves, carried stages filed under the child", () => {
+  const events = "SELECT event_id FROM diver_events";
+  const sql = standingsPerDiveForEventsCte({ name: "all_per_dive", events });
+  assert.ok(sql.startsWith("all_per_dive AS (\nSELECT s.event_id,"));
+  assert.ok(sql.endsWith("\n)"));
+  const [own, carried, ...rest] = sql.slice("all_per_dive AS (\n".length, -2).split("\nUNION ALL\n");
+  assert.equal(rest.length, 0, "two branches");
+  assert.equal(own, perDiveSelect({
+    select: ["s.event_id", "s.competitor_id", "cdl.team_id", "s.round_number"],
+    where:  `s.event_id IN (${events})\n  AND COALESCE(cdl.is_reserve, FALSE) = FALSE`,
+  }));
+  // Carried: the parent's dives, grouped and returned under the child (x).
+  assert.ok(carried.startsWith("SELECT x.id AS event_id,"));
+  assert.ok(carried.includes("JOIN events x ON x.score_carry_from = s.event_id AND x.id <> s.event_id"));
+  assert.ok(carried.includes("GROUP BY x.id, s.competitor_id, cdl.team_id, s.round_number, e.number_of_judges, e.event_type"));
+  const carrying = `SELECT ce.id FROM events ce WHERE ce.id IN (${events}) AND ce.score_carry_from IS NOT NULL`;
+  assert.ok(carried.includes(`x.id IN (${carrying})`));
+  assert.ok(carried.includes(`s.event_id IN (SELECT pe.score_carry_from FROM events pe WHERE pe.id IN (${carrying}))`),
+    "parents up front, so scores is read by event");
+  assert.ok(carried.includes(`(x.id, s.competitor_id) IN (\n   ${stageMembers({ events: carrying })}\n  )`));
+  // Neither branch reads a reserve's dive in the event being ranked.
+  assert.ok(!carried.includes("cdl.is_reserve"), "the carried stage counts every dive, like the standings");
+  assert.ok(!sql.includes("$1"));
+  assert.throws(() => standingsPerDiveForEventsCte({}), /events is required/);
+});
+
 // db/queries.js diverDivesWhere: the diver's dives plus a lead-stored synchro
 // pair's, keyed on dive-list rows so the planner can estimate it (a row-level
 // OR across scores and cdl came out ~15x slower on a long career).
@@ -1006,6 +1057,15 @@ test("diverDivesWhere: keyed on the diver's and the lead's dive-list rows, no cd
   assert.ok(sql.includes("NOT EXISTS (SELECT 1 FROM scores own"));
   assert.ok(!/\bcdl\./.test(sql), "doesn't need the caller's cdl join");
   assert.ok(!sql.includes("$1"));
+  assert.ok(!sql.includes("is_reserve"), "stats count every dive the diver did");
+  // The ranking's version leaves reserve rows out: a try-out isn't a result.
+  const competing = diverDivesWhere("$4", { competing: true });
+  assert.ok(competing.includes("\n         AND l.is_reserve = FALSE)"));
+  assert.ok(competing.includes("WHERE (l.competitor_id = $4"), "the OR is bracketed before the AND");
+  assert.ok(FULL_FIELD_RANKING.includes(diverDivesWhere("$1", { competing: true })));
+  assert.ok(FULL_FIELD_RANKING.includes(standingsPerDiveForEventsCte({
+    name: "all_per_dive", events: "SELECT event_id FROM diver_events",
+  })), "ranks on the standings' scope");
   // The public profile's cut: newest n events first (by when they took
   // place, like recent_form), then the same chain.
   const { EVENT_DATE } = require("../db/queries");

@@ -299,7 +299,8 @@
  * @property {string}        status        'pending' | 'live' | 'completed'
  * @property {string}        created_at    ISO, when the event took place (see PersonalBest.created_at)
  * @property {string}        event_type    'individual' | 'synchro_pair' | 'team'
- * @property {number}        total_score   In a team event, the team's total.
+ * @property {number}        total_score   The standings total: the team's in a team event,
+ *                                         H2H carry included in a Super Final semi.
  * @property {number}        final_rank    Place in the standings: the team's place in a
  *                                         team event (equal totals share it).
  * @property {string}        [partner_name]  Synchro partner. When the pair was entered under
@@ -332,10 +333,12 @@
  * @property {string}      event_id
  * @property {string}      event_name
  * @property {string}      created_at  when the event took place (see PersonalBest.created_at)
- * @property {number}      total       In a team event, the team's total.
+ * @property {number}      total       The standings total: the team's in a team event,
+ *                                     H2H carry included in a Super Final semi.
  * @property {number}      rank        Place in the event's standings (equal totals share
  *                                     it, WA Art 4.1.5); the team's place in a team event.
- * @property {number}      field_size  Entries ranked in the event: teams in a team event.
+ * @property {number}      field_size  Entries on the event's standings (reserves aside):
+ *                                     teams in a team event.
  * @property {RecentFormDive[]} [dives] Per-dive breakdown for the click-to-expand panel.
  */
 
