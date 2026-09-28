@@ -135,12 +135,17 @@ module.exports = function attachSocket({
     //                                   which rides the handshake headers
     //                                   (browser JS can't read it to pass
     //                                   it via auth.token anymore).
-    const authToken = socket.handshake.auth?.token;
-    const raw = authToken === "spectator"
-      ? null
-      : (authToken || readSessionCookie(socket.handshake.headers?.cookie));
-    if (raw) {
-      try {
+    // Everything below runs inside the try. socket.io never looks at
+    // what this async middleware returns, so a throw that escaped it
+    // (a malformed cookie, a DB error in the tv check) was an unhandled
+    // rejection, and that takes the process down. Any failure here just
+    // means the connection carries on as an anonymous spectator.
+    try {
+      const authToken = socket.handshake.auth?.token;
+      const raw = authToken === "spectator"
+        ? null
+        : (authToken || readSessionCookie(socket.handshake.headers?.cookie));
+      if (raw) {
         const decoded = jwt.verify(raw, JWT_SECRET, { algorithms: ["HS256"] });
         // Validate tv via the same 30s cache the HTTP path uses.
         // A revoked session must lose its socket privileges too.
@@ -154,9 +159,9 @@ module.exports = function attachSocket({
         // re-check it on every privileged action (catches role
         // revocation / 2FA-bump on a long-lived websocket).
         socket.userTokenVersion = decoded.tv != null ? Number(decoded.tv) : null;
-      } catch {
-        // Invalid token, treat as anonymous (spectator).
       }
+    } catch {
+      // Invalid token (or we couldn't check it), treat as anonymous.
     }
     next();
   });

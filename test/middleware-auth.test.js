@@ -304,3 +304,28 @@ test("club guards: no club id is a 400", async () => {
   });
   assert.equal(out.statusCode, 400);
 });
+
+// socketCanManageEvent is awaited by every Control Room socket handler
+// with no catch, and socket.io doesn't catch for them, so it must answer
+// false rather than reject. A throw here used to crash the process.
+const EVENT_ID = "33333333-3333-4333-8333-333333333333";
+function controlSocket(extra = {}) {
+  const s = fakeSocket({ sysadmin: false });
+  return Object.assign(s, { userOrgId: "org-1", userOrgRoles: ["meet_manager"], userTokenVersion: 1, disconnect() {} }, extra);
+}
+
+test("socketCanManageEvent: a non-UUID event id is refused before any query", async () => {
+  let queried = false;
+  const mw = createMiddleware({ pool: { async query() { queried = true; return { rows: [] }; } }, JWT_SECRET });
+  const s = controlSocket();
+  assert.equal(await mw.socketCanManageEvent(s, "not-a-uuid"), false);
+  assert.equal(s.emits.at(-1).payload.reason, "bad_event_id");
+  assert.equal(queried, false);
+});
+
+test("socketCanManageEvent: a DB error answers false instead of rejecting", async () => {
+  const mw = createMiddleware({ pool: { async query() { throw new Error("connection terminated"); } }, JWT_SECRET });
+  const s = controlSocket();
+  assert.equal(await mw.socketCanManageEvent(s, EVENT_ID), false);
+  assert.equal(s.emits.at(-1).payload.reason, "server_error");
+});

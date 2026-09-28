@@ -28,7 +28,7 @@ that's intentional, but every privileged event must call
 | `meet_held`               | `{ event_id, reason \| null, since: <ms epoch> }` | Operator holds the meet, or a new client joins while a hold is active. |
 | `meet_resumed`            | `{ event_id }` | Operator resumes the meet. |
 | `venue.scoreboard_state`  | Canonical venue payload from `lib/venue-state.js` | Emitted to `venue:<event_id>` subscribers after subscribe, active-diver changes, score changes, score announce, hold, and resume. Used by hardware bridges. |
-| `unauthorized`            | `{ reason: 'not_authenticated' \| 'insufficient_role' }` | A privileged event was attempted by an anonymous or under-roled socket. |
+| `unauthorized`            | `{ reason: 'not_authenticated' \| 'insufficient_role' \| 'missing_event_id' \| 'bad_event_id' \| 'event_not_found' \| 'wrong_org' \| 'token_revoked' \| 'server_error' }` | A privileged event was refused: anonymous or under-roled socket, an `event_id` that's missing or not a UUID, an event outside the socket's org, a revoked session, or a server-side failure while checking. The Control Room events also ack `{ ok: false, error }`. |
 | `schedule:conflict_dismissed` | `{ meet_id, action: 'dismiss' \| 'undismiss' }` | A scheduler conflict was dismissed or un-dismissed via the editor-only API. Drawer clients refetch `/api/meets/:id/conflicts` on receipt. The broadcast is intentionally minimal and does not include personnel labels. |
 | `schedule:block_updated`      | `{ meet_id, session_id, block_id?, created?, session_updated? }` | A Phase 3 manual edit landed (`PUT /api/blocks/:id`, `POST /api/sessions/:sessionId/blocks`, or `PUT /api/sessions/:id`). Other timeline tabs refetch `/sessions` and update inline. The broadcast is intentionally minimal; conflict details stay behind `/api/meets/:id/conflicts`. |
 | `schedule:block_deleted`      | `{ meet_id, session_id, block_id }` | A schedule block was deleted via `DELETE /api/blocks/:id`. Other tabs refetch the schedule. |
@@ -46,6 +46,9 @@ socket needs one of the listed roles **or** has to be a delegate for that
 event: an `event_managers` row, or admin of the club hosting the event's
 meet (`meets.host_club_id`, migration 087). That second path is how a club
 in a country with no federation on DivingHQ runs its own meets.
+
+`socketCanManageEvent` never rejects; a non-UUID `event_id` or a DB error
+is answered as `unauthorized`.
 
 | Event | Required role | Payload | Notes |
 |---|---|---|---|

@@ -1609,6 +1609,19 @@ const PORT = process.env.PORT || 3000;
 // the app + server so the test can drive it without a side-effect
 // listener that the process never closes.
 if (require.main === module) {
+  // Belt and braces for async code nobody awaits. socket.io ignores the
+  // promise an async handler returns, so a throw outside a handler's own
+  // try lands here, and Node's default for an unhandled rejection is to
+  // exit: one bad packet (or one DB blip) and every live meet on the box
+  // loses its sockets. Log it and keep serving. uncaughtException still
+  // exits, that's a genuinely broken process.
+  process.on("unhandledRejection", (reason) => {
+    logger.error(
+      { err: reason instanceof Error ? reason : { message: String(reason) } },
+      "unhandled promise rejection, still serving",
+    );
+  });
+
   server.listen(PORT, () => {
     logger.info({ port: PORT }, "diving app started");
     bootChecks();

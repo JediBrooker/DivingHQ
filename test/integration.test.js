@@ -7103,3 +7103,82 @@ test("sitemap.xml lists the payments and classes guides only while they're switc
     await features.set("classes", saved.classes);
   }
 });
+
+// =====================================================================
+// Server-core hardening (bug sweep, area B1). These drive the socket
+// engine through a real socket.io client against the in-process server,
+// and a few boot and shutdown paths through a spawned server.js.
+// =====================================================================
+const b1Kit = {
+  io: require("socket.io-client").io,
+  connect({ token, cookie } = {}) {
+    return new Promise((resolve, reject) => {
+      const s = b1Kit.io(baseUrl, {
+        transports: ["websocket"], reconnection: false, timeout: 4000,
+        ...(token ? { auth: { token } } : {}),
+        ...(cookie ? { extraHeaders: { cookie } } : {}),
+      });
+      const timer = setTimeout(() => { s.close(); reject(new Error("socket never connected")); }, 5000);
+      s.on("connect", () => { clearTimeout(timer); resolve(s); });
+      s.on("connect_error", (e) => { clearTimeout(timer); s.close(); reject(e); });
+    });
+  },
+  ack(s, event, data, ms = 4000) {
+    return s.timeout(ms).emitWithAck(event, data);
+  },
+  // Resolves with the next payload of `event`, or null after ms.
+  next(s, event, ms = 2000) {
+    return new Promise((resolve) => {
+      const timer = setTimeout(() => { s.off(event, on); resolve(null); }, ms);
+      const on = (p) => { clearTimeout(timer); resolve(p); };
+      s.once(event, on);
+    });
+  },
+  async login(username, password = "not-used-here") {
+    const r = await fetchJson("POST", "/api/auth/login", { body: { username, password } });
+    assert.equal(r.status, 200, JSON.stringify(r.body));
+    return r.body.token;
+  },
+  async alive() {
+    return (await fetchJson("GET", "/api/health")).status === 200;
+  },
+  // A round-1 dive-list row, which scores hang off (FK).
+  async enter(ev, diver) {
+    await pool.query(
+      "INSERT INTO competitor_dive_lists (event_id, competitor_id, dive_id, round_number) VALUES ($1, $2, $3, 1)",
+      [ev.id, diver, await recordKit.threeMetreDive()],
+    );
+  },
+};
+
+test("socket handshake with a malformed session cookie connects as a guest instead of crashing", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const s = await b1Kit.connect({ cookie: "dhq_session=%E0%A4%A" });
+  try {
+    assert.ok(s.connected);
+    assert.ok(await b1Kit.alive());
+  } finally {
+    s.close();
+  }
+});
+
+test("Control Room socket events refuse a non-UUID event_id instead of crashing the server", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  const s = await b1Kit.connect({ token: st.adminToken });
+  try {
+    const refusal = b1Kit.next(s, "unauthorized");
+    s.emit("claim_event_control", { event_id: "not-a-uuid" });
+    assert.equal((await refusal)?.reason, "bad_event_id");
+    for (const ev of ["meet_hold", "set_active_diver", "referee_failed_dive", "announce_score"]) {
+      const out = await b1Kit.ack(s, ev, { event_id: "x'; --", competitor_id: "c", round_number: 1 });
+      assert.equal(out.ok, false, ev);
+    }
+    assert.ok(await b1Kit.alive());
+  } finally {
+    s.close();
+    await teardownFixture(st);
+  }
+});
