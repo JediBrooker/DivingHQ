@@ -32,6 +32,11 @@ const notifications = ref([])
 const ready = ref(false)
 let initialised = false
 let socket = null         // socket.io-client passed in by the caller
+// Which signed-in user the login watcher already subscribed for. Every
+// usePush() caller gets its own watcher, so without this a later mount
+// (CoachView, on each visit) re-ran subscribe() + recent() for the same
+// session: another permission prompt call, VAPID fetch and inbox pull.
+let autoSubscribedFor = null
 
 // Named so bindPushSocket can move it between sockets without
 // orphaning a closure on the old one.
@@ -182,13 +187,15 @@ export function usePush({ socket: sock } = {}) {
   }
 
   // Auto-subscribe on login, once. The watcher fires when the user
-  // identity appears (after a fresh login or the boot-time /me probe)
-  // and is wrapped to avoid a duplicate subscribe on hot module reload.
+  // identity appears (after a fresh login or the boot-time /me probe).
+  // NotificationCenter lives for the whole app and gets there first, so
+  // it sees every sign-out and resets the guard for the next sign-in.
   watch(() => auth.user?.id, (id, prev) => {
-    if (id && !prev) {
-      subscribe().catch(() => {})
-      recent().catch(() => {})
-    }
+    if (!id) { autoSubscribedFor = null; return }
+    if (prev || id === autoSubscribedFor) return
+    autoSubscribedFor = id
+    subscribe().catch(() => {})
+    recent().catch(() => {})
   }, { immediate: true })
 
   return { ready, notifications, subscribe, unsubscribe, ack, recent }
