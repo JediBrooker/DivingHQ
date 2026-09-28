@@ -6,19 +6,15 @@
  * (that's a Referee judgment call, not a fixed timer), so this
  * clock represents the post-warning 60-second window.
  *
- * Lifted out of ControlView.vue when that file crossed 7,500
- * lines and reading it through cost real agent tokens. The clock
- * is genuinely standalone: it owns its own timer handle and a
- * tiny ref bundle, and the only outside-world coupling is that
- * the Control Room reads .shotClockRunning to decide whether to
- * pause it on a meet-hold.
+ * Lifted out of the old all-in-one ControlView back when that file
+ * crossed 7,500 lines. The clock is standalone: it owns its timer
+ * handle and a tiny ref bundle. Each LivePoolCard makes its own, so
+ * two pools never share a clock, and a meet-hold just resets it.
  *
  * Usage:
  *   const {
- *     shotClock, shotClockRunning, shotClockExpired,
- *     shotClockClass,
- *     startShotClock, stopShotClock, pauseShotClock, resetShotClock,
- *     SHOT_CLOCK_DEFAULT,
+ *     shotClock, shotClockExpired, shotClockClass,
+ *     startShotClock, stopShotClock, resetShotClock,
  *   } = useShotClock()
  */
 import { ref, computed, onUnmounted } from 'vue'
@@ -26,14 +22,12 @@ import { ref, computed, onUnmounted } from 'vue'
 export function useShotClock({ defaultSeconds = 60 } = {}) {
   const SHOT_CLOCK_DEFAULT = defaultSeconds
   const shotClock = ref(SHOT_CLOCK_DEFAULT)
-  const shotClockRunning = ref(false)
   const shotClockExpired = ref(false)
   let shotClockTimer = null
 
   function startShotClock(seconds = SHOT_CLOCK_DEFAULT) {
     stopShotClock()
     shotClock.value = seconds
-    shotClockRunning.value = true
     shotClockExpired.value = false
     shotClockTimer = setInterval(() => {
       shotClock.value--
@@ -52,28 +46,6 @@ export function useShotClock({ defaultSeconds = 60 } = {}) {
 
   function stopShotClock() {
     if (shotClockTimer) { clearInterval(shotClockTimer); shotClockTimer = null }
-    shotClockRunning.value = false
-  }
-
-  // Pause-toggle. Running → pause (keep remaining seconds); paused
-  // (and not at zero) → resume on a fresh interval. Operator-bound
-  // to spacebar via the keyboard map in the Control Room.
-  function pauseShotClock() {
-    if (shotClockRunning.value) {
-      stopShotClock()
-      return
-    }
-    if (shotClock.value > 0) {
-      shotClockRunning.value = true
-      shotClockTimer = setInterval(() => {
-        shotClock.value--
-        if (shotClock.value <= 0) {
-          shotClock.value = 0
-          shotClockExpired.value = true
-          stopShotClock()
-        }
-      }, 1000)
-    }
   }
 
   function resetShotClock() {
@@ -90,20 +62,17 @@ export function useShotClock({ defaultSeconds = 60 } = {}) {
     return ''
   })
 
-  // Belt-and-braces cleanup: the Control Room unmount path already
-  // calls stopShotClock(), but just in case a future caller forgets,
-  // a dangling setInterval would tick forever otherwise.
+  // The card never stops the clock on its way out, so this is the
+  // only thing between an unmounted pool and a setInterval that ticks
+  // forever.
   onUnmounted(() => stopShotClock())
 
   return {
-    SHOT_CLOCK_DEFAULT,
     shotClock,
-    shotClockRunning,
     shotClockExpired,
     shotClockClass,
     startShotClock,
     stopShotClock,
-    pauseShotClock,
     resetShotClock,
   }
 }

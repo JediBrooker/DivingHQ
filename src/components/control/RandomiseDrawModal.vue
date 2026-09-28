@@ -1,6 +1,7 @@
 <script setup>
 /* RandomiseDrawModal: the WA Article 4.1.6 random dive-order
- * draw ceremony, extracted from ControlView.vue. Three phases:
+ * draw ceremony, extracted from the old all-in-one ControlView.
+ * Three phases:
  * 'preview' (current order + "Start the draw"), 'shuffling'
  * (5-second animated reel, the server-side randomise runs in
  * parallel but the result is held back until the floor elapses),
@@ -9,13 +10,13 @@
  * Mount contract: the parent mounts this with v-if when the
  * operator opens the draw, so every open starts at 'preview'
  * with a clean reel, same reset the old openRandomiseDraw()
- * performed. The open guard (queue lock check + toast) stays in
- * ControlView because it owns canReorderQueue.
+ * performed. There's no open guard any more: SetupStage only
+ * offers the draw while the event is still Upcoming.
  *
  * State boundary: stage + reel are owned here, the roster comes
  * in as a prop and is never mutated. A successful draw emits
- * `randomised` with the fresh roster, the parent assigns it,
- * resets the active-diver pointer, and stamps the workflow.
+ * `randomised` with the fresh roster; SetupStage stamps the
+ * workflow (randomised, sign-off cleared) and ignores the roster.
  */
 import { ref, computed, onUnmounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
@@ -249,10 +250,7 @@ async function runRandomiseDraw() {
     animation-iteration-count: 1 !important;
   }
 }
-/* Randomise-draw styles MOVED from ControlView.css (exclusive to
-   this modal). The .lb-* modal frame at the bottom is COPIED,
-   the pattern is shared by the modals that remain in
-   ControlView. */
+/* Randomise-draw styles, only used by this modal. */
 /* =========================================================
    Random dive-order draw modal (WA Article 4.1.6 ceremony).
    Wide and projector-friendly so divers, referees, and
@@ -382,5 +380,5 @@ async function runRandomiseDraw() {
 }
 
 /* Modal frame (.lb-backdrop / .lb-modal + the 720px frame media query)
-   now lives in BaseModal.vue, the global lb-* is in ControlView.css. */
+   comes from BaseModal.vue, the rest of lb-* from src/styles/lb-modal.css. */
 </style>

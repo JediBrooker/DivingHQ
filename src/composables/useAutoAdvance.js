@@ -1,15 +1,15 @@
 // Auto-advance countdown (P6.4 of the redesign).
 //
-// The SAME auto-advance contract ControlView.vue runs inline
-// (ControlView.vue:746-782), COPIED here, not extracted: the original
-// SFC stays byte-identical as the V2 rollback. The frozen behaviour is:
+// The auto-advance contract the old single-pool Control Room ran inline,
+// kept as-is when each LivePoolCard got its own copy. The frozen behaviour:
 //   * Manual mode (0s) never arms a timer.
 //   * A judge flagging the referee blocks the countdown, the operator's
 //     eyes belong on the dive resolution, not racing a timer.
 //   * Editing the preference mid-countdown cancels the in-flight timer.
 //   * Finalise is NEVER auto-fired (the caller gates on nextBtnComplete).
-// The seconds preference persists in localStorage under the SAME key the
-// V1 path uses, so an operator's choice carries across the flag flip.
+// The seconds preference lives in localStorage. LivePoolCard namespaces
+// the key per event (AUTO_ADVANCE_KEY:<id>); the bare key is only the
+// default.
 //
 // Pinned by test/use-auto-advance.test.js. No scoring/business rule.
 import { ref, watch, onUnmounted, getCurrentInstance } from 'vue'

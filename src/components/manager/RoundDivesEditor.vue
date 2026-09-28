@@ -13,8 +13,9 @@
  *   * `height` / `mixedHeight` come in as props, they shape the
  *     picker filter (mixed-board events let any height through;
  *     single-board events only surface dives at that height).
- *   * `diveDirectory` comes in as a prop, the parent already loads
- *     it once on mount and reuses it across modals.
+ *   * `diveDirectory` comes in as a prop. The parent fetches it the
+ *     first time the create or edit form opens and shares it between
+ *     both, so it can still be [] for a moment right after opening.
  *   * Dive-picker dropdown state (open idx, query, results computed)
  *     is owned here. Nothing outside needs it.
  *
@@ -26,6 +27,7 @@
  * need to know our internal label format.
  */
 import { ref, computed } from 'vue'
+import { blankRoundSlot } from '@/lib/event-form'
 
 const props = defineProps({
   modelValue:    { type: Array,   required: true },  // round_dives array
@@ -106,10 +108,7 @@ function clearDiveForRow(idx) {
 function addRoundDive() {
   // Emit a new array reference for v-model so the parent's ref updates
   // even when the binding is shallow-watched.
-  emit('update:modelValue', [
-    ...props.modelValue,
-    { dive_id: null, height: null, _label: '', _meta: null },
-  ])
+  emit('update:modelValue', [...props.modelValue, blankRoundSlot()])
 }
 function removeRoundDive(idx) {
   const next = props.modelValue.slice()

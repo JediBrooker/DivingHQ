@@ -25,13 +25,10 @@ const props = defineProps({
   focused: { type: Boolean, default: false },
   totalJudges: { type: Number, default: 0 },
   socket: { type: Object, required: true },
-  // #7: the last set_active_diver for this pool wasn't confirmed by the
-  // server (likely rate-limited), so judges may be sitting on a stale diver.
-  unconfirmed: { type: Boolean, default: false },
   // Lease: another operator/window is also driving this event (or null)
   conflict: { type: String, default: null },
 })
-const emit = defineEmits(['focus', 'advance', 'retry-active'])
+const emit = defineEmits(['focus', 'advance'])
 const { t } = useI18n()
 
 // ---- Per-pool controllers (own lifecycle, auto-clean on card unmount) --
@@ -148,7 +145,7 @@ function onPrimary() {
   emit('advance')
 }
 
-// Referee calls for THIS pool's active diver (ControlView.vue:2330-2345).
+// Referee calls for THIS pool's active diver.
 // A referee action means the dive needs review, so it kills the in-flight
 // auto-advance so the operator isn't racing the timer.
 function refAction(type) {
@@ -211,10 +208,6 @@ function toggleHold() {
     </div>
     <div v-if="conflict" class="cv2-pool-conflict" role="status">
       ⚠ Also being controlled by {{ conflict }} — changes may conflict.
-    </div>
-    <div v-if="unconfirmed" class="cv2-pool-unconfirmed" role="alert">
-      <span>⚠ Diver not confirmed to the judges</span>
-      <button type="button" class="cv2-pool-retry" @click.stop="emit('retry-active')">Retry</button>
     </div>
 
     <div v-if="info" class="cv2-live">
@@ -334,18 +327,6 @@ function toggleHold() {
   background: rgba(245, 158, 11, 0.12); color: var(--amber);
   font-family: var(--font-mono); font-size: 12px;
 }
-.cv2-pool-unconfirmed {
-  display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
-  margin-bottom: 0.75rem; padding: 0.4rem 0.5rem 0.4rem 0.7rem; border-radius: var(--radius-sm);
-  background: rgba(239, 68, 68, 0.14); color: var(--red);
-  font-family: var(--font-mono); font-size: 12px;
-}
-.cv2-pool-retry {
-  flex: none; padding: 0.25rem 0.7rem; border: 1px solid var(--red); border-radius: var(--radius-sm);
-  background: transparent; color: var(--red); cursor: pointer;
-  font-family: var(--font-display); font-size: 11px; font-weight: 700; letter-spacing: 0.04em;
-}
-.cv2-pool-retry:hover { background: var(--red); color: var(--bg); }
 .cv2-pool-loading { margin: 0; font-family: var(--font-mono); font-size: 13px; color: var(--text-3); }
 
 .cv2-live-head { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem; }

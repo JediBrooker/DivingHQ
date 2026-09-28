@@ -167,20 +167,12 @@ async function downloadMeetReadinessCsv() {
 </template>
 
 <style scoped>
-/* Readiness styles MOVED from ManagerView.css (exclusive to this
-   modal: .readiness-* and the .modal.readiness-modal viewport
-   pin). .teams-section-label, .enrolled-empty, and .hint are
-   COPIED from ManagerView.css (shared with the teams /
-   federations modals and the rest of the manager page). */
+/* Readiness styles moved here from ManagerView.css (the .readiness-*
+   rules are exclusive to this modal). .enrolled-empty and .hint are
+   copies of the ManagerView.css ones, shared with the teams /
+   federations modals and the rest of the manager page. The header
+   rules went when BaseModal + ModalHeader took over the frame. */
 
-.readiness-head {
-  display: flex; align-items: flex-start; justify-content: space-between;
-  gap: 1rem; margin-bottom: 1rem;
-}
-.readiness-title {
-  font-size: 22px; line-height: 1.15; color: var(--text);
-}
-.readiness-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
 .readiness-summary {
   display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 0.55rem; margin: 0.85rem 0 1rem;
@@ -254,13 +246,8 @@ async function downloadMeetReadinessCsv() {
   font-style: normal; color: var(--amber);
 }
 
-/* COPIED: section label / hint / empty-line styles shared with
-   the other manager modals (see ManagerView.css). */
-.teams-section-label {
-  font-family: var(--font-display); font-size: 10px; font-weight: 700;
-  letter-spacing: 0.25em; text-transform: uppercase; color: var(--text-3);
-  margin-bottom: 0.6rem;
-}
+/* COPIED: hint / empty-line styles shared with the other manager
+   modals (see ManagerView.css). */
 .hint {
   font-size: 11px; color: var(--text-3); line-height: 1.5;
   padding: 0.6rem 0.75rem; margin-top: 0.4rem;

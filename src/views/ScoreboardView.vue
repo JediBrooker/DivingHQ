@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, defineAsyncComponent } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
@@ -21,10 +21,19 @@ import { fmtDate, ordinal, rankClass } from '@/lib/format'
 import DiverIdentity from '@/components/DiverIdentity.vue'
 import ScoreHistoryButton from '@/components/ScoreHistoryButton.vue'
 import JargonTip from '@/components/JargonTip.vue'
-import JudgeRankingTable from '@/components/JudgeRankingTable.vue'
 import MeetsBrowser from '@/components/scoreboard/MeetsBrowser.vue'
 import SponsorRotation from '@/components/scoreboard/SponsorRotation.vue'
 import RecordChip from '@/components/scoreboard/RecordChip.vue'
+
+// The judge ranking table only renders once someone expands it on a
+// recap, so it isn't worth shipping to every live board, projector and
+// OBS overlay (each /broadcast/all pane is a full boot of this view).
+//
+// MeetsBrowser stays static on purpose. Until /api/archive lands and
+// selectEvent runs, a deep link renders list mode for a moment, so a lazy
+// MeetsBrowser would still be fetched on every deep link, just one round
+// trip later, and the list page itself would pay that extra hop too.
+const JudgeRankingTable = defineAsyncComponent(() => import('@/components/JudgeRankingTable.vue'))
 
 const route  = useRoute()
 const router = useRouter()
@@ -67,6 +76,37 @@ const clubsList = ref([])
 const archiveTotal = ref(null)
 const loadingList = ref(false)
 const meetsFromCache = ref(false)
+
+// The club filter options and the "N archived" count are list-mode only
+// (MeetsBrowser's props and the list header). Fetch them the first time
+// the view is actually showing the list, not on a deep link or a
+// broadcast pane that never will. Once per mount. A mount straight onto
+// the list does it inline in onMounted, so the loading state still
+// waits for the clubs exactly like it always has; ensureListData covers
+// arriving at the list later (breadcrumb, Back from a deep link).
+let listDataRequested = false
+function fetchClubs() {
+  return cachedFetch('/api/archive/clubs', { credentials: 'same-origin' }, {
+    onUpdate(fresh) { if (Array.isArray(fresh)) clubsList.value = fresh },
+  })
+}
+// Headline count of the DiveRecorder results archive for the
+// header line. Fire-and-forget, a failure just hides the "N
+// archived" link, it never blocks the live list.
+function fetchArchiveStats() {
+  fetch('/api/dr-archive/stats', { credentials: 'same-origin' })
+    .then(r => (r.ok ? r.json() : null))
+    .then(s => { if (s && Number.isFinite(s.events)) archiveTotal.value = s.events })
+    .catch(() => {})
+}
+function ensureListData() {
+  if (listDataRequested) return
+  listDataRequested = true
+  fetchClubs().then((cls) => {
+    if (Array.isArray(cls.data)) clubsList.value = cls.data
+  })
+  fetchArchiveStats()
+}
 
 const currentEventId = ref(null)
 const currentEvent = computed(() => events.value.find(e => String(e.id) === String(currentEventId.value)) || null)
@@ -162,16 +202,6 @@ const heights = computed(() => {
   return [...set]
 })
 
-async function fetchJsonArray(url) {
-  try {
-    const r = await fetch(url)
-    if (!r.ok) return []
-    const body = await r.json()
-    return Array.isArray(body) ? body : []
-  } catch {
-    return []
-  }
-}
 const historyItems = ref([])
 const standings = ref([])
 const upcoming = ref([])         // next ≤5 dives queued, populated for Live events
@@ -356,11 +386,6 @@ function judgeForSynchro(historyRow, role, i) {
 }
 
 const isCompleted = computed(() => currentEvent.value?.status === 'Completed')
-
-const latestRound = computed(() => {
-  if (!leaderboardRounds.value.length) return null
-  return leaderboardRounds.value[leaderboardRounds.value.length - 1]
-})
 
 const isTeamEvent = computed(() => archiveResults.value?.event?.event_type === 'team')
 
@@ -587,6 +612,8 @@ function resetToEventPicker({ pushUrl = true } = {}) {
   if (pushUrl && route.params.eventId) {
     router.push({ path: '/scoreboard' })
   }
+  // Back on the list (breadcrumb or browser Back from a deep link).
+  ensureListData()
 }
 
 // Drive the view from the URL. If someone deep-links to
@@ -1044,36 +1071,31 @@ function parseScores(judgeArray) {
 onMounted(async () => {
   loadingList.value = true
   meetsFromCache.value = false
+  const listMode = !route.params.eventId
+  if (listMode) listDataRequested = true
   try {
     // Stale-while-revalidate via IndexedDB. Spectators landing on
     // /scoreboard get an instant render from cache (if they've
     // visited before) and the network refresh updates the list when
     // it lands. Works offline for browsing past meets too, only live
-    // state stays unavailable.
+    // state stays unavailable. Detail mode needs this list too, it's
+    // where currentEvent resolves from.
     const [evs, cls] = await Promise.all([
       cachedFetch('/api/archive', { credentials: 'same-origin' }, {
         onUpdate(fresh) {
           if (Array.isArray(fresh)) { events.value = fresh; meetsFromCache.value = false }
         },
       }),
-      cachedFetch('/api/archive/clubs', { credentials: 'same-origin' }, {
-        onUpdate(fresh) { if (Array.isArray(fresh)) clubsList.value = fresh },
-      }),
+      listMode ? fetchClubs() : null,
     ])
     if (Array.isArray(evs.data)) {
       events.value = evs.data
       meetsFromCache.value = evs.fromCache
     }
-    if (Array.isArray(cls.data)) {
+    if (Array.isArray(cls?.data)) {
       clubsList.value = cls.data
     }
-    // Headline count of the DiveRecorder results archive for the
-    // header line. Fire-and-forget, a failure just hides the "N
-    // archived" link, it never blocks the live list.
-    fetch('/api/dr-archive/stats', { credentials: 'same-origin' })
-      .then(r => (r.ok ? r.json() : null))
-      .then(s => { if (s && Number.isFinite(s.events)) archiveTotal.value = s.events })
-      .catch(() => {})
+    if (listMode) fetchArchiveStats()
   } finally {
     loadingList.value = false
   }

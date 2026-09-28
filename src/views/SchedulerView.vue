@@ -44,12 +44,12 @@
 //     and schedule:session_duplicated so multi-tab edits propagate.
 //
 // Phase 4 (this revision): subscribes to `schedule:shifted` and
-// refetches /sessions on receipt. The live re-flow UI itself
-// (the "Reschedule downstream" modal) lives in the Control Room,
-// since the operator who marked the event Complete shouldn't have
-// to leave that view to confirm shifts. See
-// src/components/ReflowModal.vue + the finaliseEvent flow in
-// ControlView.vue.
+// refetches /sessions on receipt. The re-flow UI itself (the
+// "Reschedule downstream" modal, src/components/ReflowModal.vue)
+// was opened from the old Control Room's finalise flow. The
+// Stage-Rail Control Room doesn't open it, so today nothing does,
+// and schedule:shifted only fires if something POSTs
+// /api/blocks/reflow directly.
 
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
@@ -246,10 +246,11 @@ socket.on('schedule:conflict_dismissed', onConflictDismissed)
 socket.on('schedule:block_updated', onScheduleChanged)
 socket.on('schedule:block_deleted', onScheduleChanged)
 socket.on('schedule:session_duplicated', onScheduleChanged)
-// Phase 4: live re-flow. The Control Room's reflow modal POSTs
-// to /api/blocks/reflow which emits this event; every connected
-// timeline (including public-schedule viewers) refetches so the
-// new windows appear within a socket round-trip.
+// Phase 4: live re-flow. POST /api/blocks/reflow emits this (the
+// modal that used to call it isn't mounted anywhere right now, see
+// the header); every connected timeline, public-schedule viewers
+// included, refetches so the new windows appear within a socket
+// round-trip.
 socket.on('schedule:shifted', onScheduleChanged)
 onUnmounted(() => {
   socket.off('schedule:conflict_dismissed', onConflictDismissed)
@@ -298,8 +299,25 @@ function sessionWindow(session) {
   return { start: new Date(minMs), end: new Date(maxMs) }
 }
 
-function gridlinesForSession(session) {
-  const win = sessionWindow(session)
+// sessionWindow walks every block in the session, and the template asks
+// for it once per block (blockStyle) plus for the gridlines and the
+// height, so recomputing it per call made each render O(blocks^2). A
+// drag re-renders on every snap step, which is where that hurt. Both
+// maps are keyed by session id and only rebuild when the persisted
+// blocks change (load, applyBlockUpdate, delete); the drag preview never
+// touches sessions, so it reads the cached window.
+const sessionWindows = computed(() => {
+  const out = new Map()
+  for (const session of sessions.value) out.set(session.id, sessionWindow(session))
+  return out
+})
+function windowFor(session) {
+  return sessionWindows.value.has(session.id)
+    ? sessionWindows.value.get(session.id)
+    : sessionWindow(session)
+}
+
+function buildGridlines(win) {
   if (!win) return []
   const out = []
   for (
@@ -311,9 +329,18 @@ function gridlinesForSession(session) {
   }
   return out
 }
+// The time rail and the hairlines both loop over these, so share one array.
+const sessionGridlines = computed(() => {
+  const out = new Map()
+  for (const [id, win] of sessionWindows.value) out.set(id, buildGridlines(win))
+  return out
+})
+function gridlinesForSession(session) {
+  return sessionGridlines.value.get(session.id) || buildGridlines(windowFor(session))
+}
 
 function timelineHeight(session) {
-  const win = sessionWindow(session)
+  const win = windowFor(session)
   if (!win) return 0
   const minutes = (win.end.getTime() - win.start.getTime()) / 60000
   return minutes * PIXELS_PER_MINUTE
@@ -325,7 +352,7 @@ function timelineHeight(session) {
 // pseudo-column that spans the full width, visually distinct so
 // the operator can see they're meet-wide.
 function blockStyle(block, session) {
-  const win = sessionWindow(session)
+  const win = windowFor(session)
   if (!win) return {}
   const offsetMin = (new Date(block.starts_at).getTime() - win.start.getTime()) / 60000
   const durMin = (new Date(block.ends_at).getTime() - new Date(block.starts_at).getTime()) / 60000
@@ -367,13 +394,23 @@ function blockStyle(block, session) {
   }
 }
 
+// toLocale*String with options builds a fresh formatter on every call
+// (~23 us each, vs ~1.5 us through a kept Intl.DateTimeFormat), and
+// formatTime runs twice per block plus once per gridline on every render.
+// Same locale ([] = the browser default) and options, so same output. An
+// invalid date still reads "Invalid Date" rather than throwing, which is
+// what toLocaleTimeString gave.
+const TIME_FMT = new Intl.DateTimeFormat([], { hour: '2-digit', minute: '2-digit' })
+const DATE_FMT = new Intl.DateTimeFormat([], {
+  weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+})
 function formatTime(d) {
-  return new Date(d).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  const date = new Date(d)
+  return Number.isNaN(date.getTime()) ? String(date) : TIME_FMT.format(date)
 }
 function formatDate(d) {
-  return new Date(d).toLocaleDateString([], {
-    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
-  })
+  const date = new Date(d)
+  return Number.isNaN(date.getTime()) ? String(date) : DATE_FMT.format(date)
 }
 function formatRelative(d) {
   if (!d) return ''
@@ -691,7 +728,7 @@ function onGridClick(e, session) {
   // Round DOWN to the start of the clicked half-hour, feels more
   // natural ("click 10:42 → 10:30 block") than round-to-nearest.
   const snappedMin = Math.floor(offsetMin / MINUTES_PER_GRIDLINE) * MINUTES_PER_GRIDLINE
-  const win = sessionWindow(session)
+  const win = windowFor(session)
   if (!win) return
   const startsMs = win.start.getTime() + snappedMin * 60 * 1000
   const endsMs = startsMs + MINUTES_PER_GRIDLINE * 60 * 1000

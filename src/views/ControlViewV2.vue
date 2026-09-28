@@ -8,7 +8,7 @@
 // controllers + meet-day tools; the mode gets chosen by the shared
 // useControlStage derivation. Same /control URL, ?event= deep-link, role
 // gate + AppShell as before.
-import { ref, reactive, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, reactive, computed, watch, onMounted, onUnmounted, nextTick, defineAsyncComponent } from 'vue'
 import { useRoute, onBeforeRouteLeave } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useClubScope, CONTROL_ROOM_ROLES } from '@/composables/useClubScope'
@@ -18,7 +18,19 @@ import SetupStage from '@/components/control/SetupStage.vue'
 import ReviewStage from '@/components/control/ReviewStage.vue'
 import LivePoolCard from '@/components/control/LivePoolCard.vue'
 import ScoreCorrectionModal from '@/components/control/ScoreCorrectionModal.vue'
-import DrawerPanel from '@/components/control/DrawerPanel.vue'
+// The Tools drawer (broadcast chooser, overlay picker, sponsors, reserves,
+// audit) only mounts on a click and needs the network to do anything, so
+// it's split into its own chunk rather than riding along on every live
+// board load. It's about half of this view's JS and CSS.
+// A Control Room tab stays open for hours though, and after a deploy the
+// old chunk hashes are gone (the SPA fallback answers them with HTML), so
+// a drawer first opened mid-meet wouldn't show up at all. That's why
+// onMounted warms loadDrawer once the board is up: from then on import()
+// answers out of the module map and a deploy or a wifi drop can't break it.
+// Score correction, check-in and the draw stay static, they queue through
+// the outbox and have to keep working through a network blip.
+const loadDrawer = () => import('@/components/control/DrawerPanel.vue')
+const DrawerPanel = defineAsyncComponent(loadDrawer)
 import EmptyState from '@/components/EmptyState.vue'
 import { useSocket } from '@/composables/useSocket'
 import { useSocketEvent } from '@/composables/useSocketEvent'
@@ -76,15 +88,6 @@ const pendingSeed = new Set() // events optimistically seeded, awaiting the serv
 const seedTimers = new Set() // fallback timers, cleared on unmount
 const SEED_GRACE_MS = 1500
 
-// Drop-detection: the server echoes set_active_diver back as state_update.
-// If the echo doesn't show up within CONFIRM_TIMEOUT_MS, the pool card
-// shows an "unconfirmed" warning. The outbox handles retries, this bit
-// is just UI feedback.
-const pendingConfirm = {}
-const unconfirmed = reactive({})
-const confirmTimers = new Set()
-const CONFIRM_TIMEOUT_MS = 4000
-
 // Lease conflict state: event_id -> true when another socket (operator or
 // window) is also controlling this event (server claim_event_control).
 const conflicts = reactive({})
@@ -92,13 +95,6 @@ const conflicts = reactive({})
 useSocketEvent(socket, 'state_update', (data) => {
   if (!data?.event_id) return
   pendingActive[data.event_id] = data
-  // Drop-detection: a state_update matching our pending diver confirms the
-  // set_active_diver landed -> clear the warning.
-  const pc = pendingConfirm[data.event_id]
-  if (pc && String(pc.competitor_id) === String(data.competitor_id) && Number(pc.round_number) === Number(data.round_number)) {
-    delete pendingConfirm[data.event_id]
-    delete unconfirmed[data.event_id]
-  }
   seedPoolFromServer(data.event_id)
 })
 
@@ -115,14 +111,13 @@ useSocketEvent(socket, 'event_control_granted', (d) => {
 
 // Queue set_active_diver through the outbox. It persists to IDB and
 // drains via socket ack when online; offline entries replay on
-// reconnect. Replaces the old token-bucket + drop-detection flow, since
-// the outbox's own pending/synced/failed states cover both now.
+// reconnect. That replaced the old token-bucket + drop-detection flow
+// (and its "unconfirmed / Retry" banner on the pool card), since the
+// outbox's own pending/synced/failed states cover retries now.
 function emitActiveDiver(ev) {
   const p = pools[ev.id]
   const a = p && p.currentActive
   if (!a) return
-  pendingConfirm[ev.id] = { competitor_id: a.competitor_id, round_number: a.round_number }
-  delete unconfirmed[ev.id]
   const payload = { ...a, status: 'ready' }
   queueSocketAction('set_active_diver', payload)
 }
@@ -208,17 +203,20 @@ watch(
   },
 )
 
+// The two fetches don't depend on each other, so they go out together and
+// a refresh after each dive costs the slower one, not both back to back.
+// Each still only overwrites its own panel on success.
 async function loadPoolPanels(eventId) {
   if (!eventId) return
-  try {
-    const h = await auth.apiFetch(`/api/events/${eventId}/history`)
-    // /history comes back round ASC, name ASC; reverse so the latest dive is on top.
-    histories[eventId] = Array.isArray(h) ? h.slice().reverse() : []
-  } catch { /* leave prior history in place */ }
-  try {
-    const sb = await auth.apiFetch(`/api/scoreboard/${eventId}`)
-    standingsByEvent[eventId] = Array.isArray(sb?.standings) ? sb.standings : []
-  } catch { /* leave prior standings in place */ }
+  await Promise.all([
+    auth.apiFetch(`/api/events/${eventId}/history`).then((h) => {
+      // /history comes back round ASC, name ASC; reverse so the latest dive is on top.
+      histories[eventId] = Array.isArray(h) ? h.slice().reverse() : []
+    }).catch(() => { /* leave prior history in place */ }),
+    auth.apiFetch(`/api/scoreboard/${eventId}`).then((sb) => {
+      standingsByEvent[eventId] = Array.isArray(sb?.standings) ? sb.standings : []
+    }).catch(() => { /* leave prior standings in place */ }),
+  ])
 }
 
 function fmtTotal(v) {
@@ -283,7 +281,7 @@ function closeCorrection() {
 }
 
 // Announce (#9): push the focused pool's standings to the spectator
-// scoreboard ("say it on screen"). Reproduces the V1 announce_score emit.
+// scoreboard ("say it on screen") via announce_score.
 function announceFocused() {
   const ev = currentEvent.value
   if (!ev || !focusedStandings.value.length) return
@@ -291,8 +289,8 @@ function announceFocused() {
   showSuccess(`Announced "${ev.name}" standings on the scoreboard.`)
 }
 
-// The nextDiver funnel (ControlView.vue:2347-2378), generalized to ANY
-// pool so each card's primary button advances its OWN event: partial-score
+// The old single-pool nextDiver funnel, generalized to ANY pool so each
+// card's primary button advances its OWN event: partial-score
 // confirm, then advance that pool's cursor or finalise. Per-pool shot
 // clock + auto-advance live in each card, which re-arms its clock when its
 // active diver changes here.
@@ -325,15 +323,9 @@ async function advancePool(ev) {
     await finalisePool(ev)
   } else if (selectDiver(p, p.currentIndex + 1, totalJudges, diveDescription)) {
     // The pool's currentActive changed -> its card re-arms the shot clock.
-    // Routed through the bucket + drop-detection (#7).
+    // Goes out through the outbox, see emitActiveDiver.
     emitActiveDiver(ev)
   }
-}
-
-// Re-announce the focused/named pool's current active diver (the card's
-// "Retry" after a dropped set_active_diver).
-function retryActiveDiver(ev) {
-  if (ev) emitActiveDiver(ev)
 }
 
 // Referee call for the FOCUSED pool's active diver, the keyboard path
@@ -369,10 +361,10 @@ function onKeydown(e) {
   else if (intent.action === 'ref') refActionFocused(intent.arg)
 }
 
-// finaliseEvent (ControlView.vue:2470-2545), per pool: same
-// consequences/confirm/PUT/undo. (The reflow modal is drawer plumbing,
-// deferred to P8, since an event with no long-run candidates, which is the
-// common case, never opens it.)
+// Finalise one pool: consequences confirm, PUT Completed, then an undo
+// toast. The old single-pool finalise could also open the schedule
+// reflow modal; that never came across, so nothing opens it today (an
+// event with no long-run candidates, the common case, never needed it).
 async function finalisePool(ev) {
   if (!ev) return
   const p = pools[ev.id]
@@ -518,7 +510,7 @@ async function loadEvents() {
 const wiredPools = new Set()
 
 function bringUpPools() {
-  // Honour /control?event=<id> (same deep-link contract as V1).
+  // Honour /control?event=<id>, the Control Room's deep link.
   const q = route.query.event
   if (q != null && events.value.some((e) => String(e.id) === String(q))) {
     selectedEventId.value = String(q)
@@ -544,9 +536,16 @@ watch(socket.isConnected, async (connected) => {
 })
 
 onMounted(async () => {
+  // Before the await on purpose: queued outbox actions from a previous
+  // visit still need the leave-page prompt while /api/events is loading.
+  window.addEventListener('beforeunload', onBeforeUnload)
   if (await loadEvents()) bringUpPools()
   // Per-pool operator hotkeys (focused pool only).
   window.addEventListener('keydown', onKeydown)
+  // Fetch the drawer chunk while the board sits idle so it's already here
+  // when someone hits Tools later on. Older Safari has no
+  // requestIdleCallback, the timeout covers it.
+  ;(window.requestIdleCallback || ((f) => setTimeout(f, 2000)))(() => loadDrawer().catch(() => {}))
 })
 
 // Clear any in-flight seed-fallback timers so a pool can't get announced
@@ -555,8 +554,6 @@ onMounted(async () => {
 onUnmounted(() => {
   seedTimers.forEach(clearTimeout)
   seedTimers.clear()
-  confirmTimers.forEach(clearTimeout)
-  confirmTimers.clear()
   window.removeEventListener('keydown', onKeydown)
   window.removeEventListener('beforeunload', onBeforeUnload)
 })
@@ -575,9 +572,6 @@ function onBeforeUnload(e) {
   if (!isOffline.value && outboxPending.value === 0) return
   e.preventDefault()
 }
-onMounted(() => {
-  window.addEventListener('beforeunload', onBeforeUnload)
-})
 </script>
 
 <template>
@@ -703,11 +697,9 @@ onMounted(() => {
               :focused="String(lp.event.id) === String(selectedEventId)"
               :total-judges="numberOfJudgesFor(lp.event.id)"
               :socket="socket"
-              :unconfirmed="!!unconfirmed[lp.event.id]"
               :conflict="conflicts[lp.event.id] || null"
               @focus="selectEvent"
               @advance="advancePool(lp.event)"
-              @retry-active="retryActiveDiver(lp.event)"
             />
           </div>
 
@@ -800,7 +792,6 @@ onMounted(() => {
   border-radius: var(--radius-lg); color: var(--text-2);
 }
 .cv2-mode-note { margin: 0 0 0.4rem; font-family: var(--font-mono); font-size: 13px; }
-.cv2-mode-state { margin: 0; font-family: var(--font-mono); font-size: 12px; color: var(--text-3); }
 /* Live mode: History | pool grid | Standings. The center holds one
    LivePoolCard per Live event (its own scoped styles). */
 .cv2-live-layout { display: flex; gap: 1rem; align-items: stretch; min-height: 62vh; }

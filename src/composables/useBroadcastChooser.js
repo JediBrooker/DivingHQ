@@ -1,9 +1,9 @@
-/* Broadcast chooser: state for the "..." menu's Broadcast
- * modal in Control Room.
+/* Broadcast chooser: state for the Control Room's Broadcast modal
+ * (BroadcastModal, opened from the Tools drawer).
  *
  * Five flavours surfaced to the operator:
- *   1. Operator broadcast (this screen, kiosk layout), handled
- *      inline in the template via a RouterLink, no composable
+ *   1. Operator broadcast (this screen, kiosk layout), a plain
+ *      RouterLink in BroadcastModal's template, no composable
  *      state needed beyond `broadcastChoiceOpen`.
  *   2. Audience broadcast for THIS event → new window
  *      /scoreboard/<id>/broadcast.
@@ -16,33 +16,19 @@
  *      with the chroma-key overlay URL (`/scoreboard/<id>?overlay=1`)
  *      and step-by-step Browser Source setup so the operator can
  *      composite the live scoreboard into their broadcast graphics.
- *   5. Venue hardware bridge → ControlView owns the event-specific
- *      Daktronics command panel locally since it doesn't need
- *      event-list picker state.
+ *   5. Venue hardware bridge → BroadcastModal keeps the
+ *      event-specific Daktronics command panel to itself, it
+ *      doesn't need any event-list picker state.
  *
- * Lifted out of ControlView.vue when that file crossed 7,500
- * lines and reading it through cost real agent tokens. The state
- * is self-contained, only outside coupling is a single
- * `closeHeaderMenu()` callback the caller passes in so we can
- * collapse the ⋯ overflow when the operator commits to opening
- * a broadcast window.
+ * Lifted out of the old all-in-one ControlView when that file
+ * crossed 7,500 lines. The state is self-contained. The only
+ * outside hook is the optional `closeHeaderMenu()` callback, fired
+ * when the operator commits to opening a broadcast window.
+ * BroadcastModal passes one that emits close-header-menu, though
+ * nothing listens for it now that the old ⋯ header menu is gone.
  *
- * Usage in ControlView:
- *   const {
- *     broadcastChoiceOpen, broadcastPickerOpen,
- *     broadcastLiveEvents, broadcastLiveLoading, broadcastLiveError,
- *     broadcastSelection, broadcastOpenDisabled,
- *     openBroadcastInNewWindow, pickBroadcastAll,
- *     toggleBroadcastSelection, broadcastSelectAll, broadcastSelectNone,
- *     confirmBroadcastPicker,
- *   } = useBroadcastChooser({
- *     closeHeaderMenu: () => { headerMenuOpen.value = false },
- *   })
- *
- * `closeHeaderMenu` is captured as a closure so it's safe to
- * reference `headerMenuOpen` before that ref is declared further
- * down the script; the callback only fires on user click, well
- * after the script body has run end-to-end.
+ * See BroadcastModal.vue for the full destructure; it's the only
+ * caller.
  */
 import { ref, computed } from 'vue'
 
@@ -90,7 +76,10 @@ export function useBroadcastChooser({ closeHeaderMenu = () => {} } = {}) {
     broadcastLiveLoading.value = true
     broadcastLiveError.value = ''
     try {
-      const res = await fetch('/api/events', { credentials: 'same-origin' })
+      // Ask the server for Live rows only (same visibility rules as the
+      // full list) instead of pulling every Completed event of the season
+      // and throwing them away. The client filter stays as a guard.
+      const res = await fetch('/api/events?status=Live', { credentials: 'same-origin' })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = await res.json()
       const live = (data || []).filter((e) => e.status === 'Live')

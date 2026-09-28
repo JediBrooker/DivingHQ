@@ -140,12 +140,6 @@
   color: var(--cyan); font-weight: 700; text-decoration: none;
 }
 .sb-page-sub-archive:hover { text-decoration: underline; }
-.sb-event-name {
-  font-family: var(--font-sans); font-size: 16px; font-weight: 600;
-  font-style: normal; letter-spacing: -0.01em; color: var(--fg);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  min-width: 0;
-}
 
 /* Breadcrumbs, consistent nav across the scoreboard surfaces:
    All Meets › <Meet> › <Event>. Wraps on narrow screens so the
@@ -412,12 +406,6 @@
   color: var(--text-2);
 }
 .sb-projection-chase strong { color: var(--cyan); }
-.sb-projection-detail {
-  font-size: clamp(10px, 1.2vw, 13px);
-  color: var(--text-3);
-  margin-top: 0.25rem;
-}
-.sb-projection-detail strong { color: var(--text-2); }
 /* Catch-up table, one row per podium target showing the
    average judge score the active diver needs over the remaining
    dives. Layout matches the Control Room (rank | name | target)
@@ -571,15 +559,6 @@
 }
 .sb-country-line { font-family: var(--font-mono); font-size: clamp(13px,1.7vw,17px); font-weight: 700; letter-spacing: 0.15em; color: var(--text-3); margin-bottom: 0.8rem; }
 
-#no-event-view { display: flex; flex-direction: column; align-items: center; width: 100%; max-width: 700px; }
-.picker-label { font-family: var(--font-display); font-size: 11px; font-weight: 700; letter-spacing: 0.3em; text-transform: uppercase; color: var(--text-3); margin-bottom: 2rem; }
-.event-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(200px,1fr)); gap: 1rem; width: 100%; }
-.event-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; cursor: pointer; transition: all 0.15s; text-align: start; }
-.event-card:hover { border-color: var(--cyan); background: var(--cyan-dim); }
-.event-card-name { font-family: var(--font-sans); font-size: 16px; font-weight: 600; font-style: normal; letter-spacing: -0.01em; color: var(--fg); margin-bottom: 0.375rem; line-height: 1.2; }
-.event-card-meta { font-family: var(--font-mono); font-size: 11px; color: var(--text-3); }
-.event-card:hover .event-card-name { color: var(--cyan); }
-
 .hist-card { padding: 0.875rem 1rem; border-inline-start: 2px solid var(--cyan); background: var(--bg-3); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; margin-bottom: 0.5rem; }
 .hist-round { font-size: 10px; color: var(--text-3); margin-bottom: 0.3rem; font-family: var(--font-mono); }
 /* Identity block font-size base, DiverIdentity inherits this
@@ -620,7 +599,6 @@
 /* Description now inlines next to code + DD. Ellipsis when the
    column is narrow keeps each card to one header line. */
 .hist-desc { font-size: 10px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-.hist-country { font-family: var(--font-mono); font-size: 9px; font-weight: 700; letter-spacing: 0.05em; color: var(--text-3); background: var(--bg-2); border: 1px solid var(--border); border-radius: 3px; padding: 0.1rem 0.35rem; margin-inline-start: 0.4rem; vertical-align: middle; }
 .hist-scores { display: flex; flex-wrap: wrap; gap: 0.3rem; }
 
 .standing { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 0; border-bottom: 1px solid var(--border); }
@@ -639,8 +617,6 @@
 .standing-score { font-family: var(--font-mono); font-size: 15px; font-weight: 500; color: var(--text); }
 .sb-club-line { font-family: var(--font-mono); font-size: clamp(11px,1.4vw,14px); color: var(--text-3); margin-inline-start: 0.6rem; }
 .sb-team-line { font-family: var(--font-display); font-size: clamp(13px,1.7vw,18px); font-weight: 700; color: var(--cyan); margin-inline-start: 0.7rem; }
-
-.event-sel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.4rem 0.75rem; font-family: var(--font-mono); font-size: 13px; color: var(--text); outline: none; cursor: pointer; }
 
 /* Standings panel head: title plus Final/By Round tabs */
 .col-head { display: flex; align-items: center; justify-content: space-between; }
@@ -784,16 +760,9 @@
    ========================================================= */
 .sb-layout.overlay-mode { min-height: 100vh; min-height: 100dvh; padding: 1.5rem; }
 .sb-layout.overlay-mode .sb-header,
-.sb-layout.overlay-mode .sb-controls,
-.sb-layout.overlay-mode .sb-footer,
 .sb-layout.overlay-mode .meta-strip,
 .sb-layout.overlay-mode .conn-banner,
-.sb-layout.overlay-mode .meet-hold-banner,
-.sb-layout.overlay-mode .filter-bar,
-.sb-layout.overlay-mode .sb-event-list,
-.sb-layout.overlay-mode .export-actions,
-.sb-layout.overlay-mode .archive-wrap,
-.sb-layout.overlay-mode .archive-controls { display: none !important; }
+.sb-layout.overlay-mode .export-actions { display: none !important; }
 
 /* Panel chrome off, so the key colour reaches the edges of each card. */
 .sb-layout.overlay-mode .sb-body,
@@ -1339,23 +1308,14 @@
    standings) into a single scrolling stack so the active diver
    stays the hero, with history above and standings below. */
 @media (max-width: 720px) {
-  /* List mode: tighter outer padding + single-column meet cards */
+  /* List mode: tighter outer padding. .meets-mode is MeetsBrowser's
+     root, the one element of it this scoped sheet can reach; the rest
+     of the list's phone rules live in that component. */
   .meets-mode { padding: 1rem 1rem 3rem; gap: 0.875rem; }
-  .live-banner { padding: 0.75rem 0.875rem; }
-  .live-banner-cards { grid-template-columns: 1fr; }
-  .meets-grid { grid-template-columns: 1fr; gap: 0.625rem; }
-  .meet-card { padding: 0.875rem 1rem; }
-  .meet-card-name { font-size: 15px; }
-
-  .filter-bar { padding: 0.625rem 0.75rem; gap: 0.4rem; }
-  .filter-bar .input,
-  .filter-bar .select { max-width: none; flex: 1 1 100%; }
-  .result-count { margin-inline-start: 0; }
 
   /* Header bits */
   .sb-page-title { font-size: 15px; }
   .sb-page-sub   { font-size: 10px; }
-  .sb-event-name { font-size: 14px; }
   .sb-crumbs     { font-size: 13px; gap: 0.3rem; }
   .header-left   { gap: 0.5rem; }
 
@@ -1415,10 +1375,6 @@
   .sb-name { font-size: clamp(28px, 9vw, 48px); margin-bottom: 1rem; }
   .sb-badges { gap: 1rem; margin-bottom: 0.75rem; flex-wrap: wrap; }
 
-  /* Picker grid for "no live event" state */
-  .event-grid { grid-template-columns: 1fr; }
-  .event-card { padding: 1.1rem; }
-
   /* Standings rows: pack tighter so they don't wrap awkwardly */
   .standing { padding: 0.6rem 0; gap: 0.5rem; }
   .standing-name { font-size: 14px; }
@@ -1428,9 +1384,8 @@
      Completed-event recap: phone-specific fixes
      ========================================================= */
 
-  /* The header is a single-row flex on desktop. On a phone the
-     event-sel dropdown gets pushed off-screen, so let it wrap onto
-     its own full-width row, tighten everything else. */
+  /* The header is a single-row flex on desktop. On a phone let it
+     wrap and tighten everything up. */
   .sb-header {
     flex-wrap: wrap;
     gap: 0.5rem;
@@ -1447,13 +1402,6 @@
     overflow: hidden;
     text-overflow: ellipsis;
     min-width: 0;
-  }
-  .event-sel {
-    flex: 1 1 100%;
-    min-width: 0;
-    order: 3;            /* drop below the FINAL/LIVE pill row */
-    font-size: 13px;
-    padding: 0.5rem 0.65rem;
   }
   .status-badge { padding: 0.2rem 0.55rem; font-size: 9px; }
 

@@ -1,27 +1,29 @@
-// Meet hold / resume: extracted from ControlView.vue. Broadcasts
-// pause state to judges + the spectator scoreboard (meet_hold /
-// meet_resume) and mirrors server-pushed hold state for
-// multi-operator setups + late-joining Control Room sessions
-// (the server replays meet_held when the view emits
-// get_meet_hold on event switch, that emit stays with the
-// caller's onEventChange).
+// Meet hold / resume, lifted out of the old all-in-one ControlView.
+// Broadcasts pause state to judges + the spectator scoreboard
+// (meet_hold / meet_resume) and mirrors server-pushed hold state for
+// multi-operator setups. The server only replays an existing hold to a
+// socket that asks with get_meet_hold, and asking is the caller's job:
+// the judge screen and the scoreboard do, the Control Room doesn't yet.
 //
 // Must be called synchronously during component setup: the
 // meet_held / meet_resumed listeners register via useSocketEvent,
 // which relies on the active effect scope (onScopeDispose) for
-// auto-cleanup, the same leak-fix property ControlViews listeners
-// were migrated to.
+// auto-cleanup.
 //
 // Options:
-//   socket : the pooled socket from useSocket()
-//   event  : getter returning the current event row (or null)
-//   onHold : called after a hold is broadcast; the Control Room
-//            passes a shot-clock pause here ("diver can't be on
-//            the clock during a hold")
+//   socket            : the pooled socket from useSocket(), only used
+//                       to listen for meet_held / meet_resumed
+//   event             : getter returning the current event row (or null)
+//   onHold            : called after a hold is broadcast; the pool card
+//                       passes a shot-clock reset here ("diver can't be
+//                       on the clock during a hold")
+//   queueSocketAction : the outbox sender from useHttpOutbox(). Both
+//                       emits go through it so a hold survives a wifi
+//                       blip; there's no raw socket.emit fallback.
 import { ref } from 'vue'
 import { useSocketEvent } from '@/composables/useSocketEvent'
 
-export function useMeetHold({ socket, event, onHold = () => {}, queueSocketAction = null }) {
+export function useMeetHold({ socket, event, onHold = () => {}, queueSocketAction }) {
   const isHeld = ref(false)
   const holdReason = ref('')
   const holdPromptOpen = ref(false)
@@ -35,9 +37,7 @@ export function useMeetHold({ socket, event, onHold = () => {}, queueSocketActio
     if (!event()) return
     isHeld.value = true
     holdReason.value = holdReasonInput.value.trim()
-    const holdPayload = { event_id: event().id, reason: holdReason.value || null }
-    if (queueSocketAction) queueSocketAction('meet_hold', holdPayload)
-    else socket.emit('meet_hold', holdPayload)
+    queueSocketAction('meet_hold', { event_id: event().id, reason: holdReason.value || null })
     holdPromptOpen.value = false
     // Pause the shot clock, diver can't be "on the clock" during a hold
     onHold()
@@ -46,9 +46,7 @@ export function useMeetHold({ socket, event, onHold = () => {}, queueSocketActio
     if (!event()) return
     isHeld.value = false
     holdReason.value = ''
-    const resumePayload = { event_id: event().id }
-    if (queueSocketAction) queueSocketAction('meet_resume', resumePayload)
-    else socket.emit('meet_resume', resumePayload)
+    queueSocketAction('meet_resume', { event_id: event().id })
   }
 
   // Hold-state sync: for multi-operator setups + late-joining
