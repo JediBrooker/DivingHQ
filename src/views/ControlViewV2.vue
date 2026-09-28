@@ -82,6 +82,19 @@ useSocketEvent(socket, 'score_received', (data) => {
 useSocketEvent(socket, 'judge_signal', (data) => {
   routeSignal(data)
 })
+// Anything that changes scores after the fact (a correction from any
+// operator, the HTTP amend, a referee Failed or Cap, a resolved conflict)
+// ends in score_corrected for the event's room. That's the moment the
+// server's numbers are new, so that's when History and Standings re-read.
+// The correction dialog used to trigger the re-read itself, right after
+// queueing its PUT, which usually beat the PUT to the server.
+useSocketEvent(socket, 'score_corrected', (data) => {
+  if (data?.event_id) {
+    idbInvalidate(`/api/scoreboard/${data.event_id}`).catch(() => {})
+    loadPoolPanels(data.event_id)
+  }
+})
+
 // A re-dive (from any operator) starts the dive over: the server marks
 // its scores 'redive' until the judges score again. Reset that pool's
 // tiles and disarm Next so it can't be advanced past the dive on the old
@@ -307,6 +320,12 @@ function openCorrection(row) {
 function closeCorrection() {
   correctOpen.value = false
   correctTarget.value = null
+}
+// The dialog hands back its outbox key. score_corrected normally does the
+// refresh, but it goes to the room and a socket mid-reconnect can miss
+// it, so re-read once more when the PUT itself has landed.
+async function onCorrectionSaved(key, eventId) {
+  if ((await waitForOutboxEntry(key, { timeoutMs: 15000 })) === 'synced') loadPoolPanels(eventId)
 }
 
 // Announce (#9): push the focused pool's standings to the spectator
@@ -952,7 +971,7 @@ function onBeforeUnload(e) {
       :card="correctTarget"
       :event="currentEvent"
       @close="closeCorrection"
-      @saved="loadPoolPanels(selectedEventId)"
+      @saved="(key) => onCorrectionSaved(key, selectedEventId)"
     />
   </div>
 </template>

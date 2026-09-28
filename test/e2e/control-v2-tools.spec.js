@@ -3,6 +3,7 @@
 // Standings column. Flag-on only (V2 surface)
 const { test, expect } = require("@playwright/test");
 const setup = require("./_setup");
+const { roomWatcher, emitAck } = require("./_meetday");
 
 test.describe.configure({ mode: "serial" });
 
@@ -111,4 +112,39 @@ test("announce pushes the focused pool's standings and toasts", async ({ request
   await expect.poll(() => announced.length, { timeout: 6_000 }).toBeGreaterThan(0);
   expect(announced[0].standings.length).toBeGreaterThan(0);
   spectator.disconnect();
+});
+
+// History and Standings used to refresh straight after the correction
+// dialog closed, while the PUT was still sitting in the outbox, so they
+// usually re-read the old scores. A referee Failed from another operator
+// didn't refresh them at all, and Announce then pushed the stale totals.
+test("History follows a score correction and a referee Failed", async ({ request, page, baseURL }) => {
+  test.setTimeout(120_000);
+  const { orgId, username, adminToken } = await setup.createOrgAndAdmin(request, { countryCode: "AUS", orgName: "Tools Stale" });
+  const { event, diveId, divers, judges } = await liveEvent(request, { orgId, adminToken, name: "Stale Event" });
+  const room = await roomWatcher(baseURL, event.id);
+
+  await signIn(page, username);
+  await page.goto(`/control?event=${event.id}`);
+  await expect(page.locator(".cv2-live-diver")).toContainText("AAA Diver", { timeout: 10_000 });
+  await expect.poll(() => room.seen.state.length, { timeout: 8_000 }).toBeGreaterThan(0);
+
+  await setup.submitPanelScores({
+    baseURL, judges, eventId: event.id, competitorId: divers[0].userId, roundNumber: 1, diveId,
+    scores: [7.0, 7.0, 7.0, 7.0, 7.0],
+  });
+  const histCard = page.locator(".cv2-hcard.is-clickable", { hasText: "AAA Diver" });
+  await expect(histCard.locator(".cv2-hcard-total")).toHaveText("31.50", { timeout: 8_000 });
+
+  await histCard.click();
+  await page.locator(".lb-body .input[type=number]").fill("2.0");
+  await page.getByRole("button", { name: "Save correction" }).click();
+  await expect(histCard.locator(".j-score").first()).toHaveText("2.0", { timeout: 8_000 });
+
+  expect(await emitAck(baseURL, adminToken, "referee_failed_dive", {
+    event_id: event.id, competitor_id: divers[0].userId, round_number: 1,
+  })).toMatchObject({ ok: true });
+  await expect(histCard.locator(".cv2-hcard-total")).toHaveText("0.00", { timeout: 8_000 });
+  await expect(page.locator(".cv2-srow-total").first()).toHaveText("0.00");
+  room.close();
 });

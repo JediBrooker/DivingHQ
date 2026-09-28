@@ -9,10 +9,11 @@
  * the old openCorrection() reset did (J1 preselected, its score
  * prefilled).
  *
- * State boundary: draft fields + preview are OWNED here. On save
- * the clicked history card (the `card` prop) is mutated in place,
- * same object the parent's history list renders, and `saved`
- * tells the parent to reload that pool's history + standings.
+ * State boundary: draft fields + preview are OWNED here. `saved`
+ * carries the outbox key of the queued PUT: the parent re-reads
+ * History and Standings once the server has it (score_corrected
+ * usually gets there first). Re-reading on queue, as this used to
+ * prompt, mostly fetched the old scores back.
  */
 import { ref, computed } from 'vue'
 import { useHttpOutbox } from '@/composables/useHttpOutbox'
@@ -129,19 +130,14 @@ async function submitCorrection() {
     // idempotency (P4-2) makes a retry safe, and the new schema
     // columns (P4-1 + migration 054) record both clocks. Worth
     // double-checking these two line up if you touch either one.
-    await queueAction({
+    const key = await queueAction({
       method: 'PUT',
       url: `/api/scores/${props.card.score_ids[correctJudgeIdx.value]}`,
       body: { score: newVal, reason: correctReason.value || null },
       actionType: 'score_correction',
     })
-    // Optimistic local update, the audit row + broadcast will
-    // catch up once drain() succeeds.
-    props.card.scores[correctJudgeIdx.value] = newVal
-    props.card.total = props.card.scores
-      .reduce((a, b) => a + b, 0).toFixed(1)
     emit('close')
-    emit('saved')
+    emit('saved', key)
   } catch (err) {
     correctErr.value = err.message
   } finally {
