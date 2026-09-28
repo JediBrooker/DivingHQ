@@ -56,16 +56,16 @@ the client passed an ack callback, as `{ ok: false, error }` on the ack.
 | `event_status_changed`    | `{ event_id, org_id, from, to }` | An event's status flipped (Upcoming / Live / Completed, via `routes/events/index.js`). Global `io.emit`, no sensitive data; dashboards refetch their pulse counts through their own API gates. |
 | `notification`            | `{ id, category, title, body, data, action_url, expires_at, created_at }` | `lib/push.js` `sendNotification` fanned a notification out. To room `user:<id>` (every socket joins its own user room at connect), in parallel with Web Push. `data.actions` carries any action buttons (the referee sign-off has Approve/Deny). |
 | `referee_signoff_response` | `{ request_id, decision: 'approved' \| 'declined', by_user_id }` | The referee answered a dive-order sign-off request (the in-app banner, the notification's own Approve/Deny, or the handoff code). Sent through `push.emitEvent` to room `event:<event_id>` so the manager's SignoffModal leaves its waiting state. |
-
-Not emitted, despite what you might read in `lib/idempotency.js`'s usage
-comment: `action_result` and `error`. The one socket write that's
-idempotent (`submit_score`) replays a cached result as `score_received`.
 | `schedule:conflict_dismissed` | `{ meet_id, action: 'dismiss' \| 'undismiss' }` | A scheduler conflict was dismissed or un-dismissed via the editor-only API. Drawer clients refetch `/api/meets/:id/conflicts` on receipt. The broadcast is intentionally minimal and does not include personnel labels. |
 | `schedule:block_updated`      | `{ meet_id, session_id, block_id?, created?, session_updated? }` | A Phase 3 manual edit landed (`PUT /api/blocks/:id`, `POST /api/sessions/:sessionId/blocks`, or `PUT /api/sessions/:id`). Other timeline tabs refetch `/sessions` and update inline. The broadcast is intentionally minimal; conflict details stay behind `/api/meets/:id/conflicts`. |
 | `schedule:block_deleted`      | `{ meet_id, session_id, block_id }` | A schedule block was deleted via `DELETE /api/blocks/:id`. Other tabs refetch the schedule. |
 | `schedule:session_duplicated` | `{ meet_id, source_session_id, session_id }` | A session was cloned forward via `POST /api/sessions/:id/duplicate`. Other tabs refetch `/sessions`. |
 | `role_request_created`        | `{ org_id, requested_role }` | Someone asked for a role: at signup (`POST /api/auth/register`) or later from their profile (`POST /api/role-requests`). The dashboard's pulse strip refetches its pending count. Public broadcast, no names; who may see the request is decided by the REST fetch. |
 | `schedule:shifted`            | `{ meet_id, shifted_block_ids: [...], delta_seconds }` | Phase 4 live re-flow committed — `POST /api/blocks/reflow` shifted every listed block forward by `delta_seconds` and appended a `schedule_block_shifts` ledger row per block. Timeline tabs refetch `/api/meets/:id/sessions` so the new windows appear. Public broadcast, with no personnel labels. |
+
+Not emitted, despite what you might read in `lib/idempotency.js`'s usage
+comment: `action_result` and `error`. The one socket write that's
+idempotent (`submit_score`) replays a cached result as `score_received`.
 
 ---
 

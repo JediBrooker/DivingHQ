@@ -41,3 +41,18 @@ test("every socket event the server listens for or emits is in docs/socket-event
   const missing = [...names].filter((n) => !doc.includes("`" + n + "`")).sort();
   assert.deepEqual(missing, []);
 });
+
+// A note once got pasted between two rows of the server-to-client table,
+// which silently turned every row below it into loose text with pipes in
+// it. Markdown won't complain, so check that each table starts at a
+// header row (the next line is the |---| separator).
+test("every table row in docs/socket-events.md belongs to a table with a header", () => {
+  const lines = fs.readFileSync(path.join(root, "docs", "socket-events.md"), "utf8").split("\n");
+  const orphans = [];
+  lines.forEach((line, i) => {
+    if (!line.startsWith("|")) return;
+    if (i > 0 && lines[i - 1].startsWith("|")) return;
+    if (!/^\|\s*:?-{3,}/.test(lines[i + 1] || "")) orphans.push(`line ${i + 1}: ${line.slice(0, 60)}`);
+  });
+  assert.deepEqual(orphans, []);
+});
