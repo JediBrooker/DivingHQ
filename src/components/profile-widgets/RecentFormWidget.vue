@@ -1,8 +1,8 @@
 <script setup>
 import { ref } from 'vue'
-import { fmtDate } from '@/lib/format'
+import { fmtDate, ordinal } from '@/lib/format'
 import { annotateJudgeRows, scoreCategory } from '@/composables/useScoreTrim.js'
-import { placeOrdinal, placeColor } from '@/lib/profile-helpers'
+import { placeColor } from '@/lib/profile-helpers'
 
 const props = defineProps({
   // Array of { event_id, event_name, created_at, rank, field_size,
@@ -55,7 +55,7 @@ function scoreClass(s) {
           <span class="trend-date">{{ fmtDate(r.created_at) }}</span>
           <span class="trend-name">{{ r.event_name }}</span>
           <span :class="['trend-place', placeColor(r.rank)]">
-            {{ placeOrdinal(r.rank) }} <span class="dim">/ {{ r.field_size }}</span>
+            {{ ordinal(r.rank) }} <span class="dim">/ {{ r.field_size }}</span>
           </span>
           <span class="trend-total">{{ Number(r.total).toFixed(1) }}</span>
         </div>

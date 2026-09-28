@@ -1,7 +1,7 @@
 <script setup>
 import { computed } from 'vue'
-import { fmtDate } from '@/lib/format'
-import { placeOrdinal, placeColor } from '@/lib/profile-helpers'
+import { fmtDate, ordinal } from '@/lib/format'
+import { placeColor } from '@/lib/profile-helpers'
 
 const props = defineProps({
   // Array of { event_id, event_name, event_type, total_score,
@@ -60,7 +60,7 @@ const trendChart = computed(() => {
             <span v-if="t.partner_name" class="trend-partner">with {{ t.partner_name }}</span>
             <span v-if="t.team_name" class="trend-partner">on {{ t.team_name }}</span>
           </span>
-          <span :class="['trend-place', placeColor(t.final_rank)]">{{ placeOrdinal(t.final_rank) }}</span>
+          <span :class="['trend-place', placeColor(t.final_rank)]">{{ ordinal(t.final_rank) }}</span>
           <span class="trend-total">{{ Number(t.total_score).toFixed(2) }}</span>
         </div>
       </div>
