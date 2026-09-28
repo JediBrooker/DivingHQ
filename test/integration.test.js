@@ -7469,3 +7469,41 @@ test("score corrections at the same moment leave an unbroken audit chain", async
     await teardownFixture(st);
   }
 });
+
+// recordAudit swallows its own INSERT error, but handed a transaction
+// client the failed statement aborted the caller's transaction, and the
+// later COMMIT quietly came back as ROLLBACK: the route said 200 and
+// nothing was saved.
+test("a failed audit row doesn't roll back the transaction it was written in", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  const { recordAudit } = require("../lib/audit");
+  const client = await pool.connect();
+  try {
+    const bad = { org_id: crypto.randomUUID(), entity_type: "club", action: "club.test" };   // no such org: FK error
+    await client.query("BEGIN");
+    const club = (await client.query(
+      "INSERT INTO clubs (org_id, name, short_code) VALUES ($1, 'Audit Survivors', 'AUS1') RETURNING id", [st.orgId],
+    )).rows[0].id;
+    await recordAudit(client, bad);
+    await client.query("UPDATE clubs SET name = 'Audit Survivors DC' WHERE id = $1", [club]);
+    await client.query("COMMIT");
+    const row = (await pool.query("SELECT name FROM clubs WHERE id = $1", [club])).rows[0];
+    assert.equal(row?.name, "Audit Survivors DC");
+
+    // Outside a transaction (the pool, or a client in autocommit) it's
+    // still just a logged miss, and a good row still lands.
+    await recordAudit(pool, bad);
+    await recordAudit(client, bad);
+    await recordAudit(client, { org_id: st.orgId, entity_type: "club", entity_id: club, action: "club.test" });
+    const n = (await pool.query("SELECT count(*)::int AS n FROM audit_log WHERE entity_id = $1 AND action = 'club.test'", [club])).rows[0].n;
+    assert.equal(n, 1);
+  } finally {
+    await client.query("ROLLBACK").catch(() => {});
+    client.release();
+    await pool.query("DELETE FROM audit_log WHERE org_id = $1", [st.orgId]);
+    await pool.query("DELETE FROM clubs WHERE org_id = $1", [st.orgId]);
+    await teardownFixture(st);
+  }
+});
