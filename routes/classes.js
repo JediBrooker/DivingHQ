@@ -22,7 +22,7 @@ const { recordAudit, auditFromReq } = require("../lib/audit");
 const { priceCharge } = require("../lib/fee-pricing");
 const ledger = require("../lib/payout-ledger");
 const { toAlpha2 } = require("../lib/stripe");
-const { retirePendingPayment, resumeOrRetireCheckout } = require("../lib/payment-lifecycle");
+const { retirePendingPayment, retireBlocked, resumeOrRetireCheckout } = require("../lib/payment-lifecycle");
 
 const APP_BASE_URL =
   process.env.APP_BASE_URL || process.env.CORS_ORIGIN || "http://localhost:5173";
@@ -82,20 +82,6 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
       org_id: null,
       metadata: { club_id: req.club.id, ...metadata },
     });
-  }
-
-  // Map a retire outcome onto the HTTP response for state-change endpoints.
-  // Returns true when the caller must stop (response already sent).
-  function retireBlocked(res, outcome, paidMessage) {
-    if (outcome === "paid") {
-      res.status(409).json({ error: paidMessage });
-      return true;
-    }
-    if (outcome === "unavailable") {
-      res.status(503).json({ error: "Couldn't verify the in-flight payment with Stripe — please try again." });
-      return true;
-    }
-    return false;
   }
 
   // ---- validation helpers ----------------------------------------

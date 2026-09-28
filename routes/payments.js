@@ -27,7 +27,9 @@ const { resolvePrice, priceCharge } = require("../lib/fee-pricing");
 const { recordAudit, auditFromReq } = require("../lib/audit");
 const ledger = require("../lib/payout-ledger");
 const { fromStripeAmount, toAlpha2 } = require("../lib/stripe");
-const { retirePendingPayment, resumeOrRetireCheckout, applyFullRefundSideEffects } = require("../lib/payment-lifecycle");
+const {
+  retirePendingPayment, retireBlocked, resumeOrRetireCheckout, applyFullRefundSideEffects,
+} = require("../lib/payment-lifecycle");
 
 const APP_BASE_URL =
   process.env.APP_BASE_URL || process.env.CORS_ORIGIN || "http://localhost:5173";
@@ -1946,20 +1948,6 @@ module.exports = function createPaymentsRouter({
       [fine.payment_id],
     )).rows[0];
     return retirePendingPayment({ pool, payments, logger }, p);
-  }
-
-  // Map a retire outcome onto the HTTP response for state-change endpoints.
-  // Returns true when the caller must stop (response already sent).
-  function retireBlocked(res, outcome, paidMessage) {
-    if (outcome === "paid") {
-      res.status(409).json({ error: paidMessage });
-      return true;
-    }
-    if (outcome === "unavailable") {
-      res.status(503).json({ error: "Couldn't verify the in-flight payment with Stripe — please try again." });
-      return true;
-    }
-    return false;
   }
 
   // Insert a pending payment into a one-live slot; when an earlier attempt
