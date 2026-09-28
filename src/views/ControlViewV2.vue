@@ -40,6 +40,7 @@ import { synchroJudgeGroups } from '@/composables/useScoreCategories'
 import { controlKeyIntent, isTypingTarget } from '@/composables/useControlKeymap'
 import { diveDescription } from '@/composables/useDiveLabel'
 import { idbInvalidate } from '@/lib/idbCache'
+import { activeDiverPayload } from '@/lib/activeDiver'
 import { useMeetHold } from '@/composables/useMeetHold'
 import { useHttpOutbox } from '@/composables/useHttpOutbox'
 import { useOutbox } from '@/composables/useOutbox'
@@ -114,12 +115,13 @@ useSocketEvent(socket, 'event_control_granted', (d) => {
 // reconnect. That replaced the old token-bucket + drop-detection flow
 // (and its "unconfirmed / Retry" banner on the pool card), since the
 // outbox's own pending/synced/failed states cover retries now.
+// The roster row alone isn't enough: judges and the scoreboard render
+// diverName / diveCode / eventName, see src/lib/activeDiver.js.
 function emitActiveDiver(ev) {
   const p = pools[ev.id]
   const a = p && p.currentActive
   if (!a) return
-  const payload = { ...a, status: 'ready' }
-  queueSocketAction('set_active_diver', payload)
+  queueSocketAction('set_active_diver', activeDiverPayload(a, ev))
 }
 
 // Snap an optimistically-seeded pool to the server's authoritative active

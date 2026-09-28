@@ -13,6 +13,7 @@ import {
   synchroJudgeGroups,
 } from '@/composables/useScoreCategories'
 import { diveDescription } from '@/composables/useDiveLabel'
+import { normaliseActiveDiver } from '@/lib/activeDiver'
 import { cachedFetch, idbInvalidate } from '@/lib/idbCache'
 import { SCOREBOARD_LIVE_TTL_MS, SCOREBOARD_ARCHIVE_TTL_MS } from '@/lib/cache-policy'
 import { resolveOverlay, overlayClasses } from '@/lib/overlayParts'
@@ -134,11 +135,19 @@ const completedEvents = computed(() => events.value.filter(e => e.status === 'Co
 const upcomingDisplay = computed(() => {
   if (!upcoming.value?.length) return []
   const active = activeDiver.value?.diverName
-  const round  = activeDiver.value?.round_number
+  const activeId = activeDiver.value?.competitor_id
+  const round  = Number(activeDiver.value?.round_number)
   let list = upcoming.value
-  // Active diver currently mid-dive, exclude their queue row.
+  // Active diver currently mid-dive, exclude their queue row. Same
+  // (competitor, round) key the Control Room matches on; the name is only
+  // a fallback for a row that somehow comes without an id.
   if (active) {
-    list = list.filter(u => !(u.full_name === active && u.round_number === round))
+    list = list.filter(u => !(
+      Number(u.round_number) === round
+      && (activeId && u.competitor_id
+        ? String(u.competitor_id) === String(activeId)
+        : u.full_name === active)
+    ))
   } else {
     // No active diver, so the head of the queue is already being
     // shown in the centre as "On Deck", drop it from this list.
@@ -779,7 +788,9 @@ useSocketEvent(socket, 'state_update', data => {
     && activeDiver.value.competitor_id === data.competitor_id
     && Number(activeDiver.value.round_number) === Number(data.round_number)
   if (!sameDive) liveJudgeScores.value = []
-  activeDiver.value = data
+  // A payload persisted before the Control Room sent diverName / diveCode
+  // can still be replayed, fill those from the raw roster row.
+  activeDiver.value = normaliseActiveDiver(data)
 })
 
 // Per-judge live score updates. Each judge's submit_score is

@@ -6,6 +6,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useSocket } from '@/composables/useSocket'
 import { useSocketEvent } from '@/composables/useSocketEvent'
 import { diveDescription } from '@/composables/useDiveLabel'
+import { normaliseActiveDiver } from '@/lib/activeDiver'
 import { showInfo } from '@/composables/useNotify'
 import OfflineBanner from '@/components/OfflineBanner.vue'
 import SyncStatusBadge from '@/components/SyncStatusBadge.vue'
@@ -299,7 +300,9 @@ useSocketEvent(socket, 'meet_resumed', (data) => {
 })
 
 useSocketEvent(socket, 'state_update', async (data) => {
-  activeDiver.value = data
+  // Replayed payloads from before the Control Room sent diverName /
+  // diveCode still need to render, so fill them from the raw row.
+  activeDiver.value = normaliseActiveDiver(data)
   resetScore()
   // New diver / round: previous panel + referee signal are both
   // irrelevant now. The signal would otherwise carry over to the
