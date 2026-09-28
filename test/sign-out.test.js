@@ -32,6 +32,7 @@ function installBrowser({ withSubscription = true } = {}) {
     value: {
       serviceWorker: {
         addEventListener() {},
+        register: async () => ({ pushManager: { getSubscription: async () => null } }),
         getRegistration: async () => ({ pushManager: { getSubscription: async () => (withSubscription ? sub : null) } }),
       },
     },
