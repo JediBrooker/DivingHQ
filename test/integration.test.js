@@ -7142,6 +7142,28 @@ const b1Kit = {
   async alive() {
     return (await fetchJson("GET", "/api/health")).status === 200;
   },
+  // fetchJson plus request headers.
+  request(method, path, { body, token, headers = {} } = {}) {
+    return new Promise((resolve, reject) => {
+      const url = new URL(baseUrl + path);
+      const data = body === undefined ? null : (typeof body === "string" ? body : JSON.stringify(body));
+      const h = { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}), ...headers };
+      if (data) h["Content-Length"] = Buffer.byteLength(data);
+      const req = http.request({ method, host: url.hostname, port: url.port, path: url.pathname + url.search, headers: h }, (res) => {
+        const chunks = [];
+        res.on("data", (c) => chunks.push(c));
+        res.on("end", () => {
+          const text = Buffer.concat(chunks).toString("utf8");
+          let parsed = text;
+          try { parsed = text ? JSON.parse(text) : null; } catch { /* keep the text */ }
+          resolve({ status: res.statusCode, headers: res.headers, body: parsed, text });
+        });
+      });
+      req.on("error", reject);
+      if (data) req.write(data);
+      req.end();
+    });
+  },
   // A round-1 dive-list row, which scores hang off (FK).
   async enter(ev, diver) {
     await pool.query(
@@ -7246,6 +7268,57 @@ test("a null, empty or boolean score is refused on the socket and HTTP paths, ne
   } finally {
     judge.close();
     await recordKit.cleanup(st.orgId);
+    await teardownFixture(st);
+  }
+});
+
+test("an audit insert that fails inside a transaction doesn't roll the caller's work back", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    // End to end: the proxy hop the app trusts isn't an IP, the event
+    // create writes its audit row with it, and the event still has to exist.
+    const res = await b1Kit.request("POST", "/api/events", {
+      token: st.adminToken,
+      headers: { "X-Forwarded-For": "not-an-ip" },
+      body: { name: "Audit Rollback Event", gender: "Mixed", height: "3m", number_of_judges: 5, total_rounds: 6, event_type: "individual" },
+    });
+    assert.equal(res.status, 201, JSON.stringify(res.body));
+    const ev = await pool.query("SELECT 1 FROM events WHERE id = $1", [res.body.id]);
+    assert.equal(ev.rows.length, 1, "the created event was persisted");
+
+    // Straight at the helper: an audit row that can't be written (org_id
+    // points nowhere) mustn't turn the parent COMMIT into a ROLLBACK.
+    const { recordAudit } = require("../lib/audit");
+    const client = await pool.connect();
+    const name = `audit-sp-${st.slug}`;
+    try {
+      await client.query("BEGIN");
+      await client.query("UPDATE organisations SET name = $2 WHERE id = $1", [st.orgId, name]);
+      await recordAudit(client, {
+        org_id: "00000000-0000-4000-8000-000000000000", entity_type: "org", action: "org.renamed",
+        entity_name: "x".repeat(300), ip_address: "also-not-an-ip",
+      });
+      const done = await client.query("COMMIT");
+      assert.equal(done.command, "COMMIT");
+    } finally {
+      client.release();
+    }
+    const org = await pool.query("SELECT name FROM organisations WHERE id = $1", [st.orgId]);
+    assert.equal(org.rows[0].name, name);
+
+    // Outside a transaction (a bare client, no BEGIN) it still writes.
+    const bare = await pool.connect();
+    try {
+      await recordAudit(bare, { org_id: st.orgId, entity_type: "org", action: "org.poked", ip_address: "::ffff:10.0.0.1" });
+    } finally {
+      bare.release();
+    }
+    const row = await pool.query("SELECT host(ip_address) AS ip FROM audit_log WHERE org_id = $1 AND action = 'org.poked'", [st.orgId]);
+    assert.equal(row.rows.length, 1);
+  } finally {
+    await pool.query("DELETE FROM audit_log WHERE org_id = $1", [st.orgId]);
     await teardownFixture(st);
   }
 });
