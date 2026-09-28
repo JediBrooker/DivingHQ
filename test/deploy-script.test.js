@@ -48,6 +48,53 @@ test("deploy.sh builds into dist.next and swaps it in only after migrate and tes
   }
 });
 
+// A run with nothing new to pull only restarts, dist/ is left alone, and
+// dist.prev/ is whatever an older deploy swapped out. If the health check
+// then fails, following a hint that says "mv dist.prev dist" would put a
+// stale SPA in front of the current API.
+test("a plain restart that fails its health check doesn't suggest restoring dist.prev", () => {
+  const dir = tmp();
+  const origin = tmp();
+  const bin = tmp();
+  try {
+    const id = ["-c", "user.email=t@example.test", "-c", "user.name=t"];
+    const git = (...a) => execFileSync("git", [...id, ...a], { cwd: dir, stdio: "pipe" });
+    execFileSync("git", ["init", "-q", "--bare", origin], { stdio: "pipe" });
+    fs.copyFileSync(path.join(ROOT, "deploy.sh"), path.join(dir, "deploy.sh"));
+    fs.writeFileSync(path.join(dir, ".gitignore"), "dist/\ndist.next/\ndist.prev/\n");
+    git("init", "-q");
+    git("add", "deploy.sh", ".gitignore");
+    git("commit", "-qm", "x");
+    git("remote", "add", "origin", origin);
+    git("push", "-q", "-u", "origin", "HEAD");
+    for (const d of ["dist", "dist.prev"]) {
+      fs.mkdirSync(path.join(dir, d));
+      fs.writeFileSync(path.join(dir, d, "index.html"), d);
+    }
+    // pm2 "restarts", and nothing ever answers the health check.
+    fs.writeFileSync(path.join(bin, "pm2"), "#!/bin/sh\nexit 0\n", { mode: 0o755 });
+    fs.writeFileSync(path.join(bin, "curl"), "#!/bin/sh\nexit 7\n", { mode: 0o755 });
+
+    let out = "";
+    try {
+      execFileSync("bash", [path.join(dir, "deploy.sh")], {
+        cwd: dir, encoding: "utf8", stdio: "pipe",
+        env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, HEALTH_TIMEOUT_S: "1" },
+      });
+      assert.fail("the health check was supposed to fail");
+    } catch (err) {
+      if (err.code === "ERR_ASSERTION") throw err;
+      out = String(err.stdout);
+    }
+    assert.match(out, /no new commits/, out);
+    assert.match(out, /To roll back: git reset --hard \w+ && pm2 restart/, out);
+    assert.doesNotMatch(out, /mv dist\.prev dist/, out);
+    assert.equal(fs.readFileSync(path.join(dir, "dist", "index.html"), "utf8"), "dist", "dist/ untouched");
+  } finally {
+    for (const d of [dir, origin, bin]) fs.rmSync(d, { recursive: true, force: true });
+  }
+});
+
 test("swap-dist.sh puts the new build in place and keeps last week's chunks", () => {
   const dir = tmp();
   try {

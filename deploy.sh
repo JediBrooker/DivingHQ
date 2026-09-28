@@ -56,7 +56,7 @@ cd "$(dirname "$0")"
 # Adjust these to match your environment.
 PM2_PROCESS_NAME="dive-recorder"
 HEALTH_URL="http://127.0.0.1:3000/api/health"
-HEALTH_TIMEOUT_S=10            # max time to wait for the service to come up
+HEALTH_TIMEOUT_S="${HEALTH_TIMEOUT_S:-10}"   # max time to wait for the service to come up
 
 # ---- Args -----------------------------------------------------
 SKIP_TESTS=0
@@ -66,6 +66,10 @@ ALLOW_BREAKING=0
 # Set when this run applied a migration the previous code can't run
 # against, which changes what a failed health check should tell you.
 BREAKING_APPLIED=0
+# Set when this run swapped a new SPA into dist/. Only then is dist.prev/
+# the build that matches PREV_SHA; after a plain restart it's some older
+# deploy's, and the rollback hint mustn't tell anyone to put it live.
+SWAPPED_DIST=0
 for arg in "$@"; do
   case "$arg" in
     --skip-tests) SKIP_TESTS=1 ;;
@@ -270,9 +274,11 @@ fi
 if [[ $NOOP -eq 0 ]]; then
   step "swap dist.next/ into dist/"
   run scripts/swap-dist.sh
+  SWAPPED_DIST=1
 elif [[ -f dist.next/.build-sha && "$(cat dist.next/.build-sha)" == "$(git rev-parse HEAD)" ]]; then
   step "swap dist.next/ (built from $(git rev-parse --short HEAD) by an earlier run) into dist/"
   run scripts/swap-dist.sh
+  SWAPPED_DIST=1
 fi
 
 # Named process, not "all", so other PM2 processes on this box
@@ -325,10 +331,15 @@ while true; do
     if [[ $BREAKING_APPLIED -eq 1 ]]; then
       echo "[deploy] Do NOT roll back to ${PREV_SHA}: this run applied a migration that code"
       echo "[deploy] can't run against (scripts/migration-compat.js). Fix forward and restart."
-    else
+    elif [[ $SWAPPED_DIST -eq 1 ]]; then
       echo "[deploy] To roll back: git reset --hard ${PREV_SHA} && rm -rf dist && mv dist.prev dist && pm2 restart ${PM2_PROCESS_NAME}"
       echo "[deploy] (dist.prev/ is the SPA that was live before this run; its .build-sha says which commit.)"
       echo "[deploy] (note: the migrations applied in this run are additive and safe to leave)."
+    else
+      # Plain restart, dist/ wasn't touched: it already matches the code,
+      # and dist.prev/ belongs to an older deploy.
+      echo "[deploy] To roll back: git reset --hard ${PREV_SHA} && pm2 restart ${PM2_PROCESS_NAME}"
+      echo "[deploy] (dist/ was left as it was; don't restore dist.prev/, it's from an earlier deploy.)"
     fi
     exit 1
   fi
