@@ -40,15 +40,15 @@ The switcher is a flag-prefixed dropdown. Tap the flag, pick a language, the ent
 
 ## What persists
 
-The chosen language is written to `localStorage('locale')` on every change, and, when you're signed in, saved to your account as well. That means:
+The chosen language is written to `localStorage('locale')` on every change. That means:
 
 - **Across pages within the same session** — instant. The vue-i18n locale is a globally reactive ref; every page that uses `$t(...)` re-renders the moment the locale changes.
 - **Across reload / sign-in / sign-out** — covered by `localStorage`. Returning users see their language immediately on the next visit, even before they sign in.
-- **Across devices** — yes, once you sign in. A device where nobody has picked a language yet switches to the one saved on your account. A device where someone did pick one with the switcher keeps that choice. The saved language is also what emails sent to you later (receipts, refunds, decisions) are written in.
+- **Across devices** — currently no. Each browser keeps its own `localStorage`. Cross-device persistence will land when the `users.locale` server-side column is rolled out alongside server-side i18n for email templates and PDF exports.
 
 ### First-visit auto-detect
 
-If a user has never explicitly picked a language (on this device or on their account), the app reads `navigator.language` (e.g. `fr-FR`, `ja`, `zh-CN`) and tries to match the 2-letter prefix against the supported set. So a phone set to French lands on French, a phone set to Japanese lands on Japanese, etc. Falls back to English if no match is found.
+If a user has never explicitly picked a language, the app reads `navigator.language` (e.g. `fr-FR`, `ja`, `zh-CN`) and tries to match the 2-letter prefix against the supported set. So a phone set to French lands on French, a phone set to Japanese lands on Japanese, etc. Falls back to English if no match is found.
 
 ## Right-to-left (Arabic)
 

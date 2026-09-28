@@ -2,7 +2,7 @@ import { createApp, defineAsyncComponent } from 'vue'
 import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './router'
-import i18n, { initI18n, adoptAccountLocale } from './i18n'
+import i18n, { initI18n } from './i18n'
 import { tipDirective } from './directives/tip'
 import { useUiStore } from './stores/ui'
 import { useAuthStore } from './stores/auth'
@@ -54,20 +54,14 @@ app.component('LegalConsent', defineAsyncComponent(() => import('./components/Le
 //                /payments and /classes would wave through a deep link
 //                to a screen we've turned off.
 // All three are best-effort and never reject, so a failure can't block boot.
-// Then the account's saved language, on a device that hasn't picked one,
-// so it's there for first paint instead of swapping in a frame later
-// (App.vue's watcher covers a sign-in without a reload).
 Promise.all([
   initI18n(),
   useAuthStore().fetchMe(),
   useFeaturesStore().load(),
-])
-  .then(() => adoptAccountLocale(useAuthStore().user?.locale))
-  .catch(() => {})
-  .finally(() => {
-    app.use(router)
-    app.mount('#app')
-  })
+]).finally(() => {
+  app.use(router)
+  app.mount('#app')
+})
 
 // Register the service worker only in production builds, FYI the Vite
 // dev server's HMR conflicts with cached assets otherwise. Skips
