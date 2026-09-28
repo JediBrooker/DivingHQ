@@ -7591,3 +7591,47 @@ test("judge-ranking analysis doesn't print a pending club's name", async (t) => 
     await teardownFixture(st);
   }
 });
+
+// The public fee cards take ?subject_user_id= so a guardian can see
+// whether their child's entry is paid. Nothing checked who was asking, so
+// anyone could walk competitor ids off a scoreboard and learn who'd paid.
+// And the lookup matched the payer, so a child whose parent paid read as
+// unpaid on their own card.
+test("fee cards: already_paid only for yourself or your dependant", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: true });
+  try {
+    const parent = await sweepKit.member(st.orgId, "spectator", "Paying Parent");
+    const child = await sweepKit.member(st.orgId, "diver", "Entered Child");
+    const nosy = await sweepKit.member(st.orgId, "diver", "Nosy Neighbour");
+    await pool.query(
+      "INSERT INTO guardians (org_id, guardian_user_id, dependent_user_id, status) VALUES ($1, $2, $3, 'approved')",
+      [st.orgId, parent.id, child.id],
+    );
+    const def = (await pool.query(
+      `INSERT INTO fee_definitions (org_id, scope, event_id, name) VALUES ($1, 'event_entry', $2, 'Entry') RETURNING id`,
+      [st.orgId, st.eventId],
+    )).rows[0].id;
+    await pool.query("INSERT INTO fee_prices (fee_definition_id, label, amount_cents) VALUES ($1, 'standard', 1500)", [def]);
+    await pool.query(
+      `INSERT INTO payments (org_id, fee_definition_id, payer_user_id, subject_user_id, subject_type, event_id,
+                             amount_cents, platform_fee_cents, currency, status)
+       VALUES ($1, $2, $3, $4, 'event_entry', $5, 1500, 0, 'GBP', 'paid')`,
+      [st.orgId, def, parent.id, child.id, st.eventId],
+    );
+    const fee = (q, token) => fetchJson("GET", `/api/events/${st.eventId}/fee${q}`, { token });
+    const about = `?subject_user_id=${child.id}`;
+
+    assert.equal((await fee(about)).status, 403, "anonymous");
+    assert.equal((await fee(about, nosy.token)).status, 403, "not their guardian");
+    assert.equal((await fee("?subject_user_id=nope", parent.token)).status, 403);
+    assert.equal((await fee(about, parent.token)).body.fee.already_paid, true, "the guardian who paid");
+    assert.equal((await fee("", child.token)).body.fee.already_paid, true, "the child's own card");
+    assert.equal((await fee("", nosy.token)).body.fee.already_paid, false);
+  } finally {
+    await pool.query("DELETE FROM payments WHERE org_id = $1", [st.orgId]);
+    await pool.query("DELETE FROM fee_definitions WHERE org_id = $1", [st.orgId]);
+    await teardownFixture(st);
+  }
+});

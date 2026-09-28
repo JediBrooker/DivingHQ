@@ -235,6 +235,33 @@ module.exports = function createPaymentsRouter({
     return subjectUserId;
   }
 
+  // Whose entry a public fee card reports already_paid for: the caller's
+  // own, or with ?subject_user_id= a dependant's. That parameter used to
+  // be taken from anyone (anonymous included), so walking competitor ids
+  // off a scoreboard told you who had paid. Now it's the caller or their
+  // approved dependant, else 403. Resolves { id } (null id for an
+  // anonymous card with no subject), or null once it has answered.
+  async function feeCardSubject(req, res) {
+    const raw = req.query.subject_user_id;
+    if (raw == null || raw === "") return { id: req.user ? req.user.id : null };
+    if (!req.user) {
+      res.status(403).json({ error: "You are not an approved guardian of this user." });
+      return null;
+    }
+    try {
+      return { id: (await validateGuardian(req, raw)) || req.user.id };
+    } catch (err) {
+      if (!err.status) throw err;
+      res.status(err.status).json({ error: err.message });
+      return null;
+    }
+  }
+  // "Paid for this person": what they bought for themselves (no subject
+  // on the row) or what someone bought for them (a guardian, subject set).
+  // Matching the payer alone missed the second, so a child whose parent
+  // paid read as unpaid on their own card. $2 is the person.
+  const PAID_FOR_SQL = "(subject_user_id = $2 OR (subject_user_id IS NULL AND payer_user_id = $2))";
+
   // "Can the caller act on something that belongs to ownerUserId?"
   // Yes if it's their own, yes if they're that person's approved
   // guardian, 403 otherwise. Returns true when the caller is acting on
@@ -1158,11 +1185,13 @@ module.exports = function createPaymentsRouter({
       const org = await loadOrg(orgId);
       // "Submit, then pay": the dive-list entry exists independently; an
       // entry is confirmed once a paid payment exists for this diver.
-      const checkUserId = req.query.subject_user_id || (req.user && req.user.id);
+      const subject = await feeCardSubject(req, res);
+      if (!subject) return;
+      const checkUserId = subject.id;
       const alreadyPaid = checkUserId
         ? (await pool.query(
             `SELECT 1 FROM payments
-              WHERE event_id = $1 AND payer_user_id = $2
+              WHERE event_id = $1 AND ${PAID_FOR_SQL}
                 AND subject_type = 'event_entry' AND status = 'paid' LIMIT 1`,
             [eventId, checkUserId],
           )).rows.length > 0
@@ -1390,11 +1419,13 @@ module.exports = function createPaymentsRouter({
       const member = req.user ? await isActiveMember(pool, orgId, req.user.id) : false;
       const chosen = resolvePrice(prices, { isMember: member });
       const org = await loadOrg(orgId);
-      const meetCheckUserId = req.query.subject_user_id || (req.user && req.user.id);
+      const subject = await feeCardSubject(req, res);
+      if (!subject) return;
+      const meetCheckUserId = subject.id;
       const alreadyPaid = meetCheckUserId
         ? (await pool.query(
             `SELECT 1 FROM payments
-              WHERE meet_id = $1 AND payer_user_id = $2
+              WHERE meet_id = $1 AND ${PAID_FOR_SQL}
                 AND subject_type = 'event_entry' AND status = 'paid' LIMIT 1`,
             [meetId, meetCheckUserId],
           )).rows.length > 0
@@ -1534,11 +1565,13 @@ module.exports = function createPaymentsRouter({
       const prices = (await pool.query("SELECT * FROM fee_prices WHERE fee_definition_id = $1", [def.id])).rows;
       const chosen = resolvePrice(prices, { isMember: false });
       const org = await loadOrg(orgId);
-      const accessCheckUserId = req.query.subject_user_id || (req.user && req.user.id);
+      const subject = await feeCardSubject(req, res);
+      if (!subject) return;
+      const accessCheckUserId = subject.id;
       const alreadyPaid = accessCheckUserId
         ? (await pool.query(
             `SELECT 1 FROM payments
-              WHERE meet_id = $1 AND payer_user_id = $2
+              WHERE meet_id = $1 AND ${PAID_FOR_SQL}
                 AND subject_type = $3 AND status = 'paid' LIMIT 1`,
             [meetId, accessCheckUserId, req.query.kind],
           )).rows.length > 0
@@ -1705,11 +1738,13 @@ module.exports = function createPaymentsRouter({
       // public card hides itself rather than offering an empty purchase.
       if (!events.length) return res.json({ fee: null, payments_enabled: payments.enabled });
       const org = await loadOrg(orgId);
-      const bundleCheckUserId = req.query.subject_user_id || (req.user && req.user.id);
+      const subject = await feeCardSubject(req, res);
+      if (!subject) return;
+      const bundleCheckUserId = subject.id;
       const alreadyPaid = bundleCheckUserId
         ? (await pool.query(
             `SELECT 1 FROM payments
-              WHERE meet_id = $1 AND payer_user_id = $2
+              WHERE meet_id = $1 AND ${PAID_FOR_SQL}
                 AND subject_type = 'meet_bundle' AND status = 'paid' LIMIT 1`,
             [meetId, bundleCheckUserId],
           )).rows.length > 0
