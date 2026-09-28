@@ -503,13 +503,18 @@ module.exports = function createPaymentsRouter({
     // surcharge. Expire its Stripe session and free the one-live-payment slot
     // so the fresh, correctly-priced row can be inserted. Same-priced pending
     // rows are left alone (they collide → 409 "in progress", which is right).
+    //
+    // Keyed on the beneficiary like the one-live index is. Matching on the
+    // payer meant a guardian checking out for one child could expire the
+    // pending checkout they'd opened for a sibling.
     if (surchargeCents > 0 && subjectType === "event_entry") {
       const stale = (await pool.query(
         `SELECT id, stripe_checkout_session, amount_cents FROM payments
-          WHERE event_id = $1 AND payer_user_id = $2 AND fee_definition_id = $3
+          WHERE event_id = $1 AND COALESCE(subject_user_id, payer_user_id) = $2
+            AND fee_definition_id = $3
             AND subject_type = 'event_entry' AND status = 'pending'
           LIMIT 1`,
-        [eventId, userId, fee.id],
+        [eventId, beneficiaryId, fee.id],
       )).rows[0];
       if (stale && stale.amount_cents < chargeAmountCents) {
         if (stale.stripe_checkout_session) {
@@ -531,6 +536,14 @@ module.exports = function createPaymentsRouter({
     // retries (see insertPaymentOrResume).
     // subject_user_id has no default, so a NULL here (buying for
     // yourself) is the same row as leaving the column out.
+    //
+    // findBlocking has to match what the one-live indexes key on
+    // (migration 083): COALESCE(subject_user_id, payer_user_id). On
+    // payer_user_id alone it never found a guardian's own row for their
+    // child, so every retry dead-ended in a 409 until Stripe expired the
+    // session. And because the dependent and a guardian can now both be
+    // mid-checkout on the same slot, actingUserId makes sure one of them
+    // is never resumed into the other's Stripe session.
     const feeScoped = subjectType === "event_entry" || subjectType === "membership";
     const attempt = await insertPaymentOrResume({
       insert: async () => (await pool.query(
@@ -543,14 +556,15 @@ module.exports = function createPaymentsRouter({
          chargeAmountCents, applicationFeeCents, currency, fee.fee_payer],
       )).rows[0].id,
       findBlocking: async () => (await pool.query(
-        `SELECT id, status, stripe_checkout_session FROM payments
-          WHERE subject_type = $1 AND payer_user_id = $2
+        `SELECT id, status, stripe_checkout_session, payer_user_id FROM payments
+          WHERE subject_type = $1 AND COALESCE(subject_user_id, payer_user_id) = $2
             AND event_id IS NOT DISTINCT FROM $3 AND meet_id IS NOT DISTINCT FROM $4
             AND ($5::boolean = false OR fee_definition_id = $6)
             AND status IN ('pending', 'paid')
           ORDER BY (status = 'pending') DESC, created_at DESC LIMIT 1`,
         [subjectType, beneficiaryId, eventId || null, meetId || null, feeScoped, fee.id],
       )).rows[0],
+      actingUserId: userId,
       alreadyDoneMessage: subjectUserId
         ? "A payment is already in progress or completed for this dependent."
         : "You already have a payment in progress or completed for this.",
@@ -1965,12 +1979,12 @@ module.exports = function createPaymentsRouter({
   // Returns { paymentId } for a fresh insert or { resumedUrl, paymentId }
   // when the payer should be sent back into their existing session.
   //
-  // actingUserId: whoever is trying to pay right now. The fine and
-  // entry-charge slots are the only ones two different people can
-  // contest, because their unique indexes key on fine_id /
-  // entry_charge_id alone, never on the payer. Once a guardian may pay a
-  // dependent's penalty, both of them can be mid-checkout on the same
-  // row.
+  // actingUserId: whoever is trying to pay right now. Two different
+  // people can contest one slot whenever its unique index doesn't key on
+  // the payer: fines and entry charges (fine_id / entry_charge_id), and
+  // every guardian-payable purchase in startCheckout, whose indexes key
+  // on the beneficiary. Once a guardian may pay for a dependent, both of
+  // them can be mid-checkout on the same row.
   //
   // Handing the second caller the first caller's open Stripe session
   // would take the money off card B while the payment row still names
