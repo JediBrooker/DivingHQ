@@ -550,6 +550,107 @@ test("end-to-end happy path", async (t) => {
       );
       assert.equal(p.body.placings.gold,  1, "Diver 2 placings.gold should be 1");
       assert.equal(p.body.placings.silver, 0);
+
+      // ----- The four ranking widgets vs the queries they replaced -----
+      // The endpoint runs FULL_FIELD_RANKING once and splits the rows
+      // into recent_form / placings / streak / year_over_year in Node.
+      // Add an older meet in an earlier calendar year (Diver 2, then
+      // Diver 3, then Diver 1) so every widget has more than one row to
+      // order or group, then hold each one to the standalone query it
+      // used to be.
+      const ev2 = await pool.query(
+        `INSERT INTO events (org_id, name, gender, height, number_of_judges,
+                             total_rounds, event_type, status, created_at)
+         VALUES ($1, $2, 'Mixed', '3m', 5, 6, 'individual', 'Completed',
+                 now() - INTERVAL '400 days')
+         RETURNING id`,
+        [state.orgId, `Integration Older Meet ${slug}`],
+      );
+      const ev2Id = ev2.rows[0].id;
+      for (let i = 0; i < judgeIds.length; i++) {
+        await pool.query(
+          `INSERT INTO event_judges (event_id, judge_id, judge_number) VALUES ($1, $2, $3)`,
+          [ev2Id, judgeIds[i], i + 1],
+        );
+      }
+      const OLDER = [
+        [6.0, 6.0, 6.5, 6.0, 6.0],   // Diver 1 → keep 18.0, 3rd
+        [9.0, 9.0, 9.0, 9.0, 9.0],   // Diver 2 → keep 27.0, 1st
+        [7.0, 7.0, 7.0, 7.0, 7.0],   // Diver 3 → keep 21.0, 2nd
+      ];
+      for (let di = 0; di < diverIds.length; di++) {
+        await pool.query(
+          `INSERT INTO competitor_dive_lists (event_id, competitor_id, dive_id, round_number)
+           VALUES ($1, $2, $3, 1)`,
+          [ev2Id, diverIds[di], diveId],
+        );
+        for (let ji = 0; ji < judgeIds.length; ji++) {
+          await pool.query(
+            `INSERT INTO scores (event_id, competitor_id, judge_id, dive_id, round_number, score)
+             VALUES ($1, $2, $3, $4, 1, $5)`,
+            [ev2Id, diverIds[di], judgeIds[ji], diveId, OLDER[di][ji]],
+          );
+        }
+      }
+
+      const { FULL_FIELD_RANKING } = require("../db/queries");
+      const ref = async (tail, id) =>
+        (await pool.query(`WITH ${FULL_FIELD_RANKING}${tail}`, [id, null, null])).rows;
+      // pg hands back Dates; the endpoint hands back their JSON form.
+      const asJson = (v) => JSON.parse(JSON.stringify(v));
+      const expectedStreak = {
+        [diverIds[0]]: { kind: "podium", length: 2 },   // 2nd, then 3rd
+        [diverIds[1]]: { kind: "win",    length: 2 },   // 1st, then 1st
+        [diverIds[2]]: { kind: "podium", length: 2 },   // 3rd, then 2nd
+      };
+      for (const id of diverIds) {
+        const r = await fetchJson("GET", `/api/divers/${id}/analytics`, { token: state.adminToken });
+        assert.equal(r.status, 200);
+
+        const recentRef = await ref(`
+          SELECT e.id AS event_id, e.name AS event_name, e.created_at,
+                 r.total, r.rank, r.field_size
+          FROM ranked r JOIN events e ON e.id = r.event_id
+          WHERE r.competitor_id = $1
+          ORDER BY e.created_at DESC LIMIT 5`, id);
+        assert.equal(recentRef.length, 2);
+        assert.deepEqual(
+          r.body.recent_form.map(({ dives, ...row }) => { assert.ok(Array.isArray(dives)); return row; }),
+          asJson(recentRef),
+          `diver ${id} recent_form`,
+        );
+
+        const [placingsRef] = await ref(`
+          SELECT
+            COUNT(*) FILTER (WHERE rank = 1)::int AS gold,
+            COUNT(*) FILTER (WHERE rank = 2)::int AS silver,
+            COUNT(*) FILTER (WHERE rank = 3)::int AS bronze,
+            COUNT(*) FILTER (WHERE rank BETWEEN 4 AND 8)::int  AS finalist,
+            COUNT(*) FILTER (WHERE rank > 8)::int              AS further,
+            COUNT(*)::int                                      AS total_meets
+          FROM ranked WHERE competitor_id = $1`, id);
+        assert.deepEqual(r.body.placings, placingsRef, `diver ${id} placings`);
+
+        const yearsRef = await ref(`,
+          my_events AS (
+            SELECT r.event_id, r.total, r.rank, e.created_at
+            FROM ranked r JOIN events e ON e.id = r.event_id
+            WHERE r.competitor_id = $1
+          )
+          SELECT EXTRACT(YEAR FROM created_at)::int    AS year,
+                 COUNT(DISTINCT event_id)::int         AS meets,
+                 AVG(total)::numeric(8,2)              AS avg_meet_total,
+                 MAX(total)::numeric(8,2)              AS best_meet_total,
+                 COUNT(*) FILTER (WHERE rank = 1)::int  AS wins,
+                 COUNT(*) FILTER (WHERE rank <= 3)::int AS podiums
+          FROM my_events
+          GROUP BY EXTRACT(YEAR FROM created_at)
+          ORDER BY year DESC`, id);
+        assert.equal(yearsRef.length, 2);
+        assert.deepEqual(r.body.year_over_year, yearsRef, `diver ${id} year_over_year`);
+
+        assert.deepEqual(r.body.streak, expectedStreak[id], `diver ${id} streak`);
+      }
     } finally {
       await teardownFixture(state);
     }

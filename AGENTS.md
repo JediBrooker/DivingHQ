@@ -404,8 +404,10 @@ know X":
 1. **`recent_form` / `placings` / `streak` / `year_over_year` rank against
    the FULL field of competitors, not the diver alone.** The temptation
    is to feed `RANK()` a CTE that's already filtered to the diver, which
-   silently makes every meet rank 1st-of-1. Use the
-   `analyticsRankingCTE(eventIdsSubquery)` helper.
+   silently makes every meet rank 1st-of-1. Use `FULL_FIELD_RANKING`
+   from `db/queries.js` and filter to the diver only after `ranked`.
+   The analytics endpoint reads it once (the `ranked_events` query) and
+   cuts all four widgets from that read, so don't add a second copy.
 2. **The World Aquatics category boundaries are duplicated.** Source of truth is
    `src/composables/useScoreCategories.js`; the test mirror at
    `test/syntax.test.js` is intentional and detects drift in the
