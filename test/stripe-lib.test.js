@@ -24,6 +24,10 @@ function fakeClient() {
     accountLinks: { create: async (p) => { calls.link = p; return { url: "https://onboard" }; } },
     checkout: { sessions: { create: async (p, o) => { calls.session = { p, o }; return { id: "cs_1", url: "https://pay" }; } } },
     refunds: { create: async (p, o) => { calls.refund = { p, o }; return { amount: p.amount }; } },
+    transfers: {
+      create: async (p, o) => { calls.transfer = { p, o }; return { id: "tr_1" }; },
+      list: async (p) => { calls.transferList = p; return { data: p.transfer_group === "known" ? [{ id: "tr_known" }] : [] }; },
+    },
     webhooks: { constructEvent: (raw, sig, secret) => ({ raw, sig, secret }) },
   };
 }
@@ -141,4 +145,16 @@ test("createRecipientAccount won't open an account without a country", async () 
   await assert.rejects(() => s.createRecipientAccount({ country: null, name: "X" }), (e) => e.status === 409);
   await s.createRecipientAccount({ country: "br", name: "Fed" });
   assert.equal(calls().accountCreate.identity.country, "br");
+});
+
+// A payout's transfer carries the payout id as its group, so a request
+// whose response got lost can be looked up instead of sent again.
+test("createTransfer tags the transfer with its payout, findTransfer looks it up", async () => {
+  const { s, calls } = withFake();
+  await s.createTransfer({ accountId: "acct_1", amountCents: 500, currency: "GBP", idempotencyKey: "payout-1" });
+  assert.equal(calls().transfer.p.transfer_group, "payout-1");
+  assert.deepEqual(calls().transfer.o, { idempotencyKey: "payout-1" });
+  assert.deepEqual(await s.findTransfer({ payoutId: "known", accountId: "acct_1" }), { id: "tr_known" });
+  assert.deepEqual(calls().transferList, { transfer_group: "known", destination: "acct_1", limit: 1 });
+  assert.equal(await s.findTransfer({ payoutId: "unknown" }), null);
 });

@@ -1067,8 +1067,10 @@ module.exports = function createPaymentsRouter({
   // Federation withdraws its owed balance. lib/payout-ledger locks the org
   // row so two concurrent requests can't over-withdraw, books one pending
   // payout PER CURRENCY, then fires the real Stripe transfer to the org's
-  // recipient account: success settles to 'paid', any Stripe error to
-  // 'failed' (balance auto-restores). No operator step, no bank details.
+  // recipient account: success settles to 'paid', a refusal from Stripe to
+  // 'failed' (balance auto-restores), and an uncertain outcome stays
+  // 'pending' for the auto-withdraw sweep to settle under the same id (see
+  // lib/payout-ledger executePayouts). No operator step, no bank details.
   router.post("/api/orgs/:id/withdrawals", requireOrgRole(["org_admin"]), async (req, res) => {
     if (!ensurePayments(res)) return;
     const orgId = req.params.id;

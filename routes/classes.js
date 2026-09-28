@@ -755,8 +755,9 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
     try {
       const note = ((req.body || {}).note || "").toString().trim().slice(0, 200) || null;
       // Book the payout under a row lock, then fire the real Stripe transfer
-      // to the club's recipient account: success settles 'paid', any Stripe
-      // error 'failed' (balance auto-restores). No operator step.
+      // to the club's recipient account: success settles 'paid', a refusal
+      // from Stripe 'failed' (balance auto-restores), an uncertain outcome
+      // stays 'pending' for the sweep to settle. No operator step.
       const { payouts, accountId } = await ledger.createWithdrawal(pool, { clubId: req.club.id, note });
       const settled = await ledger.executePayouts(pool, payments, payouts, accountId, { logger: log });
       clubAudit(req, {
