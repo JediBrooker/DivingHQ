@@ -11,7 +11,7 @@ Two pools running side by side. Pressing `1` focuses the left card, `2` the righ
 | Key | Action |
 |---|---|
 | **1** … **9** | Switch the focused pool. `1` is the first live pool, `2` the second, and so on (oldest-started first — the same order the chips and pool cards appear in). |
-| **Space** or **→** | Advance the focused pool to the next diver (or **Finalise** on the last dive). |
+| **Space** or **→** | Advance the focused pool to the next diver (or **Finalise** on the last dive). Asks first if the panel isn't complete (no scores at all included), and does nothing while the pool is held. |
 | **H** | Hold / resume the focused pool — pauses its shot clock and active-diver banner. |
 | **L** | Announce — push the focused pool's standings to the public scoreboard. |
 | **F** | Referee: mark the focused pool's current dive **Failed** (0 across the board). |
@@ -21,8 +21,10 @@ Two pools running side by side. Pressing `1` focuses the left card, `2` the righ
 **Notes**
 
 - Hotkeys are ignored while you're typing in a text field, a `<select>`, or the command palette — so typing a diver's name or a search query never advances a pool.
+- They're also ignored while a dialog is open (a confirm, score correction, the Tools drawer): the keyboard belongs to the dialog until it closes.
+- **Space** on a button you reached with **Tab** presses that button, as it does anywhere else. So Space on the "Skip ahead?" confirm answers it, and tabbing onto a card's **⏸ Hold** and pressing Space holds. A button you just *clicked* doesn't keep Space: click **▶ Resume** or **Re-dive** with the mouse, then press Space, and it advances as usual rather than pressing that button again.
 - Modifier combos (Cmd/Ctrl/Alt) are left alone for the browser and the command palette (e.g. **Cmd-K / Ctrl-K**).
-- Every hotkey has an on-screen equivalent too, so you can mix keyboard and mouse: the **Next Diver → / Finalise** button (and the **Auto-next** `▾` aside) on each pool card, the **Failed · Cap 2.0 · Re-dive** row, the **⏸ Hold** button, the **Announce** button in the Standings column, and the event **chips** (or **All events** dropdown) in the top bar.
+- Every hotkey has an on-screen equivalent too, so you can mix keyboard and mouse: the **Next Diver → / Finalise** button (and the **Auto-next** `▾` aside) on each pool card, the **Failed · Cap 2.0 · Re-dive** row (with **Skip** beside it until the panel is in), the **⏸ Hold** button, the **Announce** button in the Standings column, and the event **chips** (or **All events** dropdown) in the top bar.
 
 ## Scoreboard / Diver views
 
@@ -38,4 +40,4 @@ These work in any view, not just DivingHQ, but they pair nicely with specific su
 | **F11** | Full-screen the browser — turns any view into a kiosk |
 | **Cmd-Shift-T / Ctrl-Shift-T** | Reopen the last closed tab — useful if you accidentally close the Control Room mid-meet |
 
-For projector / venue use, **Broadcast mode** (`?broadcast=1` on `/control` or `/scoreboard/<id>`) hides the chrome automatically — F11 isn't needed.
+For projector / venue use, **Broadcast mode** hides the chrome automatically — F11 isn't needed. That's `/scoreboard/<id>/broadcast` for the public scoreboard, and `/control?broadcast=1` (**Tools → Broadcast → Operator broadcast**) when the operator's own screen is the projector: the Control Room drops its top bar, History and buttons, and the hotkeys above keep running the meet. The ✕ in the corner goes back.

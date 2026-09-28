@@ -2,6 +2,7 @@
 // number keys switch which pool is focused. Flag-on only (V2 surface).
 const { test, expect } = require("@playwright/test");
 const setup = require("./_setup");
+const { roomWatcher } = require("./_meetday");
 
 test.describe.configure({ mode: "serial" });
 
@@ -89,4 +90,193 @@ test("hotkeys do not fire while typing in a field", async ({ request, page, base
   await expect(page.locator(".cmdk-input")).toBeVisible({ timeout: 5_000 });
   await page.locator(".cmdk-input").type("a b");
   await expect(cardA.locator(".cv2-live-diver")).toContainText("AAA A"); // still hasn't moved
+});
+
+// The window listener used to take Space from whatever had focus: a
+// focused Hold button advanced the diver instead, and Space on the
+// partial-panel confirm's own "Move on" button queued a second confirm,
+// so accepting both skipped a diver who never dived.
+test("Space presses the focused button and answers the confirm, it doesn't advance again", async ({ request, page, baseURL }) => {
+  test.setTimeout(120_000);
+  const { orgId, username, adminToken } = await setup.createOrgAndAdmin(request, { countryCode: "AUS", orgName: "Keyboard Space Diving" });
+  const A = await liveEvent(request, { orgId, adminToken, name: "Space Pool", diverNames: ["AAA S", "BBB S", "CCC S", "DDD S"] });
+
+  const room = await roomWatcher(baseURL, A.event.id);
+
+  await signIn(page, username);
+  await page.goto(`/control?event=${A.event.id}`);
+  const cardA = page.locator(`.cv2-pool[data-event-id="${A.event.id}"]`);
+  await expect(cardA.locator(".cv2-live-diver")).toContainText("AAA S", { timeout: 10_000 });
+  // The page's announce reaching the room means its socket is in there too
+  await expect.poll(() => room.seen.state.length, { timeout: 8_000 }).toBeGreaterThan(0);
+  room.close();
+
+  // Two of five judges in, then Space from the page: one confirm, with
+  // focus on its Move on button.
+  await setup.submitPanelScores({
+    baseURL, judges: A.judges.slice(0, 2), eventId: A.event.id,
+    competitorId: A.divers[0].userId, roundNumber: 1, diveId: A.diveId,
+  });
+  await expect(cardA.locator(".cv2-tile.scored")).toHaveCount(2, { timeout: 6_000 });
+  await cardA.locator(".cv2-live-diver").click();
+  await page.keyboard.press("Space");
+  const confirm = page.locator('.confirm-backdrop[aria-modal="true"]');
+  await expect(confirm).toHaveCount(1);
+  // Space again answers it, the way Space answers any focused button
+  await page.keyboard.press("Space");
+  await expect(confirm).toHaveCount(0);
+  await expect(cardA.locator(".cv2-live-diver")).toContainText("BBB S");
+  await page.waitForTimeout(500);
+  await expect(cardA.locator(".cv2-live-diver")).toContainText("BBB S");
+
+  // Tab onto the card's Hold button: Space holds, the diver stays put
+  await cardA.locator(".cv2-pool-hold").focus();
+  await page.keyboard.press("Space");
+  await expect(cardA.locator(".cv2-pool-heldbar")).toBeVisible();
+  await expect(cardA.locator(".cv2-live-diver")).toContainText("BBB S");
+  await setup.deleteOrg(orgId);
+});
+
+// Hold is per event. The focused banner and 'h' used to share a single
+// flag that stayed put when focus moved, so pool A's hold showed on B and
+// 'h' on B sent a resume for B instead of a hold.
+test("the hold banner and 'h' follow the focused pool", async ({ request, page, baseURL }) => {
+  test.setTimeout(120_000);
+  const { orgId, username, adminToken } = await setup.createOrgAndAdmin(request, { countryCode: "AUS", orgName: "Keyboard Hold Diving" });
+  const A = await liveEvent(request, { orgId, adminToken, name: "Hold Pool A", diverNames: ["AAA HA", "ZZZ HA"] });
+  const B = await liveEvent(request, { orgId, adminToken, name: "Hold Pool B", diverNames: ["AAA HB", "ZZZ HB"] });
+
+  await signIn(page, username);
+  await page.goto(`/control?event=${A.event.id}`);
+  const cardA = page.locator(`.cv2-pool[data-event-id="${A.event.id}"]`);
+  const cardB = page.locator(`.cv2-pool[data-event-id="${B.event.id}"]`);
+  await expect(cardA.locator(".cv2-live-diver")).toContainText("AAA HA", { timeout: 10_000 });
+  await expect(cardB.locator(".cv2-live-diver")).toContainText("AAA HB", { timeout: 10_000 });
+
+  await cardA.locator(".cv2-pool-hold").click();
+  await expect(cardA.locator(".cv2-pool-heldbar")).toBeVisible();
+  await expect(page.locator(".cv2-hold-banner")).toBeVisible();
+
+  // Focus B: its banner is clear, because B isn't held
+  await cardA.locator(".cv2-live-diver").click();
+  await page.keyboard.press("2");
+  await expect(page.locator(".cv2-chip.is-focused")).toContainText("Hold Pool B");
+  await expect(page.locator(".cv2-hold-banner")).toHaveCount(0);
+
+  // 'h' holds B, and A stays held
+  await page.keyboard.press("h");
+  await expect(cardB.locator(".cv2-pool-heldbar")).toBeVisible();
+  await expect(cardA.locator(".cv2-pool-heldbar")).toBeVisible();
+  await expect(page.locator(".cv2-hold-banner")).toBeVisible();
+  await setup.deleteOrg(orgId);
+});
+
+// The card's referee buttons cancel its auto-next countdown before acting;
+// the f / r / c hotkeys queued the same call from the view and couldn't
+// reach the card's timer, so the countdown ran on and moved to the next
+// diver mid-review.
+test("a referee hotkey stops the focused pool's auto-next countdown", async ({ request, page, baseURL }) => {
+  test.setTimeout(120_000);
+  const { orgId, username, adminToken } = await setup.createOrgAndAdmin(request, { countryCode: "AUS", orgName: "Keyboard Referee Diving" });
+  const A = await liveEvent(request, { orgId, adminToken, name: "Referee Pool", diverNames: ["AAA RF", "ZZZ RF"] });
+  const room = await roomWatcher(baseURL, A.event.id);
+
+  await signIn(page, username);
+  await page.goto(`/control?event=${A.event.id}`);
+  const cardA = page.locator(`.cv2-pool[data-event-id="${A.event.id}"]`);
+  await expect(cardA.locator(".cv2-live-diver")).toContainText("AAA RF", { timeout: 10_000 });
+  await expect.poll(() => room.seen.state.length, { timeout: 8_000 }).toBeGreaterThan(0);
+  room.close();
+
+  await cardA.locator(".cv2-split-aside").click();
+  await cardA.locator(".cv2-autonext-item").filter({ hasText: /^\s*5 seconds/ }).click();
+
+  await setup.submitPanelScores({ baseURL, judges: A.judges, eventId: A.event.id, competitorId: A.divers[0].userId, roundNumber: 1, diveId: A.diveId });
+  await expect(cardA.locator(".cv2-autopill")).toBeVisible({ timeout: 6_000 });
+  await cardA.locator(".cv2-live-diver").click();
+  await page.keyboard.press("f");
+  await expect(cardA.locator(".cv2-autopill")).toHaveCount(0);
+  await page.waitForTimeout(6_500);
+  await expect(cardA.locator(".cv2-live-diver")).toContainText("AAA RF");
+  await setup.deleteOrg(orgId);
+});
+
+// The card disables Next while held or until the panel is in, but Space /
+// ArrowRight called the advance directly: a stray Space during a video
+// review moved every judge on, and with no scores in at all it skipped
+// the diver on the blocks without asking.
+test("Space respects a hold, and asks before skipping a diver nobody has scored", async ({ request, page, baseURL }) => {
+  test.setTimeout(120_000);
+  const { orgId, username, adminToken } = await setup.createOrgAndAdmin(request, { countryCode: "AUS", orgName: "Keyboard Gate Diving" });
+  const A = await liveEvent(request, { orgId, adminToken, name: "Gate Pool", diverNames: ["AAA G", "BBB G", "CCC G"] });
+
+  await signIn(page, username);
+  await page.goto(`/control?event=${A.event.id}`);
+  const cardA = page.locator(`.cv2-pool[data-event-id="${A.event.id}"]`);
+  const diver = cardA.locator(".cv2-live-diver");
+  await expect(diver).toContainText("AAA G", { timeout: 10_000 });
+  const confirm = page.locator('.confirm-backdrop[aria-modal="true"]');
+
+  // No scores: Space asks first, and Cancel leaves the diver up
+  await diver.click();
+  await page.keyboard.press("Space");
+  await expect(confirm).toHaveCount(1);
+  await confirm.locator(".confirm-btn-cancel").click();
+  await expect(confirm).toHaveCount(0);
+  await expect(diver).toContainText("AAA G");
+
+  // Held: Space does nothing at all
+  await cardA.locator(".cv2-pool-hold").click();
+  await expect(cardA.locator(".cv2-pool-heldbar")).toBeVisible();
+  await diver.click();
+  await page.keyboard.press("Space");
+  await page.waitForTimeout(400);
+  await expect(confirm).toHaveCount(0);
+  await expect(diver).toContainText("AAA G");
+
+  // Resumed, and the operator really means it: the skip goes through
+  await cardA.locator(".cv2-pool-hold").click();
+  await expect(cardA.locator(".cv2-pool-heldbar")).toHaveCount(0);
+  await diver.click();
+  await page.keyboard.press("Space");
+  await expect(confirm).toHaveCount(1);
+  await confirm.locator(".confirm-btn:not(.confirm-btn-cancel)").click();
+  await expect(diver).toContainText("BBB G");
+  await setup.deleteOrg(orgId);
+});
+
+// Chrome leaves a clicked button focused. Space on a control reached with
+// Tab presses it, but one that only has focus because the mouse clicked
+// it mustn't take the advance: click Resume, hit Space to move on, and the
+// pool went straight back on hold (and after a mouse Re-dive, the next
+// Space re-dived the diver again, over the judges' fresh scores).
+test("Space after clicking a card button advances, it doesn't press that button again", async ({ request, page }) => {
+  test.setTimeout(120_000);
+  const { orgId, username, adminToken } = await setup.createOrgAndAdmin(request, { countryCode: "AUS", orgName: "Keyboard Click Diving" });
+  const A = await liveEvent(request, { orgId, adminToken, name: "Click Pool", diverNames: ["AAA K", "BBB K"] });
+
+  await signIn(page, username);
+  await page.goto(`/control?event=${A.event.id}`);
+  const cardA = page.locator(`.cv2-pool[data-event-id="${A.event.id}"]`);
+  const diver = cardA.locator(".cv2-live-diver");
+  await expect(diver).toContainText("AAA K", { timeout: 10_000 });
+  const hold = cardA.locator(".cv2-pool-hold");
+  const heldbar = cardA.locator(".cv2-pool-heldbar");
+  const confirm = page.locator('.confirm-backdrop[aria-modal="true"]');
+
+  await hold.click();
+  await expect(heldbar).toBeVisible();
+  await hold.click();
+  await expect(heldbar).toHaveCount(0);
+  // the button the mouse just used still has focus
+  await expect(hold).toBeFocused();
+  await page.keyboard.press("Space");
+  // Space is the advance: nobody has scored yet, so it asks first
+  await expect(confirm).toHaveCount(1);
+  await expect(heldbar).toHaveCount(0);
+  await confirm.locator(".confirm-btn-cancel").click();
+  await expect(confirm).toHaveCount(0);
+  await expect(diver).toContainText("AAA K");
+  await expect(heldbar).toHaveCount(0);
+  await setup.deleteOrg(orgId);
 });

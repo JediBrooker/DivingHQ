@@ -6,6 +6,8 @@ import { useAuthStore } from '@/stores/auth'
 import { useSocket } from '@/composables/useSocket'
 import { useSocketEvent } from '@/composables/useSocketEvent'
 import { diveDescription } from '@/composables/useDiveLabel'
+import { normaliseActiveDiver } from '@/lib/activeDiver'
+import { synchroRoleForJudge } from '@/composables/useScoreCategories'
 import { showInfo } from '@/composables/useNotify'
 import OfflineBanner from '@/components/OfflineBanner.vue'
 import SyncStatusBadge from '@/components/SyncStatusBadge.vue'
@@ -211,22 +213,21 @@ const panelInCount = computed(() => Object.keys(panelScores.value).length)
 
 // Synchro role, derived from this judge's position in the panel.
 // Lets the judge see whether they should be scoring Diver A's
-// execution, Diver B's execution, or the synchronisation.
+// execution, Diver B's execution, or the synchronisation. The seat map
+// is the shared synchroRoleForJudge (the same one scoring uses), so the
+// 7-judge panel the Manager allows gets a role too; this used to know
+// only 9 and 11.
+const SYNCHRO_ROLE_LABELS = {
+  a: { label: 'EXEC A', tone: 'a' },
+  b: { label: 'EXEC B', tone: 'b' },
+  sync: { label: 'SYNCHRONISATION', tone: 'sync' },
+}
 const synchroRole = computed(() => {
   if (activeDiver.value?.event_type !== 'synchro_pair') return null
-  const n = judgeNumber.value
-  const total = activeDiver.value?.number_of_judges
+  const n = Number(judgeNumber.value)
+  const total = Number(activeDiver.value?.number_of_judges)
   if (!n || !total) return null
-  if (total === 9) {
-    if (n <= 2) return { label: 'EXEC A', tone: 'a' }
-    if (n <= 4) return { label: 'EXEC B', tone: 'b' }
-    if (n <= 9) return { label: 'SYNCHRONISATION', tone: 'sync' }
-  } else if (total === 11) {
-    if (n <= 3) return { label: 'EXEC A', tone: 'a' }
-    if (n <= 6) return { label: 'EXEC B', tone: 'b' }
-    if (n <= 11) return { label: 'SYNCHRONISATION', tone: 'sync' }
-  }
-  return null
+  return SYNCHRO_ROLE_LABELS[synchroRoleForJudge(n, total)] || null
 })
 
 function joinEventRoom() {
@@ -287,19 +288,34 @@ onBeforeUnmount(() => {
 // since judges shouldn't accidentally submit during a video review.
 const isHeld = ref(false)
 const holdReason = ref('')
+
+// Which event this screen is judging: the ?event= id when there is one,
+// else whatever the active diver belongs to. Every broadcast below is
+// checked against it. The server replays state_update for EVERY live
+// event on the platform to a socket that (re)connects, and taking the
+// last one in put another org's diver on a waiting judge's screen, with
+// Submit enabled.
+function isMyEvent(eventId) {
+  const mine = eventIdFromUrl.value || activeDiver.value?.event_id
+  return !mine || String(eventId) === String(mine)
+}
+
 useSocketEvent(socket, 'meet_held', (data) => {
-  if (activeDiver.value && data.event_id !== activeDiver.value.event_id) return
+  if (!isMyEvent(data?.event_id)) return
   isHeld.value = true
   holdReason.value = data.reason || ''
 })
 useSocketEvent(socket, 'meet_resumed', (data) => {
-  if (activeDiver.value && data.event_id !== activeDiver.value.event_id) return
+  if (!isMyEvent(data?.event_id)) return
   isHeld.value = false
   holdReason.value = ''
 })
 
 useSocketEvent(socket, 'state_update', async (data) => {
-  activeDiver.value = data
+  if (!data || !isMyEvent(data.event_id)) return
+  // Replayed payloads from before the Control Room sent diverName /
+  // diveCode still need to render, so fill them from the raw row.
+  activeDiver.value = normaliseActiveDiver(data)
   resetScore()
   // New diver / round: previous panel + referee signal are both
   // irrelevant now. The signal would otherwise carry over to the
@@ -313,11 +329,30 @@ useSocketEvent(socket, 'state_update', async (data) => {
       // auth.apiFetch rather than a raw fetch: same headers, plus
       // the store's expired-session (401 → /login) handling.
       const { judge_number } = await auth.apiFetch(`/api/events/${data.event_id}/my-judge-number`)
+      // Another state_update may have landed while this was in flight;
+      // only stamp the number onto the diver it was fetched for.
+      if (String(activeDiver.value?.event_id) !== String(data.event_id)) return
       judgeNumber.value = judge_number
       activeDiver.value = { ...activeDiver.value, judge_number }
       judgeLabel.value = `${user?.full_name} — J${judge_number}`
     } catch { /* show name only */ }
   }
+})
+
+// The referee ordered a re-dive of the dive on screen. The server marks
+// its scores 'redive' until each judge scores again, so open the keypad
+// back up and clear the panel. The keypad used to stay locked, and a
+// judge only got it back by stumbling on the Signal Referee trick.
+useSocketEvent(socket, 'referee_action_redive', (data) => {
+  const a = activeDiver.value
+  if (!a || !data) return
+  if (String(data.event_id) !== String(a.event_id)) return
+  if (String(data.competitor_id) !== String(a.competitor_id)) return
+  if (Number(data.round_number) !== Number(a.round_number)) return
+  resetScore()
+  panelScores.value = {}
+  panelSignals.value = {}
+  signaled.value = false
 })
 
 // judge_signal broadcasts from other panel members. Mirror the

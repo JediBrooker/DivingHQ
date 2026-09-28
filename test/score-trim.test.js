@@ -195,3 +195,91 @@ test("each row carries its category alongside the dropped flag", () => {
   assert.equal(out[1].category, "satisfactory");
   assert.equal(out[2].category, "very-good");
 });
+
+// ---- Live panel for the spectator scoreboard -------------------------
+// The live pills used to be a flat trim over the scores in arrival order,
+// placed in slot i and labelled as judge i+1, and the dive total skipped
+// the synchro x0.6. livePanel places each score under its own judge and
+// only trims (and totals) once the whole panel is in.
+
+test("livePanel: a score sits under its own judge while the panel fills", async () => {
+  const { livePanel } = await import("../src/composables/useScoreTrim.js");
+  const p = livePanel([{ judge_number: 3, value: 8.5 }], 5, "individual", 2.0);
+  assert.deepEqual(p.slots.map((s) => (s.filled ? s.value : null)), [null, null, 8.5, null, null]);
+  assert.deepEqual(p.slots.map((s) => s.judge_number), [1, 2, 3, 4, 5]);
+  assert.equal(p.slots[2].dropped, false);
+  assert.equal(p.total, null, "no total on a partial panel");
+});
+
+test("livePanel: individual trim and total once the panel is in", async () => {
+  const { livePanel } = await import("../src/composables/useScoreTrim.js");
+  const scores = [7, 7.5, 8, 8.5, 9].map((v, i) => ({ judge_number: i + 1, value: v }));
+  const p = livePanel(scores, 5, "individual", 1.5);
+  assert.deepEqual(p.slots.filter((s) => s.dropped).map((s) => s.judge_number), [1, 5]);
+  assert.equal(p.total.toFixed(2), "36.00");
+});
+
+test("livePanel: 9-judge synchro uses the grouped WA trim and the 0.6 factor", async () => {
+  const { livePanel } = await import("../src/composables/useScoreTrim.js");
+  // Exec A 7, 8 | Exec B 6, 9 | Sync 7, 7, 8, 8, 9, DD 3.0.
+  // calc_synchro_dive_points(ARRAY[1..9], ARRAY[7,8,6,9,7,7,8,8,9], 9, 3.0) = 68.40
+  const vals = [7, 8, 6, 9, 7, 7, 8, 8, 9];
+  const scores = vals.map((v, i) => ({ judge_number: i + 1, value: v }));
+  const p = livePanel(scores, 9, "synchro_pair", 3.0);
+  assert.deepEqual(p.slots.filter((s) => s.dropped).map((s) => s.judge_number), [3, 4, 5, 9]);
+  assert.equal(p.total.toFixed(2), "68.40");
+});
+
+test("livePanel: arrival order doesn't matter, and no DD means no total", async () => {
+  const { livePanel } = await import("../src/composables/useScoreTrim.js");
+  const scores = [5, 1, 4, 2, 3].map((j) => ({ judge_number: j, value: 5 + j * 0.5 }));
+  const p = livePanel(scores, 5, "individual", null);
+  assert.deepEqual(p.slots.map((s) => s.value), [5.5, 6, 6.5, 7, 7.5]);
+  assert.equal(p.total, null);
+});
+
+// ---- Score-correction preview -------------------------------------------
+// The amend dialog previewed a flat trim over all nine synchro scores and
+// then applied the 0.6, so its trim sum, points and delta were wrong for
+// any 7/9/11-judge synchro panel. It now asks the same annotateJudgeRows
+// the rest of the app uses, keyed by the real judge numbers.
+
+test("correctionPreview: 9-judge synchro keeps what WA keeps", async () => {
+  const { correctionPreview } = await import("../src/composables/useScoreTrim.js");
+  // Exec A 5, 9 | Exec B 9, 9 | Sync 5 x 5, DD 2.0
+  const scores = [5, 9, 9, 9, 5, 5, 5, 5, 5];
+  const p = correctionPreview({
+    scores, judgeNumbers: [1, 2, 3, 4, 5, 6, 7, 8, 9], idx: 4, newVal: 6,
+    numJudges: 9, eventType: "synchro_pair", dd: 2.0,
+  });
+  // WA keeps 9, 9 (exec, one high and one low cancelled across the four)
+  // and 5, 5, 5 (sync, high and low dropped) = 33. A flat trim kept 29.
+  assert.equal(p.oldTrim, 33);
+  assert.equal(p.oldPoints.toFixed(2), (33 * 2 * 0.6).toFixed(2));
+  assert.equal(p.judgeNumber, 5);
+  // J5's 6 is now the sync high, so it's dropped and the sum doesn't move
+  assert.equal(p.newTrim, 33);
+  assert.equal(p.dropChanged, true);
+});
+
+test("correctionPreview: individual panel, labelled by the real judge number", async () => {
+  const { correctionPreview } = await import("../src/composables/useScoreTrim.js");
+  // A panel whose judge numbers aren't 1..n (someone was swapped out)
+  const p = correctionPreview({
+    scores: [7, 7.5, 8, 8.5, 9], judgeNumbers: [2, 3, 4, 5, 6], idx: 0, newVal: 2,
+    numJudges: 5, eventType: "individual", dd: 1.5,
+  });
+  assert.equal(p.judgeNumber, 2);
+  assert.equal(p.oldTrim, 24); // 7.5 + 8 + 8.5
+  assert.equal(p.newTrim, 24); // 2.0 becomes the dropped low in 7.0's place
+  assert.equal(p.dropChanged, false);
+  assert.equal(p.unchanged, false);
+});
+
+test("correctionPreview: nothing to show for a bad score or index", async () => {
+  const { correctionPreview } = await import("../src/composables/useScoreTrim.js");
+  const base = { scores: [7, 7, 7, 7, 7], judgeNumbers: [1, 2, 3, 4, 5], numJudges: 5, eventType: "individual", dd: 1.5 };
+  assert.equal(correctionPreview({ ...base, idx: 0, newVal: 10.5 }), null);
+  assert.equal(correctionPreview({ ...base, idx: 0, newVal: 7.3 }), null);
+  assert.equal(correctionPreview({ ...base, idx: 9, newVal: 7 }), null);
+});

@@ -439,6 +439,23 @@
  * @property {number}      podiums
  */
 
+// ---- /api/event-templates ----------------------------------------
+
+/**
+ * @typedef {Object} EventTemplate
+ * A saved create-form configuration, org-scoped (GET / POST upsert by
+ * name / DELETE /api/event-templates). config is the form state as the
+ * Meet Manager saved it: gender, height, number_of_judges, total_rounds,
+ * event_type, age_group, event_format, advance_count, dd_limit_*,
+ * round_rules, optionally round_dives.
+ *
+ * @property {string} id
+ * @property {string} name
+ * @property {Object} config
+ * @property {string} created_at
+ * @property {string} updated_at
+ */
+
 // ---- /api/events/:id/roster --------------------------------------
 
 /**
@@ -456,6 +473,8 @@
  * @property {string}      dive_list_id      cdl.id, target for reorder/withdraw
  * @property {number|null} display_order
  * @property {string|null} withdrawn_at      ISO timestamp or null
+ * @property {boolean}     is_reserve        reserve row (migration 040), not in the start order until promoted
+ * @property {number|null} round_order       1-based position in its round; null for withdrawn and reserve rows
  * @property {string}      competitor_id
  * @property {string}      full_name
  * @property {string}      competitor_org_id

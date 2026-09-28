@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, watch, defineAsyncComponent } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, defineAsyncComponent } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
@@ -13,6 +13,9 @@ import {
   synchroJudgeGroups,
 } from '@/composables/useScoreCategories'
 import { diveDescription } from '@/composables/useDiveLabel'
+import { livePanel } from '@/composables/useScoreTrim'
+import { sharedRanks, placeOf } from '@/lib/standings'
+import { normaliseActiveDiver } from '@/lib/activeDiver'
 import { cachedFetch, idbInvalidate } from '@/lib/idbCache'
 import { SCOREBOARD_LIVE_TTL_MS, SCOREBOARD_ARCHIVE_TTL_MS } from '@/lib/cache-policy'
 import { resolveOverlay, overlayClasses } from '@/lib/overlayParts'
@@ -110,6 +113,10 @@ function ensureListData() {
 
 const currentEventId = ref(null)
 const currentEvent = computed(() => events.value.find(e => String(e.id) === String(currentEventId.value)) || null)
+// The URL names an event but selectEvent hasn't run yet (it waits for the
+// /api/archive list, which is where currentEvent comes from). Neither the
+// meets list nor its header belongs on screen in the meantime.
+const deepLinkPending = computed(() => !currentEventId.value && !!route.params.eventId)
 
 // Filter state (search / country / year / height / club / status,
 // plus the sort + view-mode preferences) and the meets-browsing
@@ -134,11 +141,19 @@ const completedEvents = computed(() => events.value.filter(e => e.status === 'Co
 const upcomingDisplay = computed(() => {
   if (!upcoming.value?.length) return []
   const active = activeDiver.value?.diverName
-  const round  = activeDiver.value?.round_number
+  const activeId = activeDiver.value?.competitor_id
+  const round  = Number(activeDiver.value?.round_number)
   let list = upcoming.value
-  // Active diver currently mid-dive, exclude their queue row.
+  // Active diver currently mid-dive, exclude their queue row. Same
+  // (competitor, round) key the Control Room matches on; the name is only
+  // a fallback for a row that somehow comes without an id.
   if (active) {
-    list = list.filter(u => !(u.full_name === active && u.round_number === round))
+    list = list.filter(u => !(
+      Number(u.round_number) === round
+      && (activeId && u.competitor_id
+        ? String(u.competitor_id) === String(activeId)
+        : u.full_name === active)
+    ))
   } else {
     // No active diver, so the head of the queue is already being
     // shown in the centre as "On Deck", drop it from this list.
@@ -398,6 +413,9 @@ const divesByDiver = computed(() => {
   const teamMode = isTeamEvent.value
   const order = new Map()
   ;(archiveResults.value.standings || []).forEach((s, i) => order.set(s.full_name, i))
+  // Tied totals share the place on the badge too (Art 4.1.5), as they do
+  // in the standings table.
+  const places = sharedRanks(archiveResults.value.standings || [])
 
   const grouped = new Map()
   for (const d of archiveResults.value.dives || []) {
@@ -429,7 +447,7 @@ const divesByDiver = computed(() => {
         partner_country: teamMode ? null : (dives[0]?.partner_country || null),
         isTeam: teamMode,
         total: standRow?.total ?? null,
-        rank: (order.get(key) ?? -1) + 1,
+        rank: order.has(key) ? places[order.get(key)] : 0,
         dives,
       }
     })
@@ -463,27 +481,19 @@ const countryMedalTable = computed(() => {
   if (!archiveResults.value) return null
   const standings = archiveResults.value.standings || []
   if (!standings.length) return null
-  // Derive rank from index, the archive endpoint returns standings
+  // Derive rank from the totals, the archive endpoint returns standings
   // already sorted by total descending but doesn't include a rank
   // column. Without this the medal table was rendering 0/0/0 for
   // every country because s.rank was always undefined. Tied totals
   // share a rank (World Aquatics practice: both divers on the same
   // total get gold), and subsequent ranks skip by the size of the
-  // tied group (1, 1, 3).
-  let prevTotal = null
-  let prevRank  = 0
+  // tied group (1, 1, 3). See src/lib/standings.js.
+  const places = sharedRanks(standings)
   const byCountry = new Map()
   for (let i = 0; i < standings.length; i++) {
     const s = standings[i]
     const total = parseFloat(s.total) || 0
-    let rank
-    if (prevTotal !== null && Math.abs(total - prevTotal) < 1e-9) {
-      rank = prevRank
-    } else {
-      rank = i + 1
-      prevRank  = rank
-      prevTotal = total
-    }
+    const rank = places[i]
     const code = s.country_code || '—'
     if (!byCountry.has(code)) {
       byCountry.set(code, { code, gold: 0, silver: 0, bronze: 0, total_pts: 0 });
@@ -726,6 +736,31 @@ async function refreshData() {
   }
 }
 
+// Live refresh. Standings, Completed Dives and Up Next only change when a
+// dive completes or the operator moves on, and nobody else was telling
+// this view to re-pull: a projector or overlay opened at the start of a
+// meet showed its first snapshot all day. The socket handlers below call
+// this at those moments. Debounced so a panel landing in a burst, or a
+// score and the next diver arriving together, costs one fetch.
+let refreshTimer = null
+function scheduleRefresh(delayMs = 600) {
+  if (refreshTimer) clearTimeout(refreshTimer)
+  refreshTimer = setTimeout(() => {
+    refreshTimer = null
+    refreshData()
+  }, delayMs)
+}
+onUnmounted(() => {
+  if (refreshTimer) clearTimeout(refreshTimer)
+})
+
+// Panel size for "has the dive completed". The archive list row has it;
+// the Control Room's payload carries it too, for a deep link whose event
+// isn't in that list.
+const panelSize = computed(() =>
+  Number(currentEvent.value?.number_of_judges) || Number(activeDiver.value?.number_of_judges) || 5,
+)
+
 // fmtDate imported from @/lib/format, single source of truth.
 
 
@@ -779,7 +814,11 @@ useSocketEvent(socket, 'state_update', data => {
     && activeDiver.value.competitor_id === data.competitor_id
     && Number(activeDiver.value.round_number) === Number(data.round_number)
   if (!sameDive) liveJudgeScores.value = []
-  activeDiver.value = data
+  // A payload persisted before the Control Room sent diverName / diveCode
+  // can still be replayed, fill those from the raw roster row.
+  activeDiver.value = normaliseActiveDiver(data)
+  // A new diver up means Up Next moved on, re-pull it.
+  if (!sameDive) scheduleRefresh()
 })
 
 // Per-judge live score updates. Each judge's submit_score is
@@ -798,9 +837,15 @@ useSocketEvent(socket, 'score_received', data => {
   }
   if (!currentEventId.value) return
   if (data.event_id !== currentEventId.value) return
-  if (!activeDiver.value) return
-  if (data.competitor_id !== activeDiver.value.competitor_id) return
-  if (Number(data.round_number) !== Number(activeDiver.value.round_number)) return
+  // A score for some other dive (no live diver known here, say, because
+  // the operator is offline) still changes the standings. Nothing to pill,
+  // so just re-pull, a bit lazier than a completed panel.
+  if (!activeDiver.value
+      || data.competitor_id !== activeDiver.value.competitor_id
+      || Number(data.round_number) !== Number(activeDiver.value.round_number)) {
+    scheduleRefresh(2000)
+    return
+  }
   // Same judge resubmitting (rare, referee correction path)
   // overwrites their pill rather than adding a 6th.
   const idx = liveJudgeScores.value.findIndex(s => s.judge_number === data.judge_number)
@@ -808,6 +853,32 @@ useSocketEvent(socket, 'score_received', data => {
   if (idx >= 0) liveJudgeScores.value[idx] = next
   else liveJudgeScores.value = [...liveJudgeScores.value, next]
   liveJudgeScores.value.sort((a, b) => a.judge_number - b.judge_number)
+  // The panel's complete, so the dive has a total: standings and
+  // Completed Dives both change.
+  if (liveJudgeScores.value.length >= panelSize.value) scheduleRefresh()
+})
+
+// A re-dive throws the panel's scores out until the judges score again, so
+// the pills (and any dive total they'd added up to) go too.
+useSocketEvent(socket, 'referee_action_redive', (data) => {
+  if (!currentEventId.value || data?.event_id !== currentEventId.value) return
+  const a = activeDiver.value
+  if (a && String(data.competitor_id) === String(a.competitor_id)
+      && Number(data.round_number) === Number(a.round_number)) {
+    liveJudgeScores.value = []
+  }
+  scheduleRefresh()
+})
+
+// Live -> Completed (or back) flips this page between the live board and
+// the recap. The server tells every socket, and the /api/archive list this
+// page took its statuses from was loaded once, so patch the row: the
+// currentEvent.status watcher above does the re-pull.
+useSocketEvent(socket, 'event_status_changed', (data) => {
+  if (!data?.event_id || !data.to) return
+  const ev = events.value.find(e => String(e.id) === String(data.event_id))
+  if (ev) ev.status = data.to
+  else if (String(data.event_id) === String(currentEventId.value)) scheduleRefresh()
 })
 
 // On (re)connect, re-request the current active diver if an
@@ -867,68 +938,43 @@ useSocketEvent(socket, 'record_broken', (data) => {
 // rankClass + ordinal imported from @/lib/format, single source of
 // truth for the podium classes and the "Currently Nth" line.
 
-// Per-judge pills for the current active diver, annotated with
-// scoreCategory + dropped-under-trim flag. Reuses the same helper
-// the Completed-Dives panel uses, so the chip styling is identical.
-const liveAnnotatedScores = computed(() => {
-  if (!liveJudgeScores.value.length) return []
-  const csv = liveJudgeScores.value.map(s => s.value).join(',')
-  return annotatedScores(csv, currentEvent.value?.number_of_judges)
-})
+// Per-judge pills for the current active diver. livePanel (in
+// useScoreTrim, next to the trim the completed dives use) gives one slot
+// per panel seat, ALWAYS, so the row's height stays put from the moment a
+// diver is up instead of jumping when the first score lands. Each score
+// sits in its own judge's seat (it used to be the Nth arrival in slot N,
+// under judge N's name and link), and the trim and dive total only appear
+// once the whole panel is in, with the grouped synchro trim and x0.6 where
+// that applies.
+const livePanelState = computed(() => livePanel(
+  liveJudgeScores.value,
+  panelSize.value,
+  currentEvent.value?.event_type || activeDiver.value?.event_type,
+  activeDiver.value?.dd,
+))
+const liveJudgeSlots = computed(() => livePanelState.value.slots)
+const liveDiveTotal = computed(() => livePanelState.value.total)
 
-// Stable-layout placeholders: generates an array of
-// `number_of_judges` tiles ALWAYS (even when no scores have arrived),
-// so the live-judges row's height stays constant from the moment a
-// diver becomes active. Without this the row started at 0px, then
-// jumped to ~50px the instant the first score landed, shoving the
-// catch-up + Up Next blocks below it down. Each slot either carries
-// a populated score (with World Aquatics category + dropped flag) or
-// renders as a dim placeholder dash, either way the tile dimensions
-// are identical.
-const liveJudgeSlots = computed(() => {
-  const numJudges = Number(currentEvent.value?.number_of_judges) || 5
-  const annotated = liveAnnotatedScores.value
-  const slots = []
-  for (let i = 0; i < numJudges; i++) {
-    const filled = annotated[i]
-    if (filled) {
-      slots.push({
-        filled: true,
-        value: filled.value,
-        category: filled.category,
-        dropped: filled.dropped,
-      })
-    } else {
-      slots.push({ filled: false })
-    }
+// Where a performer sits in the current standings: by competitor id
+// (standings rows carry it), by name for a row that doesn't. -1 when
+// they're not in it yet.
+function standingsIndexFor(subject) {
+  if (!subject) return -1
+  const id = subject.competitor_id
+  if (id) {
+    const byId = standings.value.findIndex(s => s.competitor_id && String(s.competitor_id) === String(id))
+    if (byId >= 0) return byId
   }
-  return slots
-})
+  const name = subject.full_name || subject.diverName
+  return name ? standings.value.findIndex(s => s.full_name === name) : -1
+}
 
-// Dive total for the active diver, only populated once the full
-// panel is in (otherwise we'd be flashing partial sums). Computed as
-// (sum of non-dropped scores) × DD.
-const liveDiveTotal = computed(() => {
-  const annotated = liveAnnotatedScores.value
-  const need = Number(currentEvent.value?.number_of_judges) || 5
-  if (annotated.length < need) return null
-  const dd = parseFloat(activeDiver.value?.dd)
-  if (!dd || Number.isNaN(dd)) return null
-  const trimSum = annotated
-    .filter(j => !j.dropped)
-    .reduce((sum, j) => sum + j.value, 0)
-  return trimSum * dd
-})
-
-// 1-based rank of the active diver in the current standings, or
-// null if we can't find them (e.g. before the first refresh).
-// Matches by the diverName field that set_active_diver carries.
+// The active diver's place in the current standings, or null if we
+// can't find them (e.g. before the first refresh). A tie shares the
+// place (Art 4.1.5), the same number the standings panel beside it shows.
 const activeDiverRank = computed(() => {
   if (!activeDiver.value || !standings.value.length) return null
-  const target = activeDiver.value.full_name || activeDiver.value.diverName
-  if (!target) return null
-  const idx = standings.value.findIndex(s => s.full_name === target)
-  return idx >= 0 ? idx + 1 : null
+  return placeOf(standings.value, standingsIndexFor(activeDiver.value))
 })
 
 // Catch-up projection: mirrors the Control Room indicator. For the
@@ -978,7 +1024,7 @@ const activeProjection = computed(() => {
   if (!subject || !standings.value.length) return null
   const target = subject.full_name || subject.diverName
   if (!target) return null
-  const idx = standings.value.findIndex(s => s.full_name === target)
+  const idx = standingsIndexFor(subject)
   const leader = standings.value[0]
   if (!leader) return null
   const totalRounds = parseInt(currentEvent.value?.total_rounds) || 0
@@ -1047,7 +1093,7 @@ const activeProjection = computed(() => {
     const gap = Number(opponent.total || 0) - myTotal
     const { score, possible } = avgJudgeForGap(gap)
     targets.push({
-      rank: r + 1,
+      rank: placeOf(standings.value, r),
       name: pairLabel(opponent),
       gap,
       avgJudge: score,
@@ -1057,7 +1103,7 @@ const activeProjection = computed(() => {
   return {
     kind: 'chase',
     activeName: myLabel,
-    currentRank: idx + 1,
+    currentRank: placeOf(standings.value, idx),
     remaining,
     targets,
   }
@@ -1152,7 +1198,7 @@ onMounted(async () => {
          breadcrumb so the user can jump back to the list. Hidden
          entirely in broadcast mode so a venue projector shows only
          the live scoring content. -->
-    <div v-if="!broadcastMode" class="sb-header">
+    <div v-if="!broadcastMode && !deepLinkPending" class="sb-header">
       <template v-if="!currentEventId">
         <div class="header-left">
           <span v-if="!auth.isLoggedIn" class="sb-page-title">Scoreboard &amp; Results</span>
@@ -1222,8 +1268,16 @@ onMounted(async () => {
          event list + filter source data and listens for a
          selection.
          ========================================================= -->
+    <!-- A deep link (/scoreboard/:id, its /broadcast, an OBS overlay)
+         waits here for /api/archive before selectEvent can run. That used
+         to be the meets list, which an overlay or a venue projector then
+         flashed on air at every load. Blank on those screens, a quiet
+         Loading on the ordinary one. -->
+    <div v-if="deepLinkPending" class="sb-deeplink-pending" aria-busy="true">
+      <span v-if="!broadcastMode && !overlayMode">{{ $t('common.loading') }}</span>
+    </div>
     <MeetsBrowser
-      v-if="!currentEventId"
+      v-else-if="!currentEventId"
       :events="events"
       :live-events="liveEvents"
       :upcoming-events="upcomingEvents"
@@ -1411,18 +1465,18 @@ onMounted(async () => {
                eventual appearance doesn't push the catch-up + Up Next
                blocks below it down. -->
           <div v-if="centrePerformer" class="sb-live-judges">
-            <template v-for="(slot, i) in liveJudgeSlots" :key="i">
-              <!-- Live chips: each slot's judge_number is i+1 (the
-                   panel is dense and ordered). Wrap in a RouterLink
-                   when we know who the judge is so spectators can
-                   click through to /judge-profile; fall back to a
-                   non-clickable span before the panel has loaded. -->
-              <RouterLink v-if="panelByNumber.get(i + 1)"
-                    :to="`/judge-profile/${panelByNumber.get(i + 1).judge_id}`"
+            <template v-for="slot in liveJudgeSlots" :key="slot.judge_number">
+              <!-- Live chips: one per panel seat, each carrying its own
+                   judge_number. Wrap in a RouterLink when we know who
+                   the judge is so spectators can click through to
+                   /judge-profile; fall back to a non-clickable span
+                   before the panel has loaded. -->
+              <RouterLink v-if="panelByNumber.get(slot.judge_number)"
+                    :to="`/judge-profile/${panelByNumber.get(slot.judge_number).judge_id}`"
                     :class="['j-score', 'j-link',
                              slot.filled ? `j-${slot.category}` : 'j-empty',
                              slot.dropped ? 'j-dropped' : '']"
-                    v-tip="judgeTooltip(panelByNumber.get(i + 1), { dropped: slot.dropped })">
+                    v-tip="judgeTooltip(panelByNumber.get(slot.judge_number), { dropped: slot.dropped })">
                 {{ slot.filled ? slot.value.toFixed(1) : '—' }}
               </RouterLink>
               <span v-else
@@ -1457,7 +1511,7 @@ onMounted(async () => {
                 {{ activeProjection.remaining === 1 ? 'dive' : 'dives' }} left
                 · currently {{ ordinal(activeProjection.currentRank) }}
               </div>
-              <div v-for="t in activeProjection.targets" :key="t.rank" class="sb-catchup-row">
+              <div v-for="t in activeProjection.targets" :key="`${t.rank}-${t.name}`" class="sb-catchup-row">
                 <span class="sb-catchup-rank">{{ ordinal(t.rank) }}</span>
                 <span class="sb-catchup-name">{{ t.name }}</span>
                 <span :class="['sb-catchup-target', t.possible === false ? 'sb-catchup-impossible' : '']">

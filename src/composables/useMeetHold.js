@@ -3,7 +3,16 @@
 // (meet_hold / meet_resume) and mirrors server-pushed hold state for
 // multi-operator setups. The server only replays an existing hold to a
 // socket that asks with get_meet_hold, and asking is the caller's job:
-// the judge screen and the scoreboard do, the Control Room doesn't yet.
+// the judge screen and the scoreboard do, and the Control Room asks for
+// every live pool it wires up (and again after a reconnect).
+//
+// Hold state is kept per event, in `store` (event_id -> { reason }). The
+// Control Room passes one store to its own focused instance and, through
+// provide/inject, to every pool card, so the focused banner, the 'h'
+// hotkey and each card read the same answer for the same event. It used to
+// be one isHeld ref per instance: the focused one never followed a change
+// of focus, so pool A's hold showed on pool B and 'h' on B sent
+// meet_resume for B. Callers that don't pass a store get a private one.
 //
 // Must be called synchronously during component setup: the
 // meet_held / meet_resumed listeners register via useSocketEvent,
@@ -20,12 +29,29 @@
 //   queueSocketAction : the outbox sender from useHttpOutbox(). Both
 //                       emits go through it so a hold survives a wifi
 //                       blip; there's no raw socket.emit fallback.
-import { ref } from 'vue'
-import { useSocketEvent } from '@/composables/useSocketEvent'
+//   store             : optional shared reactive map, see above.
+//
+// Relative import (not @/) so node:test can load this file directly.
+import { ref, computed, reactive } from 'vue'
+import { useSocketEvent } from './useSocketEvent.js'
 
-export function useMeetHold({ socket, event, onHold = () => {}, queueSocketAction }) {
-  const isHeld = ref(false)
-  const holdReason = ref('')
+// provide/inject key for the Control Room's shared store
+export const MEET_HOLD_STORE = Symbol('meetHoldStore')
+
+export function useMeetHold({ socket, event, onHold = () => {}, queueSocketAction, store = null }) {
+  const holds = store || reactive({})
+  const idOf = () => {
+    const ev = event()
+    return ev && ev.id != null ? String(ev.id) : null
+  }
+  const isHeld = computed(() => {
+    const id = idOf()
+    return !!(id && holds[id])
+  })
+  const holdReason = computed(() => {
+    const id = idOf()
+    return (id && holds[id]?.reason) || ''
+  })
   const holdPromptOpen = ref(false)
   const holdReasonInput = ref('')
 
@@ -34,35 +60,33 @@ export function useMeetHold({ socket, event, onHold = () => {}, queueSocketActio
     holdPromptOpen.value = true
   }
   function confirmHold() {
-    if (!event()) return
-    isHeld.value = true
-    holdReason.value = holdReasonInput.value.trim()
-    queueSocketAction('meet_hold', { event_id: event().id, reason: holdReason.value || null })
+    const id = idOf()
+    if (!id) return
+    const reason = holdReasonInput.value.trim()
+    holds[id] = { reason }
+    queueSocketAction('meet_hold', { event_id: event().id, reason: reason || null })
     holdPromptOpen.value = false
     // Pause the shot clock, diver can't be "on the clock" during a hold
     onHold()
   }
   function resumeMeet() {
-    if (!event()) return
-    isHeld.value = false
-    holdReason.value = ''
+    const id = idOf()
+    if (!id) return
+    delete holds[id]
     queueSocketAction('meet_resume', { event_id: event().id })
   }
 
   // Hold-state sync: for multi-operator setups + late-joining
   // Control Room sessions. The server replays meet_held when we
-  // ask for it.
+  // ask for it. Every broadcast is recorded under its own event, not
+  // just the one this instance is looking at right now.
   useSocketEvent(socket, 'meet_held', (data) => {
-    if (event() && data.event_id === event().id) {
-      isHeld.value = true
-      holdReason.value = data.reason || ''
-    }
+    if (!data || data.event_id == null) return
+    holds[String(data.event_id)] = { reason: data.reason || '' }
   })
   useSocketEvent(socket, 'meet_resumed', (data) => {
-    if (event() && data.event_id === event().id) {
-      isHeld.value = false
-      holdReason.value = ''
-    }
+    if (!data || data.event_id == null) return
+    delete holds[String(data.event_id)]
   })
 
   return {

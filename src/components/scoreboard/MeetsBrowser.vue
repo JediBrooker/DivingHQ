@@ -30,6 +30,7 @@
 import { ref, computed, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { fmtDate } from '@/lib/format'
+import { dateOnly, dateOnlyToLocalDate } from '@/lib/dateInputs'
 import { groupScoreboardEvents } from '@/composables/useProgressionGroups'
 import MeetEventGrid from '@/components/scoreboard/MeetEventGrid.vue'
 
@@ -168,8 +169,13 @@ const meetGroups = computed(() => {
 
 // Year a meet belongs to: its scheduled start, falling back to
 // the most recent event's timestamp for meets with no dates set.
+// A meet's start / end are DATE columns, which arrive as the server's
+// midnight in UTC; read them back as calendar days (src/lib/dateInputs.js)
+// so nobody west of the server sees the day before.
+const meetDay = (v) => dateOnlyToLocalDate(dateOnly(v))
+
 function meetYear(g) {
-  const src = g.startDate || g.latestCreatedAt
+  const src = meetDay(g.startDate) || g.latestCreatedAt
   if (!src) return '—'
   const y = new Date(src).getFullYear()
   return Number.isNaN(y) ? '—' : y
@@ -178,7 +184,7 @@ function meetYear(g) {
 // Header date label: the meet's scheduled range when set, else the
 // most-recent event date as a fallback.
 function meetDateLabel(g) {
-  const s = g.startDate, e = g.endDate
+  const s = meetDay(g.startDate), e = meetDay(g.endDate)
   if (s && e && fmtDate(s) !== fmtDate(e)) return `${fmtDate(s)} – ${fmtDate(e)}`
   if (s) return fmtDate(s)
   return fmtDate(g.latestCreatedAt)

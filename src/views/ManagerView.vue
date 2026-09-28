@@ -4,6 +4,7 @@ import { RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useClubScope } from '@/composables/useClubScope'
+import { localInputToIso, isoToLocalInput, dateOnly, dateOnlyToLocalDate } from '@/lib/dateInputs'
 import { idbInvalidate } from '@/lib/idbCache'
 import { DIVE_DIRECTORY_TTL_MS } from '@/lib/cache-policy'
 import { confirmAction } from '@/composables/useConfirm'
@@ -344,9 +345,12 @@ async function loadEventTemplates() {
   }
 }
 // Saved templates only show inside the create form, so fetch them when
-// it first opens.
+// it first opens. They're an org editor's tool (GET/POST/DELETE
+// /api/event-templates want org_admin or meet_manager), so a club admin
+// running their own club's meet doesn't get a strip that would 403.
 let eventTemplatesLoading = null
 function ensureEventTemplates() {
+  if (clubMode.value) return Promise.resolve()
   if (!eventTemplatesLoading) eventTemplatesLoading = loadEventTemplates()
   return eventTemplatesLoading
 }
@@ -732,24 +736,15 @@ function openCreateEvent(meetId = '') {
 }
 
 // Human-readable meet date range for the detail header subline.
-// Dates arrive as ISO-ish strings (YYYY-MM-DD or full ISO); slice
-// to the date portion and format via toLocaleDateString. Returns
-// '' when neither bound is present.
+// start_date / end_date are DATE columns, which the API sends as the
+// server's midnight in UTC; dateOnly gets the calendar date back
+// (src/lib/dateInputs.js) and it's shown as that day in any browser
+// zone. Returns '' when neither bound is present.
 function formatMeetDates(meet) {
   if (!meet) return ''
   const fmt = (d) => {
-    if (!d) return ''
-    const str = String(d)
-    // Watch out: a bare YYYY-MM-DD is pinned to local noon so it
-    // doesn't roll back a day in negative-offset zones. A full
-    // timestamp (what the API returns) is parsed as-is and converted
-    // to the local date by toLocaleDateString, slicing its date
-    // portion would show the UTC day, off by one from the local date
-    // the user entered.
-    const parsed = /^\d{4}-\d{2}-\d{2}$/.test(str)
-      ? new Date(`${str}T12:00:00`)
-      : new Date(str)
-    if (Number.isNaN(parsed.getTime())) return ''
+    const parsed = dateOnlyToLocalDate(dateOnly(d))
+    if (!parsed) return ''
     return parsed.toLocaleDateString(undefined, {
       year: 'numeric', month: 'short', day: 'numeric',
     })
@@ -955,8 +950,11 @@ async function openEditMeet(meet) {
       form: {
         name:             m.name || '',
         venue:            m.venue || '',
-        start_date:       m.start_date ? String(m.start_date).slice(0, 10) : '',
-        end_date:         m.end_date   ? String(m.end_date).slice(0, 10)   : '',
+        // DATE columns come over as the server's midnight in UTC, so the
+        // first ten characters are the day before on a server east of
+        // UTC, and saving the form moved the meet back a day each time.
+        start_date:       dateOnly(m.start_date),
+        end_date:         dateOnly(m.end_date),
         description:      m.description || '',
         sponsor_name:     m.sponsor_name || '',
         sponsor_link_url: m.sponsor_link_url || '',
@@ -1046,8 +1044,11 @@ async function createEvent() {
         event_type: createType.value,
         meet_id: createMeetId.value || null,
         age_group: createAgeGroup.value || null,
-        scheduled_at: createScheduledAt.value || null,
-        entries_close_at: createEntriesCloseAt.value || null,
+        // datetime-local is a zone-less wall clock and the server would
+        // read it in the database's zone, so send the instant the manager
+        // meant (src/lib/dateInputs.js).
+        scheduled_at: localInputToIso(createScheduledAt.value),
+        entries_close_at: localInputToIso(createEntriesCloseAt.value),
         event_format: createFormat.value,
         // Parent link matters for downstream stages: semifinals
         // always feed from a preliminary, finals may feed from
@@ -1115,18 +1116,10 @@ async function openEdit(ev) {
   editAgeChoice.value  = ageParts.choice
   editAgeMasters.value = ageParts.masters
   editAgeOther.value   = ageParts.other
-  // entries_close_at comes back as an ISO string from the server.
-  // <input type="datetime-local"> wants 'YYYY-MM-DDTHH:mm' in local
-  // time, no zone, no seconds, so format it for display.
-  if (ev.entries_close_at) {
-    const d = new Date(ev.entries_close_at)
-    const pad = (n) => String(n).padStart(2, '0')
-    editEntriesCloseAt.value =
-      `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` +
-      `T${pad(d.getHours())}:${pad(d.getMinutes())}`
-  } else {
-    editEntriesCloseAt.value = ''
-  }
+  // entries_close_at comes back as an ISO instant. <input
+  // type="datetime-local"> wants 'YYYY-MM-DDTHH:mm' in local time, and
+  // saveEdit turns it back into the same instant.
+  editEntriesCloseAt.value = isoToLocalInput(ev.entries_close_at)
   editErr.value = ''
   // Hydrate round_rules sections from the event row.
   editRoundSections.value = sectionsFromRoundRules(ev.round_rules)
@@ -1191,8 +1184,10 @@ async function saveEdit() {
         // Send '' as null so the server clears the deadline, an ISO
         // string sets it. Server treats undefined (absent key) as
         // "leave untouched", but we always send the field because
-        // the user might have just blanked it.
-        entries_close_at: editEntriesCloseAt.value || null,
+        // the user might have just blanked it. The value is converted
+        // to an instant first: sent raw, the server read the wall clock
+        // in its own zone and a no-op save moved the deadline.
+        entries_close_at: localInputToIso(editEntriesCloseAt.value),
         enforce_referee_signoff: editEnforceSignoff.value,
         is_mixed_height:         editMixedHeight.value,
         is_rehearsal:            editIsRehearsal.value,
@@ -1296,13 +1291,14 @@ function onOutsideClick(e) {
 }
 
 onMounted(async () => {
-  const meetsLoading = loadMeets()
-  await Promise.all([loadEvents(meetsLoading), meetsLoading])
   // Capture-phase mousedown closes the overflow menu when the user
   // clicks anywhere outside its wrapper. Capture phase matters here
   // so the row's own ⋯ trigger still fires its toggle before this
-  // listener runs.
+  // listener runs. Added before the loads so leaving mid-load can't
+  // leave it behind (onUnmounted would already have run).
   window.addEventListener('mousedown', onOutsideClick, true)
+  const meetsLoading = loadMeets()
+  await Promise.all([loadEvents(meetsLoading), meetsLoading])
 })
 onUnmounted(() => {
   window.removeEventListener('mousedown', onOutsideClick, true)
@@ -1319,7 +1315,8 @@ onUnmounted(() => {
       <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;margin-bottom:1rem;flex-wrap:wrap">
         <h2 style="font-size:22px">{{ $t('manager.modals.new_event_title') }}</h2>
         <div style="display:flex;gap:0.5rem">
-          <button type="button"
+          <button v-if="!clubMode"
+                  type="button"
                   class="btn btn-ghost btn-sm"
                   @click="saveTemplateOpen = !saveTemplateOpen">
             {{ saveTemplateOpen ? $t('manager.modals.save_template_cancel') : $t('manager.modals.save_template_btn') }}

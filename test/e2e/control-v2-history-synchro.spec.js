@@ -60,3 +60,39 @@ test("synchro History groups judge scores into Exec A / Exec B / Sync", async ({
   await expect(hcard.locator(".judge-group-b .j-score")).toHaveCount(2);
   await expect(hcard.locator(".judge-group-sync .j-score")).toHaveCount(3);
 });
+
+// The amend dialog previewed a flat trim over the whole synchro panel
+// times 0.6, so its trim sum and points didn't match what the server would
+// score.
+test("the correction preview on a 9-judge synchro dive uses the grouped WA trim", async ({ request, page }) => {
+  test.setTimeout(120_000);
+  const { orgId, username, adminToken } = await setup.createOrgAndAdmin(request, { countryCode: "AUS", orgName: "Synchro Preview Diving" });
+  const event = await setup.createEvent(request, {
+    adminToken, name: "Synchro Preview 3m", height: "3m",
+    number_of_judges: 9, total_rounds: 1, event_type: "synchro_pair",
+  });
+  const diver = await setup.insertUser({ orgId, role: "diver", fullName: "Preview Pair" });
+  const diveId = await setup.pickDiveId({ height: 3.0, dive_code: "101", position: "B" });
+  await setup.insertDiveList({ eventId: event.id, competitorId: diver.userId, dives: [{ round_number: 1, dive_id: diveId }] });
+  // Exec A 5, 9 | Exec B 9, 9 | Sync 5 x 5: WA keeps 9, 9 + 5, 5, 5 = 33, a flat trim kept 29
+  const judgeScores = [5, 9, 9, 9, 5, 5, 5, 5, 5];
+  for (let i = 0; i < 9; i++) {
+    const j = await setup.insertUser({ orgId, role: "judge", fullName: `SP Judge ${i + 1}` });
+    await setup.pool.query("INSERT INTO event_judges (event_id, judge_id, judge_number) VALUES ($1, $2, $3)", [event.id, j.userId, i + 1]);
+    await setup.pool.query(
+      "INSERT INTO scores (event_id, competitor_id, judge_id, dive_id, round_number, score) VALUES ($1, $2, $3, $4, 1, $5)",
+      [event.id, diver.userId, j.userId, diveId, judgeScores[i]],
+    );
+  }
+  await setup.setEventStatus(request, { adminToken, eventId: event.id, status: "Live" });
+
+  await signIn(page, username);
+  await page.goto(`/control?event=${event.id}`);
+  const hcard = page.locator(".cv2-hcard.is-clickable", { hasText: "Preview Pair" }).first();
+  await expect(hcard).toBeVisible({ timeout: 8_000 });
+  await hcard.click();
+  await page.locator(".lb-body .input[type=number]").fill("5.0");
+  const trimRow = page.locator(".correct-preview-row", { hasText: "Trim sum" });
+  await expect(trimRow.locator(".correct-preview-old")).toHaveText("33.0");
+  await setup.deleteOrg(orgId);
+});

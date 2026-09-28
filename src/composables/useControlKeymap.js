@@ -7,7 +7,9 @@
 //
 // Guards: modifier combos (Cmd/Ctrl/Alt) are left alone so the global
 // Cmd/Ctrl-K command palette and browser shortcuts keep working, and the
-// handler skips keys fired while typing (see isTypingTarget).
+// handler skips keys fired while typing, inside a dialog, or (for Space
+// and the arrows) on a control that already owns that key. See
+// hotkeyBlocked.
 
 // True when the event target is a field that should keep the keystroke,
 // so hotkeys never stomp the command-palette input, the event search,
@@ -16,6 +18,58 @@ export function isTypingTarget(el) {
   if (!el) return false
   const tag = el.tagName
   return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable === true
+}
+
+// Controls that Space activates. The window listener used to eat Space
+// on these (preventDefault, then advance), so a focused Hold button
+// advanced the diver instead of holding, and Space on a confirm's "Move
+// on" queued a second confirm rather than answering the first.
+const SPACE_OWNERS = [
+  'button', 'a[href]', 'summary', '[role="button"]', '[role^="menuitem"]',
+  '[role="option"]', '[role="tab"]', '[role="checkbox"]', '[role="switch"]', '[role="radio"]',
+].join(', ')
+// Widgets where the arrow keys move around inside the widget.
+const ARROW_OWNERS = [
+  '[role="menu"]', '[role^="menuitem"]', '[role="listbox"]', '[role="option"]',
+  '[role="tablist"]', '[role="tab"]', '[role="radiogroup"]', '[role="radio"]',
+].join(', ')
+
+function within(el, selector) {
+  return !!(el && typeof el.closest === 'function' && el.closest(selector))
+}
+
+// The control a Space on `el` would press, or null. The view also uses it
+// to remember which control the mouse last pressed.
+export function spaceOwnerOf(el) {
+  return el && typeof el.closest === 'function' ? el.closest(SPACE_OWNERS) : null
+}
+
+// True when a keydown should be left alone rather than read as a hotkey.
+// modalOpen is the caller's "is a modal dialog up" (the view checks for
+// [aria-modal="true"]): while one is, the keyboard belongs to it, so
+// f / r / c / h can't reach a pool from behind a correction dialog. A key
+// pressed inside any dialog, modal or not (the Tools drawer), stays there
+// too.
+//
+// clickedControl is the control the mouse last pressed. Chrome leaves a
+// clicked button focused, and an operator who clicks Resume (or Re-dive)
+// and then hits Space to move on means move on. Handing that Space to the
+// button put the pool straight back on hold, or re-dived the diver again
+// over the judges' fresh scores. So Space only presses a control the
+// keyboard got to.
+export function hotkeyBlocked(e, { modalOpen = false, clickedControl = null } = {}) {
+  if (!e) return true
+  if (modalOpen) return true
+  const target = e.target
+  if (isTypingTarget(target)) return true
+  if (within(target, '[role="dialog"], [aria-modal="true"]')) return true
+  const key = e.key
+  if (key === ' ' || key === 'Spacebar') {
+    const owner = spaceOwnerOf(target)
+    if (owner && owner !== clickedControl) return true
+  }
+  if (key && key.startsWith('Arrow') && within(target, ARROW_OWNERS)) return true
+  return false
 }
 
 // Map a keydown event to an intent, or null if the key isn't bound.

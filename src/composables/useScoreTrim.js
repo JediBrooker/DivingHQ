@@ -91,6 +91,125 @@ function dropEndsByJudgeNumber(rows, judgeNumbers, dropLow, dropHigh) {
   }
 }
 
+/**
+ * The live judge pills under the spectator scoreboard's current diver.
+ *
+ * `scores` is whatever has arrived so far, `[{ judge_number, value }]`,
+ * in any order. Every panel seat gets a slot, and each score goes in its
+ * own judge's seat, so J3 scoring first shows under J3 rather than in the
+ * first slot with J1's name and link on it. Drops are only marked, and the
+ * total only given, once the whole panel is in: it's the same WA trim the
+ * completed dive gets (annotateJudgeRows, grouped for synchro) times DD,
+ * times 0.6 for synchro. The old flat trim struck the wrong judges on a
+ * synchro panel and put the total at 1/0.6 of the official figure.
+ *
+ * A score with no judge_number (nothing sends one today) takes the first
+ * empty seat rather than getting lost.
+ *
+ * @returns {{ slots: Array<{judge_number:number, filled:boolean, value?:number,
+ *   category?:string, dropped?:boolean}>, total: number|null }}
+ */
+export function livePanel(scores, numJudges, eventType, dd) {
+  const n = parseInt(numJudges) || 5
+  const seat = new Map()
+  const loose = []
+  for (const s of Array.isArray(scores) ? scores : []) {
+    if (!s) continue
+    const v = Number(s.value)
+    if (Number.isNaN(v)) continue
+    const jn = Number(s.judge_number)
+    if (Number.isInteger(jn) && jn >= 1 && jn <= n && !seat.has(jn)) seat.set(jn, v)
+    else loose.push(v)
+  }
+  for (let jn = 1; jn <= n && loose.length; jn++) {
+    if (!seat.has(jn)) seat.set(jn, loose.shift())
+  }
+
+  const complete = seat.size >= n
+  const dropped = new Set()
+  let total = null
+  if (complete) {
+    const rows = annotateJudgeRows(
+      Array.from({ length: n }, (_, i) => ({ judge_number: i + 1, score: seat.get(i + 1) })),
+      n,
+      eventType,
+    )
+    let kept = 0
+    for (const r of rows) {
+      if (r.dropped) dropped.add(r.judge_number)
+      else kept += r.score
+    }
+    const d = parseFloat(dd)
+    if (d && !Number.isNaN(d)) total = kept * d * (eventType === 'synchro_pair' ? 0.6 : 1)
+  }
+
+  const slots = []
+  for (let jn = 1; jn <= n; jn++) {
+    if (!seat.has(jn)) {
+      slots.push({ judge_number: jn, filled: false })
+      continue
+    }
+    const value = seat.get(jn)
+    slots.push({ judge_number: jn, filled: true, value, category: scoreCategory(value), dropped: dropped.has(jn) })
+  }
+  return { slots, total }
+}
+
+/**
+ * The score-correction dialog's before/after preview for changing one
+ * judge's mark on a completed dive. Same trim as everywhere else
+ * (annotateJudgeRows, keyed by the real judge numbers, grouped for
+ * synchro) and the 0.6 synchro factor. The dialog used to run a flat trim
+ * over all the scores, which for a 7/9/11-judge synchro panel kept the
+ * wrong marks, so its trim sum, points, delta and "drop changed" note
+ * could all be wrong.
+ *
+ * Returns null when there's nothing sensible to preview (bad score or
+ * index).
+ */
+export function correctionPreview({ scores, judgeNumbers, idx, newVal, numJudges, eventType, dd }) {
+  if (!Array.isArray(scores) || !scores.length) return null
+  const v = Number(newVal)
+  if (Number.isNaN(v) || v < 0 || v > 10 || ((v * 2) % 1) !== 0) return null
+  if (!Number.isInteger(idx) || idx < 0 || idx >= scores.length) return null
+  const nums = scores.map((_, i) => Number(Array.isArray(judgeNumbers) && judgeNumbers[i] != null ? judgeNumbers[i] : i + 1))
+  const oldScores = scores.map(Number)
+  const newScores = oldScores.slice()
+  newScores[idx] = v
+  const n = parseInt(numJudges) || oldScores.length
+  const factor = eventType === 'synchro_pair' ? 0.6 : 1
+  const d = parseFloat(dd) || 0
+
+  const trim = (vals) => {
+    const rows = annotateJudgeRows(vals.map((score, i) => ({ judge_number: nums[i], score })), n, eventType)
+    return {
+      sum: rows.filter(r => !r.dropped).reduce((a, r) => a + r.score, 0),
+      dropped: new Set(rows.filter(r => r.dropped).map(r => r.judge_number)),
+    }
+  }
+  const before = trim(oldScores)
+  const after = trim(newScores)
+  let dropChanged = before.dropped.size !== after.dropped.size
+  for (const jn of before.dropped) if (!after.dropped.has(jn)) dropChanged = true
+
+  const oldPoints = before.sum * d * factor
+  const newPoints = after.sum * d * factor
+  return {
+    judgeIdx: idx,
+    judgeNumber: nums[idx],
+    oldScore: oldScores[idx],
+    newScore: v,
+    oldTrim: before.sum,
+    newTrim: after.sum,
+    oldPoints,
+    newPoints,
+    delta: newPoints - oldPoints,
+    dropChanged,
+    dd: d,
+    unchanged: oldScores[idx] === v,
+  }
+}
+
 // Re-export the bucket helper so callers that already imported the
 // composable don't need a second import.
 export { scoreCategory } from './useScoreCategories.js'

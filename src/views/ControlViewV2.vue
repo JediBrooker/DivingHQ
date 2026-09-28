@@ -8,8 +8,8 @@
 // controllers + meet-day tools; the mode gets chosen by the shared
 // useControlStage derivation. Same /control URL, ?event= deep-link, role
 // gate + AppShell as before.
-import { ref, reactive, computed, watch, onMounted, onUnmounted, nextTick, defineAsyncComponent } from 'vue'
-import { useRoute, onBeforeRouteLeave } from 'vue-router'
+import { ref, reactive, computed, watch, onMounted, onUnmounted, nextTick, defineAsyncComponent, provide } from 'vue'
+import { useRoute, onBeforeRouteLeave, RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useClubScope, CONTROL_ROOM_ROLES } from '@/composables/useClubScope'
 import { useControlStage, liveEventsInOrder } from '@/composables/useControlStage'
@@ -31,21 +31,25 @@ import ScoreCorrectionModal from '@/components/control/ScoreCorrectionModal.vue'
 // the outbox and have to keep working through a network blip.
 const loadDrawer = () => import('@/components/control/DrawerPanel.vue')
 const DrawerPanel = defineAsyncComponent(loadDrawer)
+// Only opens after finalising an event that overran its schedule slot, so
+// it rides in its own chunk too.
+const ReflowModal = defineAsyncComponent(() => import('@/components/ReflowModal.vue'))
 import EmptyState from '@/components/EmptyState.vue'
 import { useSocket } from '@/composables/useSocket'
 import { useSocketEvent } from '@/composables/useSocketEvent'
-import { useLivePools, selectDiver, rosterIndexForActive } from '@/composables/useLivePools'
+import { useLivePools, selectDiver, rosterIndexForActive, competingQueue, rebaseQueue, applyRedive, historyNewestFirst } from '@/composables/useLivePools'
 import { annotateJudgeRows } from '@/composables/useScoreTrim'
 import { synchroJudgeGroups } from '@/composables/useScoreCategories'
-import { controlKeyIntent, isTypingTarget } from '@/composables/useControlKeymap'
+import { controlKeyIntent, hotkeyBlocked, spaceOwnerOf } from '@/composables/useControlKeymap'
 import { diveDescription } from '@/composables/useDiveLabel'
 import { idbInvalidate } from '@/lib/idbCache'
-import { useMeetHold } from '@/composables/useMeetHold'
-import { useHttpOutbox } from '@/composables/useHttpOutbox'
+import { activeDiverPayload } from '@/lib/activeDiver'
+import { useMeetHold, MEET_HOLD_STORE } from '@/composables/useMeetHold'
+import { useHttpOutbox, waitForOutboxEntry } from '@/composables/useHttpOutbox'
 import { useOutbox } from '@/composables/useOutbox'
 import { confirmAction } from '@/composables/useConfirm'
 import { showUndo } from '@/composables/useUndo'
-import { showError, showSuccess } from '@/composables/useNotify'
+import { showError, showSuccess, showInfo } from '@/composables/useNotify'
 
 const route = useRoute()
 const auth = useAuthStore()
@@ -71,10 +75,36 @@ useSocketEvent(socket, 'score_received', (data) => {
   // A completed dive changes that pool's history + standings, so refresh
   // its side-panel data (whichever pool, focused or not). Each card
   // watches its own pool to stop its clock and arm its own auto-advance.
-  if (res.allScoresIn) loadPoolPanels(data.event_id)
+  // The queue gets re-read too, so a withdrawal or a reserve promoted from
+  // the Manager lands before Next walks on.
+  if (res.allScoresIn) {
+    loadPoolPanels(data.event_id)
+    refreshPoolRoster(data.event_id)
+  }
 })
 useSocketEvent(socket, 'judge_signal', (data) => {
   routeSignal(data)
+})
+// Anything that changes scores after the fact (a correction from any
+// operator, the HTTP amend, a referee Failed or Cap, a resolved conflict)
+// ends in score_corrected for the event's room. That's the moment the
+// server's numbers are new, so that's when History and Standings re-read.
+// The correction dialog used to trigger the re-read itself, right after
+// queueing its PUT, which usually beat the PUT to the server.
+useSocketEvent(socket, 'score_corrected', (data) => {
+  if (data?.event_id) {
+    idbInvalidate(`/api/scoreboard/${data.event_id}`).catch(() => {})
+    loadPoolPanels(data.event_id)
+  }
+})
+
+// A re-dive (from any operator) starts the dive over: the server marks
+// its scores 'redive' until the judges score again. Reset that pool's
+// tiles and disarm Next so it can't be advanced past the dive on the old
+// scores; the card sees rediveSeq move and restarts its clock.
+useSocketEvent(socket, 'referee_action_redive', (data) => {
+  const pool = data?.event_id != null ? pools[data.event_id] : null
+  if (pool) applyRedive(pool, data, numberOfJudgesFor(data.event_id))
 })
 
 // Authoritative active-diver restore. The server answers get_active_diver
@@ -89,6 +119,13 @@ const pendingActive = {} // event_id -> latest server state_update payload
 const pendingSeed = new Set() // events optimistically seeded, awaiting the server's verdict
 const seedTimers = new Set() // fallback timers, cleared on unmount
 const SEED_GRACE_MS = 1500
+
+// Set when the view goes away. Everything here that resumes after an
+// await checks it: leaving while /api/events (or a roster) was still
+// loading used to let the dead instance wire pools anyway, and with its
+// socket listeners already gone its seed timer announced diver 1 to the
+// judges of any event nobody had started.
+let unmounted = false
 
 // Lease conflict state: event_id -> true when another socket (operator or
 // window) is also controlling this event (server claim_event_control).
@@ -116,12 +153,13 @@ useSocketEvent(socket, 'event_control_granted', (d) => {
 // reconnect. That replaced the old token-bucket + drop-detection flow
 // (and its "unconfirmed / Retry" banner on the pool card), since the
 // outbox's own pending/synced/failed states cover retries now.
+// The roster row alone isn't enough: judges and the scoreboard render
+// diverName / diveCode / eventName, see src/lib/activeDiver.js.
 function emitActiveDiver(ev) {
   const p = pools[ev.id]
   const a = p && p.currentActive
   if (!a) return
-  const payload = { ...a, status: 'ready' }
-  queueSocketAction('set_active_diver', payload)
+  queueSocketAction('set_active_diver', activeDiverPayload(a, ev))
 }
 
 // Snap an optimistically-seeded pool to the server's authoritative active
@@ -157,18 +195,35 @@ const currentEvent = computed(
 const { workflowMode } = useControlStage(currentEvent)
 
 // Safe recovery: meet hold/resume on the FOCUSED event, driving the
-// recovery center mode + the focused hold banner. Per-pool hold (from any
-// card) lives inside LivePoolCard; this focused instance just mirrors the
-// same server meet_held/meet_resumed broadcasts so the two stay in sync.
-// The focused pool's clock gets paused by its own card's hold instance,
-// so onHold here is a no-op.
+// recovery center mode + the focused hold banner. Hold state lives in one
+// per-event store shared with every LivePoolCard (provide/inject), so the
+// banner, the cards and the 'h' hotkey all agree about which event is
+// held, and the banner follows focus from pool to pool. The focused
+// pool's clock gets paused by its own card's hold instance, so onHold
+// here is a no-op.
+const holdStore = reactive({}) // event_id -> { reason }
+provide(MEET_HOLD_STORE, holdStore)
 const { isHeld, holdReason, holdPromptOpen, holdReasonInput, openHoldPrompt, confirmHold, resumeMeet } =
-  useMeetHold({ socket, event: () => currentEvent.value, onHold: () => {}, queueSocketAction })
+  useMeetHold({ socket, event: () => currentEvent.value, onHold: () => {}, queueSocketAction, store: holdStore })
 
 // Recovery is the one explicit cross-cutting mode (offer, not seize).
 // Off by default so the center always shows the stage mode.
 const recoveryOpen = ref(false)
 const drawerOpen = ref(false)
+
+// Operator broadcast (/control?broadcast=1, "Operator broadcast (this
+// screen)" in the Broadcast chooser): the operator's own screen doubles
+// as the projector. The top bar, History and every control go; the pool
+// cards and Standings stay, and the hotkeys still drive the meet, since
+// the operator is still running it from this keyboard. App.vue drops the
+// app shell for it too. Nothing read the flag after the old Control Room
+// went, so picking it just closed the chooser.
+const kiosk = computed(() => route.query.broadcast === '1')
+const kioskExit = computed(() => ({
+  path: '/control',
+  query: route.query.event ? { event: route.query.event } : {},
+}))
+watch(kiosk, (on) => { if (on) drawerOpen.value = false })
 const centerMode = computed(() => (recoveryOpen.value ? 'recovery' : workflowMode.value))
 
 // Every currently-Live event, paired with its pool -> the multi-pool grid
@@ -212,13 +267,25 @@ async function loadPoolPanels(eventId) {
   if (!eventId) return
   await Promise.all([
     auth.apiFetch(`/api/events/${eventId}/history`).then((h) => {
-      // /history comes back round ASC, name ASC; reverse so the latest dive is on top.
-      histories[eventId] = Array.isArray(h) ? h.slice().reverse() : []
+      // /history comes back round ASC, name ASC; put the latest dive on
+      // top by the pool's own queue order (see historyNewestFirst).
+      histories[eventId] = historyNewestFirst(Array.isArray(h) ? h : [], pools[eventId]?.roster)
     }).catch(() => { /* leave prior history in place */ }),
     auth.apiFetch(`/api/scoreboard/${eventId}`).then((sb) => {
       standingsByEvent[eventId] = Array.isArray(sb?.standings) ? sb.standings : []
     }).catch(() => { /* leave prior standings in place */ }),
   ])
+}
+
+// Re-read one pool's queue and keep the live diver where they are (see
+// rebaseQueue). A failed fetch leaves the old queue in place.
+async function refreshPoolRoster(eventId) {
+  const pool = pools[eventId]
+  if (!pool) return
+  try {
+    const roster = await auth.apiFetch(`/api/events/${eventId}/roster`)
+    if (Array.isArray(roster)) rebaseQueue(pool, roster)
+  } catch { /* keep the queue we have */ }
 }
 
 function fmtTotal(v) {
@@ -271,6 +338,7 @@ function openCorrection(row) {
     position: row.position,
     dd: row.dd,
     scores: (row.judge_scores || []).map((s) => parseFloat(s)),
+    judge_numbers: row.judge_numbers || [],
     score_ids: row.score_ids,
     competitor_id: row.competitor_id,
     event_id: row.event_id,
@@ -281,14 +349,38 @@ function closeCorrection() {
   correctOpen.value = false
   correctTarget.value = null
 }
+// The dialog hands back its outbox key. score_corrected normally does the
+// refresh, but it goes to the room and a socket mid-reconnect can miss
+// it, so re-read once more when the PUT itself has landed.
+async function onCorrectionSaved(key, eventId) {
+  if ((await waitForOutboxEntry(key, { timeoutMs: 15000 })) === 'synced') loadPoolPanels(eventId)
+}
 
 // Announce (#9): push the focused pool's standings to the spectator
-// scoreboard ("say it on screen") via announce_score.
-function announceFocused() {
+// scoreboard ("say it on screen") via announce_score. The server's gate
+// reads event_id; this used to send eventId, so every announce was
+// refused while the toast said it had gone out. The toast now waits for
+// the server's yes.
+// The standings go through JSON on the way into the outbox: they're a
+// reactive array, and IndexedDB can't clone a Proxy, so the push itself
+// threw before anything was queued.
+async function announceFocused() {
   const ev = currentEvent.value
   if (!ev || !focusedStandings.value.length) return
-  queueSocketAction('announce_score', { standings: focusedStandings.value, eventId: ev.id })
-  showSuccess(`Announced "${ev.name}" standings on the scoreboard.`)
+  let key
+  try {
+    key = await queueSocketAction('announce_score', {
+      event_id: ev.id,
+      standings: JSON.parse(JSON.stringify(focusedStandings.value)),
+    })
+  } catch (err) {
+    showError(`Couldn't announce "${ev.name}" standings: ${err.message}`)
+    return
+  }
+  const status = await waitForOutboxEntry(key)
+  if (status === 'synced') showSuccess(`Announced "${ev.name}" standings on the scoreboard.`)
+  else if (status === 'failed') showError(`Couldn't announce "${ev.name}" standings.`)
+  else showInfo(`"${ev.name}" standings are queued and will go out when the connection's back.`)
 }
 
 // The old single-pool nextDiver funnel, generalized to ANY pool so each
@@ -296,28 +388,52 @@ function announceFocused() {
 // confirm, then advance that pool's cursor or finalise. Per-pool shot
 // clock + auto-advance live in each card, which re-arms its clock when its
 // active diver changes here.
+//
+// The card's own button is disabled while the event is held or the panel
+// is short, but Space, the arrow key and the card's Skip all land here,
+// so the same gates live here too: nothing moves during a hold, and
+// moving past a dive that's short of a full panel (none at all included,
+// a no-show) always asks first.
 async function advancePool(ev) {
   if (!ev) return
   const p = pools[ev.id]
   if (!p) return
+  if (holdStore[String(ev.id)]) {
+    showInfo(`"${ev.name}" is on hold. Resume it before moving on.`)
+    return
+  }
   const totalJudges = numberOfJudgesFor(ev.id) || 0
   const scoresIn = Object.keys(p.scoresThisRound || {}).length
   const isLast = p.currentIndex >= (p.roster?.length || 0) - 1
   const isComplete = !!p.advanceArmed && isLast
-  const partial = totalJudges > 0 && scoresIn > 0 && scoresIn < totalJudges
-  if (!isComplete && partial) {
-    if (
-      !(await confirmAction({
+  const short = !p.advanceArmed && !!p.currentActive
+  if (short) {
+    const name = p.currentActive.full_name || 'this diver'
+    const ok = scoresIn > 0
+      ? await confirmAction({
         title: 'Skip ahead with partial scores?',
-        body: `Only ${scoresIn} of ${totalJudges} judges have submitted for this dive in "${ev.name}".`,
+        body: `Only ${scoresIn} of ${totalJudges || '?'} judges have submitted for this dive in "${ev.name}".`,
         consequences: [
           'The dive will close with whatever scores arrived',
           'Missing judges can still amend via score correction afterwards',
         ],
         confirmLabel: 'Move on',
         confirmKind: 'warn',
-      }))
-    ) {
+      })
+      : await confirmAction({
+        title: `Skip ${name}?`,
+        body: `No judge scores have reached this screen for this dive in "${ev.name}".`,
+        consequences: [
+          'No score is recorded for this dive',
+          'Use it for a no-show or a diver who can\'t dive',
+        ],
+        confirmLabel: 'Skip diver',
+        confirmKind: 'warn',
+      })
+    if (!ok) return
+    // Skipping the last dive in the queue is finishing the event.
+    if (isLast) {
+      await finalisePool(ev)
       return
     }
   }
@@ -330,24 +446,65 @@ async function advancePool(ev) {
   }
 }
 
-// Referee call for the FOCUSED pool's active diver, the keyboard path
-// (per-card buttons emit the same events from LivePoolCard). Acts only
-// on currentEvent so a hotkey never touches a background pool.
+// Pool cards by event id, so a hotkey can go through the focused card's
+// own handlers (see LivePoolCard's defineExpose).
+const poolCards = {}
+function setPoolCard(eventId, el) {
+  if (el) poolCards[eventId] = el
+  else delete poolCards[eventId]
+}
+
+// Referee call for the FOCUSED pool's active diver, the keyboard path.
+// It goes through the card, which cancels its auto-next countdown before
+// queueing the call; the view can't reach that timer, and queueing it
+// from here let the countdown run on and advance mid-review. Acts only on
+// currentEvent so a hotkey never touches a background pool.
 function refActionFocused(type) {
   const ev = currentEvent.value
   const a = ev && pools[ev.id]?.currentActive
   if (!a) return
+  const card = poolCards[ev.id]
+  if (card) {
+    card.refAction(type)
+    return
+  }
+  // No card on screen (Recovery mode), so no countdown to cancel either.
   const payload = { event_id: a.event_id, competitor_id: a.competitor_id, round_number: a.round_number }
   if (type === 'failed') queueSocketAction('referee_failed_dive', payload)
   else if (type === 'cap') queueSocketAction('referee_cap_scores', { ...payload, cap_value: 2.0 })
   else if (type === 'redive') queueSocketAction('referee_redive', payload)
 }
 
+// Hold / resume the focused pool through its card too (same store as the
+// banner, and the card's own hold watcher stops its clock and countdown).
+// Recovery mode has no card on screen, so fall back to the view's own.
+function toggleHoldFocused() {
+  const ev = currentEvent.value
+  if (!ev) return
+  const card = poolCards[ev.id]
+  if (card) card.toggleHold()
+  else if (isHeld.value) resumeMeet()
+  else confirmHold()
+}
+
+// The control the mouse last pressed (see hotkeyBlocked). A button that
+// only has focus because it was clicked doesn't get Space, the advance
+// does. Tab forgets it, so tabbing back onto that button presses it.
+let clickedControl = null
+function onPointerDown(e) {
+  clickedControl = spaceOwnerOf(e.target)
+}
+
 // Per-pool keyboard control. One window listener: controlKeyIntent
-// maps the key, isTypingTarget keeps it out of inputs/modals, and every
-// action resolves through the FOCUSED pool (number keys only switch focus).
+// maps the key, hotkeyBlocked keeps it out of inputs, dialogs and the
+// buttons Space already presses, and every action resolves through the
+// FOCUSED pool (number keys only switch focus).
 function onKeydown(e) {
-  if (isTypingTarget(e.target)) return
+  if (e.key === 'Tab') clickedControl = null
+  if (hotkeyBlocked(e, {
+    modalOpen: !!document.querySelector('[aria-modal="true"]'),
+    clickedControl,
+  })) return
   const intent = controlKeyIntent(e, livePools.value.length)
   if (!intent) return
   if (intent.action === 'focus') {
@@ -359,20 +516,39 @@ function onKeydown(e) {
   e.preventDefault()
   if (intent.action === 'advance') advancePool(currentEvent.value)
   else if (intent.action === 'announce') announceFocused()
-  else if (intent.action === 'hold') isHeld.value ? resumeMeet() : confirmHold()
+  else if (intent.action === 'hold') toggleHoldFocused()
   else if (intent.action === 'ref') refActionFocused(intent.arg)
 }
 
+// Schedule re-flow after an event that ran long (docs/session-scheduler.md
+// §6). The status PUT comes back with a `reflow` proposal when the event's
+// block overran by 5+ minutes and later blocks in its session haven't
+// started; the operator picks which of them shift. The old Control Room
+// opened this and the Stage-Rail rewrite dropped it, so a late-running
+// event never offered to move the rest of the session.
+const reflowOpen = ref(false)
+const reflowProposal = ref(null)
+const reflowEventName = ref('')
+function closeReflow() {
+  reflowOpen.value = false
+  reflowProposal.value = null
+  reflowEventName.value = ''
+}
+function onReflowSaved(payload) {
+  const n = (payload && payload.count) || 0
+  if (n > 0) showSuccess(`Shifted ${n} later block${n === 1 ? '' : 's'} in the schedule.`)
+  closeReflow()
+}
+
 // Finalise one pool: consequences confirm, PUT Completed, then an undo
-// toast. The old single-pool finalise could also open the schedule
-// reflow modal; that never came across, so nothing opens it today (an
-// event with no long-run candidates, the common case, never needed it).
+// toast, and the re-flow prompt when the event overran its slot.
 async function finalisePool(ev) {
   if (!ev) return
   const p = pools[ev.id]
+  // pool.roster is already just the divers who compete, so reserves and
+  // scratched divers don't pad the email count.
   const diverIds = new Set()
   for (const r of p?.roster || []) {
-    if (r.withdrawn_at) continue
     diverIds.add(r.competitor_id || r.diver_id || r.dive_list_id)
   }
   const n = diverIds.size
@@ -397,12 +573,17 @@ async function finalisePool(ev) {
   const evId = ev.id
   const evName = ev.name
   try {
-    await auth.apiFetch(`/api/events/${evId}/status`, {
+    const res = await auth.apiFetch(`/api/events/${evId}/status`, {
       method: 'PUT',
       body: JSON.stringify({ status: 'Completed' }),
     })
     const target = events.value.find((e) => String(e.id) === String(evId))
     if (target) target.status = 'Completed' // -> workflowMode flips to review
+    if (Array.isArray(res?.reflow?.candidates) && res.reflow.candidates.length) {
+      reflowProposal.value = res.reflow
+      reflowEventName.value = evName
+      reflowOpen.value = true
+    }
     // The card unmounts from the live grid (status no longer Live) and its
     // own onUnmounted stops its shot clock; nothing to reset here.
     showUndo({
@@ -446,15 +627,47 @@ function numberOfJudgesFor(eventId) {
 //      still no emit, so the judges are never reset;
 //   3. only when the server has NO diver (a freshly-Live event nobody has
 //      started yet) do we announce roster[0], the one load path that emits.
-async function setupLivePool(ev) {
-  socket.emit('subscribe_event', { event_id: ev.id })
+// Join an event's room and claim its lease. Also asks whether it's held:
+// the server only replays a hold to a socket that asks, so without this a
+// second operator (or a reload) mid-hold saw no banner, a running clock
+// and an enabled Next.
+function joinPoolRooms(eventId) {
+  socket.emit('subscribe_event', { event_id: eventId })
   // Claim the control lease so a second operator/window driving this same
   // event gets warned (advisory; never blocks).
-  socket.emit('claim_event_control', { event_id: ev.id })
+  socket.emit('claim_event_control', { event_id: eventId })
+  socket.emit('get_meet_hold', { event_id: eventId })
+}
+
+// The server keeps no room membership across a reconnect, and it drops
+// this socket's leases when it disconnects. score_received and
+// judge_signal only go to event:<id>, so after a wifi blip or a deploy
+// every pool went deaf until someone reloaded. Rejoin each wired Live
+// pool. get_active_diver just refreshes what the server has on record;
+// pendingSeed isn't touched, so a routine reconnect never snaps the
+// operator's cursor or announces over it.
+useSocketEvent(socket, 'connect', () => {
+  for (const ev of events.value) {
+    if (ev.status !== 'Live' || !wiredPools.has(ev.id)) continue
+    // A resume that happened while we were away never reached us. Forget
+    // the hold and let get_meet_hold put it back if it's still on.
+    delete holdStore[String(ev.id)]
+    joinPoolRooms(ev.id)
+    socket.emit('get_active_diver', { event_id: ev.id })
+  }
+})
+
+async function setupLivePool(ev) {
+  if (unmounted) return
+  joinPoolRooms(ev.id)
   const pool = poolFor(ev.id)
   try {
     const roster = await auth.apiFetch(`/api/events/${ev.id}/roster`)
-    pool.roster = Array.isArray(roster) ? roster : []
+    // Gone while the roster was loading: don't seed (or later announce)
+    // anything from a dead instance.
+    if (unmounted) return
+    // Only the rows that dive: withdrawn and reserve rows come back too.
+    pool.roster = competingQueue(roster)
     // History + standings for the side columns (fire-and-forget; refreshed
     // again whenever this pool completes a dive).
     loadPoolPanels(ev.id)
@@ -472,7 +685,7 @@ async function setupLivePool(ev) {
     // blind while disconnected.
     const tid = setTimeout(() => {
       seedTimers.delete(tid)
-      if (pendingSeed.has(ev.id) && socket.isConnected.value && pool.currentActive) {
+      if (!unmounted && pendingSeed.has(ev.id) && socket.isConnected.value && pool.currentActive) {
         pendingSeed.delete(ev.id)
         emitActiveDiver(ev)
       }
@@ -508,17 +721,14 @@ async function loadEvents() {
 }
 
 // Events whose live pool is already wired, so a retry doesn't subscribe
-// or announce twice.
+// or announce twice. An event that leaves Live stays in here: if it comes
+// back (Undo on a finalise) its pool, rooms and cursor are all still good,
+// and wiring it again would announce diver 1 over the top.
 const wiredPools = new Set()
 
-function bringUpPools() {
-  // Honour /control?event=<id>, the Control Room's deep link.
-  const q = route.query.event
-  if (q != null && events.value.some((e) => String(e.id) === String(q))) {
-    selectedEventId.value = String(q)
-  }
-  // Stand up a live pool for EVERY Live event (not just the focused
-  // one) so non-focused pools keep receiving + routing their scores.
+// Stand up a live pool for EVERY Live event (not just the focused
+// one) so non-focused pools keep receiving + routing their scores.
+function wireLivePools() {
   for (const ev of events.value) {
     if (ev.status === 'Live' && !wiredPools.has(ev.id)) {
       wiredPools.add(ev.id)
@@ -527,23 +737,73 @@ function bringUpPools() {
   }
 }
 
+function bringUpPools() {
+  // Honour /control?event=<id>, the Control Room's deep link.
+  const q = route.query.event
+  if (q != null && events.value.some((e) => String(e.id) === String(q))) {
+    selectedEventId.value = String(q)
+  }
+  wireLivePools()
+}
+
+// An event can go Live after load: Start Event on the Setup stage flips
+// the row in place, and another operator can start one too (see
+// event_status_changed below). Either way it needs a pool wired, or its
+// card sits on "Loading the active diver" and no diver ever reaches the
+// judges.
+watch(
+  () => liveEventsInOrder(events.value).map((e) => e.id).join(),
+  () => { if (!loading.value && !loadError.value) wireLivePools() },
+)
+
+// Statuses changed somewhere else (another operator, the Manager, an
+// Undo in another tab). The server tells every socket; patch our row so
+// the board follows. An event we don't have yet (created after this page
+// loaded) that's just gone Live gets fetched quietly, without the
+// full-page "Loading…" a loadEvents() would flash mid-meet.
+useSocketEvent(socket, 'event_status_changed', (d) => {
+  if (!d?.event_id || !d.to) return
+  const ev = events.value.find((e) => String(e.id) === String(d.event_id))
+  if (ev) {
+    ev.status = d.to
+    return
+  }
+  if (d.to === 'Live' && (auth.user?.is_system_admin || String(d.org_id) === String(auth.user?.org_id))) {
+    mergeNewEvents()
+  }
+})
+
+async function mergeNewEvents() {
+  try {
+    const fresh = await narrowEvents(await auth.apiFetch('/api/events'))
+    if (!Array.isArray(fresh)) return
+    const known = new Set(events.value.map((e) => String(e.id)))
+    const added = fresh.filter((e) => !known.has(String(e.id)))
+    if (added.length) events.value = [...events.value, ...added]
+  } catch { /* the next status change or a reload will catch it */ }
+}
+
 // Venue wifi dies, the operator refreshes, /api/events can't be reached and
 // they are left staring at an error message in the middle of a meet, with
 // no way back other than noticing the wifi came back and hitting reload
 // again. Retry the moment the socket reconnects.
 watch(socket.isConnected, async (connected) => {
   if (connected && loadError.value) {
-    if (await loadEvents()) bringUpPools()
+    if (await loadEvents() && !unmounted) bringUpPools()
   }
 })
 
 onMounted(async () => {
-  // Before the await on purpose: queued outbox actions from a previous
-  // visit still need the leave-page prompt while /api/events is loading.
+  // Both before the await on purpose. Queued outbox actions from a
+  // previous visit still need the leave-page prompt while /api/events is
+  // loading, and a listener added after it would outlive a view that was
+  // left mid-load (onUnmounted would have run first).
   window.addEventListener('beforeunload', onBeforeUnload)
-  if (await loadEvents()) bringUpPools()
   // Per-pool operator hotkeys (focused pool only).
   window.addEventListener('keydown', onKeydown)
+  window.addEventListener('pointerdown', onPointerDown, true)
+  if (await loadEvents() && !unmounted) bringUpPools()
+  if (unmounted) return
   // Fetch the drawer chunk while the board sits idle so it's already here
   // when someone hits Tools later on. Older Safari has no
   // requestIdleCallback, the timeout covers it.
@@ -554,9 +814,11 @@ onMounted(async () => {
 // after the view is gone. Heads up: useSocketEvent already auto-cleans the
 // socket listeners on unmount, this is just for our own timers.
 onUnmounted(() => {
+  unmounted = true
   seedTimers.forEach(clearTimeout)
   seedTimers.clear()
   window.removeEventListener('keydown', onKeydown)
+  window.removeEventListener('pointerdown', onPointerDown, true)
   window.removeEventListener('beforeunload', onBeforeUnload)
 })
 
@@ -577,8 +839,16 @@ function onBeforeUnload(e) {
 </script>
 
 <template>
-  <div class="cv2">
+  <div class="cv2" :class="{ 'cv2-kiosk': kiosk }">
+    <RouterLink
+      v-if="kiosk"
+      :to="kioskExit"
+      class="cv2-kiosk-exit"
+      aria-label="Exit broadcast mode"
+      v-tip="'Exit broadcast mode'"
+    >✕</RouterLink>
     <ControlTopBar
+      v-if="!kiosk"
       :events="events"
       :selected-id="selectedEventId"
       :history-open="historyOpen"
@@ -594,7 +864,7 @@ function onBeforeUnload(e) {
     <section class="cv2-center" aria-label="Current stage">
       <div v-if="isHeld" class="cv2-hold-banner" role="status">
         <span>⏸ Meet held<template v-if="holdReason"> — {{ holdReason }}</template></span>
-        <button type="button" @click="resumeMeet">Resume</button>
+        <button v-if="!kiosk" type="button" @click="resumeMeet">Resume</button>
       </div>
       <p v-if="loadError" class="cv2-msg cv2-error">{{ loadError }}</p>
       <p v-else-if="loading" class="cv2-msg">Loading…</p>
@@ -624,7 +894,7 @@ function onBeforeUnload(e) {
         <section v-else-if="centerMode === 'meet'" class="cv2-live-layout" aria-label="Live">
           <!-- HISTORY (left). One Live event -> a full column; two or more
                -> a collapsed edge drawer the operator can peek per focused pool. -->
-          <aside v-if="historyOpen" class="cv2-side cv2-side-history" aria-label="History">
+          <aside v-if="historyOpen && !kiosk" class="cv2-side cv2-side-history" aria-label="History">
             <div class="cv2-side-head">
               <span class="cv2-side-title">History</span>
               <button type="button" class="cv2-side-collapse" aria-label="Collapse history" @click="historyOpen = false">‹</button>
@@ -681,7 +951,7 @@ function onBeforeUnload(e) {
             </div>
           </aside>
           <button
-            v-else
+            v-else-if="!kiosk"
             type="button"
             class="cv2-side-tab"
             aria-label="Open history drawer"
@@ -694,6 +964,7 @@ function onBeforeUnload(e) {
             <LivePoolCard
               v-for="lp in livePools"
               :key="lp.event.id"
+              :ref="(el) => setPoolCard(lp.event.id, el)"
               :event="lp.event"
               :pool="lp.pool"
               :focused="String(lp.event.id) === String(selectedEventId)"
@@ -702,15 +973,17 @@ function onBeforeUnload(e) {
               :conflict="conflicts[lp.event.id] || null"
               @focus="selectEvent"
               @advance="advancePool(lp.event)"
+              @skip="advancePool(lp.event)"
             />
           </div>
 
           <!-- STANDINGS (right). Same collapse behaviour as History. -->
-          <aside v-if="standingsOpen" class="cv2-side cv2-side-standings" aria-label="Standings">
+          <aside v-if="standingsOpen || kiosk" class="cv2-side cv2-side-standings" aria-label="Standings">
             <div class="cv2-side-head">
-              <button type="button" class="cv2-side-collapse" aria-label="Collapse standings" @click="standingsOpen = false">›</button>
+              <button v-if="!kiosk" type="button" class="cv2-side-collapse" aria-label="Collapse standings" @click="standingsOpen = false">›</button>
               <span class="cv2-side-title">Standings</span>
               <button
+                v-if="!kiosk"
                 type="button"
                 class="cv2-announce"
                 :disabled="!focusedStandings.length"
@@ -725,7 +998,8 @@ function onBeforeUnload(e) {
                 :key="`${s.competitor_id || s.public_id || i}`"
                 class="cv2-srow"
               >
-                <span class="cv2-srow-rank">{{ i + 1 }}</span>
+                <!-- the server's RANK(): tied totals share the place -->
+                <span class="cv2-srow-rank">{{ s.rank ?? i + 1 }}</span>
                 <span class="cv2-srow-name">{{ s.full_name }}</span>
                 <span class="cv2-srow-total">{{ fmtTotal(s.total) }}</span>
               </div>
@@ -765,7 +1039,21 @@ function onBeforeUnload(e) {
     <!-- Secondary surfaces (broadcast / reserves / audit / sponsor) live
          in a closed-by-default drawer. v-if-gated so a resting Live canvas
          never mounts this markup, the #9 subtraction. -->
-    <DrawerPanel v-if="drawerOpen" :event="currentEvent" @close="drawerOpen = false" />
+    <DrawerPanel
+      v-if="drawerOpen"
+      :event="currentEvent"
+      @close="drawerOpen = false"
+      @roster-changed="(id) => refreshPoolRoster(id)"
+    />
+
+    <ReflowModal
+      v-if="reflowOpen"
+      :open="reflowOpen"
+      :proposal="reflowProposal"
+      :event-name="reflowEventName"
+      @close="closeReflow"
+      @saved="onReflowSaved"
+    />
 
     <!-- Score correction (#9): amend a judge score on a completed dive in
          the focused pool's History. Mounted per-open so its draft fields
@@ -775,7 +1063,7 @@ function onBeforeUnload(e) {
       :card="correctTarget"
       :event="currentEvent"
       @close="closeCorrection"
-      @saved="loadPoolPanels(selectedEventId)"
+      @saved="(key) => onCorrectionSaved(key, selectedEventId)"
     />
   </div>
 </template>
@@ -886,4 +1174,27 @@ function onBeforeUnload(e) {
   background: var(--amber); color: var(--bg); font-family: var(--font-display); font-weight: 700; font-size: 13px;
 }
 .cv2-hold-banner button { padding: 0.3rem 0.8rem; border-radius: var(--radius-sm); border: 1px solid var(--bg); background: transparent; color: var(--bg); cursor: pointer; font: inherit; font-weight: 700; }
+
+/* Operator broadcast (kiosk). Controls hidden rather than unmounted, so
+   the cards keep their clocks and hotkeys keep working; type sized for a
+   projector across the room. */
+.cv2-kiosk .cv2-center { padding: 2rem 2.5rem; }
+.cv2-kiosk :deep(.cv2-ref),
+.cv2-kiosk :deep(.cv2-primary-slot),
+.cv2-kiosk :deep(.cv2-pool-hold),
+.cv2-kiosk :deep(.cv2-blockers),
+.cv2-kiosk :deep(.cv2-pool-conflict) { display: none; }
+.cv2-kiosk :deep(.cv2-live-diver) { font-size: clamp(32px, 4.5vw, 72px); }
+.cv2-kiosk :deep(.cv2-live-dive) { font-size: clamp(16px, 1.6vw, 26px); }
+.cv2-kiosk :deep(.cv2-tile) { height: clamp(48px, 6vw, 96px); font-size: clamp(18px, 2.2vw, 34px); }
+.cv2-kiosk .cv2-srow-name,
+.cv2-kiosk .cv2-srow-total { font-size: 16px; }
+.cv2-kiosk-exit {
+  position: fixed; top: 1rem; inset-inline-end: 1rem; z-index: 90;
+  width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
+  border: 1px solid var(--border-2); border-radius: 50%;
+  background: var(--bg-2); color: var(--text-3); text-decoration: none;
+  font-family: var(--font-mono); font-size: 16px; font-weight: 700; opacity: 0.5;
+}
+.cv2-kiosk-exit:hover { opacity: 1; color: var(--cyan); border-color: var(--cyan); }
 </style>

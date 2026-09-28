@@ -9794,3 +9794,64 @@ test("an admin profile edit refuses a year-zero birth date with a 400", async (t
     await teardownFixture(st);
   }
 });
+
+// Saved event templates in the Meet Manager. The router was dropped in the
+// server.js split (b63a883) while the Manager kept calling it, so the strip
+// was always empty and Save / Delete failed with a 404. Org-scoped: a
+// federation's templates are its own.
+test("event templates: save, upsert by name, list and delete, scoped to the caller's org", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const mine = await setupFixture({ withEvent: false });
+  const theirs = await setupFixture({ withEvent: false });
+  try {
+    await pool.query("UPDATE organisations SET country_code = 'BLZ' WHERE id = ANY($1)", [[mine.orgId, theirs.orgId]]);
+    const list = async (token) => fetchJson("GET", "/api/event-templates", { token });
+
+    const empty = await list(mine.adminToken);
+    assert.equal(empty.status, 200, JSON.stringify(empty.body));
+    assert.deepEqual(empty.body, []);
+
+    const config = { gender: "Female", height: "3m", number_of_judges: 5, total_rounds: 5, event_type: "individual" };
+    const saved = await fetchJson("POST", "/api/event-templates", {
+      token: mine.adminToken, body: { name: "  Belize Women 3m  ", config },
+    });
+    assert.equal(saved.status, 201, JSON.stringify(saved.body));
+    assert.equal(saved.body.name, "Belize Women 3m");
+    assert.deepEqual(saved.body.config, config);
+
+    // Same name again overwrites rather than duplicating
+    const again = await fetchJson("POST", "/api/event-templates", {
+      token: mine.adminToken, body: { name: "Belize Women 3m", config: { ...config, total_rounds: 6 } },
+    });
+    assert.equal(again.status, 201);
+    assert.equal(again.body.id, saved.body.id);
+    const one = await list(mine.adminToken);
+    assert.equal(one.body.length, 1);
+    assert.equal(one.body[0].config.total_rounds, 6);
+
+    // bad input
+    assert.equal((await fetchJson("POST", "/api/event-templates", { token: mine.adminToken, body: { name: " ", config } })).status, 400);
+    assert.equal((await fetchJson("POST", "/api/event-templates", { token: mine.adminToken, body: { name: "x", config: [1] } })).status, 400);
+
+    // Another org sees none of it and can't delete it
+    assert.deepEqual((await list(theirs.adminToken)).body, []);
+    assert.equal((await fetchJson("DELETE", `/api/event-templates/${saved.body.id}`, { token: theirs.adminToken })).status, 404);
+
+    // A diver in the same org can't use them at all
+    const diverName = `int-tpl-diver-${mine.slug}`;
+    await insertUser({ orgId: mine.orgId, role: "diver", username: diverName, fullName: "Template Diver" });
+    const diverLogin = await fetchJson("POST", "/api/auth/login", { body: { username: diverName, password: "not-used-here" } });
+    assert.equal((await list(diverLogin.body.token)).status, 403);
+
+    // Anonymous: no (verifyToken answers a missing token with 403)
+    assert.equal((await fetchJson("GET", "/api/event-templates")).status, 403);
+
+    const del = await fetchJson("DELETE", `/api/event-templates/${saved.body.id}`, { token: mine.adminToken });
+    assert.equal(del.status, 200);
+    assert.deepEqual((await list(mine.adminToken)).body, []);
+  } finally {
+    await teardownFixture(mine);
+    await teardownFixture(theirs);
+  }
+});

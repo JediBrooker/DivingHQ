@@ -35,6 +35,7 @@ During the day, use **Hold / Resume** for a temporary pause inside the current e
 | Wrong score landed | Click the completed-dive card in **History** → Score Correction |
 | Diver needs to redo the dive | **Re-dive** on the pool card |
 | Referee calls a failed dive | **Failed** on the pool card |
+| Diver doesn't show | **Skip** on the pool card (it asks first; on the last diver it offers Finalise) |
 | Meet must pause | **⏸ Hold** on that event's pool card (pauses only that pool) |
 | Event is running late | Update [Session Scheduler](/guide/session-scheduler), then publish the change |
 | Wrong person was withdrawn | Use the Undo snackbar, or toggle the row back if the snackbar expired |
@@ -50,7 +51,7 @@ Below the bar, a Live event is the familiar three-column board, pared back so on
 - **Centre — the pool card.** The active diver: a READY / DIVING / JUDGING status pill, `Round X / Y`, the 60-second shot clock, the big diver name + country, dive code + DD + description, the live judge tiles, a **Failed · Cap 2.0 · Re-dive** referee row, and the bottom-pinned **Next Diver → / Finalise** primary with an Auto-next picker (the `▾` aside). A per-card **⏸ Hold** sits in the card header.
 - **Right column — Standings.** The live leaderboard for the focused event, with an **Announce** button that flashes it on the spectator scoreboard.
 
-**Setup, Review, and Recovery** swap into the centre in place of the live board depending on the event's state: an Upcoming event shows the pre-meet workflow (below); a Completed event shows the final standings; the **Recovery** toggle opens a hold/resume cross-cut. The **Tools** button opens a drawer for the secondary surfaces (Broadcast, Reserves, Audit, Sponsor branding).
+**Setup, Review, and Recovery** swap into the centre in place of the live board depending on the event's state: an Upcoming event shows the pre-meet workflow (below); a Completed event shows the final standings; the **Recovery** toggle opens a hold/resume cross-cut. The **Tools** button opens a drawer for the secondary surfaces (Broadcast, Reserves, Late entry, Audit, Sponsor branding, and Super Final dive-offs / synchro reserves on a Super Final stage).
 
 ## Running multiple events at once
 
@@ -187,7 +188,7 @@ The diver's totals and standings recompute on the fly, and the recap PDFs and ar
 
 ## Late entries
 
-If a diver shows up after entries have closed, click **+ Add** at the top of the Dive Order panel. The late-entry modal lets you:
+If a diver shows up after entries have closed, open **Tools** (top bar) → **Late entry** → **Add a late diver…** for the focused event. The late-entry modal lets you:
 
 1. Pick a diver from your federation's user list (or create a new account on the fly)
 2. Enter their dive list for each round (defaults to the most popular dive for that round and panel)
@@ -286,9 +287,9 @@ Push notifications go out to all 12 advanced divers.
 
 ### Scoring + tie-breaking H2H
 
-Score H2H normally — same Control Room flow as any individual event. The pair winners are computed automatically: each diver's 3-dive total is summed, higher total advances. **If a pair ties on total**, the Control Room **Dive-offs** panel surfaces a "Resolve tie" prompt:
+Score H2H normally — same Control Room flow as any individual event. The pair winners are computed automatically: each diver's 3-dive total is summed, higher total advances. **If a pair ties on total**, resolve it from the Control Room: focus the H2H (or SF) event, open **Tools** → **Super Final**, and the **Dive-offs** panel lists the tied pairs:
 
-1. Click *New Dive-off* (or use the auto-suggest from the tied-pair list).
+1. Click **+ Create** (the tied-pair hint above the list says how many pairs need one).
 2. Pick which dive each tied diver will redo (any of their previously-performed dives this stage).
 3. Enter the resulting scores after they dive.
 4. Pick the winner (auto-defaults to the higher score).
@@ -311,7 +312,7 @@ Per Appendix 3 §4.1, the F stage uses a **15-min lock with a 5-min buffer befor
 
 ### Synchro reserve replacement (pre-H2H only)
 
-Per Appendix 3 §5.1, if a Top-12 individual withdraws after the Team Leaders Meeting, the Control Room can pull a replacement from the same meet's synchronised events. Open the H2H event's **Synchro reserves** panel:
+Per Appendix 3 §5.1, if a Top-12 individual withdraws after the Team Leaders Meeting, the Control Room can pull a replacement from the same meet's synchronised events. Focus the (still Upcoming) H2H event and open **Tools** → **Super Final** → **Replace from synchro pool**:
 
 - Lists eligible replacement divers in federation-priority order (highest synchro rank wins).
 - Federations that already have 2 individuals in the H2H event are filtered out.
@@ -336,6 +337,7 @@ Every destructive or consequential action in the Control Room (and across the re
 - *Delete event?* — "All dives, scores, and the audit log for this event are deleted; records set at this event stay with their holders, without the link back to the event."
 - *Finalise event?* — "Public scoreboard switches to recap; results emails go out to N competitors; reversible by an org admin."
 - *Skip ahead with partial scores?* — "Only N of M judges have submitted; missing judges can still amend via score correction afterwards."
+- *Skip <diver>?* — no judge has scored the dive yet (a no-show). Asked for the card's **Skip** button and for Space / → alike.
 
 Confirm buttons are colour-coded by severity: cyan for routine actions, amber for warnings (`Move on`, `Reset workflow`), red for destructive ones (`Delete event`, `Delete club`).
 

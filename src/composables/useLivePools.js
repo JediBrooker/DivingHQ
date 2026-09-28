@@ -26,6 +26,7 @@ export function makePoolState() {
     scoresThisRound: {}, // judge_id -> numeric score
     judgeTiles: [], // [{ judgeIndex, judgeId, score, scored, signaled }]
     advanceArmed: false, // set when the active dive's last score lands
+    rediveSeq: 0, // bumped on a re-dive so the card restarts its clock
   }
 }
 
@@ -102,6 +103,69 @@ export function rosterIndexForActive(roster, active) {
   )
 }
 
+// The rows that actually dive, in queue order. /roster returns withdrawn
+// and reserve rows too (the Manager draws them as separate bands), and
+// stepping through those put a scratched diver or Reserve 1 up on every
+// judge's screen. round_order is null for both, which also covers a
+// server that predates the is_reserve column.
+export function competingQueue(roster) {
+  if (!Array.isArray(roster)) return []
+  return roster.filter((r) => r && !r.withdrawn_at && !r.is_reserve && r.round_order != null)
+}
+
+// Swap a pool onto a freshly fetched roster without losing its place.
+// Withdrawals, promotions and late entries change the queue mid-meet, and
+// the live diver has to stay live through that. If they're still in the
+// queue the cursor just follows them. If they were the one withdrawn, the
+// cursor sits just before whoever was next after them, so Next picks up
+// from the right spot. currentActive is left alone either way: the dive
+// on the blocks keeps its tiles and scores.
+export function rebaseQueue(pool, roster) {
+  if (!pool) return
+  const next = competingQueue(roster)
+  const prev = Array.isArray(pool.roster) ? pool.roster : []
+  const active = pool.currentActive
+  pool.roster = next
+  if (!active) return
+  const idx = rosterIndexForActive(next, active)
+  if (idx >= 0) {
+    pool.currentIndex = idx
+    return
+  }
+  const oldIdx = rosterIndexForActive(prev, active)
+  for (let i = oldIdx + 1; oldIdx >= 0 && i < prev.length; i++) {
+    const at = rosterIndexForActive(next, prev[i])
+    if (at >= 0) {
+      pool.currentIndex = at - 1
+      return
+    }
+  }
+  pool.currentIndex = next.length - 1
+}
+
+// A pool's completed dives, most recent first, for the History column.
+// /history is ordered round ASC, name ASC, and just reversing it put the
+// reverse-alphabetical diver on top of each round rather than the dive
+// that had just finished. The pool walks its queue in order, so within a
+// round the later queue position is the later dive. A dive whose diver
+// isn't in the queue any more (withdrawn after diving) goes to the bottom
+// of its round.
+export function historyNewestFirst(rows, queue) {
+  if (!Array.isArray(rows)) return []
+  const key = (r) => `${r?.competitor_id}:${Number(r?.round_number)}`
+  const pos = new Map((Array.isArray(queue) ? queue : []).map((r, i) => [key(r), i]))
+  return rows.slice().sort((a, b) => {
+    const round = Number(b.round_number) - Number(a.round_number)
+    if (round) return round
+    const pa = pos.get(key(a))
+    const pb = pos.get(key(b))
+    if (pa != null && pb != null) return pb - pa
+    if (pa != null) return -1
+    if (pb != null) return 1
+    return String(b.diverName || '').localeCompare(String(a.diverName || ''))
+  })
+}
+
 // Apply a score_received to ONE pool's state. Same matching the old
 // single-pool handler did, minus its focused-event short-circuit. Returns
 // { matched, allScoresIn } so the caller can run the DOM/event side
@@ -131,6 +195,24 @@ export function applyScore(pool, data, numberOfJudges) {
   const allScoresIn = totalJudges > 0 && scoresIn >= totalJudges
   if (allScoresIn) pool.advanceArmed = true
   return { matched: true, allScoresIn }
+}
+
+// Apply a referee re-dive to ONE pool. The server marks the round's score
+// rows 'redive' until each judge scores again, so the live dive starts
+// over: empty tiles, no count, Next disarmed. rediveSeq lets the card
+// notice and restart its clock (the active diver didn't change, so its
+// usual "new diver" watch won't fire). Returns true when it matched.
+export function applyRedive(pool, data, numberOfJudges) {
+  const a = pool && pool.currentActive
+  if (!a || !data) return false
+  if (String(data.event_id) !== String(a.event_id)) return false
+  if (String(data.competitor_id) !== String(a.competitor_id)) return false
+  if (Number(data.round_number) !== Number(a.round_number)) return false
+  pool.scoresThisRound = {}
+  pool.judgeTiles = initJudgeTiles(numberOfJudges)
+  pool.advanceArmed = false
+  pool.rediveSeq = (pool.rediveSeq || 0) + 1
+  return true
 }
 
 // Apply a judge_signal (a judge flagging the referee) to ONE pool's tile.
