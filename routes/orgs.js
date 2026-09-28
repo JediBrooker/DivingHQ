@@ -417,9 +417,12 @@ module.exports = function createOrgsRouter({
                 ) AS accreditation_active
          FROM clubs cl
          JOIN organisations o ON o.id = cl.org_id
+         -- Live members only. Self-delete keeps club_id on the tombstone,
+         -- and counting those made an empty club look occupied here while
+         -- club setup (which already filtered) said 0.
          LEFT JOIN LATERAL (
            SELECT COUNT(*) AS member_count
-           FROM users WHERE club_id = cl.id
+           FROM users WHERE club_id = cl.id AND deleted_at IS NULL
          ) stat ON true
          LEFT JOIN users f ON f.id = cl.created_by
          WHERE ($2::boolean OR cl.org_id = $1)
@@ -509,7 +512,7 @@ module.exports = function createOrgsRouter({
       if (club.status === "pending") return pendingConflict(res);
       const { memberCount, closed } = await clubApprovals.withTx(pool, async (client) => {
         const memberCount = await client.query(
-          "SELECT COUNT(*)::int AS n FROM users WHERE club_id = $1",
+          "SELECT COUNT(*)::int AS n FROM users WHERE club_id = $1 AND deleted_at IS NULL",
           [club.id],
         );
         // club_change_requests.to_club_id is ON DELETE SET NULL, so a

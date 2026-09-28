@@ -7797,3 +7797,24 @@ test("deleting your account closes your pending club requests, and a tombstone c
     await teardownFixture(Y);
   }
 });
+
+test("club member counts leave out deleted accounts", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const club = (await pool.query("INSERT INTO clubs (org_id, name) VALUES ($1, 'Ghost Divers') RETURNING id", [st.orgId])).rows[0].id;
+    await pool.query(
+      "INSERT INTO users (username, full_name, org_id, club_id, deleted_at) VALUES ($1, 'Gone', $2, $3, now())",
+      [`deleted-b3-${st.slug}`, st.orgId, club],
+    );
+    const list = await fetchJson("GET", "/api/clubs", { token: st.adminToken });
+    assert.equal(list.body.find((c) => c.id === club).member_count, 0);
+    const del = await fetchJson("DELETE", `/api/clubs/${club}`, { token: st.adminToken });
+    assert.equal(del.status, 200, JSON.stringify(del.body));
+    assert.equal(del.body.unassigned_members, 0);
+  } finally {
+    await pool.query("DELETE FROM clubs WHERE org_id = $1", [st.orgId]);
+    await teardownFixture(st);
+  }
+});
