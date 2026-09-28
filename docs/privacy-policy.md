@@ -176,7 +176,7 @@ We don't use third-party analytics or marketing tools.
 
 You can delete your account from **Profile → Delete account**. We ask for your password first.
 
-If you're the only administrator left in your federation, we ask you to appoint another one first, so the federation isn't left with nobody who can run it. If there's nobody to hand it to, write to us at [support@divinghq.app](mailto:support@divinghq.app) and we'll delete the account for you.
+If you're the only administrator left in your federation, we ask you to appoint another one first, so the federation isn't left with nobody who can run it. If there's nobody to hand it to, write to us at [support@divinghq.app](mailto:support@divinghq.app): we can take the administrator role off your account, and then you can delete it as usual.
 
 **What we delete, straight away:**
 

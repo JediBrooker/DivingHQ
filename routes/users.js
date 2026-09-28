@@ -694,9 +694,10 @@ module.exports = function createUsersRouter({
       await client.query("BEGIN");
 
       // The last live org admin of a federation can't leave it with
-      // nobody. They appoint someone first, or ask DivingHQ, who can
-      // remove the account themselves. Locks the org's admin rows, so two
-      // admins deleting at once can't both get through.
+      // nobody. They appoint someone first, or ask DivingHQ, whose
+      // sysadmin can take the role off them (it isn't held to this), and
+      // then the account can go. Locks the org's admin rows, so two admins
+      // deleting at once can't both get through.
       if (!req.user.is_system_admin) {
         const hold = await orgAdminHold(client, user.org_id, user.id);
         if (hold) {
