@@ -531,6 +531,9 @@ watch(socket.isConnected, async (connected) => {
 })
 
 onMounted(async () => {
+  // Before the await on purpose: queued outbox actions from a previous
+  // visit still need the leave-page prompt while /api/events is loading.
+  window.addEventListener('beforeunload', onBeforeUnload)
   if (await loadEvents()) bringUpPools()
   // Per-pool operator hotkeys (focused pool only).
   window.addEventListener('keydown', onKeydown)
@@ -560,9 +563,6 @@ function onBeforeUnload(e) {
   if (!isOffline.value && outboxPending.value === 0) return
   e.preventDefault()
 }
-onMounted(() => {
-  window.addEventListener('beforeunload', onBeforeUnload)
-})
 </script>
 
 <template>
