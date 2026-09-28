@@ -32,10 +32,6 @@
 //     (score_received → invalidate /api/scoreboard/:id; state_update
 //     → invalidate event metadata).
 
-// Explicit .js extension: this module is also loaded by the node:test
-// suite, where extensionless ESM specifiers don't resolve.
-import { fingerprintFromToken } from './userFingerprint.js'
-
 const DB_NAME = 'dive-recorder-cache'
 const STORE   = 'api'
 const VERSION = 1
@@ -133,19 +129,12 @@ export function isCacheExpired(cached, maxAgeMs, now = Date.now()) {
 // scoreboard, judge panel state).
 export async function cachedFetch(url, fetchOptions = {}, { onUpdate, maxAgeMs, fingerprint } = {}) {
   // Per-user cache key so user A's cached responses are invisible to
-  // user B. Since the cookie migration the auth store passes the
-  // identity fingerprint in explicitly (the JWT is no longer readable
-  // from JS to derive one); fall back to the Authorization header for
-  // any caller that still sends a Bearer token, then 'anon' for public
-  // reads.
-  let fp = fingerprint
-  if (fp == null) {
-    const authHeader =
-      (fetchOptions.headers && (fetchOptions.headers.Authorization
-        || fetchOptions.headers.authorization)) || ''
-    fp = fingerprintFromToken(String(authHeader).replace(/^Bearer\s+/i, ''))
-  }
-  const key = `${fp}:${url}`
+  // user B. Signed-in reads pass the identity fingerprint (the auth
+  // store's cachedApiFetch does it for you); anything else is a public
+  // read and shares the 'anon' keyspace. There used to be a fallback
+  // that sliced one out of an Authorization: Bearer header, but since
+  // the cookie migration nothing in the SPA sends one.
+  const key = `${fingerprint ?? 'anon'}:${url}`
   const cached = await idbGet(key)
   const expired = isCacheExpired(cached, maxAgeMs)
   let returned = false
