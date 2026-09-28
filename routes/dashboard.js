@@ -232,7 +232,11 @@ module.exports = function createDashboardRouter({ pool, verifyToken }) {
                  a.round_number, a.old_score, a.new_score, a.reason,
                  e.org_id, o.name AS org_name
           FROM score_audit_log a
-          JOIN events e        ON e.id = a.event_id
+          -- LEFT JOINs: migration 035 made event_id (and role_audit_log's
+          -- org_id) nullable so audit rows outlive a deleted event or org.
+          -- An inner join dropped exactly those from the sysadmin's feed;
+          -- the org filter below still keeps them out of everyone else's.
+          LEFT JOIN events e   ON e.id = a.event_id
           LEFT JOIN organisations o ON o.id = e.org_id
           LEFT JOIN users comp ON comp.id = a.competitor_id
           LEFT JOIN users jud  ON jud.id  = a.judge_id
@@ -248,7 +252,7 @@ module.exports = function createDashboardRouter({ pool, verifyToken }) {
                  a.role::text AS role, a.note,
                  a.org_id, o.name AS org_name
           FROM role_audit_log a
-          JOIN organisations o ON o.id = a.org_id
+          LEFT JOIN organisations o ON o.id = a.org_id
           LEFT JOIN users target ON target.id = a.user_id
           LEFT JOIN users actor  ON actor.id  = a.actor_id
           WHERE a.created_at >= $1

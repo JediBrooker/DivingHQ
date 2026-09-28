@@ -7793,3 +7793,50 @@ test("re-linking a coach and diver who changed federation moves the link", async
     await teardownFixture(X);
   }
 });
+
+// Migration 035 made score_audit_log.event_id and role_audit_log.org_id
+// nullable so audit rows outlive a deleted event or org. The dashboard
+// feed (and /api/audit/recent's role rows) still INNER JOINed them, so a
+// sysadmin's feed silently dropped exactly those rows.
+test("the sysadmin's activity feeds keep audit rows whose event or org is gone", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const jwt = require("jsonwebtoken");
+  const st = await setupFixture();
+  try {
+    const sys = await insertUser({ orgId: st.orgId, role: "org_admin", username: `int-sa-${st.slug}`, fullName: "Feed Sysadmin" });
+    await pool.query("UPDATE users SET is_system_admin = true WHERE id = $1", [sys]);
+    const token = jwt.sign(
+      { id: sys, username: `int-sa-${st.slug}`, full_name: "Feed Sysadmin", org_id: st.orgId, org_roles: ["org_admin"], is_system_admin: true },
+      process.env.JWT_SECRET, { algorithm: "HS256", expiresIn: "10m" },
+    );
+    // Newest in the feed (a minute ahead), so other suites' rows can't push them out.
+    const scoreRow = (await pool.query(
+      `INSERT INTO score_audit_log (event_id, round_number, action, old_score, new_score, reason, created_at)
+       VALUES ($1, 1, 'update', 6.0, 6.5, 'orphan check', now() + interval '1 minute') RETURNING id`,
+      [st.eventId],
+    )).rows[0].id;
+    const roleRow = (await pool.query(
+      `INSERT INTO role_audit_log (user_id, org_id, role, action, created_at)
+       VALUES ($1, NULL, 'judge', 'granted', now() + interval '1 minute') RETURNING id`,
+      [sys],
+    )).rows[0].id;
+    await pool.query("DELETE FROM events WHERE id = $1", [st.eventId]); // event_id → NULL
+
+    const dash = await fetchJson("GET", "/api/dashboard", { token });
+    assert.equal(dash.status, 200, JSON.stringify(dash.body));
+    const ids = (dash.body.recent_activity || []).map((r) => r.id);
+    assert.ok(ids.includes(scoreRow), "the correction on a deleted event is still in the feed");
+    assert.ok(ids.includes(roleRow), "so is the role change with no org");
+    const recent = await fetchJson("GET", "/api/audit/recent?days=1", { token });
+    assert.equal(recent.status, 200, JSON.stringify(recent.body));
+    assert.ok(recent.body.some((r) => r.id === roleRow));
+    // An org admin's own feed never saw orphans, and still doesn't.
+    const own = await fetchJson("GET", "/api/dashboard", { token: st.adminToken });
+    assert.ok(!(own.body.recent_activity || []).some((r) => r.id === scoreRow || r.id === roleRow));
+  } finally {
+    await pool.query("DELETE FROM score_audit_log WHERE reason = 'orphan check'");
+    await pool.query("DELETE FROM role_audit_log WHERE user_id IN (SELECT id FROM users WHERE org_id = $1)", [st.orgId]);
+    await teardownFixture(st);
+  }
+});
