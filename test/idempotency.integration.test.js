@@ -185,6 +185,18 @@ test("migration 054: event_status enum includes pending_signoff", async (t) => {
 
 // ---- socketStore + socketCheck round-trip ---------------------
 
+// socketStore is fire-and-forget. A fixed 100ms sleep was usually long
+// enough and sometimes not (a busy CI runner), and then socketCheck
+// found nothing. Wait for the row itself instead.
+async function waitForStored(key) {
+  for (let i = 0; i < 100; i++) {
+    const r = await pool.query("SELECT 1 FROM idempotency_keys WHERE idempotency_key = $1", [key]);
+    if (r.rows.length) return;
+    await new Promise((res) => setTimeout(res, 50));
+  }
+  throw new Error(`socketStore never wrote ${key}`);
+}
+
 test("socketStore persists and socketCheck retrieves", async (t) => {
   if (!dbReachable || !migrationApplied) { t.skip(); return; }
   const key = crypto.randomUUID();
@@ -192,8 +204,7 @@ test("socketStore persists and socketCheck retrieves", async (t) => {
   const hash = hashPayload(payload);
 
   idem.socketStore(key, testUserId, "test_action", hash, 200, { ok: true, score_id: "abc" });
-  // Fire-and-forget; wait for the insert to land.
-  await new Promise((r) => setTimeout(r, 100));
+  await waitForStored(key);
 
   const cached = await idem.socketCheck(key, testUserId, hash);
   assert.ok(cached, "cache hit expected");
@@ -206,7 +217,7 @@ test("socketCheck returns 403 error for different user", async (t) => {
   const key = crypto.randomUUID();
   const hash = hashPayload({ x: 1 });
   idem.socketStore(key, testUserId, "test_action", hash, 200, { ok: true });
-  await new Promise((r) => setTimeout(r, 100));
+  await waitForStored(key);
 
   const otherUser = crypto.randomUUID();
   const result = await idem.socketCheck(key, otherUser, hash);
@@ -220,7 +231,7 @@ test("socketCheck returns 422 error for same key, different payload", async (t) 
   const hashA = hashPayload({ score: 8.0 });
   const hashB = hashPayload({ score: 8.5 });
   idem.socketStore(key, testUserId, "test_action", hashA, 200, { ok: true });
-  await new Promise((r) => setTimeout(r, 100));
+  await waitForStored(key);
 
   const result = await idem.socketCheck(key, testUserId, hashB);
   assert.equal(result.error, "key_reused_with_different_payload");
