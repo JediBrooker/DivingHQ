@@ -80,7 +80,8 @@
       "success_club_pending": "{club} aguarda a aprovação de {org}. O pedido chega-lhes assim que confirmar o seu e-mail, e enviamos-lhe um e-mail quando decidirem.",
       "region_will_ask": "{region} decide que clubes aceita, por isso receberá um pedido assim que verificar o seu e-mail. Até aceitar, o seu clube não pertence à região.",
       "founder_role_note": "Como fundador do clube, não pode aprovar o seu próprio pedido de treinador ou juiz, por isso é analisado pelos administradores da sua região ou pela DivingHQ.",
-      "spectator_note_see_above": "Todas as contas começam como Espectador. A função que solicitar acima é analisada como indica a nota por baixo. Pode iniciar sessão depois de verificar o seu e-mail."
+      "spectator_note_see_above": "Todas as contas começam como Espectador. A função que solicitar acima é analisada como indica a nota por baixo. Pode iniciar sessão depois de verificar o seu e-mail.",
+      "username_taken": "Esse nome de utilizador já está a ser usado. Escolha outro."
     },
     "register_org": {
       "title": "Registar Organização",

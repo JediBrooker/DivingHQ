@@ -80,7 +80,8 @@
       "success_club_pending": "{club} 正在等待 {org} 审批。您确认邮箱后对方即可看到，审批结果出来后我们会通过邮件通知您。",
       "region_will_ask": "{region}自行决定接收哪些俱乐部，因此在您验证邮箱后会向其发送申请。在其接受之前，您的俱乐部不属于该地区。",
       "founder_role_note": "作为俱乐部创始人，您不能批准自己成为教练或裁判的申请，因此将由您所在地区的管理员或 DivingHQ 审核。",
-      "spectator_note_see_above": "所有账户起初均为观众。您在上方申请的角色将按其下方说明进行审核。验证邮箱后即可登录。"
+      "spectator_note_see_above": "所有账户起初均为观众。您在上方申请的角色将按其下方说明进行审核。验证邮箱后即可登录。",
+      "username_taken": "该用户名已被使用，请换一个。"
     },
     "register_org": {
       "title": "注册机构",

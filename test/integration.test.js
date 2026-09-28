@@ -7533,3 +7533,44 @@ test("a 2FA recovery code opens one session however many logins race for it", as
     await teardownFixture(st);
   }
 });
+
+test("register refuses an email longer than the column with a 400, not a 500", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const r = await fetchJson("POST", "/api/auth/register", {
+      body: { username: `int-b3le-${st.slug}`, password: TEST_PASSWORD, full_name: "Long Mail",
+              email: `${"a".repeat(290)}@example.test`, org_id: st.orgId },
+    });
+    assert.equal(r.status, 400, JSON.stringify(r.body));
+  } finally {
+    await teardownFixture(st);
+  }
+});
+
+test("a taken username at signup is a 409 username_taken without the database's wording", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const again = await fetchJson("POST", "/api/auth/register", {
+      body: { username: st.username, password: TEST_PASSWORD, full_name: "Copy Cat",
+              email: `copy-${st.slug}@example.test`, org_id: st.orgId },
+    });
+    assert.equal(again.status, 409, JSON.stringify(again.body));
+    assert.equal(again.body.code, "username_taken");
+    assert.doesNotMatch(again.body.error, /Key \(|already exists/);
+
+    const org = await fetchJson("POST", "/api/auth/register-org", {
+      body: { org_name: `Copy Fed ${st.slug}`, country_code: "TST", username: st.username, password: TEST_PASSWORD,
+              full_name: "Copy Cat", email: `copy2-${st.slug}@example.test` },
+    });
+    assert.equal(org.status, 409, JSON.stringify(org.body));
+    assert.equal(org.body.code, "username_taken");
+    assert.doesNotMatch(org.body.error, /Key \(|already exists/);
+  } finally {
+    await pool.query("DELETE FROM organisations WHERE name = $1", [`Copy Fed ${st.slug}`]);
+    await teardownFixture(st);
+  }
+});

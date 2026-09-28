@@ -80,7 +80,8 @@
       "success_club_pending": "{club} venter på godkendelse fra {org}. De ser den, så snart du har bekræftet din e-mail, og vi skriver til dig, når de har besluttet sig.",
       "region_will_ask": "{region} bestemmer selv, hvilke klubber den optager, så den bliver spurgt, når du har bekræftet din e-mail. Indtil den siger ja, er din klub ikke i regionen.",
       "founder_role_note": "Som klubbens stifter kan du ikke godkende din egen anmodning om at blive træner eller dommer, så den går til din regions administratorer eller til DivingHQ.",
-      "spectator_note_see_above": "Alle konti starter som tilskuer. En rolle, du anmoder om ovenfor, gennemgås som noten under den beskriver. Du kan logge ind, når din e-mail er bekræftet."
+      "spectator_note_see_above": "Alle konti starter som tilskuer. En rolle, du anmoder om ovenfor, gennemgås som noten under den beskriver. Du kan logge ind, når din e-mail er bekræftet.",
+      "username_taken": "Det brugernavn er taget. Vælg et andet."
     },
     "register_org": {
       "title": "Registrér organisation",

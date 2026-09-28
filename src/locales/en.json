@@ -80,7 +80,8 @@
       "success_club_pending": "{club} is waiting for {org} to approve it. They'll see it once you've confirmed your email, and we'll email you when they decide.",
       "region_will_ask": "{region} decides which clubs it takes, so it will be asked to take yours once you've verified your email. Until it accepts, your club isn't in the region.",
       "founder_role_note": "As the club's founder you can't approve your own coach or judge request, so it goes to your region's admins, or to DivingHQ.",
-      "spectator_note_see_above": "All accounts start as Spectator. A role you request above is reviewed as the note under it says. You can log in once your email is verified."
+      "spectator_note_see_above": "All accounts start as Spectator. A role you request above is reviewed as the note under it says. You can log in once your email is verified.",
+      "username_taken": "That username is taken. Pick another one."
     },
     "register_org": {
       "title": "Register Organisation",

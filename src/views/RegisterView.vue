@@ -277,6 +277,7 @@ async function handleSubmit() {
         codeError.value = t(codeMsg)
         throw new Error(codeError.value)
       }
+      if (data.code === 'username_taken') throw new Error(t('auth.register.username_taken'))
       throw new Error(data.error || t('auth.register.failed'))
     }
     registered.value = {

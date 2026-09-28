@@ -55,6 +55,16 @@ function includeBodyToken(req) {
   return !req.get("sec-fetch-site");
 }
 
+// Someone picking a username that's taken is an everyday mistake, not a
+// server fault. Both signup routes used to answer it with a 500 carrying
+// Postgres's own "Key (username)=(bob) already exists." (err.detail),
+// which also leaks whatever a future constraint's detail holds, so
+// neither sends err.detail any more.
+const USERNAME_TAKEN = { error: "That username is taken. Pick another one.", code: "username_taken" };
+function isUsernameClash(err) {
+  return err && err.code === "23505" && err.constraint === "users_username_key";
+}
+
 // Who a forgot-password request for this address should reach. Register
 // keeps the email as typed while the email change lower-cases it, so an
 // exact match missed "John.Smith@Example.com" asked for as
@@ -1127,8 +1137,9 @@ module.exports = function createAuthRouter({
       });
     } catch (err) {
       await client.query("ROLLBACK");
+      if (isUsernameClash(err)) return res.status(409).json(USERNAME_TAKEN);
       console.error("[Register Error]", err.message);
-      res.status(500).json({ error: err.detail || "Registration failed" });
+      res.status(500).json({ error: "Registration failed" });
     } finally {
       client.release();
     }
@@ -1484,6 +1495,7 @@ module.exports = function createAuthRouter({
       if (err instanceof claims.ClaimError) {
         return res.status(err.status).json({ error: err.message, ...(err.code ? { code: err.code } : {}) });
       }
+      if (isUsernameClash(err)) return res.status(409).json(USERNAME_TAKEN);
       console.error("[Register Org Error]", err.message);
       if (err.constraint === "organisations_slug_key")
         return res
@@ -1491,7 +1503,7 @@ module.exports = function createAuthRouter({
           .json({ error: "That organisation slug is already taken" });
       res
         .status(500)
-        .json({ error: err.detail || "Organisation registration failed" });
+        .json({ error: "Organisation registration failed" });
     } finally {
       client.release();
     }
