@@ -119,3 +119,30 @@ test("after the socket drops and reconnects, judge scores still reach the pool",
   room.close();
   await setup.deleteOrg(orgId);
 });
+
+// Leaving the Control Room before /api/events came back left a dead
+// instance behind: it still stood up pools for every Live event and, with
+// its socket listeners already gone, its seed timer announced diver 1 to
+// the judges of any event nobody had started, and its hotkeys kept
+// running on every other page.
+test("leaving the Control Room mid-load doesn't announce anything afterwards", async ({ page, request, baseURL }) => {
+  test.setTimeout(90_000);
+  const { orgId, username, adminToken } = await setup.createOrgAndAdmin(request, { countryCode: "AUS", orgName: "Lifecycle Leave" });
+  const { event } = await liveEvent(request, { orgId, adminToken, name: "Left Behind", diverNames: ["AAA Left"] });
+  const room = await roomWatcher(baseURL, event.id);
+
+  await signIn(page, username);
+  await page.route(/\/api\/events(\?.*)?$/, async (route) => {
+    await new Promise((r) => setTimeout(r, 2500));
+    await route.continue().catch(() => {});
+  });
+  await page.goto("/control");
+  await page.waitForTimeout(300);
+  // In-app navigation, so the page (and the stale instance) lives on
+  await page.locator(".sidebar a", { hasText: "Dashboard" }).first().click();
+  await page.waitForURL(/\/dashboard$/);
+  await page.waitForTimeout(5_000);
+  expect(room.seen.state).toEqual([]);
+  room.close();
+  await setup.deleteOrg(orgId);
+});

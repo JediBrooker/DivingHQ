@@ -1291,13 +1291,14 @@ function onOutsideClick(e) {
 }
 
 onMounted(async () => {
-  const meetsLoading = loadMeets()
-  await Promise.all([loadEvents(meetsLoading), meetsLoading])
   // Capture-phase mousedown closes the overflow menu when the user
   // clicks anywhere outside its wrapper. Capture phase matters here
   // so the row's own ⋯ trigger still fires its toggle before this
-  // listener runs.
+  // listener runs. Added before the loads so leaving mid-load can't
+  // leave it behind (onUnmounted would already have run).
   window.addEventListener('mousedown', onOutsideClick, true)
+  const meetsLoading = loadMeets()
+  await Promise.all([loadEvents(meetsLoading), meetsLoading])
 })
 onUnmounted(() => {
   window.removeEventListener('mousedown', onOutsideClick, true)

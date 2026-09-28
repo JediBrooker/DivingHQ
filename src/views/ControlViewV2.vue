@@ -118,6 +118,13 @@ const pendingSeed = new Set() // events optimistically seeded, awaiting the serv
 const seedTimers = new Set() // fallback timers, cleared on unmount
 const SEED_GRACE_MS = 1500
 
+// Set when the view goes away. Everything here that resumes after an
+// await checks it: leaving while /api/events (or a roster) was still
+// loading used to let the dead instance wire pools anyway, and with its
+// socket listeners already gone its seed timer announced diver 1 to the
+// judges of any event nobody had started.
+let unmounted = false
+
 // Lease conflict state: event_id -> true when another socket (operator or
 // window) is also controlling this event (server claim_event_control).
 const conflicts = reactive({})
@@ -636,10 +643,14 @@ useSocketEvent(socket, 'connect', () => {
 })
 
 async function setupLivePool(ev) {
+  if (unmounted) return
   joinPoolRooms(ev.id)
   const pool = poolFor(ev.id)
   try {
     const roster = await auth.apiFetch(`/api/events/${ev.id}/roster`)
+    // Gone while the roster was loading: don't seed (or later announce)
+    // anything from a dead instance.
+    if (unmounted) return
     // Only the rows that dive: withdrawn and reserve rows come back too.
     pool.roster = competingQueue(roster)
     // History + standings for the side columns (fire-and-forget; refreshed
@@ -659,7 +670,7 @@ async function setupLivePool(ev) {
     // blind while disconnected.
     const tid = setTimeout(() => {
       seedTimers.delete(tid)
-      if (pendingSeed.has(ev.id) && socket.isConnected.value && pool.currentActive) {
+      if (!unmounted && pendingSeed.has(ev.id) && socket.isConnected.value && pool.currentActive) {
         pendingSeed.delete(ev.id)
         emitActiveDiver(ev)
       }
@@ -763,17 +774,20 @@ async function mergeNewEvents() {
 // again. Retry the moment the socket reconnects.
 watch(socket.isConnected, async (connected) => {
   if (connected && loadError.value) {
-    if (await loadEvents()) bringUpPools()
+    if (await loadEvents() && !unmounted) bringUpPools()
   }
 })
 
 onMounted(async () => {
-  // Before the await on purpose: queued outbox actions from a previous
-  // visit still need the leave-page prompt while /api/events is loading.
+  // Both before the await on purpose. Queued outbox actions from a
+  // previous visit still need the leave-page prompt while /api/events is
+  // loading, and a listener added after it would outlive a view that was
+  // left mid-load (onUnmounted would have run first).
   window.addEventListener('beforeunload', onBeforeUnload)
-  if (await loadEvents()) bringUpPools()
   // Per-pool operator hotkeys (focused pool only).
   window.addEventListener('keydown', onKeydown)
+  if (await loadEvents() && !unmounted) bringUpPools()
+  if (unmounted) return
   // Fetch the drawer chunk while the board sits idle so it's already here
   // when someone hits Tools later on. Older Safari has no
   // requestIdleCallback, the timeout covers it.
@@ -784,6 +798,7 @@ onMounted(async () => {
 // after the view is gone. Heads up: useSocketEvent already auto-cleans the
 // socket listeners on unmount, this is just for our own timers.
 onUnmounted(() => {
+  unmounted = true
   seedTimers.forEach(clearTimeout)
   seedTimers.clear()
   window.removeEventListener('keydown', onKeydown)
