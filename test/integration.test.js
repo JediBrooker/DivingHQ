@@ -7704,3 +7704,32 @@ test("the dashboard's recent activity keeps audit rows whose event or org has si
     await pool.query("DELETE FROM role_audit_log WHERE id = $1", [role]);
   }
 });
+
+test("clubs let in by a revoked claim don't come live sharing another club's code", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const clubApprovals = require("../lib/club-approvals");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    await pool.query("INSERT INTO clubs (org_id, name, short_code, status) VALUES ($1, 'Sydney Divers', 'SYD', 'active')", [st.orgId]);
+    const founder = await insertUser({ orgId: st.orgId, role: "diver", username: `int-b3cc-${st.slug}`, fullName: "Second Founder" });
+    const waiting = (await pool.query(
+      `INSERT INTO clubs (org_id, name, short_code, status, created_by)
+       VALUES ($1, 'Sydney Springboard', 'syd', 'pending', $2) RETURNING id`, [st.orgId, founder],
+    )).rows[0].id;
+    const fine = (await pool.query(
+      "INSERT INTO clubs (org_id, name, short_code, status) VALUES ($1, 'Bondi Divers', 'BON', 'pending') RETURNING id", [st.orgId],
+    )).rows[0].id;
+    await pool.query("UPDATE users SET club_id = $1 WHERE id = $2", [waiting, founder]);
+
+    const out = await clubApprovals.withTx(pool, (c) => clubApprovals.activateAllPending(c, st.orgId, { actorId: st.adminId }));
+    const row = async (id) => (await pool.query("SELECT status, short_code FROM clubs WHERE id = $1", [id])).rows[0];
+    assert.deepEqual(await row(waiting), { status: "active", short_code: null }, "the clashing code is cleared");
+    assert.deepEqual(await row(fine), { status: "active", short_code: "BON" }, "a free code is kept");
+    const note = out.notes.find((n) => n.userIds.includes(founder));
+    assert.match(note.email.body, /SYD/);
+  } finally {
+    await pool.query("DELETE FROM clubs WHERE org_id = $1", [st.orgId]);
+    await teardownFixture(st);
+  }
+});
