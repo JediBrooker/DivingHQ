@@ -135,28 +135,34 @@ module.exports = function attachSocket({
     //                                   which rides the handshake headers
     //                                   (browser JS can't read it to pass
     //                                   it via auth.token anymore).
-    const authToken = socket.handshake.auth?.token;
-    const raw = authToken === "spectator"
-      ? null
-      : (authToken || readSessionCookie(socket.handshake.headers?.cookie));
-    if (raw) {
-      try {
+    // All of it sits inside the try. socket.io never awaits this
+    // function, so anything thrown out of it is an unhandled rejection
+    // and Node takes the process down with it (a junk cookie did exactly
+    // that). Whatever goes wrong, the socket carries on as a spectator.
+    try {
+      const authToken = socket.handshake.auth?.token;
+      const raw = authToken === "spectator"
+        ? null
+        : (authToken || readSessionCookie(socket.handshake.headers?.cookie));
+      if (raw) {
         const decoded = jwt.verify(raw, JWT_SECRET, { algorithms: ["HS256"] });
         // Validate tv via the same 30s cache the HTTP path uses.
         // A revoked session must lose its socket privileges too.
         const tvOk = await isTokenVersionCurrent(decoded.id, decoded.tv);
-        if (!tvOk) return next();        // stale, fall through to anonymous
-        socket.userId = decoded.id;
-        socket.userOrgId = decoded.org_id;
-        socket.userIsSystemAdmin = !!decoded.is_system_admin;
-        socket.userOrgRoles = decoded.org_roles || [];
-        // Stash the token version so socketCanManageEvent can
-        // re-check it on every privileged action (catches role
-        // revocation / 2FA-bump on a long-lived websocket).
-        socket.userTokenVersion = decoded.tv != null ? Number(decoded.tv) : null;
-      } catch {
-        // Invalid token, treat as anonymous (spectator).
+        if (tvOk) {
+          socket.userId = decoded.id;
+          socket.userOrgId = decoded.org_id;
+          socket.userIsSystemAdmin = !!decoded.is_system_admin;
+          socket.userOrgRoles = decoded.org_roles || [];
+          // Stash the token version so socketCanManageEvent can
+          // re-check it on every privileged action (catches role
+          // revocation / 2FA-bump on a long-lived websocket).
+          socket.userTokenVersion = decoded.tv != null ? Number(decoded.tv) : null;
+        }
       }
+    } catch {
+      // Invalid token (or a DB wobble on the tv check), treat as
+      // anonymous (spectator).
     }
     next();
   });

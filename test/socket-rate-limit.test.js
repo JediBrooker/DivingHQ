@@ -1,6 +1,8 @@
 // Rate-limit / connection-cap / input-validation guards on the
 // anonymous socket surface (security audit F2 + connection-cap
-// follow-up).
+// follow-up), plus the crash and gate guards from the 2026-09 bug
+// sweep further down (bad cookies, handler errors, deep payloads,
+// maintenance, referee actions on finished events, room caps).
 //
 // subscribe_venue is unauthenticated (hardware bridges + public clients)
 // and triggers emitVenueState, which runs the multi-CTE leaderboard
@@ -34,11 +36,13 @@ function makeHarness(opts = {}) {
   const canManage = opts.canManage || (() => false);
 
   const captured = { use: null, connection: null };
+  // Room broadcasts, so a test can look at what went out.
+  const broadcasts = [];
   const io = {
     use: (fn) => { captured.use = fn; },
     on: (event, fn) => { if (event === "connection") captured.connection = fn; },
-    to: () => ({ emit: () => {} }),
-    sockets: { adapter: { rooms: new Map() } },
+    to: (room) => ({ emit: (name, payload) => broadcasts.push({ room, name, payload }) }),
+    sockets: { adapter: { rooms: new Map() }, sockets: new Map() },
   };
 
   const prevEnv = process.env.MAX_SOCKETS_PER_IP;
@@ -50,7 +54,7 @@ function makeHarness(opts = {}) {
       io,
       pool: { query: async () => ({ rows: [] }) },
       JWT_SECRET: "test-secret",
-      socketRequireRole: () => {},
+      socketRequireRole: () => true,
       socketCanManageEvent: async () => canManage(),
       isValidScore: () => true,
       isTokenVersionCurrent: async () => true,
@@ -63,6 +67,9 @@ function makeHarness(opts = {}) {
       scoreboardCache: null,
       metrics: null,
       push: null,
+      // Anything a test wants to swap (a pool that answers, the real
+      // score validator, a gate that throws).
+      ...(opts.deps || {}),
     });
   } finally {
     if (prevEnv === undefined) delete process.env.MAX_SOCKETS_PER_IP;
@@ -73,23 +80,36 @@ function makeHarness(opts = {}) {
   // onHandlers maps event → array of listeners, like real socket.io,
   // so a handler registering a second listener for the same event can't
   // silently replace the first (the disconnect decrement, say).
-  async function connect(ip, token) {
+  async function connect(ip, token, extra = {}) {
     const onHandlers = new Map();
     const listeners = (event) => onHandlers.get(event) || [];
     let disconnected = false;
+    const emitted = [];
+    const rooms = new Set();
     const socket = {
       id: `sock-${ip}-${++seq}`,
-      handshake: { auth: token ? { token } : {}, headers: { "x-forwarded-for": ip }, address: ip },
-      join: () => {},
-      emit: () => {},
+      handshake: {
+        auth: token ? { token } : {},
+        headers: { "x-forwarded-for": ip, ...(extra.headers || {}) },
+        address: extra.address || ip,
+      },
+      join: (room) => { rooms.add(room); },
+      emit: (name, payload) => { emitted.push({ name, payload }); },
       on: (event, fn) => { onHandlers.set(event, [...listeners(event), fn]); },
       disconnect: () => { disconnected = true; },
     };
     // Soft handshake: no token means anonymous. It's async (it checks
-    // the token version), so wait for next() before connecting.
-    await new Promise((resolve) => captured.use(socket, resolve));
+    // the token version), so wait for next() before connecting. A
+    // rejected handshake fails the test here instead of going unhandled.
+    await new Promise((resolve, reject) => {
+      const p = captured.use(socket, resolve);
+      if (p && typeof p.catch === "function") p.catch(reject);
+    });
     captured.connection(socket);
     return {
+      socket,
+      emitted,
+      rooms,
       fire: (event, data, ack) => listeners(event).reduce((_, fn) => fn(data, ack), undefined),
       // Fires and resolves with whatever the handler acked.
       ask: async (event, data) => {
@@ -103,7 +123,7 @@ function makeHarness(opts = {}) {
     };
   }
 
-  return { connect, emits: () => emitCount, venueCalls };
+  return { connect, emits: () => emitCount, venueCalls, broadcasts };
 }
 
 const token = (id) => jwt.sign({ id, org_id: "org-1", org_roles: ["meet_manager"] }, "test-secret");
@@ -208,4 +228,15 @@ test("meet_hold and meet_resume send the hold state to the venue board", async (
   assert.deepEqual(await c.ask("meet_resume", { event_id: VALID_ID }), { ok: true });
   assert.equal(h.venueCalls.at(-1).onHoldReason, null);
   assert.equal(meetHolds[VALID_ID], undefined);
+});
+
+// A session cookie with a broken %-escape used to throw out of the
+// handshake middleware. socket.io doesn't await that promise, so the
+// rejection went unhandled and took the whole process down, no
+// account needed.
+test("a malformed session cookie on the handshake connects as anonymous", async () => {
+  const h = makeHarness();
+  const c = await h.connect("198.51.100.30", null, { headers: { cookie: "dhq_session=%E0%A4%A" } });
+  assert.equal(c.socket.userId, undefined);
+  assert.ok(c.isWired(), "the socket still gets its handlers");
 });

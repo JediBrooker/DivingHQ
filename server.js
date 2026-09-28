@@ -1677,6 +1677,20 @@ if (require.main === module) {
   }
   process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
   process.on("SIGINT",  () => gracefulShutdown("SIGINT"));
+
+  // Last line of defence. Node's default for a rejected promise nobody
+  // caught is to kill the process, and socket.io never awaits its
+  // handlers, so one bad packet from anyone (a junk cookie, a non-UUID
+  // event id) used to take every live meet down with it. The handlers
+  // catch their own errors now; this logs whatever still slips through
+  // and keeps serving. Only for the real server: the test runner wants
+  // to see these as failures.
+  process.on("unhandledRejection", (reason) => {
+    logger.error(
+      { err: reason instanceof Error ? reason.message : String(reason), stack: reason?.stack },
+      "unhandled promise rejection (kept running)",
+    );
+  });
 }
 
 module.exports = { app, server, pool, io, features };
