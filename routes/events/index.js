@@ -1356,9 +1356,13 @@ module.exports = function createEventsRouter({
         const primaries = boundaryRank == null
           ? ranked.slice(0, topN)
           : ranked.filter((r) => Number(r.rnk) <= Number(boundaryRank));
-        const reserveRows = ranked
-          .filter((r) => boundaryRank == null || Number(r.rnk) > Number(boundaryRank))
-          .slice(0, resN);
+        // No boundary means the field is smaller than top_n and every
+        // diver is already a primary, so there's nobody left to hold in
+        // reserve. Filtering on a null boundary used to pick the same
+        // divers again and the second insert hit the unique key (500).
+        const reserveRows = boundaryRank == null
+          ? []
+          : ranked.filter((r) => Number(r.rnk) > Number(boundaryRank)).slice(0, resN);
 
         // Compute display_order for primaries per the chosen mode.
         // 'inherit': copy parent_display_order, then re-number 1..N

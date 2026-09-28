@@ -7399,3 +7399,53 @@ test("synchro pairs entered through the portal are one entry per round", async (
     await compKit.cleanup(orgId);
   }
 });
+
+// A Completed preliminary with a final hanging off it, and `divers`
+// scored by a 3-judge panel: `totals[i]` is what each judge gave
+// diver i in every round. Returns ids for the advance tests.
+compKit.stage = async function stage(orgId, tag, { divers, totals, eventType = "individual", partners = [] }) {
+  const manager = await compKit.user(orgId, `${tag} Manager`, ["org_admin"]);
+  const judges = [];
+  for (let i = 0; i < 3; i++) judges.push(await compKit.user(orgId, `${tag} Judge ${i + 1}`, ["judge"]));
+  const prelim = await compKit.event(orgId, {
+    name: `${tag} prelim`, event_format: "preliminary", event_type: eventType,
+    number_of_judges: 3, total_rounds: 2,
+  });
+  const final = await compKit.event(orgId, {
+    name: `${tag} final`, event_format: "final", event_type: eventType,
+    number_of_judges: 3, total_rounds: 2, parent_event_id: prelim,
+  });
+  await compKit.panel(prelim, judges);
+  const dives = await compKit.dives(2);
+  for (let i = 0; i < divers.length; i++) {
+    await compKit.enter(prelim, divers[i].id, dives, { display_order: i + 1, partner_id: partners[i]?.id ?? null });
+    for (const round of [1, 2]) {
+      for (const j of judges) await compKit.score(prelim, divers[i].id, round, j, totals[i]);
+    }
+  }
+  await pool.query("UPDATE events SET status = 'Completed' WHERE id = $1", [prelim]);
+  return { manager, prelim, final };
+};
+
+test("advance: a field smaller than top_n takes everyone, with no reserves to spare", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const orgId = await compKit.org("adv");
+  try {
+    const divers = [];
+    for (let i = 0; i < 4; i++) divers.push(await compKit.user(orgId, `Adv Diver ${i + 1}`, ["diver"]));
+    const { manager, prelim, final } = await compKit.stage(orgId, "Adv", { divers, totals: [8, 7, 6, 5] });
+    // The usual WA final shape, 12 plus 2 reserves, on a club-sized field.
+    const r = await fetchJson("POST", `/api/events/${prelim}/advance`, {
+      token: manager.token, body: { top_n: 12, reserves: 2, dive_order: "reverse" },
+    });
+    assert.equal(r.status, 200, JSON.stringify(r.body));
+    const seeded = (await pool.query(
+      `SELECT competitor_id, bool_or(is_reserve) AS reserve FROM competitor_dive_lists
+        WHERE event_id = $1 GROUP BY competitor_id`, [final])).rows;
+    assert.equal(seeded.length, 4);
+    assert.ok(seeded.every((s) => !s.reserve), "nobody's left over to be a reserve");
+  } finally {
+    await compKit.cleanup(orgId);
+  }
+});
