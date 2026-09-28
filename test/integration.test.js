@@ -8046,3 +8046,36 @@ test("seed-final with the minimum lock window locks the lists now, not never", a
     await compKit.cleanup(orgId);
   }
 });
+
+test("coach up-next pushes skip rehearsal events", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const { maybeNotifyCoachesOfNextDivers, resetDedupeForTest } = require("../lib/coach-alerts");
+  const orgId = await compKit.org("rehearse");
+  try {
+    const coach = await compKit.user(orgId, "Rehearse Coach", ["coach"]);
+    const divers = [];
+    for (let i = 0; i < 3; i++) divers.push(await compKit.user(orgId, `Rehearse Diver ${i + 1}`, ["diver"]));
+    await pool.query(
+      "INSERT INTO coach_diver_links (coach_id, diver_id, org_id) SELECT $1, unnest($2::uuid[]), $3",
+      [coach.id, divers.map((d) => d.id), orgId],
+    );
+    const dives = await compKit.dives(3);
+    const run = async (isRehearsal) => {
+      const eventId = await compKit.event(orgId, { status: "Live", is_rehearsal: isRehearsal });
+      for (const [i, d] of divers.entries()) await compKit.enter(eventId, d.id, dives, { display_order: i + 1 });
+      const sent = [];
+      resetDedupeForTest();
+      await maybeNotifyCoachesOfNextDivers(
+        { pool, push: { sendNotification: async (ids, p) => { sent.push({ ids, p }); } } },
+        eventId, { event_id: eventId, competitor_id: divers[0].id, round_number: 1 },
+      );
+      return sent;
+    };
+    // Diver 3 is two dives away, the default heads-up distance.
+    assert.equal((await run(false)).length, 1, "a real meet pushes");
+    assert.equal((await run(true)).length, 0, "a dry run doesn't");
+  } finally {
+    await compKit.cleanup(orgId);
+  }
+});
