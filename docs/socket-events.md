@@ -17,7 +17,7 @@ that's intentional, but every privileged event must call
 | Event | Payload | Sent when |
 |---|---|---|
 | `state_update`            | `{ event_id, diverName, country_code, club_name, club_code, diveCode, description, round_number, status, … }` | A diver becomes active in the Control Room, or a new client connects (rebroadcast on demand). |
-| `score_received`          | The full score-submit payload + `judge_id`, `judge_number` | A judge submits a score. Broadcast to everyone watching the meet. |
+| `score_received`          | `{ event_id, competitor_id, round_number, score, judge_id, judge_number }`, built from the checked values (never an echo of the client's object; `score` is the stored number) | A judge submits a score. Broadcast to everyone watching the meet. When the judge's value lost to an earlier manual entry, only the judge's own socket gets it, with the operator's `score` and `superseded_by: 'manual_entry'`. |
 | `score_rejected`          | `{ reason: 'not_authenticated' \| 'insufficient_role' \| 'not_on_panel' \| 'bad_payload' \| 'bad_round' \| 'bad_score' \| 'rate_limited', message?: string }` | A submit_score from this socket failed validation. Sent only to the offending socket. |
 | `score_corrected`         | The new score row from `PUT /api/scores/:id` | A referee corrects a score via HTTP (the socket bus rebroadcasts so other operators see it live). |
 | `final_score_announced`   | Whatever the announcer sent | Announcer presses "Announce" in the Control Room. |

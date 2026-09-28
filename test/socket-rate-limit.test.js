@@ -270,3 +270,44 @@ test("submit_score acks server_error when the revocation lookup throws", async (
   const reply = await c.ask("submit_score", { event_id: VALID_ID, competitor_id: VALID_ID, round_number: 1, score: 7 });
   assert.deepEqual(reply, { ok: false, error: "server_error" });
 });
+
+// A pool just capable enough for submit_score and the referee actions:
+// the judge sits on the panel, the event has `status`, and every write
+// works. `writes` records the SQL so a test can see what ran.
+function scoringPool({ status = "Live" } = {}) {
+  const writes = [];
+  const answer = async (sql) => {
+    writes.push(sql);
+    if (/FROM event_judges ej\s+JOIN events e/.test(sql)) return { rows: [{ judge_number: 1, event_status: status }] };
+    if (/SELECT status FROM events/.test(sql)) return { rows: [{ status }] };
+    if (/INSERT INTO scores/.test(sql)) return { rows: [{ id: "score-1" }] };
+    return { rows: [], rowCount: 0 };
+  };
+  return {
+    writes,
+    query: answer,
+    connect: async () => ({ query: answer, release() {} }),
+  };
+}
+const judgeToken = (id) => jwt.sign({ id, org_id: "org-1", org_roles: ["judge"] }, "test-secret");
+
+// hashPayload used to canonicalise the whole client object, recursively,
+// before any try. A 20k-deep array in an extra field blew the stack and,
+// the handler being un-awaited, killed the process. The room broadcast
+// spread the same object, which socket.io's encoder walks recursively too.
+test("submit_score only hashes and rebroadcasts the fields that define a submission", async () => {
+  let deep = [];
+  for (let i = 0; i < 20000; i++) deep = [deep];
+  const pool = scoringPool();
+  const h = makeHarness({ deps: { pool } });
+  const c = await h.connect("198.51.100.33", judgeToken("judge-deep"));
+  const reply = await c.ask("submit_score", {
+    event_id: VALID_ID, competitor_id: VALID_ID, round_number: 1, score: 7,
+    idempotency_key: "2b1e4f1c-3a52-4d7e-9c1a-0f6e5d4c3b2a", x: deep,
+  });
+  assert.equal(reply.ok, true, JSON.stringify(reply).slice(0, 200));
+  const sent = h.broadcasts.find((b) => b.name === "score_received");
+  assert.ok(sent, "the score still goes out to the room");
+  assert.deepEqual(Object.keys(sent.payload).sort(),
+    ["competitor_id", "event_id", "judge_id", "judge_number", "round_number", "score"]);
+});

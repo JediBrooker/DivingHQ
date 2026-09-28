@@ -262,6 +262,12 @@ module.exports = function attachSocket({
     return ipWindows.limited(`${action}:${ip}`, cfg);
   }
 
+  // What a keypad sends with submit_score, the idempotency hash covers
+  // exactly these (see the handler).
+  const SUBMISSION_FIELDS = [
+    "event_id", "competitor_id", "round_number", "dive_id", "judge_id", "judge_number", "score",
+  ];
+
   // events.id is a UUID; reject anything else before doing DB work.
   // Same lenient shape used for event ids elsewhere (lib/records.js).
   const EVENT_UUID_RE =
@@ -577,6 +583,12 @@ module.exports = function attachSocket({
         reject("bad_payload");
         return;
       }
+      // Both ids are UUIDs. Anything else is junk that would only make
+      // pg throw further down.
+      if (!EVENT_UUID_RE.test(String(data.event_id)) || !EVENT_UUID_RE.test(String(data.competitor_id))) {
+        reject("bad_payload");
+        return;
+      }
       const round = Number(data.round_number);
       if (!Number.isInteger(round) || round < 1) {
         reject("bad_round");
@@ -595,16 +607,22 @@ module.exports = function attachSocket({
 
       // Idempotency check. When the client sends an idempotency_key
       // (outbox mode), look up any cached response BEFORE doing DB
-      // work. Hash excludes the key itself + actor_local_time so a
-      // retry with the same semantic payload but different wall-clock
-      // claim still matches the cache.
+      // work. The hash covers the fields the keypad sends
+      // (SUBMISSION_FIELDS) and nothing else, so the key and
+      // actor_local_time stay out and a retry with a different
+      // wall-clock claim still matches. It used to hash the whole client
+      // object, recursively, and a payload nested 20k deep blew the stack.
+      // Same fields and values as before for a real keypad, so hashes
+      // cached before this change still match.
       const idempotencyKey = data.idempotency_key;
       const actorLocalTime = data.actor_local_time || null;
       let payloadHash = null;
       if (idempotencyKey) {
-        const payloadForHash = { ...data };
-        delete payloadForHash.idempotency_key;
-        delete payloadForHash.actor_local_time;
+        const payloadForHash = {};
+        for (const k of SUBMISSION_FIELDS) {
+          const v = data[k];
+          if (v !== undefined && (v === null || typeof v !== "object")) payloadForHash[k] = v;
+        }
         payloadHash = idem.hashPayload(payloadForHash);
         const cached = await idem.socketCheck(idempotencyKey, judgeId, payloadHash);
         if (cached?.error) {
@@ -814,11 +832,15 @@ module.exports = function attachSocket({
       // broadcast it AND cache it in idempotency_keys. Caching the
       // exact payload (not just "ok: true") means a replay can
       // tell the judge's UI the same details the original got.
+      // Built from what the server checked, never by spreading the
+      // client's object: that echoed arbitrary junk to the whole room
+      // (the encoder walks it recursively, so a deep enough one crashed
+      // the emit) and sent the raw score, say null, while 0 was stored.
       const scoreReceivedBody = {
-        ...data,
-        idempotency_key: undefined,  // never leak it back
-        actor_local_time: undefined,
-        dive_id: undefined,           // don't leak whatever the client sent
+        event_id: data.event_id,
+        competitor_id: data.competitor_id,
+        round_number: round,
+        score,
         judge_id: judgeId,
         judge_number: judgeNumber,
       };
