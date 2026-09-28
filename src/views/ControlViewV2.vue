@@ -544,8 +544,21 @@ async function loadEvents() {
 }
 
 // Events whose live pool is already wired, so a retry doesn't subscribe
-// or announce twice.
+// or announce twice. An event that leaves Live stays in here: if it comes
+// back (Undo on a finalise) its pool, rooms and cursor are all still good,
+// and wiring it again would announce diver 1 over the top.
 const wiredPools = new Set()
+
+// Stand up a live pool for EVERY Live event (not just the focused
+// one) so non-focused pools keep receiving + routing their scores.
+function wireLivePools() {
+  for (const ev of events.value) {
+    if (ev.status === 'Live' && !wiredPools.has(ev.id)) {
+      wiredPools.add(ev.id)
+      setupLivePool(ev)
+    }
+  }
+}
 
 function bringUpPools() {
   // Honour /control?event=<id>, the Control Room's deep link.
@@ -553,14 +566,44 @@ function bringUpPools() {
   if (q != null && events.value.some((e) => String(e.id) === String(q))) {
     selectedEventId.value = String(q)
   }
-  // Stand up a live pool for EVERY Live event (not just the focused
-  // one) so non-focused pools keep receiving + routing their scores.
-  for (const ev of events.value) {
-    if (ev.status === 'Live' && !wiredPools.has(ev.id)) {
-      wiredPools.add(ev.id)
-      setupLivePool(ev)
-    }
+  wireLivePools()
+}
+
+// An event can go Live after load: Start Event on the Setup stage flips
+// the row in place, and another operator can start one too (see
+// event_status_changed below). Either way it needs a pool wired, or its
+// card sits on "Loading the active diver" and no diver ever reaches the
+// judges.
+watch(
+  () => liveEventsInOrder(events.value).map((e) => e.id).join(),
+  () => { if (!loading.value && !loadError.value) wireLivePools() },
+)
+
+// Statuses changed somewhere else (another operator, the Manager, an
+// Undo in another tab). The server tells every socket; patch our row so
+// the board follows. An event we don't have yet (created after this page
+// loaded) that's just gone Live gets fetched quietly, without the
+// full-page "Loading…" a loadEvents() would flash mid-meet.
+useSocketEvent(socket, 'event_status_changed', (d) => {
+  if (!d?.event_id || !d.to) return
+  const ev = events.value.find((e) => String(e.id) === String(d.event_id))
+  if (ev) {
+    ev.status = d.to
+    return
   }
+  if (d.to === 'Live' && (auth.user?.is_system_admin || String(d.org_id) === String(auth.user?.org_id))) {
+    mergeNewEvents()
+  }
+})
+
+async function mergeNewEvents() {
+  try {
+    const fresh = await narrowEvents(await auth.apiFetch('/api/events'))
+    if (!Array.isArray(fresh)) return
+    const known = new Set(events.value.map((e) => String(e.id)))
+    const added = fresh.filter((e) => !known.has(String(e.id)))
+    if (added.length) events.value = [...events.value, ...added]
+  } catch { /* the next status change or a reload will catch it */ }
 }
 
 // Venue wifi dies, the operator refreshes, /api/events can't be reached and
