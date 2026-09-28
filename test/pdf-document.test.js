@@ -100,13 +100,17 @@ function recordFragments(fn) {
 // be tested without font files. Helvetica is the base; Courier stands in
 // for the CJK font and "has" the CJK characters plus § and ×, which the
 // fake base pretends not to have. Courier's glyphs are wider than
-// Helvetica's, so a width measured in the wrong font shows.
+// Helvetica's, so a width measured in the wrong font shows. Times plays
+// the Arabic font; it can't draw the letters, but the tests only look at
+// how each piece is handed to PDFKit.
 function fakeFonts() {
   const std = (name, has) => ({ key: name, standard: true, name, has });
   const baseHas = (cp) => isWinAnsiChar(cp) && cp !== 0xa7 && cp !== 0xd7;
   const cjkHas = (cp) => (cp >= 0x4e00 && cp <= 0x9fff) || cp === 0xa7 || cp === 0xd7 || cp === 0x20;
+  const arabicHas = (cp) => cp >= 0x600 && cp <= 0x6ff;
   const base = { regular: std("Helvetica", baseHas), bold: std("Helvetica-Bold", baseHas), italic: std("Helvetica-Oblique", baseHas) };
   const cjk = { regular: std("Courier", cjkHas), bold: std("Courier-Bold", cjkHas), italic: std("Courier", cjkHas) };
+  const arabic = std("Times-Roman", arabicHas);
   const asked = [];
   return {
     asked,
@@ -117,6 +121,7 @@ function fakeFonts() {
       base: base[style],
       font: (slot, region) => {
         asked.push(`${slot}:${region}:${style}`);
+        if (slot === "arabic") return arabic;
         return slot === "cjk" ? cjk[style] : null;
       },
     }),
@@ -203,6 +208,28 @@ test("a font the caller names itself is left alone", () => {
     doc.end();
   });
   assert.deepEqual(calls.map((c) => [c.text, c.font.name]), [["Ab 李§", "Times-Roman"]]);
+});
+
+// The real-font test further down proves the shaping, but only on a Mac.
+// This pins the part that makes it work, everywhere: a right-to-left run
+// reaches PDFKit with an empty feature list (so PDFKit hands fontkit the
+// whole run to shape and flip, not one word at a time) and without
+// letter-spacing, which would pull joined Arabic letters apart.
+test("right-to-left runs go to PDFKit whole and without letter-spacing", () => {
+  let doc;
+  const calls = recordFragments(() => {
+    doc = createPdfDocument({ margin: 50, size: "A4" }, { fonts: fakeFonts() });
+    doc.font("Helvetica").fontSize(10).text("Ab محمد علي", 50, 100, { characterSpacing: 2 });
+  });
+  assert.deepEqual(calls.map((c) => [c.text, c.font.name]), [
+    ["Ab ", "Helvetica"], ["علي", "Times-Roman"], [" ", "Helvetica"], ["محمد", "Times-Roman"],
+  ]);
+  for (const c of calls) {
+    const rtl = c.font.name === "Times-Roman";
+    assert.deepEqual(c.options.features, rtl ? [] : undefined, `features for ${c.text}`);
+    assert.equal(c.options.characterSpacing, rtl ? 0 : 2, `letter-spacing for ${c.text}`);
+  }
+  doc.end();
 });
 
 // Optional, and only on a Mac: Arial Unicode stands in for Noto Sans,
