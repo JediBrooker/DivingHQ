@@ -406,6 +406,10 @@ h1, h2, h3, h4 {
   background-position: right 0.75rem center;
   padding-inline-end: 2.25rem;
 }
+/* background-position has no logical keywords yet, so flip the chevron by
+   hand. padding-inline-end already moves its lane to the left in RTL, and
+   without this the arrow sat on top of the selected text. */
+:root[dir="rtl"] .select { background-position: left 0.75rem center; }
 .select:focus { border-color: var(--border-focus); box-shadow: var(--shadow-focus); }
 
 /* ── Status badges ────────────────────────────────────────── */
@@ -1291,7 +1295,10 @@ h1, h2, h3, h4 {
   content: attr(data-tip);
   position: absolute;
   bottom: calc(100% + 6px);
-  inset-inline-start: 50%;
+  /* Physical left pairs with the physical -50% shift. With
+     inset-inline-start the bubble sat a whole bubble-width left of
+     its host in RTL. */
+  left: 50%;
   transform: translateX(-50%);
   /* The directive's value can carry literal "\n" between
      lines (e.g. "J3, Maria Schmidt · GER\nClick to open

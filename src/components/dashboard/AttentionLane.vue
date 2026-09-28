@@ -325,7 +325,8 @@ const emit = defineEmits(['chip-click'])
     content: '';
     position: absolute;
     top: 0.45rem;
-    inset-inline-start: 50%;
+    /* physical left to match the physical -50%, or RTL shoves it sideways */
+    left: 50%;
     transform: translateX(-50%);
     width: 40px;
     height: 4px;

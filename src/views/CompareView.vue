@@ -644,7 +644,9 @@ onMounted(async () => {
   backdrop-filter: blur(2px);
 }
 .browse-modal {
-  position: fixed; top: 50%; inset-inline-start: 50%; transform: translate(-50%, -50%);
+  /* left, not inset-inline-start: the -50% shift is physical, so the
+     anchor has to be too or RTL lands it a full width to the left. */
+  position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
   z-index: 100;
   width: min(900px, calc(100vw - 2rem));
   /* `dvh` not `vh` so the modal shrinks with the iOS Safari
