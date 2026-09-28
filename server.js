@@ -1018,6 +1018,9 @@ app.use(require("./routes/users")({
   // Signed-in role requests (POST /api/role-requests).
   sendNewRoleRequestEmail,
   io,
+  // Guardian link requests tell their reviewers, and the parent how it went.
+  push,
+  sendNoticeEmail: email.sendNoticeEmail,
 }));
 
 // Club-change requests + cross-org transfers (Migration 057).

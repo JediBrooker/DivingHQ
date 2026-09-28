@@ -23,10 +23,12 @@
 //   POST /api/users/:id/reset-password       send a reset link
 //
 //   Guardians (migration 083):
-//   GET  /api/guardians/my-dependents   (?include_pending=1 for the page)
+//   GET  /api/guardians/my-dependents   (?include=pending for the page)
 //   GET  /api/guardians/search       find someone in my org to link to
 //   POST /api/guardians/request
-//   GET  /api/guardian-requests      org admin's queue
+//   GET  /api/guardian-requests      the reviewer's queue: org admin, or
+//                                    the child's club / region admins
+//                                    where there's no federation
 //   POST /api/guardian-requests/:id/review
 //   POST /api/guardians/:id/revoke   end a link, or withdraw a request
 //
@@ -41,6 +43,7 @@
 
 const express = require("express");
 const roleRequests = require("../lib/role-requests");
+const guardianRequests = require("../lib/guardian-requests");
 const claimsLib = require("../lib/claims");
 const bcrypt  = require("bcrypt");
 const createAuthLinks = require("../lib/auth-links");
@@ -82,6 +85,10 @@ module.exports = function createUsersRouter({
   // Both optional so older test mounts keep working.
   sendNewRoleRequestEmail,
   io,
+  // Guardian link notices, in-app and by email (lib/notices.js). Also
+  // optional: without them the request still lands, nobody's pinged.
+  push,
+  sendNoticeEmail,
 }) {
   if (!pool) throw new Error("createUsersRouter requires { pool, … }");
   const router = express.Router();
@@ -91,6 +98,10 @@ module.exports = function createUsersRouter({
   // below 503 before minting when JWT_SECRET isn't wired in.
   const { mintVerifyToken, mintResetToken } = createAuthLinks(JWT_SECRET);
   const writeLimiter = bulkWriteLimiter || NOOP;
+  const noticeDeps = {
+    push,
+    email: typeof sendNoticeEmail === "function" ? { sendNoticeEmail } : null,
+  };
 
   router.get("/api/users", requireOrgAdmin, async (req, res) => {
     try {
@@ -242,8 +253,10 @@ module.exports = function createUsersRouter({
 
   // Org admins review everything in their org, as before. Club and
   // region admins in a country with no federation yet review their own
-  // members' everyday role requests (lib/role-requests.js has the rules). Both
-  // get through this gate; each handler then scopes to what they may see.
+  // members' everyday role requests (lib/role-requests.js has the rules),
+  // and parents' requests to link to a child in their club
+  // (lib/guardian-requests.js). Both get through this gate; each handler
+  // then scopes to what they may see.
   const isOrgAdminUser = (user) =>
     !!user.is_system_admin || (user.org_roles || []).includes("org_admin");
   const requireRequestReviewer = [
@@ -1400,15 +1413,19 @@ module.exports = function createUsersRouter({
   //
   // A parent or guardian can link to a minor's account so they can
   // pay entry fees, memberships, etc. on the minor's behalf. Links
-  // are org-scoped and need org_admin approval.
+  // are org-scoped and need approving: by an org admin under a
+  // federation, by the child's club (or its region) where the clubs run
+  // the country. lib/guardian-requests.js has who sees and decides what.
   // ===============================================================
 
-  // ?include_pending=1 adds the links still waiting for an admin, for the
+  // ?include=pending adds the links still waiting for a decision, for the
   // Dependents page, so a parent can see their request went in (and
   // withdraw it). The "Paying for" picker calls it without, and only ever
-  // gets approved links.
+  // gets approved links. include_pending=1 is the old spelling, kept for
+  // a tab still running the bundle from before.
   router.get("/api/guardians/my-dependents", verifyToken, async (req, res) => {
-    const statuses = req.query.include_pending === "1" ? ["approved", "pending"] : ["approved"];
+    const withPending = req.query.include === "pending" || req.query.include_pending === "1";
+    const statuses = withPending ? ["approved", "pending"] : ["approved"];
     try {
       // Scoped to the caller's own federation. A guardian link belongs to
       // one org (guardians.org_id) and routes/payments.js won't act on a
@@ -1486,11 +1503,16 @@ module.exports = function createUsersRouter({
       if (age >= 18) {
         return res.status(400).json({ error: "Dependent must be under 18" });
       }
-      await pool.query(
+      const link = (await pool.query(
         `INSERT INTO guardians (org_id, guardian_user_id, dependent_user_id)
-         VALUES ($1, $2, $3)`,
+         VALUES ($1, $2, $3)
+         RETURNING id, org_id, guardian_user_id, dependent_user_id`,
         [req.user.org_id, req.user.id, dependent_user_id],
-      );
+      )).rows[0];
+      // Tell whoever decides. Best effort: the request is in either way,
+      // and it sits in their queue whether or not the notice got there.
+      await guardianRequests.notifyReviewers(pool, noticeDeps, link)
+        .catch((err) => console.error("[Guardians] notify", err.message));
       res.status(201).json({ message: "Request submitted for admin approval" });
     } catch (err) {
       if (err.code === "23505") return res.status(409).json({ error: "A pending or approved link already exists" });
@@ -1499,21 +1521,11 @@ module.exports = function createUsersRouter({
     }
   });
 
-  router.get("/api/guardian-requests", requireOrgAdmin, async (req, res) => {
+  router.get("/api/guardian-requests", requireRequestReviewer, async (req, res) => {
     try {
-      const isSysAdmin = !!req.user.is_system_admin;
-      const rows = (await pool.query(
-        `SELECT g.id, g.status, g.requested_at, g.org_id,
-                gu.id AS guardian_id, gu.full_name AS guardian_name, gu.username AS guardian_username,
-                du.id AS dependent_id, du.full_name AS dependent_name, du.username AS dependent_username,
-                du.date_of_birth AS dependent_dob
-           FROM guardians g
-           JOIN users gu ON gu.id = g.guardian_user_id
-           JOIN users du ON du.id = g.dependent_user_id
-          WHERE g.status = 'pending' AND ($2::boolean OR g.org_id = $1)
-          ORDER BY g.requested_at ASC`,
-        [req.user.org_id, isSysAdmin],
-      )).rows;
+      const rows = isOrgAdminUser(req.user)
+        ? await guardianRequests.listForOrgAdmin(pool, req.user)
+        : await guardianRequests.listForDelegate(pool, req.user);
       res.json(rows);
     } catch (err) {
       console.error("[Guardians]", err.message);
@@ -1521,7 +1533,7 @@ module.exports = function createUsersRouter({
     }
   });
 
-  router.post("/api/guardian-requests/:id/review", requireOrgAdmin, async (req, res) => {
+  router.post("/api/guardian-requests/:id/review", requireRequestReviewer, async (req, res) => {
     const { decision } = req.body || {};
     if (!["approved", "rejected"].includes(decision)) {
       return res.status(400).json({ error: "decision must be 'approved' or 'rejected'" });
@@ -1535,6 +1547,11 @@ module.exports = function createUsersRouter({
       if (!req.user.is_system_admin && g.org_id !== req.user.org_id) {
         return res.status(403).json({ error: "Cannot review requests in other organisations" });
       }
+      // A club or region admin: only children in a club they run, where
+      // there's no federation, and never a request they're part of.
+      if (!isOrgAdminUser(req.user) && !(await guardianRequests.delegateCanReview(pool, req.user, g))) {
+        return res.status(403).json({ error: "Only requests for children in a club you run" });
+      }
       // Only a link that's still pending changes, so an approve racing a
       // reject (or a revoke) can't overwrite a decision already made.
       const done = await pool.query(
@@ -1545,6 +1562,8 @@ module.exports = function createUsersRouter({
       if (!done.rowCount) {
         return res.status(409).json({ error: "This request has already been decided", code: "already_decided" });
       }
+      await guardianRequests.notifyDecision(pool, noticeDeps, g, decision)
+        .catch((err) => console.error("[Guardians] notify", err.message));
       res.json({ message: `Guardian request ${decision}` });
     } catch (err) {
       console.error("[Guardians]", err.message);

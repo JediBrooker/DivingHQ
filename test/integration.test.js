@@ -11653,3 +11653,233 @@ test("the sysadmin can remove a coach link in another org", async (t) => {
     await teardownFixture(st);
   }
 });
+
+// ---------------------------------------------------------------------
+// Guardian links where there's no federation (lib/guardian-requests.js).
+// The child's club decides: its admins, the region above it, then the
+// sysadmin. Each test owns country codes nobody else in test/ uses and
+// wipes them before and after.
+// ---------------------------------------------------------------------
+
+const guardianKit = {
+  async minor(id, years = 10) {
+    await pool.query(
+      "UPDATE users SET date_of_birth = (CURRENT_DATE - make_interval(years => $2))::date WHERE id = $1", [id, years],
+    );
+  },
+  async ask(parentToken, kidId) {
+    const r = await fetchJson("POST", "/api/guardians/request", { token: parentToken, body: { dependent_user_id: kidId } });
+    assert.equal(r.status, 201, JSON.stringify(r.body));
+    return (await pool.query(
+      `SELECT * FROM guardians WHERE dependent_user_id = $1 AND status = 'pending'
+        ORDER BY requested_at DESC LIMIT 1`, [kidId],
+    )).rows[0];
+  },
+  async queue(token) {
+    const r = await fetchJson("GET", "/api/guardian-requests", { token });
+    assert.equal(r.status, 200, JSON.stringify(r.body));
+    return r.body;
+  },
+  review(token, id, decision = "approved") {
+    return fetchJson("POST", `/api/guardian-requests/${id}/review`, { token, body: { decision } });
+  },
+  async status(id) {
+    return (await pool.query("SELECT status FROM guardians WHERE id = $1", [id])).rows[0]?.status;
+  },
+  async region(orgId, name, code, clubIds) {
+    const id = (await pool.query(
+      "INSERT INTO regions (org_id, name, short_code) VALUES ($1, $2, $3) RETURNING id", [orgId, name, code],
+    )).rows[0].id;
+    await pool.query("UPDATE clubs SET region_id = $1 WHERE id = ANY($2::uuid[])", [id, clubIds]);
+    return id;
+  },
+};
+
+test("guardian links in an unclaimed country: the child's club decides, and the parent hears", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "MNG";
+  await claimKit.wipe(CODE);
+  try {
+    const A = await delegateSignUp({ country_code: CODE, new_club_name: "Ulaanbaatar Divers" });
+    const B = await delegateSignUp({ country_code: CODE, new_club_name: "Darkhan Divers" });
+    const kid = await delegateSignUp({ country_code: CODE, club_id: A.clubId, full_name: "Saraa Bold" });
+    const parent = await delegateSignUp({ country_code: CODE, full_name: "Bold Bat" });
+    assert.equal((await pool.query("SELECT club_id FROM users WHERE id = $1", [kid.id])).rows[0].club_id, A.clubId);
+    await guardianKit.minor(kid.id, 10);
+
+    const link = await guardianKit.ask(parent.token, kid.id);
+    assert.equal(link.org_id, A.orgId);
+
+    // Only the child's club heard, and the notice points at My club.
+    const told = await approvalKit.notices(A.id, "guardian_request");
+    assert.equal(told.length, 1);
+    assert.equal(told[0].action_url, "/club");
+    assert.match(told[0].title, /Bold Bat/);
+    assert.equal(told[0].data.guardian_link_id, link.id);
+    assert.deepEqual(await approvalKit.notices(B.id, "guardian_request"), [], "not the club next door");
+    assert.equal((await require("../lib/guardian-requests").reviewersFor(pool, link)).via, "club");
+
+    // The parent sees it waiting on /guardians; the payments picker doesn't.
+    assert.deepEqual((await fetchJson("GET", "/api/guardians/my-dependents", { token: parent.token })).body, []);
+    const mine = (await fetchJson("GET", "/api/guardians/my-dependents?include=pending", { token: parent.token })).body;
+    assert.deepEqual(mine.map((d) => [d.id, d.status]), [[kid.id, "pending"]]);
+
+    // Another club's admin in the same country: not theirs to see or decide.
+    assert.ok(!(await guardianKit.queue(B.token)).some((g) => g.id === link.id));
+    assert.equal((await guardianKit.review(B.token, link.id)).status, 403);
+    // Neither the parent nor the child reviews anything.
+    assert.equal((await fetchJson("GET", "/api/guardian-requests", { token: parent.token })).status, 403);
+    assert.equal((await guardianKit.review(kid.token, link.id)).status, 403);
+
+    // The club admin sees who's asking, the child's age and club, not the birthday.
+    const row = (await guardianKit.queue(A.token)).find((g) => g.id === link.id);
+    assert.ok(row, "the child's club admin sees it");
+    assert.equal(row.guardian_name, "Bold Bat");
+    assert.equal(row.dependent_name, "Saraa Bold");
+    assert.equal(row.dependent_age, 10);
+    assert.equal(row.club_name, "Ulaanbaatar Divers");
+    assert.ok(!("dependent_dob" in row), "a club admin gets the age, not the date of birth");
+
+    assert.equal((await guardianKit.review(A.token, link.id, "maybe")).status, 400);
+    const ok = await guardianKit.review(A.token, link.id);
+    assert.equal(ok.status, 200, JSON.stringify(ok.body));
+    assert.equal(await guardianKit.status(link.id), "approved");
+    assert.equal((await guardianKit.review(A.token, link.id, "rejected")).status, 409, "decided once");
+    assert.deepEqual((await fetchJson("GET", "/api/guardians/my-dependents", { token: parent.token })).body.map((d) => d.id), [kid.id]);
+    const heard = await approvalKit.notices(parent.id, "guardian_decision");
+    assert.equal(heard.length, 1);
+    assert.equal(heard[0].action_url, "/guardians");
+    assert.match(heard[0].title, /now linked to Saraa Bold/);
+
+    // A no reaches the parent too.
+    const kid2 = await delegateSignUp({ country_code: CODE, club_id: A.clubId, full_name: "Temuulen Bold" });
+    await guardianKit.minor(kid2.id, 12);
+    const link2 = await guardianKit.ask(parent.token, kid2.id);
+    assert.equal((await guardianKit.review(A.token, link2.id, "rejected")).status, 200);
+    assert.equal(await guardianKit.status(link2.id), "rejected");
+    assert.match((await approvalKit.notices(parent.id, "guardian_decision"))[1].title, /turned down/);
+  } finally {
+    await claimKit.wipe(CODE);
+  }
+});
+
+test("guardian links in an unclaimed country: the region steps in, nobody decides their own, and it follows the child", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "KGZ";
+  const FAR = "TJK";
+  await claimKit.wipe(CODE);
+  await claimKit.wipe(FAR);
+  const { reviewersFor } = require("../lib/guardian-requests");
+  try {
+    const A = await delegateSignUp({ country_code: CODE, new_club_name: "Bishkek Divers" });
+    const B = await delegateSignUp({ country_code: CODE, new_club_name: "Osh Divers" });
+    const north = await guardianKit.region(A.orgId, "Chuy", "CHU", [A.clubId]);
+    const south = await guardianKit.region(A.orgId, "Osh Region", "OSH", [B.clubId]);
+    const RA = await delegateSignUp({ country_code: CODE, full_name: "Chuy Admin" });
+    const RB = await delegateSignUp({ country_code: CODE, full_name: "Osh Admin" });
+    await pool.query("INSERT INTO region_admins (region_id, user_id, org_id) VALUES ($1, $2, $3), ($4, $5, $3)",
+      [north, RA.id, A.orgId, south, RB.id]);
+
+    // The club's founder asks to pay for their own child in their own club.
+    const kid = await delegateSignUp({ country_code: CODE, club_id: A.clubId, full_name: "Aibek Founder" });
+    await guardianKit.minor(kid.id, 9);
+    const own = await guardianKit.ask(A.token, kid.id);
+    // Nobody else runs the club, so it goes up to the region.
+    assert.deepEqual(await approvalKit.notices(A.id, "guardian_request"), [], "not asked to approve themselves");
+    const up = await approvalKit.notices(RA.id, "guardian_request");
+    assert.equal(up.length, 1);
+    assert.equal(up[0].action_url, "/region");
+    assert.deepEqual(await approvalKit.notices(RB.id, "guardian_request"), [], "not the other region");
+    assert.ok(!(await guardianKit.queue(A.token)).some((g) => g.id === own.id), "not in their own queue");
+    assert.equal((await guardianKit.review(A.token, own.id)).status, 403);
+
+    // A co-admin is a nearer pair of eyes than the region, once there is one.
+    const A2 = await delegateSignUp({ country_code: CODE, club_id: A.clubId, full_name: "Bishkek Co-admin" });
+    await pool.query("INSERT INTO club_admins (club_id, user_id, org_id) VALUES ($1, $2, $3)", [A.clubId, A2.id, A.orgId]);
+    const next = await reviewersFor(pool, own);
+    assert.equal(next.via, "club");
+    assert.deepEqual(next.recipients.map((r) => r.id), [A2.id]);
+    assert.ok((await guardianKit.queue(A2.token)).some((g) => g.id === own.id));
+
+    // Nobody live at the club or the region: DivingHQ.
+    await pool.query("UPDATE users SET suspended_at = now() WHERE id = ANY($1::uuid[])", [[A2.id, RA.id]]);
+    assert.equal((await reviewersFor(pool, own)).via, "sysadmin");
+    await pool.query("UPDATE users SET suspended_at = NULL WHERE id = ANY($1::uuid[])", [[A2.id, RA.id]]);
+
+    // One level up can always act; the other region can't.
+    assert.ok((await guardianKit.queue(RA.token)).some((g) => g.id === own.id));
+    assert.ok(!(await guardianKit.queue(RB.token)).some((g) => g.id === own.id));
+    assert.equal((await guardianKit.review(RB.token, own.id)).status, 403);
+    assert.equal((await guardianKit.review(RA.token, own.id)).status, 200);
+    assert.equal(await guardianKit.status(own.id), "approved");
+
+    // It follows the child: moved to Osh, the old club and region lose it.
+    const parent = await delegateSignUp({ country_code: CODE, full_name: "Moving Parent" });
+    const mover = await delegateSignUp({ country_code: CODE, club_id: A.clubId, full_name: "Moving Kid" });
+    await guardianKit.minor(mover.id, 13);
+    const moving = await guardianKit.ask(parent.token, mover.id);
+    assert.ok((await guardianKit.queue(A2.token)).some((g) => g.id === moving.id));
+    await pool.query("UPDATE users SET club_id = $2 WHERE id = $1", [mover.id, B.clubId]);
+    assert.ok(!(await guardianKit.queue(A2.token)).some((g) => g.id === moving.id));
+    assert.equal((await guardianKit.review(A2.token, moving.id)).status, 403);
+    assert.equal((await guardianKit.review(RA.token, moving.id)).status, 403);
+    assert.ok((await guardianKit.queue(B.token)).some((g) => g.id === moving.id));
+
+    // And never across a border: another country's club admin.
+    const far = await delegateSignUp({ country_code: FAR, new_club_name: "Dushanbe Divers" });
+    assert.ok(!(await guardianKit.queue(far.token)).some((g) => g.id === moving.id));
+    const cross = await guardianKit.review(far.token, moving.id);
+    assert.equal(cross.status, 403, JSON.stringify(cross.body));
+    assert.equal(await guardianKit.status(moving.id), "pending");
+
+    // The sysadmin can always decide, wherever it is.
+    const sys = await claimKit.login("admin", "admin");
+    assert.ok((await guardianKit.queue(sys.token)).some((g) => g.id === moving.id));
+    assert.equal((await guardianKit.review(sys.token, moving.id, "rejected")).status, 200);
+  } finally {
+    await claimKit.wipe(CODE);
+    await claimKit.wipe(FAR);
+  }
+});
+
+test("guardian links under a federation stay with its org admins, not the clubs", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const club = (await pool.query(
+      "INSERT INTO clubs (org_id, name) VALUES ($1, 'Federation Divers') RETURNING id", [st.orgId],
+    )).rows[0].id;
+    const clubAdmin = await approvalKit.member(st.orgId, "coach", club);
+    await pool.query("INSERT INTO club_admins (club_id, user_id, org_id) VALUES ($1, $2, $3)", [club, clubAdmin.id, st.orgId]);
+    const kid = await approvalKit.member(st.orgId, "diver", club);
+    await guardianKit.minor(kid.id, 11);
+    const parent = await approvalKit.member(st.orgId, "spectator");
+
+    const link = await guardianKit.ask(parent.token, kid.id);
+    const told = await approvalKit.notices(st.adminId, "guardian_request");
+    assert.equal(told.length, 1, "the org admin hears");
+    assert.equal(told[0].action_url, "/users");
+    assert.deepEqual(await approvalKit.notices(clubAdmin.id, "guardian_request"), [], "the club doesn't");
+
+    // A club admin under a federation has an empty queue and no say.
+    assert.deepEqual(await guardianKit.queue(clubAdmin.token), []);
+    assert.equal((await guardianKit.review(clubAdmin.token, link.id)).status, 403);
+
+    const row = (await guardianKit.queue(st.adminToken)).find((g) => g.id === link.id);
+    assert.ok(row);
+    assert.equal(row.dependent_age, 11);
+    assert.ok(row.dependent_dob, "User Manager still gets the date of birth");
+    assert.equal((await guardianKit.review(st.adminToken, link.id)).status, 200);
+    assert.equal(await guardianKit.status(link.id), "approved");
+
+    // With no live org admin, new ones go to DivingHQ.
+    await pool.query("UPDATE users SET suspended_at = now() WHERE id = $1", [st.adminId]);
+    assert.equal((await require("../lib/guardian-requests").reviewersFor(pool, link)).via, "sysadmin");
+  } finally {
+    await pool.query("DELETE FROM clubs WHERE org_id = $1", [st.orgId]);
+    await teardownFixture(st);
+  }
+});
