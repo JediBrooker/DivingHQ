@@ -564,3 +564,36 @@ test("a guardian paying a class the diver opened checkout for gets their own ses
   acting = as(A);
   assert.equal((await api("POST", `/api/me/class-enrolments/${enrol}/checkout`, {})).status, 409);
 });
+
+// B4-23: the API refund emails the payer, and then Stripe's charge.refunded
+// for the same refund matched status 'partially_refunded' and emailed them
+// again. The webhook only emails when the refunded amount actually grew.
+test("a partial refund emails the payer once, a later one emails again", async (t) => {
+  if (!ready) return t.skip();
+  const ev = await newEvent("Partial refund");
+  await setEntryFee(ev, 5000);
+  acting = as(B);
+  const co = await api("POST", `/api/events/${ev}/checkout`, {});
+  assert.equal(co.status, 200, JSON.stringify(co.body));
+  await completeWebhook(co.body.payment_id);
+  const pi = (await pool.query("SELECT stripe_payment_intent FROM payments WHERE id = $1", [co.body.payment_id])).rows[0].stripe_payment_intent;
+  const mine = () => emails.filter((id) => id === co.body.payment_id).length;
+  const refunded = (amount) => fetch(`${base}/webhooks/stripe`, {
+    method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ type: "charge.refunded", data: { object: { id: `ch_${suffix}`, payment_intent: pi, currency: "gbp", amount_refunded: amount } } }),
+  });
+
+  acting = admin;
+  const rf = await api("POST", `/api/payments/${co.body.payment_id}/refund`, { amount_cents: 1000 });
+  assert.equal(rf.status, 200, JSON.stringify(rf.body));
+  assert.equal(mine(), 1);
+  assert.equal((await refunded(1000)).status, 200);
+  assert.equal(mine(), 1, "Stripe confirming the same refund isn't news");
+  assert.equal((await refunded(1000)).status, 200);
+  assert.equal(mine(), 1, "nor is a redelivery");
+  // A second refund from the Stripe dashboard is.
+  assert.equal((await refunded(2500)).status, 200);
+  assert.equal(mine(), 2);
+  const row = (await pool.query("SELECT status, refunded_amount_cents, stripe_charge_id FROM payments WHERE id = $1", [co.body.payment_id])).rows[0];
+  assert.deepEqual(row, { status: "partially_refunded", refunded_amount_cents: 2500, stripe_charge_id: `ch_${suffix}` });
+});
