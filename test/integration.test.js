@@ -7618,3 +7618,43 @@ test("diver analytics ranks equal totals as a shared place, like the scoreboard"
     await teardownFixture(st);
   }
 });
+
+// The live trim drops exactly k marks at each end (lowest judge number
+// first on a tie, same as the scoreboard's chips); the judge analytics
+// flags have to count the same drops.
+test("judge analytics flags exactly the marks the trim drops, ties included", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const { JUDGE_PER_DIVE } = require("../db/queries");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const dive = await recordKit.threeMetreDive();
+    const ev = await recordKit.event(st.orgId, { gender: "Female" });
+    const diver = await recordKit.diver(st.orgId, null, "female", "Unanimous Diver");
+    // A unanimous panel: every judge 7.0.
+    await recordKit.dive(ev, diver, 1, dive, 7);
+    const flags = [];
+    for (const j of ev.judges) {
+      const r = await pool.query(`SELECT is_dropped, is_dropped_high, is_dropped_low FROM (${JUDGE_PER_DIVE}) x WHERE event_id = '${ev.id}'`, [j, null, null]);
+      flags.push(r.rows[0]);
+    }
+    assert.equal(flags.filter((f) => f.is_dropped).length, 2, JSON.stringify(flags));
+    assert.equal(flags.filter((f) => f.is_dropped_high).length, 1);
+    assert.equal(flags.filter((f) => f.is_dropped_low).length, 1);
+    // Judges 1..5 in order: judge 1 is the low drop, judge 5 the high.
+    assert.equal(flags[0].is_dropped_low, true);
+    assert.equal(flags[4].is_dropped_high, true);
+    assert.deepEqual(flags.slice(1, 4).map((f) => f.is_dropped), [false, false, false]);
+
+    // Two marks in: fewer than 2k+1, so nothing is trimmed and nothing flagged.
+    await pool.query("INSERT INTO competitor_dive_lists (event_id, competitor_id, dive_id, round_number) VALUES ($1, $2, $3, 2)", [ev.id, diver, dive]);
+    for (const j of ev.judges.slice(0, 2)) {
+      await pool.query("INSERT INTO scores (event_id, competitor_id, judge_id, dive_id, round_number, score) VALUES ($1, $2, $3, $4, 2, 5)", [ev.id, diver, j, dive]);
+    }
+    const partial = await pool.query(`SELECT is_dropped FROM (${JUDGE_PER_DIVE}) x WHERE event_id = '${ev.id}' AND round_number = 2`, [ev.judges[0], null, null]);
+    assert.equal(partial.rows[0].is_dropped, false);
+  } finally {
+    await recordKit.cleanup(st.orgId);
+    await teardownFixture(st);
+  }
+});

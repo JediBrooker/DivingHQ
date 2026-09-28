@@ -143,7 +143,10 @@ const FULL_FIELD_RANKING = `
 //   * `is_dropped`: TRUE when this judge's score was on the trimmed
 //     ends (one of the highest k or lowest k for the panel size).
 //     For a 7-judge panel this is the high-2 / low-2 the trim
-//     drops. Drives the "drop rate" + hi/lo asymmetry metrics
+//     drops, exactly two at each end even when marks tie (Art
+//     9.1.5.1: "When more than two (2) of either the highest or
+//     lowest awards are equal, only two (2) of each will be
+//     cancelled"). Drives the "drop rate" + hi/lo asymmetry metrics
 //     (see WA Article 8.4.9, referee may remove a judge whose
 //     judgement is unsatisfactory; a persistent hi-bias dropping
 //     pattern is the kind of thing the WA judges programme
@@ -233,23 +236,22 @@ const JUDGE_PER_DIVE = `
        For 7-judge: drop_count = 2 → 2 highest + 2 lowest dropped.
        For 5-judge: drop_count = 1 → 1 highest + 1 lowest dropped.
        For 3-judge: drop_count = 0 → no scores dropped.
+       Nothing is flagged until more than 2 × drop_count marks are in,
+       the same point where panel_kept_mean starts trimming.
        Synchro panels (9, 11) are excluded from this signal,
        see the file header. */
     CASE
       WHEN e.event_type::text = 'synchro_pair' THEN NULL
-      WHEN s.score >= panel.high_threshold THEN TRUE
-      WHEN s.score <= panel.low_threshold  THEN TRUE
-      ELSE FALSE
+      ELSE panel.trims AND (panel.my_pos <= panel.drop_count
+                            OR panel.my_pos > panel.n - panel.drop_count)
     END                                    AS is_dropped,
     CASE
       WHEN e.event_type::text = 'synchro_pair' THEN NULL
-      WHEN s.score >= panel.high_threshold THEN TRUE
-      ELSE FALSE
+      ELSE panel.trims AND panel.my_pos > panel.n - panel.drop_count
     END                                    AS is_dropped_high,
     CASE
       WHEN e.event_type::text = 'synchro_pair' THEN NULL
-      WHEN s.score <= panel.low_threshold  THEN TRUE
-      ELSE FALSE
+      ELSE panel.trims AND panel.my_pos <= panel.drop_count
     END                                    AS is_dropped_low
   FROM scores s
   JOIN events e ON e.id = s.event_id
@@ -263,21 +265,21 @@ const JUDGE_PER_DIVE = `
   LEFT JOIN organisations co ON co.id = cu.org_id
   LEFT JOIN clubs cl ON cl.id = cu.club_id
   /* Panel-level rollup for the same (event, competitor, round).
-     We compute the trim thresholds from the sorted panel scores:
        drop_count = 2 for 7-judge, 1 for 5-judge, 3 for 11-judge,
                     2 for 9-judge, 0 otherwise.
-     low_threshold  = the (drop_count)th lowest score
-     high_threshold = the (drop_count)th highest score
-     A judge whose score is <= low_threshold sits on the dropped
-     low end; >= high_threshold on the dropped high end. Ties
-     break against the judge, same behaviour as the live trim,
-     which drops "the lowest k by sorted order regardless of
-     duplicates". This means a 3-way tie at the bottom drops all
-     three, which over-reports drops on rare tie cases (fine for
-     analytics); the trim function in init.sql does the same. */
+     Drops go by position in the sorted panel, not by value: the k
+     lowest positions and the k highest, ordered by score and then
+     judge number, which is the order the live trim and the
+     scoreboard's chips use (useScoreTrim's dropEndsByJudgeNumber).
+     This used to compare each mark against the k-th lowest and k-th
+     highest values, which flags every judge sitting on a tied
+     boundary. With half-point marks that's most dives, not a rare
+     case: a unanimous panel had all of its judges flagged high AND
+     low, and a judge who scored with the panel showed a drop rate
+     near 100%. my_pos is this judge's position; n the marks in. */
   LEFT JOIN LATERAL (
     SELECT
-      array_agg(s2.score ORDER BY s2.score)::numeric[] AS panel_scores,
+      array_agg(p.score ORDER BY p.score)::numeric[] AS panel_scores,
       /* drop_count by panel size (Article 9.1.5.1-9.1.5.2 / calc_dive_points). */
       CASE
         WHEN e.number_of_judges = 5  THEN 1
@@ -286,40 +288,27 @@ const JUDGE_PER_DIVE = `
         WHEN e.number_of_judges = 11 THEN 3
         ELSE 0
       END AS drop_count,
-      /* low_threshold = the score at index (drop_count) when
-         sorted ascending. For drop_count = 0 we pick a sentinel
-         below the score range (-1) so no row is flagged. */
-      COALESCE(
-        (array_agg(s2.score ORDER BY s2.score))[
-          (CASE
-            WHEN e.number_of_judges = 5  THEN 1
-            WHEN e.number_of_judges = 7  THEN 2
-            WHEN e.number_of_judges = 9  THEN 2
-            WHEN e.number_of_judges = 11 THEN 3
-            ELSE 0
-          END)
-        ],
-        -1
-      ) AS low_threshold,
-      /* high_threshold = the score at index (count - drop_count + 1)
-         when sorted ascending. Sentinel 11 above the range when
-         drop_count = 0. */
-      COALESCE(
-        (array_agg(s2.score ORDER BY s2.score))[
-          (COUNT(*)::int - (CASE
-            WHEN e.number_of_judges = 5  THEN 1
-            WHEN e.number_of_judges = 7  THEN 2
-            WHEN e.number_of_judges = 9  THEN 2
-            WHEN e.number_of_judges = 11 THEN 3
-            ELSE 0
-          END) + 1)
-        ],
-        11
-      ) AS high_threshold
-    FROM scores s2
-    WHERE s2.event_id      = s.event_id
-      AND s2.competitor_id = s.competitor_id
-      AND s2.round_number  = s.round_number
+      COUNT(*)::int AS n,
+      MAX(p.pos) FILTER (WHERE p.judge_id = s.judge_id) AS my_pos,
+      COUNT(*) > 2 * (CASE
+        WHEN e.number_of_judges = 5  THEN 1
+        WHEN e.number_of_judges = 7  THEN 2
+        WHEN e.number_of_judges = 9  THEN 2
+        WHEN e.number_of_judges = 11 THEN 3
+        ELSE 0
+      END) AS trims
+    FROM (
+      SELECT s2.judge_id, s2.score,
+             ROW_NUMBER() OVER (
+               ORDER BY s2.score, ej2.judge_number NULLS LAST, s2.judge_id
+             ) AS pos
+      FROM scores s2
+      LEFT JOIN event_judges ej2
+        ON ej2.event_id = s2.event_id AND ej2.judge_id = s2.judge_id
+      WHERE s2.event_id      = s.event_id
+        AND s2.competitor_id = s.competitor_id
+        AND s2.round_number  = s.round_number
+    ) p
   ) panel ON TRUE
   WHERE s.judge_id = $1
     AND COALESCE(e.is_rehearsal, FALSE) = FALSE
