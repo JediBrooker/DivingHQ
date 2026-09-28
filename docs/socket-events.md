@@ -12,18 +12,21 @@ check the caller before mutating anything. How that's done today:
 
 - The Control Room events (`set_active_diver`, `announce_score`, the three
   `referee_*` actions, `meet_hold`, `meet_resume`) go through
-  `guardControl` in `routes/socket.js`, which is `socketCanManageEvent`
-  (`lib/middleware.js`: signed in, token version current, event in the
-  caller's org, one of the control roles or a delegate of the event) plus
-  a per-(action, user) rate limit. `claim_event_control` uses
-  `socketCanManageEvent` directly.
-- `submit_score` and `judge_signal` do their own checks (signed in,
-  judge/referee role or a seat on the event's panel, token version).
-- `socketRequireRole` exists in `lib/middleware.js` and carries the
-  maintenance-mode check, but **no handler calls it**. So maintenance mode
-  does not block socket writes at the moment; only the HTTP
-  `maintenanceGate` in `server.js` does. If you close that gap, update this
-  paragraph and the matching one in `AGENTS.md`.
+  `guardControl` in `routes/socket.js`: `socketRequireRole(socket)`
+  (signed in, not in maintenance mode), then `socketCanManageEvent`
+  (`lib/middleware.js`: a UUID event id, token version current, event in
+  the caller's org, one of the control roles or a delegate of the event),
+  then a per-(action, user) rate limit. `claim_event_control` runs the same
+  two gates without the rate limit.
+- `submit_score` and `judge_signal` pass `socketRequireRole(socket)` and
+  then do their own checks (judge/referee role or a seat on the event's
+  panel, token version).
+- `notification:ack` needs no role and asks `socketMaintenanceBlocked`
+  directly.
+
+Maintenance mode is the one check, `socketMaintenanceBlocked`, which
+`socketRequireRole` and `socketCanManageEvent` both run (details below the
+client-to-server heading).
 
 Refusals from those gates arrive as `unauthorized` (see below) and, where
 the client passed an ack callback, as `{ ok: false, error }` on the ack.
@@ -117,7 +120,7 @@ directly. A refused write gets ack `{ ok: false, error: 'maintenance' }`
 | `get_meet_hold`           | none (any socket)             | `{ event_id }` | Read-only — joins the room (same rules as `subscribe_event`) and returns the current hold state to the asking socket. |
 | `notification:ack`        | any signed-in socket          | `{ id }` | Marks the caller's own notification `acknowledged` (the UPDATE is scoped to `socket.userId`). Dropped silently in maintenance mode, like its HTTP twin `POST /api/notifications/:id/acknowledge`. |
 | `subscribe_venue`         | none (any socket)             | `{ event_id }` | Joins `venue:<event_id>` and immediately emits a fresh `venue.scoreboard_state` snapshot for hardware bridges. |
-| `disconnect`              | (built-in)                    | — | Just logs; no state cleanup needed. |
+| `disconnect`              | (built-in)                    | — | Frees the socket's slot in the per-IP connection count and any Control Room lease it held (`clearEventControllersBySocket`). Rooms go with the socket. |
 
 ---
 
@@ -125,11 +128,13 @@ directly. A refused write gets ack `{ ok: false, error: 'maintenance' }`
 
 1. **Define the role** required to emit it. If it mutates server-
    side state, gate it at the top of the handler: event-scoped
-   Control Room writes through `guardControl` (which is
-   `socketCanManageEvent` plus the rate limit), anything else with
-   an explicit signed-in and role check like `submit_score`'s.
-   Remember neither path checks maintenance mode today (see the top
-   of this file). Read-only listeners can stay anonymous.
+   Control Room writes through `guardControl` (`socketRequireRole`,
+   then `socketCanManageEvent`, then the rate limit), anything else
+   through `socketRequireRole` and an explicit role check like
+   `submit_score`'s. Either way it reaches the maintenance-mode check;
+   don't roll your own. Register it with the `on(name, handler)`
+   wrapper, not `socket.on`, so a throw is answered instead of
+   killing the process. Read-only listeners can stay anonymous.
 2. **Validate the payload** before doing anything. The
    `submit_score` handler is the template — it rejects with a
    typed `score_rejected` event so the client can react instead of

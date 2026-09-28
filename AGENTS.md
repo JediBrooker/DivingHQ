@@ -167,12 +167,13 @@ opened an IDOR — the audit caught three of these.
 Socket handlers that mutate state (`submit_score`, `set_active_diver`,
 `referee_*`, `meet_hold`, `meet_resume`, `announce_score`, `judge_signal`,
 `claim_event_control`) must check the caller first. In `routes/socket.js`
-the Control Room writes go through `guardControl`, which is
-`socketCanManageEvent` (signed in, token version current, event in the
-caller's org, a control role or a delegate of the event) plus the rate
-limit; `submit_score` and `judge_signal` do their own signed-in and
-role/panel checks. `socketRequireRole` exists but nothing calls it (see the
-maintenance note below). Anonymous spectators connect without a token and
+the Control Room writes go through `guardControl`: `socketRequireRole`
+(signed in, not in maintenance mode), then `socketCanManageEvent` (token
+version current, event in the caller's org, a control role or a delegate
+of the event), then the rate limit. `submit_score` and `judge_signal` pass
+`socketRequireRole` and then do their own role/panel checks. Ids off the
+wire go through `isUuid` (`lib/uuid.js`), never `String(x)` and a regex.
+Anonymous spectators connect without a token and
 that's intentional, but they can only listen, never emit. **Don't fall back
 to `data.judge_id`** — that's the spoof the audit closed.
 `docs/socket-events.md` has the per-event gates.
@@ -181,9 +182,10 @@ to `data.judge_id`** — that's the spoof the audit closed.
 
 Any code path that accepts a score must validate `0 ≤ n ≤ 10` in 0.5
 increments. Helper is `isValidScore(s)` in `lib/score-audit.js` (the HTTP
-writes reach it through `scoreBodyError`); `lib/middleware.js` still has its
-own copy of the same rule, which is the one the socket path gets. The HTTP and Socket paths must agree, otherwise
-one becomes a back-door.
+writes reach it through `scoreBodyError`, `routes/socket.js` requires it
+directly, and `lib/middleware.js` re-exports the same function). A number
+or a plain numeric string only: `null`, `""` and `false` aren't a 0. The
+HTTP and Socket paths must agree, otherwise one becomes a back-door.
 
 ### Feature flags: `configured` is not `enabled`
 
@@ -360,10 +362,10 @@ until the operator has switched maintenance mode on and passed
 | Auth + maintenance gate for socket writes | `socketRequireRole(socket, [...])` | `lib/middleware.js` |
 | Auth gate for socket events (per event: org, role or delegate, token version) | `socketCanManageEvent(socket, eventId, roles)`, wrapped with the rate limit as `guardControl` in `routes/socket.js` | `lib/middleware.js` |
 | Is this socket locked out by maintenance mode? | `socketMaintenanceBlocked(socket)` | `lib/middleware.js` |
-| Read TRUST_PROXY (Express value, socket hop count) | `expressTrustProxy()` / `trustProxyHops()` | `lib/trust-proxy.js` |
+| Read TRUST_PROXY (Express value; the socket side uses Express's compiled `app.get("trust proxy fn")`, with the hop count only as a fallback) | `expressTrustProxy()` / `trustProxyHops()` | `lib/trust-proxy.js` |
 | Audit snapshot + purge (daily, high-water mark) | `createAuditSnapshot({ pool, logger })` | `lib/audit-snapshot.js` |
 | When an event took place, for analytics dates | `EVENT_DATE` / `EVENT_DATE_FILTER` | `db/queries.js` |
-| Validate a score from the wire (0–10, half-points) | `isValidScore(s)` | `lib/middleware.js` |
+| Validate a score from the wire (0–10, half-points) | `isValidScore(s)` / `scoreBodyError(v, label)` | `lib/score-audit.js` (re-exported by `lib/middleware.js`) |
 | Parse `?from_date=&to_date=` query params | `parseDateRange(query)` | `lib/middleware.js` |
 | Rate-limit one router's routes (never `app.use(limiter, router)`, that counts every later request too) | `limitRoutes(limiter, router)` | `lib/scoped-limiter.js` |
 | Per-query catch-and-log (analytics) | `runQuery(label, sql, params)` | inline in `/api/divers/:id/analytics` |

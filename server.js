@@ -578,8 +578,8 @@ const requireMeetOrClubEditor = [
 // request from a non-sysadmin is refused, but reads, the scoreboard, admin
 // sign-in, and the Stripe webhook stay live. Mounted here so it fronts every
 // router below; the socket side is gated in lib/middleware too
-// (socketMaintenanceBlocked, which socketCanManageEvent and the judge's
-// submit_score both ask).
+// (socketMaintenanceBlocked, which socketRequireRole and
+// socketCanManageEvent both run for every socket write).
 //
 // Reads are the overwhelming majority of traffic, so the fast path is a
 // method + flag check before we spend anything decoding a token.
