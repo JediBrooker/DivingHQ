@@ -523,3 +523,44 @@ test("a full refund of one dependent's bundle leaves the sibling's entries alone
     [A]: ["refunded", "refunded"], [B]: ["paid", "paid"], [G]: ["paid", "paid"],
   });
 });
+
+// B4-13: the class checkout resumed whatever session was open for the
+// enrolment. A guardian paying after the diver had opened checkout got the
+// diver's session: the guardian's card paid a row naming the diver.
+test("a guardian paying a class the diver opened checkout for gets their own session", async (t) => {
+  if (!ready) return t.skip();
+  const club = (await pool.query(
+    "INSERT INTO clubs (org_id, name, short_code) VALUES ($1, $2, 'CLS') RETURNING id",
+    [orgId, `Class Club ${suffix}`],
+  )).rows[0].id;
+  const cls = (await pool.query(
+    "INSERT INTO classes (club_id, org_id, name) VALUES ($1, $2, 'Squad') RETURNING id", [club, orgId],
+  )).rows[0].id;
+  const enrol = (await pool.query(
+    `INSERT INTO class_enrolments (class_id, diver_user_id, club_id, org_id, status, amount_cents, currency)
+     VALUES ($1, $2, $3, $4, 'pending', 6000, 'GBP') RETURNING id`,
+    [cls, A, club, orgId],
+  )).rows[0].id;
+
+  acting = as(A);
+  const kid = await api("POST", `/api/me/class-enrolments/${enrol}/checkout`, {});
+  assert.equal(kid.status, 200, JSON.stringify(kid.body));
+  // The same person again resumes, as before.
+  const kidAgain = await api("POST", `/api/me/class-enrolments/${enrol}/checkout`, {});
+  assert.equal(kidAgain.body.payment_id, kid.body.payment_id);
+
+  acting = as(G);
+  const parent = await api("POST", `/api/me/class-enrolments/${enrol}/checkout`, {});
+  assert.equal(parent.status, 200, JSON.stringify(parent.body));
+  assert.notEqual(parent.body.payment_id, kid.body.payment_id);
+  assert.ok(!parent.body.resumed);
+  const rows = (await pool.query(
+    "SELECT payer_user_id, subject_user_id, status FROM payments WHERE class_enrolment_id = $1 ORDER BY created_at", [enrol],
+  )).rows;
+  assert.deepEqual(rows.map((r) => [r.payer_user_id, r.subject_user_id, r.status]), [[A, null, "failed"], [G, A, "pending"]]);
+
+  // Once it's paid, nobody opens another.
+  await completeWebhook(parent.body.payment_id);
+  acting = as(A);
+  assert.equal((await api("POST", `/api/me/class-enrolments/${enrol}/checkout`, {})).status, 409);
+});

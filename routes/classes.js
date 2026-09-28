@@ -995,11 +995,23 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
             throw e;
           }
           const blocking = (await pool.query(
-            `SELECT id, status, stripe_checkout_session FROM payments
+            `SELECT id, status, stripe_checkout_session, payer_user_id FROM payments
               WHERE class_enrolment_id = $1 AND status IN ('pending', 'paid')
               ORDER BY (status = 'pending') DESC, created_at DESC LIMIT 1`,
             [enr.id],
           )).rows[0];
+          // The diver and their guardian can both pay this enrolment, and
+          // the slot is keyed on the enrolment alone. Resuming someone
+          // else's open session would charge the caller's card on a row
+          // naming the other person as payer, so their attempt is retired
+          // and the caller gets a fresh one (insertPaymentOrResume in
+          // routes/payments.js does the same for fines and entries).
+          if (blocking && blocking.payer_user_id && blocking.payer_user_id !== req.user.id) {
+            const retired = await retirePendingPayment({ pool, payments, logger: log }, blocking);
+            if (retired === "paid") return res.status(409).json({ error: "This enrolment has already been paid for." });
+            if (retired === "unavailable") return res.status(503).json({ error: "Couldn't check the existing payment attempt with Stripe — please try again." });
+            continue; // retired or gone: the slot is free, retry the insert.
+          }
           const outcome = await resumeOrRetireCheckout({ pool, payments, logger: log }, blocking);
           if (outcome.url) return res.json({ url: outcome.url, payment_id: outcome.paymentId, resumed: true });
           if (outcome.paid) return res.status(409).json({ error: "This enrolment has already been paid for." });
