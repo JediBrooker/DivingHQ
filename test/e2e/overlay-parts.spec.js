@@ -139,6 +139,23 @@ async function lowContrast(page) {
 
 const shown = (page, sel) => page.locator(sel).first().isVisible().catch(() => false);
 
+// Open a board and wait for its data, never for a clock. The fixed sleeps
+// these tests used to take were fine on an idle laptop and flaked under
+// parallel workers, and worse, a check like "no app chrome" or the contrast
+// sweep passes happily against a board that hasn't rendered yet. The
+// fixture names Di Parts live and scores three divers, so the board is
+// ready once both of those are in the DOM (parts are hidden with CSS, so
+// they're there whatever the shape).
+async function openBoard(page, query, { layoutClass = /overlay-/ } = {}) {
+  await page.goto(`/scoreboard/${world.event.id}${query ? `?${query}` : ""}`);
+  const layout = page.locator(".sb-layout");
+  await expect(layout).toHaveClass(layoutClass, { timeout: 10_000 });
+  await expect(page.locator(".sb-name").first()).toContainText("Di Parts", { timeout: 10_000 });
+  await expect.poll(() => page.locator(".sb-col-standings .standing").count(), { timeout: 10_000 })
+    .toBeGreaterThanOrEqual(3);
+  return layout;
+}
+
 // Put real scores in the live judge chips.
 //
 // It has to be done in the DOM rather than by scoring the fixture, because
@@ -181,16 +198,15 @@ async function visibleParts(page) {
 // ---------------------------------------------------------------
 
 test("?overlay=1 still renders the whole board, unplated, all standings", async ({ page }) => {
-  await page.goto(`/scoreboard/${world.event.id}?overlay=1`);
-  await page.waitForTimeout(1200);
+  await openBoard(page, "overlay=1", { layoutClass: /overlay-mode/ });
 
   const cls = await page.locator(".sb-layout").getAttribute("class");
   expect(cls).toContain("overlay-mode");
   expect(cls, "the legacy shape must not opt into the parts CSS").not.toContain("overlay-parts");
   expect(cls).not.toContain("overlay-minimal");
 
-  expect(await visibleParts(page)).toEqual(ALL_PARTS);
-  expect(await page.locator(".sb-header").isVisible()).toBe(false);
+  await expect.poll(() => visibleParts(page)).toEqual(ALL_PARTS);
+  await expect(page.locator(".sb-header")).toBeHidden();
   // Unplated: the standings column keeps the page background, not an ink plate.
   const plate = await page.locator(".sb-col-standings")
     .evaluate((el) => getComputedStyle(el).backgroundColor);
@@ -198,30 +214,29 @@ test("?overlay=1 still renders the whole board, unplated, all standings", async 
 });
 
 test("?overlay=minimal is unchanged: diver plus a top three", async ({ page }) => {
-  await page.goto(`/scoreboard/${world.event.id}?overlay=minimal`);
-  await page.waitForTimeout(1200);
+  await openBoard(page, "overlay=minimal", { layoutClass: /overlay-minimal/ });
 
   const cls = await page.locator(".sb-layout").getAttribute("class");
   expect(cls).toContain("overlay-minimal");
   expect(cls, "minimal is legacy, not a parts shape").not.toContain("overlay-parts");
 
-  expect(await shown(page, ".sb-col-history")).toBe(false);
-  expect(await shown(page, ".up-next")).toBe(false);
-  expect(await shown(page, ".sb-projection")).toBe(false);
-  expect(await shown(page, ".sb-col-standings")).toBe(true);
+  await expect(page.locator(".sb-col-standings").first()).toBeVisible();
+  await expect(page.locator(".sb-col-history").first()).toBeHidden();
+  await expect(page.locator(".up-next").first()).toBeHidden();
+  await expect(page.locator(".sb-projection").first()).toBeHidden();
 
-  const rows = await page.locator(".sb-col-standings .standing")
-    .evaluateAll((els) => els.filter((e) => getComputedStyle(e).display !== "none").length);
-  expect(rows, "minimal trims the podium to three").toBe(3);
+  await expect.poll(() => page.locator(".sb-col-standings .standing")
+    .evaluateAll((els) => els.filter((e) => getComputedStyle(e).display !== "none").length),
+  { message: "minimal trims the podium to three" }).toBe(3);
 });
 
 test("an unknown overlay value renders the ordinary scoreboard, chrome and all", async ({ page }) => {
-  await page.goto(`/scoreboard/${world.event.id}?overlay=bogus`);
-  await page.waitForTimeout(1200);
+  // No overlay class to wait for here, the board data is the signal.
+  await openBoard(page, "overlay=bogus", { layoutClass: /sb-layout/ });
 
   const cls = await page.locator(".sb-layout").getAttribute("class");
   expect(cls).not.toContain("overlay-mode");
-  expect(await page.locator(".sb-header").isVisible()).toBe(true);
+  await expect(page.locator(".sb-header")).toBeVisible();
   const bg = await page.locator(".sb-layout").evaluate((el) => getComputedStyle(el).backgroundColor);
   expect(bg, "no chroma key for a URL we do not understand").toBe("rgba(0, 0, 0, 0)");
 });
@@ -244,16 +259,15 @@ const SHAPES = [
 
 for (const shape of SHAPES) {
   test(`${shape.name} shows exactly the parts it was asked for`, async ({ page }) => {
-    await page.goto(`/scoreboard/${world.event.id}?${shape.url}`);
-    await page.waitForTimeout(1200);
-
-    expect(await page.locator(".sb-layout").getAttribute("class")).toContain("overlay-parts");
-    expect(await visibleParts(page)).toEqual(shape.expect.filter((p) => ALL_PARTS.includes(p)));
+    await openBoard(page, shape.url, { layoutClass: /overlay-parts/ });
+    await expect.poll(() => visibleParts(page)).toEqual(shape.expect.filter((p) => ALL_PARTS.includes(p)));
 
     // An overlay with no centre parts must not leave an empty ink plate
     // floating in the frame.
     const centreWanted = shape.expect.some((p) => !["standings", "history"].includes(p));
-    expect(await shown(page, ".active-centre")).toBe(centreWanted);
+    const centre = page.locator(".active-centre").first();
+    if (centreWanted) await expect(centre).toBeVisible();
+    else await expect(centre).toBeHidden();
   });
 }
 
@@ -275,9 +289,13 @@ for (const bg of ["", "&bg=ff00ff"]) {
   for (const shape of SWEEP_SHAPES) {
     const label = `${shape}${bg || " (default green)"}`;
     test(`every text node stays legible: ${label}`, async ({ page }) => {
-      await page.goto(`/scoreboard/${world.event.id}?${shape}${bg}`);
-      await page.waitForTimeout(1000);
-      await fillJudgeChips(page);
+      await openBoard(page, `${shape}${bg}`);
+      const chips = await fillJudgeChips(page);
+      // The judge chips are the part that went white-on-white twice. On a
+      // shape that shows them, an empty sweep would prove nothing.
+      if (/overlay=(detailed|judges)|parts=[^&]*judges/.test(shape)) {
+        expect(chips, "judge chips never rendered, the sweep would be vacuous").toBeGreaterThan(0);
+      }
       const bad = await lowContrast(page);
       expect(bad, `low-contrast text: ${JSON.stringify(bad, null, 1)}`).toEqual([]);
     });
@@ -305,17 +323,15 @@ test("a signed-in operator previewing a new overlay shape gets no app chrome ove
   // only recognised '1', 'true' and 'minimal', so any new shape rendered the
   // whole CRM on top of the chroma key.
   for (const shape of ["overlay=judges", "overlay=detailed", "overlay=custom&parts=judges"]) {
-    await page.goto(`/scoreboard/${world.event.id}?${shape}`);
-    await page.waitForTimeout(900);
-    expect(await page.locator(".sb-user").isVisible().catch(() => false),
-      `${shape} must not render the app shell`).toBe(false);
-    expect(await page.locator(".sb-layout").getAttribute("class")).toContain("overlay-mode");
+    // Rendered first, so the missing shell below is a real absence and not
+    // a page that hadn't drawn anything yet.
+    await openBoard(page, shape, { layoutClass: /overlay-mode/ });
+    await expect(page.locator(".sb-user"), `${shape} must not render the app shell`).toBeHidden();
   }
 
   // And the shell still appears where it should.
-  await page.goto(`/scoreboard/${world.event.id}`);
-  await page.waitForTimeout(900);
-  expect(await page.locator(".sb-user").isVisible()).toBe(true);
+  await openBoard(page, "", { layoutClass: /sb-layout/ });
+  await expect(page.locator(".sb-user")).toBeVisible();
 
   await setup.deleteOrg(orgId);
 });

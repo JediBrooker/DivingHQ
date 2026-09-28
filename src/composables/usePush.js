@@ -23,9 +23,14 @@
 //   ack(id)        - mark notification 'acknowledged' on the
 //                    server + remove from the local list.
 //   recent()       - pull /api/notifications/me, merge into list.
+//   showSignoff(requestId)
+//                  - put a referee sign-off request back in the
+//                    banner stack (the only place with Approve/Deny)
+//                    for a /control?signoff_request=... deep link.
 
 import { ref, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
+import router from '@/router'
 
 // Module-level shared state, survives across component mounts
 const notifications = ref([])
@@ -145,9 +150,25 @@ export function usePush({ socket: sock } = {}) {
     initialised = true
     navigator.serviceWorker.addEventListener('message', (ev) => {
       const m = ev.data
-      if (m?.type === 'notification-click' && m.id) {
-        // Mark read locally; the SW already POSTed the ack.
-        notifications.value = notifications.value.filter(n => n.id !== m.id)
+      // Approve/Deny pressed on the OS notification itself. The worker has
+      // already answered and acked it, so just drop the banner copy.
+      if (m?.type === 'notification-answered') {
+        if (m.id) notifications.value = notifications.value.filter(n => n.id !== m.id)
+        return
+      }
+      if (m?.type !== 'notification-click') return
+      if (m.id) {
+        // Mark read locally; the SW already POSTed the ack. Not for a
+        // sign-off though: the SW leaves those unacked until they're
+        // answered, and its banner is where the answering happens.
+        notifications.value = notifications.value.filter(
+          n => n.id !== m.id || n.category === 'referee_signoff',
+        )
+      }
+      // The tap was meant to take them somewhere. The SW only focuses
+      // this tab, so the routing is ours to do.
+      if (m.action_url && m.action_url !== router.currentRoute.value.fullPath) {
+        router.push(m.action_url).catch(() => {})
       }
     })
   }
@@ -209,6 +230,22 @@ export function usePush({ socket: sock } = {}) {
     } catch { /* silent */ }
   }
 
+  async function showSignoff(requestId) {
+    if (!requestId || !auth.isLoggedIn) return false
+    const match = (n) => n?.category === 'referee_signoff' && n.data?.request_id === requestId
+    let n = notifications.value.find(match)
+    if (!n) {
+      try {
+        // Acknowledged rows count too: opening the inbox row may have
+        // acked it while the request itself is still waiting.
+        const rows = await auth.apiFetch('/api/notifications/me?limit=50')
+        n = (rows || []).find(match)
+      } catch { /* silent, same as recent() */ }
+    }
+    if (n) pushIntoList(n)
+    return !!n
+  }
+
   async function recent() {
     if (!auth.isLoggedIn) return
     try {
@@ -235,7 +272,7 @@ export function usePush({ socket: sock } = {}) {
     recent().catch(() => {})
   }, { immediate: true })
 
-  return { ready, notifications, permission, subscribe, unsubscribe, ack, recent }
+  return { ready, notifications, permission, subscribe, unsubscribe, ack, recent, showSignoff }
 }
 
 // Test-only: feed a row into the shared list the way the socket does.

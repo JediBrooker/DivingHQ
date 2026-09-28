@@ -47,6 +47,14 @@ const assert = require("node:assert/strict");
 const http   = require("node:http");
 const crypto = require("node:crypto");
 
+// Before dotenv, which never overwrites a var that's already set (even to
+// ""). A dev .env usually has real VAPID keys and the test DB has real
+// browser subscriptions, so without this every fixture org that pinged
+// the sysadmins landed on someone's actual phone. Set here and not only
+// in scripts/run-tests.js, since `node --test` on this file skips that.
+process.env.VAPID_PUBLIC_KEY = "";
+process.env.VAPID_PRIVATE_KEY = "";
+
 require("dotenv").config();
 // Public signups are now a feature flag ('signups', migration 086), not an env
 // var. This suite drives register-org / register as the system under test, so
@@ -62,6 +70,10 @@ let baseUrl;
 let pool;
 
 before(async () => {
+  // Run straight through `node --test` this file skips scripts/run-tests.js,
+  // so it checks for itself that it isn't about to fill a real database
+  // with fixture orgs (test/support/test-db.js).
+  require("./support/test-db").assertTestDatabase();
   // Prefer the app's documented DB_* env vars; fall back to
   // libpq's PG* names so CI's Postgres service container keeps
   // working unchanged. Without this, an empty `new Pool()` would
@@ -7161,6 +7173,11 @@ test("migration 098 rewrites alpha-2 entry snapshots so a country prints one cod
   if (!serverReady) return t.skip("server didn't boot — see warning above");
   const fs = require("node:fs");
   const path = require("node:path");
+  // 098 ends by stamping schema_meta.version = 98, and it carries its own
+  // BEGIN/COMMIT so a wrapping transaction can't roll that back. Note what
+  // was there and put it back, or every run leaves the shared test DB
+  // claiming v98 (health check, boot log) while the ledger says 101+.
+  const metaBefore = (await pool.query("SELECT version FROM schema_meta WHERE id = 1")).rows[0]?.version;
   const st = await setupFixture({ withEvent: false });
   try {
     const diver = await recordKit.diver(st.orgId, null, "female", "Sina Samoa");
@@ -7176,9 +7193,12 @@ test("migration 098 rewrites alpha-2 entry snapshots so a country prints one cod
     assert.equal(row.rep_country, "WSM");
     assert.equal(row.code, "WSM");
   } finally {
+    if (metaBefore != null) await pool.query("UPDATE schema_meta SET version = $1 WHERE id = 1", [metaBefore]);
     await recordKit.cleanup(st.orgId);
     await teardownFixture(st);
   }
+  const metaAfter = (await pool.query("SELECT version FROM schema_meta WHERE id = 1")).rows[0]?.version;
+  assert.equal(metaAfter, metaBefore, "the test must leave schema_meta as it found it");
 });
 
 // Same thing through the real route, following the live flags.
@@ -9884,5 +9904,54 @@ test("GET /api/users sends date_of_birth as a plain YYYY-MM-DD date", async (t) 
     assert.equal(after.rows[0].dob, "2006-06-11");
   } finally {
     await teardownFixture(st);
+  }
+});
+
+// The suite registers orgs (which pushes "new federation pending" to every
+// sysadmin) and notifies seeded users. A local .env usually carries real
+// VAPID keys and the test DB carries real browser subscriptions, so those
+// were going out to real phones. Push has to be off for the whole run.
+test("web push is switched off for the test run", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const r = await fetchJson("GET", "/api/push/vapid-public-key");
+  assert.equal(r.status, 200);
+  assert.equal(r.body.enabled, false);
+  assert.equal(r.body.key, "");
+});
+
+// If schema_meta has slipped behind the ledger (the 098 test above used to
+// do exactly that), `npm run migrate` with nothing pending should still
+// put it right rather than printing "up to date" over a wrong number.
+test("migrate resyncs a drifted schema_meta even when nothing is pending", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  const { spawnSync } = require("node:child_process");
+  const path = require("node:path");
+  const fs = require("node:fs");
+  // This runs the real migrator against the suite's database. With a
+  // migration file the DB hasn't had yet (a fresh branch, before `npm run
+  // migrate`) it would apply it halfway through the run, under every other
+  // test file, and then fail for not saying "up to date". Only the
+  // nothing-pending path is under test, so stay out of the way otherwise.
+  const ledger = await pool.query("SELECT version FROM applied_migrations").catch(() => null);
+  if (!ledger) return t.skip("no applied_migrations ledger, run npm run migrate first");
+  const applied = new Set(ledger.rows.map((r) => r.version));
+  const pending = fs.readdirSync(path.join(__dirname, "..", "migrations"))
+    .map((f) => f.match(/^(\d+)_.*\.sql$/)).filter(Boolean).map((m) => Number(m[1]))
+    .filter((v) => !applied.has(v));
+  if (pending.length) return t.skip(`migrations ${pending.join(", ")} not applied yet, run npm run migrate first`);
+  const ledgerMax = Math.max(...applied);
+  const before = (await pool.query("SELECT version FROM schema_meta WHERE id = 1")).rows[0].version;
+  try {
+    await pool.query("UPDATE schema_meta SET version = 98 WHERE id = 1");
+    const run = spawnSync(process.execPath, [path.join(__dirname, "..", "scripts", "migrate.js")], {
+      env: process.env, encoding: "utf8", timeout: 60_000,
+    });
+    assert.equal(run.status, 0, run.stderr || run.stdout);
+    assert.match(run.stdout, /up to date/);
+    const now = (await pool.query("SELECT version FROM schema_meta WHERE id = 1")).rows[0].version;
+    assert.equal(now, ledgerMax);
+  } finally {
+    await pool.query("UPDATE schema_meta SET version = $1 WHERE id = 1", [before]);
   }
 });

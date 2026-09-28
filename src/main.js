@@ -7,6 +7,7 @@ import { tipDirective } from './directives/tip'
 import { useUiStore } from './stores/ui'
 import { useAuthStore } from './stores/auth'
 import { useFeaturesStore } from './stores/features'
+import { installStaleChunkRecovery } from './lib/staleChunk'
 // Global styles. Imported here (not via <link> in index.html) so Vite
 // content-hashes the output filename. Any edit to app.css produces a
 // new hashed URL, so browser + service-worker caches stay transparent
@@ -26,6 +27,10 @@ useUiStore().applyTheme()
 // signed-in reload of /inbox went /inbox -> /login?next= -> /inbox,
 // flashed the login screen, fetched its chunk for nothing and left
 // /login in history for Back to land on.
+//
+// A tab left open over a deploy asks for chunks that are gone. Reload it
+// once onto the new build rather than let the click silently do nothing.
+installStaleChunkRecovery(router)
 app.use(i18n)
 // v-tip: instant tooltip replacement for `title=`. See
 // src/directives/tip.js for the rationale (native title has a

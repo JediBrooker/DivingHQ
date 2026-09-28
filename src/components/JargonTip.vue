@@ -88,7 +88,8 @@ function close()  { showTip.value = false }
 .jargon-tip {
   position: absolute;
   bottom: calc(100% + 6px);
-  inset-inline-start: 50%;
+  /* physical on purpose, see the [data-tip] bubble in app.css */
+  left: 50%;
   transform: translateX(-50%);
   background: var(--bg-2, #0f172a);
   color: var(--text, #f8fafc);

@@ -11,7 +11,13 @@
  */
 .lb-backdrop { position: fixed; inset: 0; background: rgba(3,7,18,0.95); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); z-index: 300; }
 .lb-modal {
-  position: fixed; top: 50%; inset-inline-start: 50%; transform: translate(-50%, -50%);
+  /* Physical left on purpose. Centring is the same in both directions, and
+     inset-inline-start turns into right:50% under dir=rtl while the -50%
+     shift still goes left, which parked the box a full width off-screen.
+     The shift uses the translate property rather than transform so the
+     fadeUp animation (a transform) stacks on top of it instead of wiping
+     it out for 300ms, which is what made every dialog jump into place. */
+  position: fixed; top: 50%; left: 50%; translate: -50% -50%;
   z-index: 301;
   background: var(--surface); border: 1px solid var(--border-2); border-radius: 28px;
   width: calc(100% - 3rem); max-width: 560px;

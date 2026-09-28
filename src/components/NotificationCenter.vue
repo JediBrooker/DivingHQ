@@ -9,16 +9,32 @@
 // component-defined handler map. Everything else just renders as a
 // passive "click to open" banner.
 import { computed, watch, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { usePush, bindPushSocket } from '@/composables/usePush'
 import { useAuthStore } from '@/stores/auth'
 import { acquireSocket } from '@/composables/useSocket'
 import { showError } from '@/composables/useNotify'
 
 const router = useRouter()
+const route = useRoute()
 const auth = useAuthStore()
 
-const { notifications, ack } = usePush()
+const { notifications, ack, showSignoff } = usePush()
+
+// /control?signoff_request=<id> is where the dashboard's "Waiting for you"
+// card, the inbox row and an unanswerable notification tap all send the
+// referee. Nothing on that screen reads it, so surface the request here
+// as its Approve/Deny banner, wherever in the app the link lands.
+// Two sources rather than one getter that builds an array: a fresh array
+// counts as a change every time, so any navigation (or a /me refresh)
+// would pull an already answered request back up while the query stays.
+watch(
+  [() => route.query.signoff_request, () => auth.user?.id],
+  ([requestId, userId]) => {
+    if (typeof requestId === 'string' && requestId && userId) showSignoff(requestId)
+  },
+  { immediate: true },
+)
 
 // One socket per logged-in identity, used for live notification
 // reciept + the notification:ack emit. Anonymous sessions get no

@@ -60,7 +60,10 @@ function iconFor(kind) { return ICONS[kind] ?? '' }
    lowest (where a single toast used to sit) and stacks the older ones on top. */
 .notify-stack {
   position: fixed;
-  inset-inline-start: 50%;
+  /* left rather than inset-inline-start, same as the modal frame: the
+     translateX(-50%) below is physical, so in RTL the logical version
+     pushed the whole stack off the left edge of a phone. */
+  left: 50%;
   /* Sit above the iOS home-indicator gesture zone on notch
      iPhones, falls back to design's 1.5rem on devices without insets. */
   bottom: max(1.5rem, calc(env(safe-area-inset-bottom, 0px) + 0.75rem));

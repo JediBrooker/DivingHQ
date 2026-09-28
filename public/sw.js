@@ -42,12 +42,63 @@
 // invalidating every previously-cached asset hash. Bumping the
 // cache forces returning PWA users to re-fetch the shell on
 // next visit instead of getting a blank page from stale hashes.
-// v7 → v8: a missing /assets/* file used to come back from the server as
-// the SPA shell with a 200, and the asset branch below cached that HTML
-// under the chunk's URL. The server 404s those now and nothing here
-// caches HTML for a non-navigation request; the bump clears entries
-// that were already poisoned.
+// v7 → v8: the server used to answer a missing /assets chunk with the
+// SPA shell (200, text/html) and we cached that under the .js URL,
+// which left the screen blank on that device for good. Both ends are
+// fixed now; the bump throws away any entry that was poisoned before.
 const CACHE = "divinghq-shell-v8";
+
+// Only HTML is allowed to become the offline shell, and HTML is never
+// allowed into the /assets cache. A 200 isn't enough to go on: /metrics
+// and /sitemap.xml are navigable too, and an old server build still
+// hands out the shell for a chunk it doesn't have.
+function isHtml(res) {
+  return (res.headers.get("content-type") || "").includes("text/html");
+}
+
+// Hashed /assets names as Vite writes them, <name>-<8 char hash>.<ext>.
+// A reference can look like "/assets/x", "assets/x" or "./x" depending on
+// what's importing it, so match the file name and rebuild the path.
+const ASSET_REF = /[\w.-]+-[\w-]{8}\.(?:js|css|woff2?|ttf|otf|svg|png|jpe?g|webp|avif|gif|ico)\b/g;
+function assetRefs(text) {
+  return [...new Set(text.match(ASSET_REF) || [])].map((f) => "/assets/" + f);
+}
+
+// Hashed assets never change, so nothing ever replaced them and every
+// deploy's chunks piled up in the one cache (0.4-0.6 MB a deploy for a
+// phone that uses the app a lot). When a fresh shell comes in, walk what
+// it reaches (the shell names the entry and CSS, the entry names the lazy
+// chunks, those name theirs) through what's cached, and drop the rest.
+// That's everything from builds nobody is running any more. An open tab
+// still on an old build that loses a chunk this way gets a 404 and
+// reloads onto the new one (src/lib/staleChunk.js).
+async function pruneAssets(html) {
+  const cache = await caches.open(CACHE);
+  const cached = new Map();
+  for (const req of await cache.keys()) {
+    const p = new URL(req.url).pathname;
+    if (p.startsWith("/assets/")) cached.set(p, req);
+  }
+  const roots = assetRefs(html);
+  // On the first load after a deploy the page is still fetching the new
+  // entry, and without it we can't see which lazy chunks are still live.
+  // Leave everything and let the next load do it.
+  if (!roots.length || roots.some((p) => p.endsWith(".js") && !cached.has(p))) return;
+  const keep = new Set();
+  const queue = [...roots];
+  while (queue.length) {
+    const p = queue.pop();
+    if (keep.has(p)) continue;
+    keep.add(p);
+    const req = cached.get(p);
+    if (!req || !/\.(?:js|css)$/.test(p)) continue;
+    const res = await cache.match(req);
+    if (res) queue.push(...assetRefs(await res.text()));
+  }
+  await Promise.all(
+    [...cached].filter(([p]) => !keep.has(p)).map(([, req]) => cache.delete(req)),
+  );
+}
 // No "/" here: the offline navigation fallback only ever reads
 // /index.html, so a cached "/" was a wasted request on install.
 const SHELL = [
@@ -57,12 +108,6 @@ const SHELL = [
   "/icon-512.png",
   "/manifest.webmanifest",
 ];
-
-// An HTML answer to a request that isn't a page load is the SPA shell
-// standing in for a file that doesn't exist. Hand it back, never keep it.
-function isShellStandIn(res) {
-  return (res.headers.get("content-type") || "").includes("text/html");
-}
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -103,9 +148,16 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(
       fetch(request)
         .then((res) => {
-          if (res.ok) {
-            const clone = res.clone();
-            caches.open(CACHE).then((c) => c.put("/index.html", clone)).catch(() => {});
+          if (res.ok && isHtml(res)) {
+            const forCache = res.clone();
+            const forPrune = res.clone();
+            event.waitUntil(
+              caches.open(CACHE)
+                .then((c) => c.put("/index.html", forCache))
+                .then(() => forPrune.text())
+                .then(pruneAssets)
+                .catch(() => {}),
+            );
           }
           return res;
         })
@@ -121,7 +173,7 @@ self.addEventListener("fetch", (event) => {
       caches.match(request).then((cached) => {
         if (cached) return cached;
         return fetch(request).then((res) => {
-          if (res.status === 200 && !isShellStandIn(res)) {
+          if (res.status === 200 && !isHtml(res)) {
             const clone = res.clone();
             caches.open(CACHE).then((c) => c.put(request, clone)).catch(() => {});
           }
@@ -141,7 +193,7 @@ self.addEventListener("fetch", (event) => {
   event.respondWith(
     fetch(request)
       .then((res) => {
-        if (res.status === 200 && !isShellStandIn(res)) {
+        if (res.status === 200) {
           const clone = res.clone();
           caches.open(CACHE).then((c) => c.put(request, clone)).catch(() => {});
         }
@@ -168,11 +220,14 @@ self.addEventListener("fetch", (event) => {
  *     action_url,          // SPA route to open on tap
  *   }
  *
- * On notificationclick we focus an existing SPA tab if one's
- * open (the in-app banner has likely already handled it), only
- * spinning up a new tab when no SPA window is around. Either
- * way we POST /api/notifications/:id/acknowledge so the inbox
- * row clears.
+ * On notificationclick:
+ *   - Approve / Deny on a referee sign-off answers it straight
+ *     away and acks the row. If the server won't take the answer
+ *     we open the request in the app instead.
+ *   - Any other tap acks the row (a sign-off stays until it's
+ *     answered), then routes an open SPA tab to action_url via
+ *     postMessage, or opens a new window when there isn't one we
+ *     can use. Broadcast/overlay windows are never taken over.
  * ============================================================= */
 
 self.addEventListener("push", (event) => {
@@ -206,45 +261,84 @@ self.addEventListener("push", (event) => {
   event.waitUntil(self.registration.showNotification(title, options));
 });
 
-self.addEventListener("notificationclick", (event) => {
-  event.notification.close();
-  const { id, action_url } = event.notification.data || {};
-  const action = event.action;       // empty string when body tapped
+// A window we may take over for a notification. Broadcast and overlay
+// screens (the projector, the OBS source) are left alone: yanking the
+// live scoreboard to someone's inbox mid-meet would be worse than
+// opening a second window.
+function isChromeless(url) {
+  return /[?&](overlay|broadcast)=/.test(url.search);
+}
 
-  // Build the URL to open. Append ?notif=<id>&action=<approve|deny>
-  // so the SPA knows which row to ack + (for action buttons) which
-  // outcome to record.
-  let target = action_url || "/";
-  const sep = target.includes("?") ? "&" : "?";
-  const params = [];
-  if (id)     params.push(`notif=${encodeURIComponent(id)}`);
-  if (action) params.push(`action=${encodeURIComponent(action)}`);
-  if (params.length) target += sep + params.join("&");
+function ack(id) {
+  if (!id) return Promise.resolve();
+  return fetch(`/api/notifications/${encodeURIComponent(id)}/acknowledge`, {
+    method: "POST",
+    credentials: "same-origin",
+  }).catch(() => {});
+}
 
-  event.waitUntil((async () => {
-    // Best-effort ack so a tapped notification clears from the
-    // inbox even if the SPA never opens (offline, blocked popup,
-    // etc.). The SPA also acks on render so this is belt+braces.
-    if (id) {
-      fetch(`/api/notifications/${encodeURIComponent(id)}/acknowledge`, {
+// Approve / Deny on the referee sign-off notification answers the request
+// right here, the same call the in-app banner makes. True only when the
+// server recorded it; anything else (session expired, request gone or
+// already answered) falls back to opening the app so the referee can see
+// what happened and answer there.
+async function answerSignoff(data, decision) {
+  if (!data.event_id || !data.request_id) return false;
+  try {
+    const res = await fetch(
+      `/api/events/${encodeURIComponent(data.event_id)}/dive-order/sign-off/respond`,
+      {
         method: "POST",
         credentials: "same-origin",
-      }).catch(() => {});
-    }
-    const clientsList = await self.clients.matchAll({
-      type: "window",
-      includeUncontrolled: true,
-    });
-    // Focus the first same-origin SPA tab + post a message so it
-    // can react in-place rather than navigating away.
-    for (const client of clientsList) {
-      const url = new URL(client.url);
-      if (url.origin === self.location.origin) {
-        client.postMessage({ type: "notification-click", id, action, action_url: target });
-        return client.focus();
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ request_id: data.request_id, decision }),
+      },
+    );
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const data = event.notification.data || {};
+  const { id, category } = data;
+  const target = data.action_url || "/";
+  const action = event.action;       // empty string when body tapped
+
+  event.waitUntil((async () => {
+    if (category === "referee_signoff" && (action === "approve" || action === "deny")) {
+      if (await answerSignoff(data, action)) {
+        await ack(id);
+        // An open tab got this request over the socket as well and still
+        // shows it with live Approve/Deny buttons. Tell every tab it's
+        // settled, or the referee taps it again and gets "already
+        // approved". No focus and no routing, there's nothing left to do.
+        const tabs = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+        for (const c of tabs) c.postMessage({ type: "notification-answered", id });
+        return;
       }
+    } else if (category !== "referee_signoff") {
+      // Tapping it counts as reading it. A sign-off is different: it
+      // stays in the inbox until it's actually answered.
+      ack(id);
     }
-    // No SPA tab open, fall back to opening the action URL.
+
+    const all = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+    const ours = all.filter((c) => {
+      const u = new URL(c.url);
+      return u.origin === self.location.origin && !isChromeless(u);
+    });
+    const client = ours.find((c) => c.focused)
+      || ours.find((c) => c.visibilityState === "visible")
+      || ours[0];
+    if (client) {
+      // The SPA routes itself to action_url (usePush), which keeps the
+      // tab's state instead of reloading it.
+      client.postMessage({ type: "notification-click", id, action, action_url: target });
+      return client.focus();
+    }
     return self.clients.openWindow(target);
   })());
 });

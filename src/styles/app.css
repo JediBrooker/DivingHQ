@@ -66,6 +66,9 @@
   --accent-soft:   var(--blue-50);
   --accent-soft-2: var(--blue-100);
   --accent-ring:   rgba(11, 97, 145, 0.18);
+  /* Band behind the iOS status bar in the installed app (see AppShell's
+     .topbar). Brand blue, same as the theme-color, in both themes. */
+  --status-band:   var(--blue-600);
 
   /* ── SEMANTIC · Status (bg / fg / solid) ────────────────── */
   --ok-bg:var(--green-50);   --ok-fg:var(--green-700);   --ok-solid:var(--green-600);
@@ -201,8 +204,15 @@ html {
      horizontal scrollbar AND let body extend past the
      viewport. Clamping at the document root catches every
      route. Per-view overflow-x: hidden is still in place
-     where needed. */
+     where needed.
+     clip, not hidden: with hidden on both html and body, body
+     stops handing its overflow to the viewport and becomes a
+     scroll box that never scrolls, so every position:sticky
+     header outside the app shell (home nav, guide sidebars)
+     stuck to body and scrolled away with the page. The hidden
+     line stays as the fallback for browsers without clip. */
   overflow-x: hidden;
+  overflow-x: clip;
 }
 
 body {
@@ -222,8 +232,10 @@ body {
   min-height: 100vh;
   min-height: 100dvh;
   /* Match html's overflow clamp + cap width to the viewport so
-     a descendant's intrinsic size can't push the body wider. */
+     a descendant's intrinsic size can't push the body wider.
+     clip for the reason given on html above. */
   overflow-x: hidden;
+  overflow-x: clip;
   max-width: 100vw;
 }
 
@@ -355,7 +367,10 @@ h1, h2, h3, h4 {
 /* ── Form elements ────────────────────────────────────────── */
 .field { display: flex; flex-direction: column; gap: 0.5rem; }
 
-.input {
+/* .textarea shares the .input look; docs/design-system.md lists it as a
+   primitive, and ClaimsView's objection box was using it before it
+   existed. */
+.input, .textarea {
   font-family: var(--font-sans);
   font-size: 14px;
   background: var(--surface);
@@ -367,8 +382,9 @@ h1, h2, h3, h4 {
   transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
   width: 100%;
 }
-.input:focus { border-color: var(--border-focus); box-shadow: var(--shadow-focus); }
-.input::placeholder { color: var(--fg-3); }
+.input:focus, .textarea:focus { border-color: var(--border-focus); box-shadow: var(--shadow-focus); }
+.input::placeholder, .textarea::placeholder { color: var(--fg-3); }
+.textarea { display: block; resize: vertical; min-height: 4.5rem; line-height: 1.45; }
 
 /* Number-input spinner arrows. Browser defaults render almost
    black-on-black in our dark theme, so recolour the chrome so the
@@ -406,6 +422,10 @@ h1, h2, h3, h4 {
   background-position: right 0.75rem center;
   padding-inline-end: 2.25rem;
 }
+/* background-position has no logical keywords yet, so flip the chevron by
+   hand. padding-inline-end already moves its lane to the left in RTL, and
+   without this the arrow sat on top of the selected text. */
+:root[dir="rtl"] .select { background-position: left 0.75rem center; }
 .select:focus { border-color: var(--border-focus); box-shadow: var(--shadow-focus); }
 
 /* ── Status badges ────────────────────────────────────────── */
@@ -477,6 +497,14 @@ h1, h2, h3, h4 {
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(12px); }
   to   { opacity: 1; transform: translateY(0); }
+}
+/* LIVE-dot pulse. Has to live here: the copies in MeetView and
+   ScoreboardView are scoped, so Vue renames them per file and the
+   dashboard's LIVE card (below) and MeetsBrowser's badges were pointing
+   at a name that didn't exist. HomeView keeps its own, deeper pulse. */
+@keyframes pulse-red {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.7; }
 }
 
 /* The LIVE pulse. Declared here, globally, because a keyframes name set
@@ -1301,7 +1329,10 @@ h1, h2, h3, h4 {
   content: attr(data-tip);
   position: absolute;
   bottom: calc(100% + 6px);
-  inset-inline-start: 50%;
+  /* Physical left pairs with the physical -50% shift. With
+     inset-inline-start the bubble sat a whole bubble-width left of
+     its host in RTL. */
+  left: 50%;
   transform: translateX(-50%);
   /* The directive's value can carry literal "\n" between
      lines (e.g. "J3, Maria Schmidt · GER\nClick to open

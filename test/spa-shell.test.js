@@ -135,3 +135,18 @@ test("the sitemap drops guide topics whose feature flag is off", () => {
   const on = dropGatedGuidePages(xml, gated, (k) => k === "payments");
   assert.ok(on.includes("/guide/payments") && !on.includes("/guide/classes"));
 });
+
+// The install splash and the pre-paint window chrome come from the
+// manifest, the tab from index.html. They drifted: the manifest kept the
+// retired cyan-on-near-black palette while the app went Marine blue on a
+// light background.
+test("the web manifest's colours match the shell's brand and light background", () => {
+  const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, "public", "manifest.webmanifest"), "utf8"));
+  const themeMeta = SHELL.match(/<meta name="theme-color" content="([^"]+)">/)?.[1];
+  assert.equal(manifest.theme_color.toLowerCase(), themeMeta.toLowerCase());
+  const css = fs.readFileSync(path.join(ROOT, "src", "styles", "app.css"), "utf8");
+  // --bg is var(--slate-100) in the default (light) theme.
+  const slate100 = css.match(/--slate-100:\s*(#[0-9a-f]{6})/i)[1];
+  assert.match(css, /--bg:\s+var\(--slate-100\)/);
+  assert.equal(manifest.background_color.toLowerCase(), slate100.toLowerCase());
+});

@@ -1491,7 +1491,11 @@ app.use((req, res, next) => {
   if (req.method !== 'GET') return next();
   if (req.path.startsWith('/api/')) return next();
   if (req.path.startsWith('/socket.io/')) return next();
-  // Build output never gets the shell; see the /assets mount above.
+  // A hashed chunk that isn't on disk is from an older build (every deploy
+  // rebuilds dist/ in place). Answering it with the shell gave the browser
+  // a 200 of HTML for a .js URL, which the service worker then cached
+  // for good. A plain 404 lets the import fail cleanly so the SPA can
+  // reload itself onto the new build.
   if (req.path.startsWith('/assets/')) return next();
   sendSpaShell(req, res, next);
 });
@@ -1502,7 +1506,7 @@ app.use((req, res) => {
   if (req.path.startsWith('/api/')) {
     return res.status(404).json({ error: 'Not found' });
   }
-  res.status(404).send('Not found');
+  res.status(404).type('text/plain').send('Not found');
 });
 
 // Last stop for anything passed to next(err): the JSON body parser's 400

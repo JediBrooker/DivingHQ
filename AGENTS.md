@@ -81,8 +81,8 @@ ship code (or docs) that misrepresents the rule.
 
 | Folder | What's there |
 |---|---|
-| `server.js`           | Express + Socket.IO bootstrap, route mounts, socket handlers. Has a TOC at the top with `[SECTION: NAME]` anchors — Cmd-F for any of them to jump straight there. ~5,000 lines. |
-| `routes/`             | Route modules extracted from `server.js`: `auth.js`, `scoreboard.js`, `diver-search.js`. Pattern: factory function returning an Express router. |
+| `server.js`           | Express + Socket.IO bootstrap, middleware, route mounts, SPA fallback, boot checks. Has a TOC at the top with `[SECTION: NAME]` anchors — Cmd-F for any of them to jump straight there. ~1,700 lines; the handlers themselves live in `routes/`. |
+| `routes/`             | About 40 route modules extracted from `server.js` (`auth.js`, `scoreboard.js`, `control-room.js`, `meets.js`, `payments.js`, ...), plus `routes/events/` for event CRUD, stages, reserves, dive-offs and the Super Final, and `routes/socket.js`, which holds every Socket.IO handler. Pattern: factory function returning an Express router. |
 | `lib/middleware.js`   | The auth + RBAC + payload-validation perimeter. Every gate the API uses to reject a request lives here. **Read this whole file** when reviewing security. |
 | `lib/features.js`     | Runtime kill switches (`payments`, `classes`), backed by the `feature_flags` table. `requireFeature('x')` is the Express gate; sysadmins toggle at `/admin/features`. Both ship OFF. See the invariant below. |
 | `db/queries.js`       | Shared SQL CTE templates (`PER_DIVE`, `FULL_FIELD_RANKING`). Used by the analytics endpoint. |
@@ -99,15 +99,24 @@ ship code (or docs) that misrepresents the rule.
 
 ## Stack at a glance
 
-- **Backend**: Node 20 + Express 5 + Socket.IO 4 + node-postgres (`pg`).
-  PostgreSQL 14+ with `uuid-ossp` and `pgcrypto`. Auth via JWT in the
-  `Authorization: Bearer …` header.
+- **Backend**: Node 22 (`engines` is `>=22 <23`, same as `.nvmrc` and CI)
+  + Express 5 + Socket.IO 4 + node-postgres (`pg`). PostgreSQL 14+ with
+  `uuid-ossp` and `pgcrypto`. Auth is a JWT: the SPA carries it in an
+  httpOnly session cookie, and an `Authorization: Bearer …` header is also
+  accepted and wins when both are present (`extractToken` in
+  `lib/middleware.js`; API clients and the e2e harness use the header).
 - **Frontend**: Vue 3 (`<script setup>`) + Vite 6 + Vue Router + Pinia.
-  PWA via `public/sw.js` (cache v3, network-first navigation).
+  PWA via `public/sw.js` (cache v8: network-first navigation, cache-first
+  hashed `/assets`, chunks from superseded builds pruned when a new shell
+  lands; `src/lib/staleChunk.js` reloads a tab that outlived a deploy).
   IndexedDB stale-while-revalidate via `src/lib/idbCache.js`.
-- **Tests**: `node:test` runner. Two suites today — `test/syntax.test.js`
-  (no DB needed) and `test/calc.test.js` (skips when DB unreachable).
-  CI runs both against a Postgres service container.
+- **Tests**: `node:test` over every `test/*.test.js`, discovered by
+  `scripts/run-tests.js` (`npm test` runs them all; `npm run test:safe`
+  leaves out `integration.test.js` and `*.integration.test.js`, which need
+  Postgres). Playwright e2e under `test/e2e/`. CI runs both against a
+  Postgres service container. Every test entry point resolves its database
+  through `test/support/test-db.js` and refuses one whose name doesn't
+  contain `test`.
 
 ---
 
@@ -156,17 +165,25 @@ opened an IDOR — the audit caught three of these.
 ### Role gates on socket events
 
 Socket handlers that mutate state (`submit_score`, `set_active_diver`,
-`referee_*`, `meet_hold`, `meet_resume`, `announce_score`) must call
-`socketRequireRole(socket, [...])` first. Anonymous spectators connect
-without a token and that's intentional, but they can only listen, never
-emit. **Don't fall back to `data.judge_id`** — that's the spoof the audit
-closed.
+`referee_*`, `meet_hold`, `meet_resume`, `announce_score`, `judge_signal`,
+`claim_event_control`) must check the caller first. In `routes/socket.js`
+the Control Room writes go through `guardControl`, which is
+`socketCanManageEvent` (signed in, token version current, event in the
+caller's org, a control role or a delegate of the event) plus the rate
+limit; `submit_score` and `judge_signal` do their own signed-in and
+role/panel checks. `socketRequireRole` exists but nothing calls it (see the
+maintenance note below). Anonymous spectators connect without a token and
+that's intentional, but they can only listen, never emit. **Don't fall back
+to `data.judge_id`** — that's the spoof the audit closed.
+`docs/socket-events.md` has the per-event gates.
 
 ### Score validation
 
 Any code path that accepts a score must validate `0 ≤ n ≤ 10` in 0.5
-increments. Helper is `isValidScore(s)` in `server.js`. The HTTP and
-Socket paths must agree, otherwise one becomes a back-door.
+increments. Helper is `isValidScore(s)` in `lib/score-audit.js` (the HTTP
+writes reach it through `scoreBodyError`); `lib/middleware.js` still has its
+own copy of the same rule, which is the one the socket path gets. The HTTP and Socket paths must agree, otherwise
+one becomes a back-door.
 
 ### Feature flags: `configured` is not `enabled`
 
@@ -338,7 +355,8 @@ until the operator has switched maintenance mode on and passed
 | Require sysadmin only | `requireSystemAdmin` | `lib/middleware.js` |
 | Confirm event ID belongs to caller's org (read paths) | `ensureEventOrgGate(req, res, paramName)` | `lib/middleware.js` |
 | Confirm a target user/team belongs to the event's org | `isInSameOrg(db, eventOrgId, id, kind)` | `lib/middleware.js` |
-| Auth gate for socket events | `socketRequireRole(socket, [...])` | `lib/middleware.js` |
+| Auth + maintenance gate for socket writes | `socketRequireRole(socket, [...])` | `lib/middleware.js` |
+| Auth gate for socket events (per event: org, role or delegate, token version) | `socketCanManageEvent(socket, eventId, roles)`, wrapped with the rate limit as `guardControl` in `routes/socket.js` | `lib/middleware.js` |
 | Is this socket locked out by maintenance mode? | `socketMaintenanceBlocked(socket)` | `lib/middleware.js` |
 | Read TRUST_PROXY (Express value, socket hop count) | `expressTrustProxy()` / `trustProxyHops()` | `lib/trust-proxy.js` |
 | Audit snapshot + purge (daily, high-water mark) | `createAuditSnapshot({ pool, logger })` | `lib/audit-snapshot.js` |
@@ -456,14 +474,14 @@ A non-exhaustive checklist:
 | If you change… | Also check… |
 |---|---|
 | `users` table columns | `routes/auth.js` (the SELECTs that build the JWT payload), `src/types.js`, `init.sql` + a new `migrations/0NN_*.sql` |
-| Super Final endpoints (`/seed-h2h`, `/seed-semi`, `/seed-final`, `/super-final/*`, `/dive-offs`, `/synchro-reserve-pool`) | `docs/2026.03.05-…-Super-Final…pdf` Appendix 3 (re-quote the rule, don't paraphrase), `routes/events.js`, `src/views/ManagerView.vue`, `src/views/ControlView.vue`, `test/e2e/super-final-*.spec.js` |
+| Super Final endpoints (`/seed-h2h`, `/seed-semi`, `/seed-final`, `/super-final/*`, `/dive-offs`, `/synchro-reserve-pool`) | `docs/2026.03.05-…-Super-Final…pdf` Appendix 3 (re-quote the rule, don't paraphrase), `routes/events/*.js` (`super-final-seeding.js`, `super-final-bridge.js`, `dive-offs.js`, `reserves.js`), `src/views/ManagerView.vue`, `src/views/ControlViewV2.vue` + `src/components/control/SuperFinalPanels.vue`, `test/e2e/super-final-*.spec.js` |
 | The JWT payload shape | Every `req.user.X` reference in `server.js` (grep), `src/stores/auth.js`'s `user` computed |
 | A `/api/...` response shape | `src/types.js`, every consumer view (grep for the URL) |
 | A SQL function | `init.sql`, all migrations that touch it, `test/calc.test.js` if there's a closed-form test |
 | `KNOWN_WIDGETS` (diver) | `WIDGET_CATALOG` in `src/views/DiverProfileView.vue` |
 | `KNOWN_WIDGETS` in `routes/judge-analytics.js` | `JUDGE_WIDGET_CATALOG` in `src/views/JudgeProfileView.vue` |
 | Record scopes, record columns, or who sets a record | `lib/records.js` (`RECORD_TABLES`, `checkAndApplyRecords`, the `GET /api/records` UNION, `eventRecordMarks`), `record_gender()` (migration 094), `scripts/rebuild-records.js` (replays with the same rules), `src/views/RecordsView.vue`, the scoreboard chip (`src/lib/recordMarks.js`, `RecordChip.vue`), `record_broken` in `docs/socket-events.md`, `src/types.js` (`RecordRow`, `ScoreboardRecordMark`), and the Records section of `src/guide/content/admin-tasks.md` |
-| A socket event | `socketRequireRole` gate, every consumer (`socket.on('eventName')` grep), `docs/socket-events.md` |
+| A socket event | its gate (`guardControl` / `socketCanManageEvent`, or an explicit check), every consumer (`socket.on('eventName')` grep), `docs/socket-events.md` (`test/socket-events-doc.test.js` fails if it's missing) |
 | Anything in `src/composables/` | The handful of consumers, since composables aren't auto-typed |
 | The `<head>` of `index.html` (canonical, `og:*`, `twitter:*`) | `lib/spa-shell.js` rewrites the canonical link and `og:url` per request by matching those tags as written; `test/spa-shell.test.js` pins it |
 | Guide topics in `src/guide/topics.js`, or a new public page | `public/sitemap.xml` (the test fails when a topic is missing) and a `meta.titleKey` on the route for its tab title (`src/lib/pageTitle.js`) |
@@ -572,9 +590,10 @@ add a comment explaining why. The default expectation is `v-tip`.
 
 `.claude/launch.json` is committed to the repo (the only file
 under `.claude/` that is — see `.gitignore`). It declares a
-preview-server config that the `mcp__Claude_Preview__*` tools
-use to spin up a real Chrome rendering the SPA against the
-test DB:
+preview-server config (`scoreboard-preview`) that the Browser
+pane's `preview_start` tool uses to spin up a real Chrome
+rendering the SPA against the test DB (web push is blanked in
+it, like every other test harness):
 
 ```bash
 PORT=3097 \
@@ -587,20 +606,22 @@ JWT_SECRET=local-test-secret-do-not-use-in-prod-aaaaa \
 
 Useful for verifying any change that's "did the tooltip / chip /
 modal / animation actually render right" — Playwright runs
-headless, so a screenshot from `mcp__Claude_Preview__preview_screenshot`
-is the right tool when the question is visual rather than
-behavioural.
+headless, so a screenshot from the Browser pane is the right
+tool when the question is visual rather than behavioural.
 
 A typical agent loop:
 
 1. Edit a Vue file.
-2. `mcp__Claude_Preview__preview_start` (config name `scoreboard-preview`).
-3. `mcp__Claude_Preview__preview_eval` to navigate to the page
-   under test (`location.href = '/scoreboard/<id>'`).
-4. `mcp__Claude_Preview__preview_screenshot` or `…inspect` to
-   verify rendering.
-5. `mcp__Claude_Preview__preview_click` to drive interactions.
-6. `mcp__Claude_Preview__preview_stop` when done.
+2. `preview_start` with the config name `scoreboard-preview`.
+3. `navigate` to the page under test (`/scoreboard/<id>`).
+4. A `computer` screenshot, or `read_page` / `javascript_tool`
+   to inspect what rendered.
+5. `computer` clicks to drive interactions.
+6. `preview_stop` when done.
+
+(The tool names are the ones the desktop app exposes today, under
+`mcp__Claude_Browser__*`. They've been renamed before, so go by
+what your session lists.)
 
 Don't replace Playwright e2e with this — Playwright is the
 contract. Preview is the "did that look right?" loop while

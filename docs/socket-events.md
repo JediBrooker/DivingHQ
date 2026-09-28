@@ -5,10 +5,28 @@ expected payload shape, and the broadcast scope. If you add a new
 event, add it here in the same commit — agents reviewing the wire
 should be able to see the whole surface in one file.
 
-The handshake auth is **soft**: spectators connect with no token and
-that's intentional, but every privileged event must call
-`socketRequireRole(socket, [...])` before mutating anything. See
-`lib/middleware.js` for the helper and `AGENTS.md` for the rule.
+The handshake auth is **soft**: spectators connect with no token (the SPA
+authenticates off the httpOnly session cookie; a `token` in the handshake
+auth also works) and that's intentional, but every privileged event has to
+check the caller before mutating anything. How that's done today:
+
+- The Control Room events (`set_active_diver`, `announce_score`, the three
+  `referee_*` actions, `meet_hold`, `meet_resume`) go through
+  `guardControl` in `routes/socket.js`, which is `socketCanManageEvent`
+  (`lib/middleware.js`: signed in, token version current, event in the
+  caller's org, one of the control roles or a delegate of the event) plus
+  a per-(action, user) rate limit. `claim_event_control` uses
+  `socketCanManageEvent` directly.
+- `submit_score` and `judge_signal` do their own checks (signed in,
+  judge/referee role or a seat on the event's panel, token version).
+- `socketRequireRole` exists in `lib/middleware.js` and carries the
+  maintenance-mode check, but **no handler calls it**. So maintenance mode
+  does not block socket writes at the moment; only the HTTP
+  `maintenanceGate` in `server.js` does. If you close that gap, update this
+  paragraph and the matching one in `AGENTS.md`.
+
+Refusals from those gates arrive as `unauthorized` (see below) and, where
+the client passed an ack callback, as `{ ok: false, error }` on the ack.
 
 ---
 
@@ -30,6 +48,14 @@ that's intentional, but every privileged event must call
 | `event_status_changed`    | `{ event_id, org_id, from, to }` | `PUT /api/events/:id/status` moved an event (Upcoming / Live / Completed). Global `io.emit`, no sensitive data. The spectator scoreboard patches its event row so it flips between the live board and the recap; the Control Room reconciles its event list and stands up (or drops) live pools. |
 | `venue.scoreboard_state`  | Canonical venue payload from `lib/venue-state.js` | Emitted to `venue:<event_id>` subscribers after subscribe, active-diver changes, score changes, score announce, hold, and resume. Used by hardware bridges. |
 | `unauthorized`            | `{ reason: 'not_authenticated' \| 'insufficient_role' \| 'maintenance' \| 'missing_event_id' \| 'bad_event_id' \| 'event_not_found' \| 'wrong_org' \| 'token_revoked' \| 'server_error' }` | A privileged event was refused: anonymous or under-roled socket, maintenance mode (non-sysadmins), an `event_id` that's missing or not a UUID, an event outside the socket's org, a revoked session, or a server-side failure while checking. The Control Room events also ack `{ ok: false, error }`. |
+| `referee_action_rejected` | `{ reason: 'bad_round' \| 'bad_cap_value' \| 'server_error', message?: string }` | A `referee_failed_dive` / `referee_cap_scores` / `referee_redive` passed the gate but couldn't be applied. Sent only to the offending socket. |
+| `conflict_pending`        | `{ conflict_id, action_type: 'submit_score_vs_manual_entry', actor_id, actor_local_time, target: { event_id, competitor_id, round_number, judge_id }, existing_value: { score, source: 'manual_entry' }, proposed_value: { score, source: 'judge_direct' }, resolution_required_by: 'operator', created_at }` | A judge's (usually offline-queued) score arrived for a slot the operator already filled by manual entry, with a different value. The operator's value stands; the Control Room's review tray shows the mismatch. To room `event:<event_id>`. The judge's own socket gets a `score_received` with `superseded_by: 'manual_entry'`. |
+| `judge_signal`            | `{ event_id, competitor_id, round_number, judge_id, judge_number, signaled }` | A panel judge toggled "Signal Referee" on the keypad. `judge_id`/`judge_number` come from `event_judges`, never the wire. To room `event:<event_id>`; the Control Room highlights that judge's tile. |
+| `event_control_granted`   | `{ event_id }` | This socket's `claim_event_control` got the advisory lease (it was free, stale or already ours). To the claiming socket only. |
+| `event_control_conflict`  | `{ event_id, sameUser }` | Another live socket already holds the lease. To the claiming socket; `sameUser` is true when it's the same account in another window. The lease never blocks an action, it only warns. |
+| `event_control_contested` | `{ event_id, sameUser }` | Someone else just tried to claim a lease this socket holds. To the holder only. |
+| `notification`            | `{ id, category, title, body, data, action_url, expires_at, created_at }` | `lib/push.js` `sendNotification` fanned a notification out. To room `user:<id>` (every socket joins its own user room at connect), in parallel with Web Push. `data.actions` carries any action buttons (the referee sign-off has Approve/Deny). |
+| `referee_signoff_response` | `{ request_id, decision: 'approved' \| 'declined', by_user_id }` | The referee answered a dive-order sign-off request (the in-app banner, the notification's own Approve/Deny, or the handoff code). Sent through `push.emitEvent` to room `event:<event_id>` so the manager's SignoffModal leaves its waiting state. |
 | `schedule:conflict_dismissed` | `{ meet_id, action: 'dismiss' \| 'undismiss' }` | A scheduler conflict was dismissed or un-dismissed via the editor-only API. Drawer clients refetch `/api/meets/:id/conflicts` on receipt. The broadcast is intentionally minimal and does not include personnel labels. |
 | `schedule:block_updated`      | `{ meet_id, session_id, block_id?, created?, session_updated? }` | A Phase 3 manual edit landed (`PUT /api/blocks/:id`, `POST /api/sessions/:sessionId/blocks`, or `PUT /api/sessions/:id`). Other timeline tabs refetch `/sessions` and update inline. The broadcast is intentionally minimal; conflict details stay behind `/api/meets/:id/conflicts`. |
 | `schedule:block_deleted`      | `{ meet_id, session_id, block_id }` | A schedule block was deleted via `DELETE /api/blocks/:id`. Other tabs refetch the schedule. |
@@ -37,6 +63,10 @@ that's intentional, but every privileged event must call
 | `event_status_changed`        | `{ event_id, org_id, from, to }` | `PUT /api/events/:id/status` flipped an event. Sent to rooms `event:<id>`, `org:<host org>`, `org:<each participating org>` and `sysadmins` (every signed-in socket joins `org:<its org>`, and a sysadmin also `sysadmins`, on connect), the people whose dashboard pulse lists the event. The dashboard refetches its pulse. |
 | `role_request_created`        | `{ org_id, requested_role }` | Someone asked for a role: at signup (`POST /api/auth/register`) or later from their profile (`POST /api/role-requests`). The dashboard's pulse strip refetches its pending count. Public broadcast, no names; who may see the request is decided by the REST fetch. |
 | `schedule:shifted`            | `{ meet_id, shifted_block_ids: [...], delta_seconds }` | Phase 4 live re-flow committed — `POST /api/blocks/reflow` shifted every listed block forward by `delta_seconds` and appended a `schedule_block_shifts` ledger row per block. Timeline tabs refetch `/api/meets/:id/sessions` so the new windows appear. Public broadcast, with no personnel labels. |
+
+Not emitted, despite what you might read in `lib/idempotency.js`'s usage
+comment: `action_result` and `error`. The one socket write that's
+idempotent (`submit_score`) replays a cached result as `score_received`.
 
 ---
 
@@ -67,6 +97,9 @@ directly. A refused write gets ack `{ ok: false, error: 'maintenance' }`
 
 | Event | Required role | Payload | Notes |
 |---|---|---|---|
+| `subscribe_event`         | none (any socket)             | `{ event_id }` | Joins room `event:<event_id>`. How a spectator, judge or Control Room gets that event's broadcasts. |
+| `claim_event_control`     | `socketCanManageEvent` (control roles or delegate) | `{ event_id }` | Asks for the advisory per-event lease. Answered with `event_control_granted`, or `event_control_conflict` (and `event_control_contested` to the holder). Silently ignored for anyone who couldn't drive the event. |
+| `judge_signal`            | signed in, seat on the event's panel (`event_judges`) | `{ event_id, competitor_id, round_number, signaled }` | Rate-limited per user, token version re-checked. Rebroadcast as `judge_signal` to the event room. A caller not on the panel is dropped silently. |
 | `set_active_diver`        | meet_manager / referee / org_admin / sysadmin | Roster row + `diverName`, `diveCode`, `eventName`, `status` (built by `activeDiverPayload` in `src/lib/activeDiver.js`) | The server keeps and broadcasts a public copy: `paid_entry`, `competitor_org_id`, `competitor_org_name` and `dive_list_id` are dropped, and `club_name` / `club_code` are nulled unless the diver's club is approved (`clubs.status = 'active'`). That copy goes in `activeDivers[event_id]` (and `event_live_state`) so late-joiners see it. Readers run `normaliseActiveDiver` so a replayed payload without the display fields still renders. |
 | `get_active_diver`        | none (any socket)             | `{ event_id }` | Read-only — returns the current state to the asking socket only. |
 | `submit_score`            | judge / referee / sysadmin    | `{ event_id, competitor_id, round_number, score, dive_id?, judge_number? }` | Server-trusted `judge_id = socket.userId`. Rate-limited (60/min/judge). Validates 0–10 in 0.5 steps, confirms event_judges membership. A sync that differs from an operator's manual entry is refused but still acked, `{ ok: true, superseded_by: 'manual_entry', response }` with the operator's value, and cached under its `idempotency_key` so a retry replays it. |
@@ -86,8 +119,12 @@ directly. A refused write gets ack `{ ok: false, error: 'maintenance' }`
 ## Adding a new event
 
 1. **Define the role** required to emit it. If it mutates server-
-   side state, gate it with `socketRequireRole(socket, [...])` at
-   the top of the handler. Read-only listeners can stay anonymous.
+   side state, gate it at the top of the handler: event-scoped
+   Control Room writes through `guardControl` (which is
+   `socketCanManageEvent` plus the rate limit), anything else with
+   an explicit signed-in and role check like `submit_score`'s.
+   Remember neither path checks maintenance mode today (see the top
+   of this file). Read-only listeners can stay anonymous.
 2. **Validate the payload** before doing anything. The
    `submit_score` handler is the template — it rejects with a
    typed `score_rejected` event so the client can react instead of

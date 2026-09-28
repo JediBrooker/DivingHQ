@@ -155,14 +155,14 @@ test("the URL the picker emits actually renders that shape", async ({ page, cont
   const anon = await context.browser().newContext();
   const source = await anon.newPage();
   await source.goto(composed);
-  await source.waitForTimeout(1200);
-
-  expect(await source.locator(".sb-live-judges").isVisible()).toBe(true);
-  expect(await source.locator(".sb-col-standings").isVisible()).toBe(true);
-  expect(await source.locator(".sb-col-history").isVisible()).toBe(false);
-  expect(await source.locator(".sb-name").isVisible()).toBe(false);
-  expect(await source.locator(".sb-user").isVisible().catch(() => false),
-    "no app chrome on a broadcast source").toBe(false);
+  // Wait on the render itself, not a timer, and check the shown parts
+  // first: the hidden ones below would also "pass" on a blank page.
+  await expect(source.locator(".sb-layout")).toHaveClass(/overlay-parts/, { timeout: 10_000 });
+  await expect(source.locator(".sb-live-judges").first()).toBeVisible({ timeout: 10_000 });
+  await expect(source.locator(".sb-col-standings").first()).toBeVisible();
+  await expect(source.locator(".sb-col-history").first()).toBeHidden();
+  await expect(source.locator(".sb-name").first()).toBeHidden();
+  await expect(source.locator(".sb-user"), "no app chrome on a broadcast source").toBeHidden();
 
   await anon.close();
 });

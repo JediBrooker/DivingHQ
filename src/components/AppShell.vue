@@ -6,7 +6,7 @@
 //
 // Nav is role-gated against the auth store (system admins see
 // everything). Collapse state and theme live in the Pinia ui store.
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter, useRoute, RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useUiStore } from '@/stores/ui'
@@ -215,18 +215,36 @@ const collapsed = computed(() => (isMobile.value ? !mobileOpen.value : ui.sideba
 // to one icon whose hover/focus flyout lists its items. Mobile keeps the
 // off-canvas overlay, so the rail is desktop-only.
 const railMode = computed(() => ui.sidebarCollapsed && !isMobile.value)
+// The closed drawer is only slid off-screen, so it's also made inert
+// (template) or its links sat in the tab order and the a11y tree while
+// invisible. That means focus has to be walked in and out by hand.
+const sidebarEl = ref(null)
+const toggleBtn = ref(null)
 function toggleSidebar() {
-  if (isMobile.value) mobileOpen.value = !mobileOpen.value
-  else ui.toggleSidebar()
+  if (!isMobile.value) { ui.toggleSidebar(); return }
+  mobileOpen.value = !mobileOpen.value
+  // inert only comes off on the next render, focus() before that is a no-op.
+  if (mobileOpen.value) nextTick(() => sidebarEl.value?.querySelector('a[href], button')?.focus())
 }
-function closeMobile() { mobileOpen.value = false }
+// restoreFocus for scrim/Esc. A nav link click is heading to a new page,
+// so there's no point dragging focus back to the toggle for that.
+function closeMobile(restoreFocus = false) {
+  if (!mobileOpen.value) return
+  mobileOpen.value = false
+  if (restoreFocus) nextTick(() => toggleBtn.value?.focus())
+}
 </script>
 
 <template>
   <div class="app-shell" :class="{ collapsed, mobile: isMobile, 'mobile-open': isMobile && mobileOpen }">
     <a class="skip-link" href="#main-content">Skip to main content</a>
     <!-- Sidebar -->
-    <aside class="sidebar">
+    <aside
+      ref="sidebarEl"
+      class="sidebar"
+      :inert="isMobile && !mobileOpen"
+      @keydown.esc="closeMobile(true)"
+    >
       <RouterLink to="/dashboard" class="sb-brand">
         <LogoMark :size="28" />
         <span class="wm brand-wordmark">DIVING<span>HQ</span></span>
@@ -278,7 +296,7 @@ function closeMobile() { mobileOpen.value = false }
             :to="it.to"
             class="sb-item"
             :class="{ active: isActive(it.to) }"
-            @click="closeMobile"
+            @click="closeMobile()"
           >
             <component :is="it.icon" class="sb-ic" />
             <span class="sb-label">{{ navLabel(it) }}</span>
@@ -309,12 +327,12 @@ function closeMobile() { mobileOpen.value = false }
     </aside>
 
     <!-- Scrim for the mobile off-canvas sidebar -->
-    <div v-if="isMobile && mobileOpen" class="shell-scrim" @click="closeMobile"></div>
+    <div v-if="isMobile && mobileOpen" class="shell-scrim" @click="closeMobile(true)"></div>
 
     <!-- Main column -->
     <div class="shell-main">
       <header class="topbar">
-        <button class="icon-btn" type="button" :aria-label="collapsed ? 'Expand sidebar' : 'Collapse sidebar to icons'" @click="toggleSidebar">
+        <button ref="toggleBtn" class="icon-btn" type="button" :aria-label="collapsed ? 'Expand sidebar' : 'Collapse sidebar to icons'" :aria-expanded="isMobile ? mobileOpen : undefined" @click="toggleSidebar">
           <PanelLeftOpen v-if="collapsed" />
           <PanelLeftClose v-else />
         </button>
@@ -371,6 +389,12 @@ function closeMobile() { mobileOpen.value = false }
   grid-template-columns: 244px 1fr;
   transition: grid-template-columns var(--dur-slow) var(--ease);
   background: var(--bg);
+  /* The installed iOS app draws edge to edge (index.html asks for
+     viewport-fit=cover + a black-translucent status bar), so keep the
+     chrome out of the notch in landscape. Physical sides because
+     that's what the insets are. 0 everywhere else. */
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
 }
 /* Desktop collapse = a slim icon rail (mobile is handled off-canvas
    in the media query below, where this width is overridden to 1fr). */
@@ -379,6 +403,8 @@ function closeMobile() { mobileOpen.value = false }
 /* ── Sidebar ── */
 .sidebar {
   background: var(--surface);
+  /* Status-bar band, see .topbar. */
+  border-top: env(safe-area-inset-top, 0px) solid var(--status-band);
   border-right: 1px solid var(--border);
   display: flex; flex-direction: column;
   min-width: 0; overflow: hidden;
@@ -492,7 +518,12 @@ function closeMobile() { mobileOpen.value = false }
 /* ── Main column ── */
 .shell-main { display: flex; flex-direction: column; min-width: 0; height: 100dvh; overflow: hidden; }
 .topbar {
-  height: 56px; flex-shrink: 0;
+  /* Grows by the status-bar inset in the installed iOS app, where the
+     page runs up under the clock. The band is a border in the brand
+     blue (the theme-color) because iOS draws that status text white
+     and it vanished against the light topbar. */
+  height: calc(56px + env(safe-area-inset-top, 0px)); flex-shrink: 0;
+  border-top: env(safe-area-inset-top, 0px) solid var(--status-band);
   background: var(--surface); border-bottom: 1px solid var(--border);
   display: flex; align-items: center; gap: 12px; padding: 0 16px;
 }
@@ -557,7 +588,11 @@ function closeMobile() { mobileOpen.value = false }
 @media (max-width: 860px) {
   .app-shell, .app-shell.collapsed { grid-template-columns: 1fr; }
   .sidebar {
-    position: fixed; inset: 0 auto 0 0; width: 244px; z-index: 60;
+    position: fixed; inset: 0 auto 0 0; z-index: 60;
+    /* Wider by the landscape notch so the links clear it; translateX
+       below still takes the whole thing off-screen. */
+    width: calc(244px + env(safe-area-inset-left, 0px));
+    padding-left: env(safe-area-inset-left, 0px);
     transform: translateX(-100%); transition: transform var(--dur-slow) var(--ease);
     box-shadow: var(--shadow-lg);
   }
