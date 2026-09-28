@@ -500,6 +500,30 @@ module.exports = function createAuthRouter({
   // ...payload }. Recovery codes are one-time, on success the
   // matched hash is removed from the user's stored array.
   // -------------------------------------------------------------
+  // Spend one recovery code. The bcrypt compares take a while, and the
+  // write used to be a plain overwrite of the whole list, so two logins
+  // racing with the same code both matched it and both got a session
+  // (and two different codes at once wrote one of them back, unused).
+  // The write is a compare-and-set against the list we matched in: if it
+  // changed underneath us, re-read and match again. A code the other
+  // request already spent isn't there the second time, so it fails.
+  async function consumeRecoveryAtomically(userId, hashes, code) {
+    let current = hashes || [];
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const { matched, remainingHashes } = await totp.consumeRecoveryCode(current, code);
+      if (!matched) return false;
+      const done = await pool.query(
+        `UPDATE users SET totp_recovery_codes = $1::jsonb
+          WHERE id = $2 AND totp_recovery_codes = $3::jsonb`,
+        [JSON.stringify(remainingHashes), userId, JSON.stringify(current)],
+      );
+      if (done.rowCount) return true;
+      const fresh = await pool.query("SELECT totp_recovery_codes FROM users WHERE id = $1", [userId]);
+      current = fresh.rows[0]?.totp_recovery_codes || [];
+    }
+    return false;
+  }
+
   router.post("/api/auth/login/totp", authLimiter, async (req, res) => {
     const { totp_token, code } = req.body || {};
     if (!totp_token || !code) {
@@ -532,18 +556,8 @@ module.exports = function createAuthRouter({
       let consumedRecovery = false;
       if (looksLikeTotp) accepted = await consumeTotpStep(user.id, user.totp_secret, code);
       if (!accepted) {
-        const { matched, remainingHashes } = await totp.consumeRecoveryCode(
-          user.totp_recovery_codes || [],
-          code,
-        );
-        if (matched) {
-          accepted = true;
-          consumedRecovery = true;
-          await pool.query(
-            "UPDATE users SET totp_recovery_codes = $1::jsonb WHERE id = $2",
-            [JSON.stringify(remainingHashes), user.id],
-          );
-        }
+        consumedRecovery = await consumeRecoveryAtomically(user.id, user.totp_recovery_codes, code);
+        accepted = consumedRecovery;
       }
       if (!accepted) {
         return res.status(401).json({ error: "Invalid TOTP / recovery code" });

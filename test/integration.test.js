@@ -7493,3 +7493,43 @@ test("guardian linking works for a parent: scoped search, pending shown, withdra
     await teardownFixture(other);
   }
 });
+
+test("a 2FA recovery code opens one session however many logins race for it", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const speakeasy = require("speakeasy");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const uname = `int-b3tf-${st.slug}`;
+    const u = await insertUser({ orgId: st.orgId, role: "diver", username: uname, fullName: "Two Factor" });
+    const tok = await b3Login(uname);
+    const setup = await fetchJson("POST", "/api/auth/2fa/setup", { token: tok });
+    assert.equal(setup.status, 200, JSON.stringify(setup.body));
+    const code = speakeasy.totp({ secret: setup.body.base32, encoding: "base32" });
+    assert.equal((await fetchJson("POST", "/api/auth/2fa/confirm", { token: tok, body: { code } })).status, 200);
+    const codes = setup.body.recovery_codes;
+    const stepUp = async () => (await fetchJson("POST", "/api/auth/login", {
+      body: { username: uname, password: "not-used-here" },
+    })).body.totp_token;
+    const left = async () => (await pool.query(
+      "SELECT jsonb_array_length(totp_recovery_codes) AS n FROM users WHERE id = $1", [u],
+    )).rows[0].n;
+
+    // The same code twice at once: one session, not two.
+    const [a, b] = await Promise.all([stepUp(), stepUp()]);
+    const same = await Promise.all([a, b].map((totp_token) =>
+      fetchJson("POST", "/api/auth/login/totp", { body: { totp_token, code: codes[0] } })));
+    assert.deepEqual(same.map((r) => r.status).sort(), [200, 401], JSON.stringify(same.map((r) => r.body?.error || "ok")));
+    assert.equal(await left(), codes.length - 1);
+
+    // Two different codes at once: both work, and both are used up (a lost
+    // update used to write one of them back).
+    const [c, d] = await Promise.all([stepUp(), stepUp()]);
+    const both = await Promise.all([[c, codes[1]], [d, codes[2]]].map(([totp_token, rc]) =>
+      fetchJson("POST", "/api/auth/login/totp", { body: { totp_token, code: rc } })));
+    assert.deepEqual(both.map((r) => r.status), [200, 200], JSON.stringify(both.map((r) => r.body?.error || "ok")));
+    assert.equal(await left(), codes.length - 3);
+  } finally {
+    await teardownFixture(st);
+  }
+});
