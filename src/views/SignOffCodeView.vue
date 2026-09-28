@@ -14,14 +14,11 @@
 // path, so any open Control Room tab updates too) and show a
 // "Signed off" confirmation.
 import { ref, computed, onMounted } from 'vue'
-import { RouterLink, useRouter, useRoute } from 'vue-router'
-import { useI18n } from 'vue-i18n'
+import { RouterLink, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
-const router = useRouter()
 const route = useRoute()
-const { t } = useI18n()
 
 const code = ref('')
 const busy = ref(false)

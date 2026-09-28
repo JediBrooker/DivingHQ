@@ -26,7 +26,6 @@
 //             multiply kept sum × DD × scaling).
 
 import { ref, computed, onMounted, watch } from 'vue'
-import { useI18n } from 'vue-i18n'
 import { useRoute, RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
@@ -34,7 +33,6 @@ import { useWidgetDashboard } from '@/composables/useWidgetDashboard'
 
 const route = useRoute()
 const auth = useAuthStore()
-const { t } = useI18n()
 
 const profile = ref(null)
 const analytics = ref(null)

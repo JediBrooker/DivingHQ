@@ -233,15 +233,6 @@ function entityLabel(d) {
   return d.full_name
 }
 
-// Per-judge cell lookup for the synchro sub-tables. The single-
-// matrix branch uses index-aligned per_judge[idx]; the segmented
-// branch picks judges by id (since each segment only includes a
-// subset of the panel).
-function perJudgeOf(diver, judge) {
-  if (!diver || !judge) return null
-  return diver.per_judge.find((p) => p.judge_id === judge.judge_id) || null
-}
-
 // Tooltip composer for a per-judge cell. v-tip renders \n as
 // newlines (white-space: pre-line in src/styles/app.css).
 function cellTip(diver, judge, pj) {

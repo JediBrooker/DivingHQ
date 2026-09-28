@@ -3,7 +3,6 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { fmtDate } from '@/lib/format'
 import { useDiverSearch } from '@/composables/useDiverSearch'
 
 // Side-by-side comparison of two divers across ANY organisation.

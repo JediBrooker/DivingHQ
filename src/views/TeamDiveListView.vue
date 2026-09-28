@@ -2,7 +2,6 @@
 import { ref, computed, onMounted } from 'vue'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
-import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { diveDescription } from '@/composables/useDiveLabel'
 import { useDiveSearch } from '@/composables/useDiveSearch'
@@ -11,7 +10,6 @@ import { useDiveDirectory } from '@/composables/useDiveDirectory'
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
-const { t } = useI18n()
 
 const teamId  = computed(() => route.params.teamId)
 const eventId = computed(() => route.params.eventId)

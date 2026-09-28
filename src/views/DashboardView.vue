@@ -1224,69 +1224,14 @@ function detachSocketHandlers() {
   white-space: normal; word-break: break-word;
 }
 
-/* Secondary nav row, sits inside .header-inner as a third flex
-   item that consumes full width, so it stacks below the
-   welcome/account row even though they're in the same flex
-   container. Right-aligned per the spec; reads as a quiet
-   strip of "always-on" destinations. Currently just Scoreboard,
-   easy to grow as more cross-role surfaces land. */
-.header-secondary-nav {
-  flex: 1 0 100%;
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.85rem;
-  margin-top: 0.5rem;
-}
-.header-secondary-link-icon { display: inline-flex; align-items: center; }
-.hs-ic { width: 16px; height: 16px; }
-.header-secondary-link {
-  display: inline-flex; align-items: center; gap: 0.5rem;
-  font-family: var(--font-sans);
-  font-size: 12.5px; font-weight: 600;
-  letter-spacing: 0; text-transform: none;
-  color: var(--accent);
-  text-decoration: none;
-  padding: 0.55rem 1rem;
-  border: 1px solid rgba(6,182,212,0.45);
-  border-radius: var(--radius);
-  background: rgba(6,182,212,0.08);
-  transition: background 0.12s, border-color 0.12s, transform 0.1s, box-shadow 0.12s;
-}
-.header-secondary-link:hover,
-.header-secondary-link:focus-visible {
-  background: rgba(6,182,212,0.18);
-  border-color: var(--cyan);
-  box-shadow: 0 0 14px rgba(6,182,212,0.35);
-  transform: translateY(-1px);
-  outline: none;
-}
-.header-secondary-link.router-link-active {
-  color: var(--bg);
-  background: var(--cyan);
-  border-color: var(--cyan);
-}
-.header-secondary-link-icon {
-  font-size: 14px; line-height: 1;
-  /* Emojis carry their own colour, so neutralise the cyan tint
-     that bleeds in from the parent. */
-  filter: none;
-}
-
-/* Account-area buttons (and the diver-search input) in the
-   top-right of the header. Search + My Profile + Sign Out stay
-   on a single line within this block; the parent .header-inner
-   wraps the whole block below the welcome on narrow viewports
-   if needed. */
+/* Account area (the diver-search input) in the top-right of the
+   header. The parent .header-inner wraps the whole block below the
+   welcome on narrow viewports if needed. */
 .header-account {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   flex-shrink: 0;
-}
-.header-account .btn {
-  /* Redundant inside the app shell, Inbox, My Profile, User Guide
-     and Sign Out are provided by the sidebar + topbar user menu. */
-  display: none;
 }
 
 /* Find Diver, typeahead lives in the top-right account row.
@@ -1448,26 +1393,6 @@ function detachSocketHandlers() {
     flex: 1 1 100%;
     min-width: 0;
   }
-  .header-secondary-nav {
-    /* Buttons themselves can shrink + wrap onto a second line
-       if "SCOREBOARD & RESULTS" + "JUDGE ANALYSIS" can't fit. */
-    flex-wrap: wrap;
-    justify-content: flex-start;
-    gap: 0.5rem;
-  }
-  .header-secondary-link {
-    /* Shrink the chunky letter-spacing on phones, the desktop
-       0.18em + 12px makes "SCOREBOARD & RESULTS" ~210px wide on
-       its own. 0.08em + 11px keeps the affordance readable but
-       fits comfortably alongside its sibling at 360px+. */
-    font-size: 11px;
-    letter-spacing: 0.08em;
-    padding: 0.5rem 0.75rem;
-    flex: 1 1 auto;
-    text-align: center;
-    justify-content: center;
-    min-width: 0;
-  }
   .tab-strip {
     padding: 0 1.25rem;
     /* Horizontal scroll instead of wrap, keeps the strip a
@@ -1514,12 +1439,6 @@ function detachSocketHandlers() {
   }
   .header-account {
     width: 100%;
-  }
-  .header-account .btn {
-    flex: 1 1 auto;
-    text-align: center;
-    font-size: 11px;
-    padding: 0.5rem 0.75rem;
   }
   .find-diver-wrapper { flex: 1 1 100%; }
   .tab-strip { padding: 0 1rem; }

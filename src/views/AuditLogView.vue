@@ -22,14 +22,13 @@
 // the file to a dispute resolution email.
 
 import { ref, computed, onMounted, watch } from 'vue'
-import { RouterLink, useRouter } from 'vue-router'
+import { RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { showError } from '@/composables/useNotify'
 
 const { t } = useI18n()
 const auth = useAuthStore()
-const router = useRouter()
 const isSysAdmin = computed(() => !!auth.user?.is_system_admin)
 
 // ----- Tab state -----

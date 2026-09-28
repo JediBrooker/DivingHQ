@@ -64,7 +64,3 @@ export function lookupTerm(raw) {
   }
   return null
 }
-
-export function allTerms() {
-  return { ...TERMS }
-}
