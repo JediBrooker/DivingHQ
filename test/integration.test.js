@@ -7574,3 +7574,36 @@ test("a taken username at signup is a 409 username_taken without the database's 
     await teardownFixture(st);
   }
 });
+
+test("the event-is-live email skips withdrawn divers and reserves", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: true });
+  const saved = { fetch: global.fetch, env: { ...process.env } };
+  try {
+    const dive = (await pool.query("SELECT id FROM dive_directory LIMIT 1")).rows[0].id;
+    const entrant = async (name, extra) => {
+      const id = await insertUser({ orgId: st.orgId, role: "diver", username: `int-b3ev-${name}-${st.slug}`, fullName: name });
+      await pool.query("UPDATE users SET email = $2 WHERE id = $1", [id, `${name.toLowerCase()}-${st.slug}@example.test`]);
+      await pool.query(
+        `INSERT INTO competitor_dive_lists (event_id, competitor_id, dive_id, round_number, withdrawn_at, is_reserve)
+         VALUES ($1, $2, $3, 1, $4, $5)`,
+        [st.eventId, id, dive, extra.withdrawn ? new Date() : null, !!extra.reserve],
+      );
+    };
+    await entrant("Competing", {});
+    await entrant("Withdrawn", { withdrawn: true });
+    await entrant("Reserve", { reserve: true });
+
+    const sent = [];
+    Object.assign(process.env, { CF_ACCOUNT_ID: "acct-test", CF_EMAIL_TOKEN: "token-test", EMAIL_FROM: "noreply@example.test" });
+    global.fetch = async (_url, opts) => { sent.push(JSON.parse(opts.body).to); return { ok: true, json: async () => ({}) }; };
+    const email = require("../lib/email")({ pool });
+    await email.sendEventStartedEmails({ id: st.eventId, name: "B3 Open" });
+    assert.deepEqual(sent, [`competing-${st.slug}@example.test`]);
+  } finally {
+    global.fetch = saved.fetch;
+    process.env = saved.env;
+    await teardownFixture(st);
+  }
+});
