@@ -11698,11 +11698,11 @@ const guardianKit = {
 test("guardian links in an unclaimed country: the child's club decides, and the parent hears", async (t) => {
   if (!dbReachable) return t.skip("DB not reachable");
   if (!serverReady) return t.skip("server didn't boot — see warning above");
-  const CODE = "MNG";
+  const CODE = "NPL";
   await claimKit.wipe(CODE);
   try {
-    const A = await delegateSignUp({ country_code: CODE, new_club_name: "Ulaanbaatar Divers" });
-    const B = await delegateSignUp({ country_code: CODE, new_club_name: "Darkhan Divers" });
+    const A = await delegateSignUp({ country_code: CODE, new_club_name: "Kathmandu Divers" });
+    const B = await delegateSignUp({ country_code: CODE, new_club_name: "Pokhara Divers" });
     const kid = await delegateSignUp({ country_code: CODE, club_id: A.clubId, full_name: "Saraa Bold" });
     const parent = await delegateSignUp({ country_code: CODE, full_name: "Bold Bat" });
     assert.equal((await pool.query("SELECT club_id FROM users WHERE id = $1", [kid.id])).rows[0].club_id, A.clubId);
@@ -11738,7 +11738,7 @@ test("guardian links in an unclaimed country: the child's club decides, and the 
     assert.equal(row.guardian_name, "Bold Bat");
     assert.equal(row.dependent_name, "Saraa Bold");
     assert.equal(row.dependent_age, 10);
-    assert.equal(row.club_name, "Ulaanbaatar Divers");
+    assert.equal(row.club_name, "Kathmandu Divers");
     assert.ok(!("dependent_dob" in row), "a club admin gets the age, not the date of birth");
 
     assert.equal((await guardianKit.review(A.token, link.id, "maybe")).status, 400);
@@ -11897,5 +11897,45 @@ test("guardian links under a federation stay with its org admins, not the clubs"
   } finally {
     await pool.query("DELETE FROM clubs WHERE org_id = $1", [st.orgId]);
     await teardownFixture(st);
+  }
+});
+
+test("guardian links in an unclaimed country: a club waiting for approval decides nothing", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  // Nobody runs a pending club (migration 096), whatever club_admins says,
+  // and its region doesn't get to act through it either. So a child there
+  // goes to DivingHQ until the club is live.
+  const CODE = "UZB";
+  await claimKit.wipe(CODE);
+  const { reviewersFor } = require("../lib/guardian-requests");
+  try {
+    const A = await delegateSignUp({ country_code: CODE, new_club_name: "Tashkent Divers" });
+    const RA = await delegateSignUp({ country_code: CODE, full_name: "Tashkent Region Admin" });
+    const region = await guardianKit.region(A.orgId, "Tashkent", "TAS", [A.clubId]);
+    await pool.query("INSERT INTO region_admins (region_id, user_id, org_id) VALUES ($1, $2, $3)", [region, RA.id, A.orgId]);
+    const kid = await delegateSignUp({ country_code: CODE, club_id: A.clubId, full_name: "Dilnoza Karimova" });
+    await guardianKit.minor(kid.id, 10);
+    const parent = await delegateSignUp({ country_code: CODE, full_name: "Rustam Karimov" });
+    await pool.query("UPDATE clubs SET status = 'pending' WHERE id = $1", [A.clubId]);
+
+    const link = await guardianKit.ask(parent.token, kid.id);
+    assert.equal((await reviewersFor(pool, link)).via, "sysadmin");
+    assert.deepEqual(await approvalKit.notices(A.id, "guardian_request"), [], "not the pending club's admin");
+    assert.deepEqual(await approvalKit.notices(RA.id, "guardian_request"), [], "nor its region");
+
+    for (const who of [A, RA]) {
+      assert.ok(!(await guardianKit.queue(who.token)).some((g) => g.id === link.id));
+      assert.equal((await guardianKit.review(who.token, link.id)).status, 403);
+    }
+    assert.equal(await guardianKit.status(link.id), "pending");
+
+    // Approved, the club has its say again.
+    await pool.query("UPDATE clubs SET status = 'active' WHERE id = $1", [A.clubId]);
+    assert.ok((await guardianKit.queue(A.token)).some((g) => g.id === link.id));
+    assert.equal((await guardianKit.review(A.token, link.id)).status, 200);
+    assert.equal(await guardianKit.status(link.id), "approved");
+  } finally {
+    await claimKit.wipe(CODE);
   }
 });
