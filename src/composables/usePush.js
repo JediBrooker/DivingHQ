@@ -76,6 +76,42 @@ function urlBase64ToUint8Array(base64String) {
   return out
 }
 
+// Drop the whole list. Called when the signed-in identity changes: the
+// list is module state and sign-out is a router.push with no reload, so
+// user A's banners (receipts, role decisions, sign-off Approve/Deny
+// cards) used to stay on screen at /login and into the next session.
+export function clearNotifications() {
+  notifications.value = []
+}
+
+// Take specific rows out of the floating stack, e.g. once the Inbox has
+// marked them read. Otherwise their banners kept floating over the page.
+export function dropNotifications(ids) {
+  const gone = new Set(ids)
+  if (!gone.size) return
+  notifications.value = notifications.value.filter(n => !gone.has(n.id))
+}
+
+// Revoke this browser's push subscription, server side and in the
+// browser. Needs the session cookie for the DELETE, so sign-out has to
+// call it before clearing the session (see useSignOut). Never throws.
+export async function unsubscribePush(auth) {
+  if (!pushApiAvailable()) return
+  try {
+    const reg = await navigator.serviceWorker.getRegistration('/sw.js')
+    const sub = await reg?.pushManager.getSubscription()
+    if (sub) {
+      await auth.apiFetch('/api/push/subscribe', {
+        method: 'DELETE',
+        body: JSON.stringify({ endpoint: sub.endpoint }),
+      }).catch(() => {})
+      await sub.unsubscribe().catch(() => {})
+    }
+  } catch (err) {
+    console.warn('[usePush] unsubscribe failed', err.message)
+  }
+}
+
 function pushIntoList(n) {
   if (!n?.id) return
   // Dedup by id so a SW message + socket emit for the same row
@@ -146,21 +182,8 @@ export function usePush({ socket: sock } = {}) {
     }
   }
 
-  async function unsubscribe() {
-    if (!pushApiAvailable()) return
-    try {
-      const reg = await navigator.serviceWorker.getRegistration('/sw.js')
-      const sub = await reg?.pushManager.getSubscription()
-      if (sub) {
-        await auth.apiFetch('/api/push/subscribe', {
-          method: 'DELETE',
-          body: JSON.stringify({ endpoint: sub.endpoint }),
-        }).catch(() => {})
-        await sub.unsubscribe().catch(() => {})
-      }
-    } catch (err) {
-      console.warn('[usePush] unsubscribe failed', err.message)
-    }
+  function unsubscribe() {
+    return unsubscribePush(auth)
   }
 
   async function ack(id) {
@@ -191,6 +214,8 @@ export function usePush({ socket: sock } = {}) {
   // NotificationCenter lives for the whole app and gets there first, so
   // it sees every sign-out and resets the guard for the next sign-in.
   watch(() => auth.user?.id, (id, prev) => {
+    // A different person (or nobody) now: the old list isn't theirs.
+    if (prev && id !== prev) clearNotifications()
     if (!id) { autoSubscribedFor = null; return }
     if (prev || id === autoSubscribedFor) return
     autoSubscribedFor = id
@@ -199,4 +224,9 @@ export function usePush({ socket: sock } = {}) {
   }, { immediate: true })
 
   return { ready, notifications, subscribe, unsubscribe, ack, recent }
+}
+
+// Test-only: feed a row into the shared list the way the socket does.
+export function _pushNotificationForTests(n) {
+  pushIntoList(n)
 }

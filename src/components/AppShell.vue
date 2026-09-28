@@ -15,6 +15,7 @@ import { useI18n } from 'vue-i18n'
 import LogoMark from '@/components/LogoMark.vue'
 import ThemeToggle from '@/components/ThemeToggle.vue'
 import { openCommandPalette } from '@/composables/useAppChannel'
+import { signOut as signOutAndLeave } from '@/composables/useSignOut'
 import {
   LayoutDashboard, Trophy, MonitorPlay, Calculator, ChartColumn, Waves, GraduationCap,
   ListChecks, BookOpen, Users, Building2, ScrollText,
@@ -188,8 +189,7 @@ function goProfile() { menuOpen.value = false; router.push('/profile') }
 function goInbox() { menuOpen.value = false; router.push('/inbox') }
 function signOut() {
   menuOpen.value = false
-  auth.clearSession()
-  router.push('/login')
+  signOutAndLeave(auth, router)
 }
 
 // Search → reuse the global command palette (⌘K) via the app channel

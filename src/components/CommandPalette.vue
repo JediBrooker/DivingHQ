@@ -24,6 +24,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 import { onOpenCommandPalette, replayRoleTour } from '@/composables/useAppChannel'
 import { useDiverSearch } from '@/composables/useDiverSearch'
+import { signOut } from '@/composables/useSignOut'
 
 const router = useRouter()
 const auth   = useAuthStore()
@@ -58,7 +59,7 @@ const STATIC_ENTRIES = [
       replayRoleTour()
     } },
   { kind:'go', label:'Sign Out',       sub:'End your session',          to:null,             roles:null,           icon:'🚪',
-    action: () => { auth.clearSession(); router.push('/login') } },
+    action: () => { signOut(auth, router) } },
 ]
 
 // Events cached on first open (see primeCache).
