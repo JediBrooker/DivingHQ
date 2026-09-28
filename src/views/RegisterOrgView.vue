@@ -1,24 +1,19 @@
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useCountryOptions } from '@/composables/useCountryOptions'
+import { useFeaturesStore } from '@/stores/features'
 import CheckInboxPanel from '@/components/CheckInboxPanel.vue'
 
 const { t } = useI18n()
 const { countryOptions, countryName: nameOfCountry } = useCountryOptions()
 
-// Public signups are gated OFF by default (coming-soon launch). null = still
-// checking, true = open (show the form), false = closed (show the notice).
-const signupsEnabled = ref(null)
-onMounted(async () => {
-  try {
-    const res = await fetch('/api/auth/signups-status')
-    signupsEnabled.value = !!(await res.json()).enabled
-  } catch {
-    signupsEnabled.value = false
-  }
-})
+// Public signups are gated OFF by default (coming-soon launch): open shows
+// the form, closed shows the notice. The flag is already in the features
+// store, loaded before the app mounted.
+const features = useFeaturesStore()
+const signupsEnabled = computed(() => features.signups)
 
 const orgName = ref('')
 const countryCode = ref('')
@@ -172,14 +167,14 @@ async function handleSubmit() {
   <div class="wrap">
     <div class="login-mark brand-wordmark">DIVING<span>HQ</span></div>
 
-    <template v-if="signupsEnabled === false">
+    <template v-if="!signupsEnabled">
       <h1>{{ $t('auth.register_org.title') }}</h1>
       <p class="subtitle">{{ $t('auth.register.coming_soon') }}</p>
       <p class="note">{{ $t('auth.register_org.coming_soon_note') }}</p>
       <p class="footer-link">{{ $t('auth.register_org.already_registered') }} <RouterLink to="/login">{{ $t('auth.register_org.sign_in_link') }}</RouterLink></p>
     </template>
 
-    <template v-else-if="signupsEnabled === true">
+    <template v-else>
     <h1>{{ $t('auth.register_org.title') }}</h1>
     <p class="subtitle">{{ $t('auth.register_org.subtitle') }}</p>
 

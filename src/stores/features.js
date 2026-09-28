@@ -14,7 +14,6 @@ import { ref, computed } from 'vue'
 // vanishes, or worse leads to a checkout we meant to keep dark, is not.
 export const useFeaturesStore = defineStore('features', () => {
   const flags = ref({ payments: false, classes: false, signups: false, maintenance: false })
-  const loaded = ref(false)
 
   async function load() {
     try {
@@ -23,8 +22,6 @@ export const useFeaturesStore = defineStore('features', () => {
     } catch {
       // Offline or the API is down. Leave every flag off and carry on:
       // the rest of the app (scoreboard, judging) works without this.
-    } finally {
-      loaded.value = true
     }
     return flags.value
   }
@@ -44,5 +41,5 @@ export const useFeaturesStore = defineStore('features', () => {
   const signups = computed(() => enabled('signups'))
   const maintenance = computed(() => enabled('maintenance'))
 
-  return { flags, loaded, load, enabled, apply, payments, classes, signups, maintenance }
+  return { flags, load, enabled, apply, payments, classes, signups, maintenance }
 })
