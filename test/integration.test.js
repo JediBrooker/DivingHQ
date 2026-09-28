@@ -7421,3 +7421,49 @@ test("the roster counts an entry a guardian paid for as paid", async (t) => {
     await teardownFixture(st);
   }
 });
+
+// Migration 096 / club-first §20: a club waiting on its federation stays
+// out of public surfaces (PUBLIC_CLUB_JOIN). The judge ranking analysis,
+// judge analytics' club breakdown and the diver search joined clubs
+// plainly and printed the pending club's name and code.
+test("a pending club's name stays off judge ranking, judge analytics and diver search", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const club = await recordKit.club(st.orgId, "Unvetted Pending Club Zed", "UPZ");
+    await pool.query("UPDATE clubs SET status = 'pending' WHERE id = $1", [club]);
+    const dive = await recordKit.threeMetreDive();
+    const d1 = await recordKit.diver(st.orgId, club, "female", "Pending Zara");
+    const d2 = await recordKit.diver(st.orgId, null, "female", "Open Zoe");
+    const ev = await recordKit.event(st.orgId, { gender: "Female" });
+    await pool.query("UPDATE users SET club_id = $1 WHERE id = $2", [club, ev.judges[0]]);
+    for (const r of [1, 2, 3]) {
+      await recordKit.dive(ev, d1, r, dive, 6 + (r % 2));
+      await recordKit.dive(ev, d2, r, dive, 7);
+    }
+    await pool.query("UPDATE events SET status = 'Completed' WHERE id = $1", [ev.id]);
+
+    const jra = await fetchJson("GET", `/api/events/${ev.id}/judge-ranking-analysis`);
+    assert.equal(jra.status, 200, JSON.stringify(jra.body));
+    assert.ok(!JSON.stringify(jra.body).includes("Unvetted"), "no pending club name anywhere");
+    assert.equal(jra.body.divers.find((d) => d.full_name === "Pending Zara").club_name, null);
+    assert.equal(jra.body.judges.find((j) => j.judge_id === ev.judges[0]).club_code, null);
+
+    const ja = await fetchJson("GET", `/api/judges/${ev.judges[1]}/analytics`);
+    assert.equal(ja.status, 200, JSON.stringify(ja.body));
+    assert.ok(!JSON.stringify(ja.body.club_breakdown).includes("UPZ"));
+    assert.ok(!ja.body.club_breakdown.some((c) => c.club_id === club));
+
+    const search = await fetchJson("GET", "/api/divers/search?q=Pending%20Zara", { token: st.adminToken });
+    assert.equal(search.status, 200);
+    assert.equal(search.body[0].club_name, null);
+    const browse = await fetchJson("GET", `/api/divers?q=Pending%20Zara`, { token: st.adminToken });
+    assert.equal(browse.body.rows[0].club_code, null);
+  } finally {
+    await recordKit.cleanup(st.orgId);
+    await pool.query("UPDATE users SET club_id = NULL WHERE org_id = $1", [st.orgId]);
+    await pool.query("DELETE FROM clubs WHERE org_id = $1", [st.orgId]);
+    await teardownFixture(st);
+  }
+});

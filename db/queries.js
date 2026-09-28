@@ -257,7 +257,10 @@ const JUDGE_PER_DIVE = `
        the analysis. */
     cu.org_id                              AS diver_org_id,
     co.country_code                        AS diver_country_code,
-    cu.club_id                             AS diver_club_id,
+    /* From the approved-clubs join, not cu.club_id: the club breakdown
+       is public and a pending club's id and code stay private
+       (migration 096). */
+    cl.id                                  AS diver_club_id,
     cl.short_code                          AS diver_club_code,
     cu.full_name                           AS diver_name,
     /* Panel context: the full panel's scores for THIS dive,
@@ -320,7 +323,7 @@ const JUDGE_PER_DIVE = `
     ON d.id = COALESCE(s.dive_id, cdl.dive_id)
   LEFT JOIN users cu ON cu.id = s.competitor_id
   LEFT JOIN organisations co ON co.id = cu.org_id
-  LEFT JOIN clubs cl ON cl.id = cu.club_id
+  LEFT JOIN clubs cl ON cl.id = cu.club_id AND cl.status = 'active'
   /* Panel-level rollup for the same (event, competitor, round).
      We compute the trim thresholds from the sorted panel scores:
        drop_count = 2 for 7-judge, 1 for 5-judge, 3 for 11-judge,

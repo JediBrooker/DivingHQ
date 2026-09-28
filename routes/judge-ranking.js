@@ -61,6 +61,9 @@
 
 const express = require("express");
 const { perDivePointsCte } = require("../lib/scoring-sql");
+// Approved clubs only: this is a public read, and a club still waiting on
+// its federation keeps its name private (migration 096).
+const { PUBLIC_CLUB_JOIN } = require("../lib/club-approvals");
 // Unicode names print readably, see lib/pdf-document.
 const { createPdfDocument } = require("../lib/pdf-document");
 // CSV escaping + formula-injection guard, and the filename slug the
@@ -105,7 +108,7 @@ async function buildAnalysis(pool, eventId) {
        FROM event_judges ej
        JOIN users u         ON u.id = ej.judge_id
        JOIN organisations o ON o.id = u.org_id
-       LEFT JOIN clubs cl   ON cl.id = u.club_id
+       ${PUBLIC_CLUB_JOIN}
       WHERE ej.event_id = $1
       ORDER BY ej.judge_number ASC`,
     [eventId],
@@ -284,7 +287,7 @@ async function buildAnalysis(pool, eventId) {
            FROM totals t
            JOIN users u ON u.id = t.competitor_id
            JOIN organisations o ON o.id = u.org_id
-           LEFT JOIN clubs cl ON cl.id = u.club_id
+           ${PUBLIC_CLUB_JOIN}
            LEFT JOIN LATERAL (
              SELECT DISTINCT cdl.partner_id
                FROM competitor_dive_lists cdl
