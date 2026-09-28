@@ -596,7 +596,8 @@
         "step_4": "Sa araw ng kompetisyon, patakbuhin ang pagmamarka mula sa <strong>Control Room</strong>",
         "step_5": "Kapag dumating ang iyong pederasyon o panrehiyong lupon, bumoto sa claim nito sa <strong>Mga claim</strong>",
         "cta": "Pagpapatakbo ng kompetisyon ↗",
-        "step_invite": "Sa <strong>Aking club</strong>, ibahagi ang invite link ng iyong club at itakda ang code ng club"
+        "step_invite": "Sa <strong>Aking club</strong>, ibahagi ang invite link ng iyong club at itakda ang code ng club",
+        "step_templates": "I-save bilang <strong>template</strong> sa form na Bagong Kaganapan ang mga setting na paulit-ulit mong ginagamit. Sa iyong club ito: ang mga admin lang nito ang nakakakita, hindi ang iyong rehiyon o pederasyon"
       },
       "region_admin": {
         "name": "Admin ng rehiyon",
@@ -604,7 +605,8 @@
         "step_1": "Buksan ang <strong>Aking rehiyon</strong> para makita ang mga club at kung sino ang nagpapatakbo",
         "step_2": "Gumawa ng mga kampeonato sa <strong>Tagapamahala ng meet</strong> na hino-host ng iyong rehiyon",
         "step_3": "Kung wala pang pederasyon, aprubahan ang mga miyembrong gustong mag-dive, humusga o maging tagasanay, at ang mga club na humihiling na sumali sa iyong rehiyon",
-        "cta": "Pagpapatakbo ng kompetisyon ↗"
+        "cta": "Pagpapatakbo ng kompetisyon ↗",
+        "step_templates": "I-save ang sariling mga <strong>template</strong> ng iyong rehiyon sa form na Bagong Kaganapan. Ang mga admin lang nito ang nakakakita, hindi ang mga club nito o ang iyong pederasyon"
       },
       "org_admin": {
         "name": "Tagapangasiwa ng Organisasyon",
@@ -994,6 +996,17 @@
       "region": "Ang kanilang estado / lalawigan (mga pambansang kampeonato)",
       "club": "Ang kanilang club (mga paligsahan ng club at inter-club)",
       "hint": "Ipinapakita sa tabi ng bawat diver sa scoreboard, mga resulta at PDF, at ito ang batayan ng pagpapangkat sa medal table. Ang diver na walang code ng estado o club ay ipapakita kasama ang kanyang bansa."
+    },
+    "templates": {
+      "owner_org": "Mga template ng iyong organisasyon",
+      "owner_named": "Mga template ng {name}",
+      "delete_tip": "Burahin ang template",
+      "delete_title": "Burahin ang template na \"{name}\"?",
+      "delete_body": "Mawawala ito sa lahat ng gumagamit ng mga template na ito. Hindi maaapektuhan ang mga kaganapang nagawa na mula rito.",
+      "deleted": "Nabura ang template na \"{name}\"",
+      "delete_failed": "Hindi mabura ang template: {error}",
+      "name_placeholder": "Pangalan ng template (hal. \"U16 Kababaihan 3m\")",
+      "name_required": "Bigyan ng pangalan ang template"
     }
   },
   "user_manager": {

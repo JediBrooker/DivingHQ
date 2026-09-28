@@ -596,7 +596,8 @@
         "step_4": "Pada hari pertandingan, kendalikan pemarkahan dari <strong>Bilik Kawalan</strong>",
         "step_5": "Apabila persekutuan atau badan wilayah anda tiba, undi tuntutannya di <strong>Tuntutan</strong>",
         "cta": "Menganjurkan pertandingan ↗",
-        "step_invite": "Di <strong>Kelab saya</strong>, kongsi pautan jemputan kelab anda dan tetapkan kod kelab"
+        "step_invite": "Di <strong>Kelab saya</strong>, kongsi pautan jemputan kelab anda dan tetapkan kod kelab",
+        "step_templates": "Simpan tetapan yang anda guna berulang kali sebagai <strong>templat</strong> dalam borang Acara Baharu. Templat itu milik kelab anda: hanya pentadbir kelab yang melihatnya, bukan rantau atau persekutuan anda"
       },
       "region_admin": {
         "name": "Pentadbir rantau",
@@ -604,7 +605,8 @@
         "step_1": "Buka <strong>Rantau saya</strong> untuk melihat kelab dan pengurusnya",
         "step_2": "Cipta kejohanan anda dalam <strong>Pengurus pertandingan</strong> dengan rantau anda sebagai tuan rumah",
         "step_3": "Di tempat yang belum ada persekutuan, luluskan ahli yang mahu menerjun, menghakimi atau melatih, serta kelab yang ingin menyertai rantau anda",
-        "cta": "Menganjurkan pertandingan ↗"
+        "cta": "Menganjurkan pertandingan ↗",
+        "step_templates": "Simpan <strong>templat</strong> rantau anda sendiri dalam borang Acara Baharu. Hanya pentadbir rantau yang melihatnya, bukan kelab-kelabnya atau persekutuan anda"
       },
       "org_admin": {
         "name": "Pentadbir Organisasi",
@@ -994,6 +996,17 @@
       "region": "Negeri / wilayah mereka (kejohanan kebangsaan)",
       "club": "Kelab mereka (kejohanan kelab dan antara kelab)",
       "hint": "Dipaparkan di sebelah setiap penerjun pada papan skor, keputusan dan PDF, dan menjadi asas pengumpulan jadual pingat. Penerjun tanpa kod negeri atau kelab dipaparkan dengan negaranya."
+    },
+    "templates": {
+      "owner_org": "Templat organisasi anda",
+      "owner_named": "Templat untuk {name}",
+      "delete_tip": "Padam templat",
+      "delete_title": "Padam templat \"{name}\"?",
+      "delete_body": "Templat ini hilang bagi semua yang menggunakan templat-templat ini. Acara yang sudah dicipta daripadanya tidak terjejas.",
+      "deleted": "Templat \"{name}\" dipadam",
+      "delete_failed": "Templat tidak dapat dipadam: {error}",
+      "name_placeholder": "Nama templat (cth. \"U16 Wanita 3m\")",
+      "name_required": "Beri nama templat"
     }
   },
   "user_manager": {

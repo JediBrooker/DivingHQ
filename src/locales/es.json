@@ -596,7 +596,8 @@
         "step_4": "El día de la competición, dirige la puntuación desde la <strong>Sala de control</strong>",
         "step_5": "Cuando llegue tu federación u organismo regional, vota su reclamación en <strong>Reclamaciones</strong>",
         "cta": "Organizar una competición ↗",
-        "step_invite": "En <strong>Mi club</strong>, comparte el enlace de invitación de tu club y define el código del club"
+        "step_invite": "En <strong>Mi club</strong>, comparte el enlace de invitación de tu club y define el código del club",
+        "step_templates": "Guarda la configuración que repites como <strong>plantilla</strong> en el formulario Nuevo Evento. Es de tu club: solo la ven sus administradores, no tu región ni tu federación"
       },
       "region_admin": {
         "name": "Administrador regional",
@@ -604,7 +605,8 @@
         "step_1": "Abre <strong>Mi región</strong> para ver tus clubes y quién los gestiona",
         "step_2": "Crea tus campeonatos en el <strong>Gestor de competiciones</strong>, organizados por tu región",
         "step_3": "Donde aún no hay federación, aprueba a los miembros que quieren saltar, juzgar o entrenar, y a los clubes que piden unirse a tu región",
-        "cta": "Organizar una competición ↗"
+        "cta": "Organizar una competición ↗",
+        "step_templates": "Guarda las <strong>plantillas</strong> propias de tu región en el formulario Nuevo Evento. Solo las ven sus administradores, no sus clubes ni tu federación"
       },
       "org_admin": {
         "name": "Admin de Organización",
@@ -994,6 +996,17 @@
       "region": "Su estado / provincia (campeonatos nacionales)",
       "club": "Su club (competiciones de club e interclubes)",
       "hint": "Se muestra junto a cada saltador en el marcador, los resultados y los PDF, y es lo que agrupa el medallero. Un saltador sin código de estado o de club aparece con su país."
+    },
+    "templates": {
+      "owner_org": "Plantillas de tu organización",
+      "owner_named": "Plantillas de {name}",
+      "delete_tip": "Eliminar plantilla",
+      "delete_title": "¿Eliminar la plantilla \"{name}\"?",
+      "delete_body": "Desaparece para todos los que usan estas plantillas. Los eventos ya creados con ella no cambian.",
+      "deleted": "Plantilla \"{name}\" eliminada",
+      "delete_failed": "No se pudo eliminar la plantilla: {error}",
+      "name_placeholder": "Nombre de la plantilla (p. ej. \"U16 Mujeres 3m\")",
+      "name_required": "Ponle un nombre a la plantilla"
     }
   },
   "user_manager": {

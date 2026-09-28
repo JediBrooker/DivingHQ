@@ -596,7 +596,8 @@
         "step_4": "V den závodu řiďte bodování z <strong>Řídicí místnosti</strong>",
         "step_5": "Až dorazí vaše federace nebo krajský svaz, hlasujte o jejím nároku na stránce <strong>Nároky</strong>",
         "cta": "Pořádání závodu ↗",
-        "step_invite": "Na stránce <strong>Můj klub</strong> sdílejte pozvánkový odkaz klubu a nastavte kód klubu"
+        "step_invite": "Na stránce <strong>Můj klub</strong> sdílejte pozvánkový odkaz klubu a nastavte kód klubu",
+        "step_templates": "Nastavení disciplín, která používáte opakovaně, uložte ve formuláři Nová disciplína jako <strong>šablonu</strong>. Patří vašemu klubu: vidí ji jen jeho správci, ne váš region ani federace"
       },
       "region_admin": {
         "name": "Správce regionu",
@@ -604,7 +605,8 @@
         "step_1": "Otevřete <strong>Můj region</strong> a uvidíte své kluby a jejich vedení",
         "step_2": "Vytvořte mistrovství ve <strong>Správě závodů</strong> pořádané vaším regionem",
         "step_3": "Kde zatím není federace, schvalujte členy, kteří chtějí skákat, soudit nebo trénovat, a kluby, které žádají o vstup do vašeho regionu",
-        "cta": "Pořádání závodu ↗"
+        "cta": "Pořádání závodu ↗",
+        "step_templates": "Vlastní <strong>šablony</strong> disciplín vašeho regionu uložte ve formuláři Nová disciplína. Vidí je jen jeho správci, ne jeho kluby ani vaše federace"
       },
       "org_admin": {
         "name": "Administrátor organizace",
@@ -994,6 +996,17 @@
       "region": "Svůj stát / provincii (národní mistrovství)",
       "club": "Svůj klub (klubové a meziklubové závody)",
       "hint": "Zobrazuje se u každého skokana na výsledkové tabuli, ve výsledcích a v PDF a podle toho se seskupuje tabulka medailí. Skokan bez kódu státu nebo klubu se zobrazí se svou zemí."
+    },
+    "templates": {
+      "owner_org": "Šablony vaší organizace",
+      "owner_named": "Šablony: {name}",
+      "delete_tip": "Smazat šablonu",
+      "delete_title": "Smazat šablonu „{name}“?",
+      "delete_body": "Zmizí všem, kdo tyto šablony používají. Disciplíny, které už podle ní vznikly, se nemění.",
+      "deleted": "Šablona „{name}“ smazána",
+      "delete_failed": "Šablonu se nepodařilo smazat: {error}",
+      "name_placeholder": "Název šablony (např. „U16 ženy 3m“)",
+      "name_required": "Zadejte název šablony"
     }
   },
   "user_manager": {

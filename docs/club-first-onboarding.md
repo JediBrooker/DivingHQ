@@ -265,6 +265,7 @@ everything beneath it, never sideways.
 | See member data for… | own club | clubs in region | whole org | |
 | Set fees / take payments | own club | own region | org | |
 | Approve clubs founded at signup | n/a | no (v1) | own org, or let them join automatically (§20) | nobody, they join straight away |
+| Saved event templates (§21) | own club's only | own region's only | own org's only | n/a |
 
 Concretely:
 
@@ -793,3 +794,15 @@ Founders hear the outcome in-app (`club_decision`) and by email. Admin and found
 **Frontend.** Clubs gets a Waiting for approval panel (founder, email-verified badge, waiting since, and a "Looks like …" warning when an active club in the org has the same code or much the same name), Approve and Reject dialogs on `BaseModal`, a Waiting stat, and the "New clubs from signup" setting. Pending clubs stay out of the table and its counts. Dashboard: a New clubs chip and attention card for org admins and the sysadmin, and a "club awaiting approval" chip for the founder. Register shows whether a new club waits or joins now, and the pending note after signup.
 
 **Tests.** Integration: the club approval tests at the end of `test/integration.test.js`. e2e: `test/e2e/club-approval.spec.js`.
+
+## 21. Event templates by owner (migration 104)
+
+The Meet Manager's saved event templates used to be the org's alone (`org_admin` / `meet_manager`), so club and region admins running their own meets got no strip at all. The product call (Sep 2026, made for manual score entry as well) is that **things belong to the organisation that made them, not to whoever is above it**. That's the one place this doc's "own level and everything beneath it" rule from §7 doesn't hold: a federation admin doesn't see or edit its clubs' templates, a region admin doesn't see its clubs', and a club sees neither the region's nor the federation's.
+
+**Schema.** `event_templates` gets `club_id` and `region_id` (nullable, FKs `ON DELETE CASCADE`), and every row has exactly one owner: `CHECK (num_nonnulls(org_id, club_id, region_id) = 1)`. A club or region row leaves `org_id` NULL rather than copying the club's org, so the old `UNIQUE (org_id, name)` stays as it was ("a name once per org") and two partial unique indexes, `(club_id, name)` and `(region_id, name)`, give each club and region its own. Anything asking `WHERE org_id = $1` only ever sees the org's own templates, and the release still running during a deploy (which upserts `ON CONFLICT (org_id, name)`) keeps working, so 104 isn't in `scripts/migration-compat.js`. `init.sql` stays pinned.
+
+**API.** `routes/event-templates.js`. Every verb works in one scope, picked with the query string: nothing is the caller's org (org_admin / meet_manager), `?club_id=` a club they hold a seat for (`CLUB_SEAT_SQL`), `?region_id=` a region they hold a seat for (`REGION_SEAT_SQL`, new beside it in `lib/middleware.js`). An org role doesn't open a club's scope and a seat doesn't open the org's. Both params is a 400, a malformed id a 400, someone else's club or region a 403 (a missing one too, except for the sysadmin, who gets the 404), a pending club a 409 `club_pending`. DELETE only matches inside the scope, anything else is a 404. The sysadmin works in any scope and deletes by id from anywhere. Responses carry `club_id` / `region_id` (`src/types.js` `EventTemplate`).
+
+**Manager.** Org editors see their org's templates, as before. In club mode (`useClubScope`) the strip comes back, pointed at whoever hosts the meet the new event is going into: the host club if they admin it, else the host region, else the region of the host club (a region admin stepping in on one of its clubs' meets uses the region's templates, not the club's). `templateScopeFor()` in `club-scope-core.js` makes that call and the strip reloads when the meet changes. No meet, no strip.
+
+**Tests.** Integration: the "event templates by owner" tests at the end of `test/integration.test.js` (every permission edge, the sysadmin, pending clubs, the CHECK, the cascade). Unit: `test/use-club-scope.test.js`. e2e: `test/e2e/club-templates.spec.js`, a club admin saving and applying one.

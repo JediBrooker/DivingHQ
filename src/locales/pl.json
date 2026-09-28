@@ -607,7 +607,8 @@
         "step_4": "W dniu zawodów prowadź punktację z <strong>Pokoju kontroli</strong>",
         "step_5": "Gdy dołączy twoja federacja lub organ regionalny, zagłosuj nad jej roszczeniem w <strong>Roszczeniach</strong>",
         "cta": "Organizacja zawodów ↗",
-        "step_invite": "Na stronie <strong>Mój klub</strong> udostępnij link z zaproszeniem do klubu i ustaw kod klubu"
+        "step_invite": "Na stronie <strong>Mój klub</strong> udostępnij link z zaproszeniem do klubu i ustaw kod klubu",
+        "step_templates": "Ustawienia, których używasz wielokrotnie, zapisz jako <strong>szablon</strong> w formularzu Nowa Konkurencja. Należy do twojego klubu: widzą go tylko jego administratorzy, nie twój region ani federacja"
       },
       "region_admin": {
         "name": "Administrator regionu",
@@ -615,7 +616,8 @@
         "step_1": "Otwórz <strong>Mój region</strong>, aby zobaczyć kluby i kto je prowadzi",
         "step_2": "Utwórz mistrzostwa w <strong>Menedżerze zawodów</strong>, organizowane przez twój region",
         "step_3": "Tam, gdzie nie ma jeszcze federacji, zatwierdzaj członków, którzy chcą skakać, sędziować lub trenować, oraz kluby proszące o dołączenie do twojego regionu",
-        "cta": "Organizacja zawodów ↗"
+        "cta": "Organizacja zawodów ↗",
+        "step_templates": "Własne <strong>szablony</strong> twojego regionu zapisuj w formularzu Nowa Konkurencja. Widzą je tylko jego administratorzy, nie jego kluby ani twoja federacja"
       },
       "org_admin": {
         "name": "Administrator Organizacji",
@@ -1005,6 +1007,17 @@
       "region": "Swój stan / prowincję (mistrzostwa krajowe)",
       "club": "Swój klub (zawody klubowe i międzyklubowe)",
       "hint": "Wyświetlane obok każdego skoczka na tablicy wyników, w wynikach i plikach PDF; według tego grupuje się też klasyfikacja medalowa. Skoczek bez kodu stanu lub klubu pojawia się ze swoim krajem."
+    },
+    "templates": {
+      "owner_org": "Szablony twojej organizacji",
+      "owner_named": "Szablony: {name}",
+      "delete_tip": "Usuń szablon",
+      "delete_title": "Usunąć szablon „{name}”?",
+      "delete_body": "Zniknie dla wszystkich, którzy korzystają z tych szablonów. Konkurencje już z niego utworzone się nie zmienią.",
+      "deleted": "Usunięto szablon „{name}”",
+      "delete_failed": "Nie udało się usunąć szablonu: {error}",
+      "name_placeholder": "Nazwa szablonu (np. „U16 kobiety 3m”)",
+      "name_required": "Nadaj szablonowi nazwę"
     }
   },
   "user_manager": {

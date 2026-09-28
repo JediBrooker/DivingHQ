@@ -607,7 +607,8 @@
         "step_4": "No dia da prova, conduza a pontuação a partir da <strong>Sala de Controlo</strong>",
         "step_5": "Quando a sua federação ou organismo regional chegar, vote a reivindicação em <strong>Reivindicações</strong>",
         "cta": "Organizar uma prova ↗",
-        "step_invite": "Em <strong>O meu clube</strong>, partilhe a ligação de convite do seu clube e defina o código do clube"
+        "step_invite": "Em <strong>O meu clube</strong>, partilhe a ligação de convite do seu clube e defina o código do clube",
+        "step_templates": "Guarde as definições que repete como <strong>modelo</strong> no formulário Nova Prova. Fica do seu clube: só os administradores do clube o veem, não a sua região nem a federação"
       },
       "region_admin": {
         "name": "Administrador regional",
@@ -615,7 +616,8 @@
         "step_1": "Abra <strong>A minha região</strong> para ver os clubes e quem os gere",
         "step_2": "Crie os campeonatos no <strong>Gestor de Competições</strong>, organizados pela sua região",
         "step_3": "Onde ainda não há federação, aprove os membros que querem saltar, julgar ou treinar, e os clubes que pedem para aderir à sua região",
-        "cta": "Organizar uma prova ↗"
+        "cta": "Organizar uma prova ↗",
+        "step_templates": "Guarde os <strong>modelos</strong> próprios da sua região no formulário Nova Prova. Só os administradores da região os veem, não os seus clubes nem a sua federação"
       },
       "org_admin": {
         "name": "Admin de Organização",
@@ -1005,6 +1007,17 @@
       "region": "O seu estado / província (campeonatos nacionais)",
       "club": "O seu clube (competições de clube e interclubes)",
       "hint": "Aparece junto a cada saltador no painel de resultados, nos resultados e nos PDF, e é o que agrupa o quadro de medalhas. Um saltador sem código de estado ou de clube aparece com o seu país."
+    },
+    "templates": {
+      "owner_org": "Modelos da sua organização",
+      "owner_named": "Modelos de {name}",
+      "delete_tip": "Eliminar modelo",
+      "delete_title": "Eliminar o modelo \"{name}\"?",
+      "delete_body": "Desaparece para todos os que usam estes modelos. As provas já criadas a partir dele não são afetadas.",
+      "deleted": "Modelo \"{name}\" eliminado",
+      "delete_failed": "Não foi possível eliminar o modelo: {error}",
+      "name_placeholder": "Nome do modelo (p. ex. \"U16 Femininos 3m\")",
+      "name_required": "Dê um nome ao modelo"
     }
   },
   "user_manager": {

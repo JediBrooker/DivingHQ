@@ -596,7 +596,8 @@
         "step_4": "On the day, drive scoring from <strong>Control Room</strong>",
         "step_5": "When your federation or state body arrives, vote on its claim on <strong>Claims</strong>",
         "cta": "Running a meet ↗",
-        "step_invite": "On <strong>My club</strong>, share your club's invite link and set its club code"
+        "step_invite": "On <strong>My club</strong>, share your club's invite link and set its club code",
+        "step_templates": "Save event settings you reuse as a <strong>template</strong> in the New Event form. It stays your club's: only its admins see it, not your region or federation"
       },
       "region_admin": {
         "name": "Region Admin",
@@ -604,7 +605,8 @@
         "step_1": "Open <strong>My region</strong> to see your clubs and who runs them",
         "step_2": "Create your championships in <strong>Meet Manager</strong>, hosted by your region",
         "step_3": "Where there's no federation yet, approve members who want to dive, judge or coach, and clubs asking to join your region",
-        "cta": "Running a meet ↗"
+        "cta": "Running a meet ↗",
+        "step_templates": "Save your region's own event <strong>templates</strong> in the New Event form. Only its admins see them, not its clubs or your federation"
       },
       "org_admin": {
         "name": "Org Admin",
@@ -994,6 +996,17 @@
       "region": "Their state / province (national championships)",
       "club": "Their club (club and inter-club meets)",
       "hint": "Shown next to each diver on the scoreboard, results and PDFs, and what the medal table groups by. A diver with no state or club code falls back to their country."
+    },
+    "templates": {
+      "owner_org": "Your organisation's templates",
+      "owner_named": "Templates for {name}",
+      "delete_tip": "Delete template",
+      "delete_title": "Delete template \"{name}\"?",
+      "delete_body": "Everyone who uses these templates loses it too. Events already created from it aren't affected.",
+      "deleted": "Deleted template \"{name}\"",
+      "delete_failed": "Couldn't delete the template: {error}",
+      "name_placeholder": "Template name (e.g. \"U16 Women 3m\")",
+      "name_required": "Pick a template name"
     }
   },
   "user_manager": {

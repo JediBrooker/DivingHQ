@@ -321,6 +321,15 @@ club admins, payments, records, rep codes), filter on `status = 'active'` or
 answer 409 `club_pending`, and add a test. Deciding lives in
 `lib/club-approvals.js`, never a hand-written `UPDATE clubs SET status`.
 
+**Some things belong to their maker, not the hierarchy.** Meets follow the
+"your level and below" rule, but saved event templates (migration 104,
+`docs/club-first-onboarding.md` §21) are the owner's alone: an org's for its
+org_admin / meet_manager, a club's for its club admins, a region's for its
+region admins, and nobody up or down the chain sees the others'. A club or
+region row has `org_id` NULL, so `WHERE org_id = $1` on `event_templates`
+means the org's own. Seats go through `CLUB_SEAT_SQL` / `REGION_SEAT_SQL`
+(`lib/middleware.js`); an org role never opens a club's scope.
+
 ### Schema migrations
 
 Every change goes in **two** places:

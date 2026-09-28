@@ -607,7 +607,8 @@
         "step_4": "Le jour J, pilotez la notation depuis la <strong>Salle de contrôle</strong>",
         "step_5": "Quand votre fédération ou votre organe régional arrive, votez sur sa revendication dans <strong>Revendications</strong>",
         "cta": "Organiser une compétition ↗",
-        "step_invite": "Dans <strong>Mon club</strong>, partagez le lien d'invitation de votre club et définissez son code"
+        "step_invite": "Dans <strong>Mon club</strong>, partagez le lien d'invitation de votre club et définissez son code",
+        "step_templates": "Enregistrez les réglages que vous réutilisez comme <strong>modèle</strong> dans le formulaire Nouvelle Épreuve. Il reste à votre club : seuls ses administrateurs le voient, ni votre région ni votre fédération"
       },
       "region_admin": {
         "name": "Administrateur régional",
@@ -615,7 +616,8 @@
         "step_1": "Ouvrez <strong>Ma région</strong> pour voir vos clubs et qui les gère",
         "step_2": "Créez vos championnats dans le <strong>Gestionnaire de compétitions</strong>, organisés par votre région",
         "step_3": "Là où il n'y a pas encore de fédération, approuvez les membres qui veulent plonger, juger ou entraîner, et les clubs qui demandent à rejoindre votre région",
-        "cta": "Organiser une compétition ↗"
+        "cta": "Organiser une compétition ↗",
+        "step_templates": "Enregistrez les <strong>modèles</strong> propres à votre région dans le formulaire Nouvelle Épreuve. Seuls ses administrateurs les voient, ni ses clubs ni votre fédération"
       },
       "org_admin": {
         "name": "Admin de l'Organisation",
@@ -1005,6 +1007,17 @@
       "region": "Leur État / province (championnats nationaux)",
       "club": "Leur club (compétitions de club et interclubs)",
       "hint": "Affiché à côté de chaque plongeur sur le tableau, dans les résultats et les PDF, et c'est ce qui regroupe le tableau des médailles. Un plongeur sans code d'État ou de club apparaît avec son pays."
+    },
+    "templates": {
+      "owner_org": "Modèles de votre organisation",
+      "owner_named": "Modèles de {name}",
+      "delete_tip": "Supprimer le modèle",
+      "delete_title": "Supprimer le modèle « {name} » ?",
+      "delete_body": "Il disparaît pour tous ceux qui utilisent ces modèles. Les épreuves déjà créées à partir de lui ne changent pas.",
+      "deleted": "Modèle « {name} » supprimé",
+      "delete_failed": "Impossible de supprimer le modèle : {error}",
+      "name_placeholder": "Nom du modèle (par ex. « U16 Dames 3m »)",
+      "name_required": "Donnez un nom au modèle"
     }
   },
   "user_manager": {

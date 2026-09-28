@@ -1,9 +1,9 @@
 <script setup>
-import { ref, computed, onMounted, onUnmounted, defineAsyncComponent } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, defineAsyncComponent } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
-import { useClubScope } from '@/composables/useClubScope'
+import { useClubScope, templateScopeQuery } from '@/composables/useClubScope'
 import { localInputToIso, isoToLocalInput, dateOnly, dateOnlyToLocalDate } from '@/lib/dateInputs'
 import { idbInvalidate } from '@/lib/idbCache'
 import { DIVE_DIRECTORY_TTL_MS } from '@/lib/cache-policy'
@@ -48,7 +48,7 @@ const meets = ref([])
 
 // Club admins without an org role only see their own club's meets
 // (src/composables/useClubScope.js).
-const { clubMode, isMyClubMeet, narrowEvents } = useClubScope()
+const { clubMode, isMyClubMeet, narrowEvents, templateScopeForMeet } = useClubScope()
 const formErr = ref('')
 const editErr = ref('')
 // One composable instance locks the body whenever any of this
@@ -331,29 +331,64 @@ const sectionsRoundsTotal = computed(() => roundSectionsTotal(createRoundSection
 
 // Event templates: saved form configurations the manager can apply
 // to a fresh event with one click.
+//
+// Each one belongs to whoever saved it (migration 104) and nobody else
+// sees it. An org editor works with the org's. In club mode it's the club
+// or region hosting the meet the event is going into, so the strip
+// follows the meet picker, and a club admin never lands on the org's list
+// (which would only 403). No scope (club mode, no meet of theirs) means
+// no strip and no Save button.
 const eventTemplates = ref([])
 const saveTemplateOpen = ref(false)
 const saveTemplateName = ref('')
 const saveTemplateBusy = ref(false)
 const templateErr = ref('')
 
-async function loadEventTemplates() {
-  try {
-    eventTemplates.value = await auth.apiFetch('/api/event-templates')
-  } catch {
-    eventTemplates.value = []
+const templateScope = computed(() =>
+  templateScopeForMeet(meets.value.find(m => m.id === createMeetId.value) || null))
+// '' for the org, '?club_id=…' / '?region_id=…', null for none.
+const templateQuery = computed(() => templateScopeQuery(templateScope.value))
+// Whose list this is, over the strip. Matters for someone who runs two
+// clubs, or a club and a region, and would otherwise not know which
+// one's templates they're saving into.
+const templateOwnerLabel = computed(() => {
+  const s = templateScope.value
+  if (s?.club_id) {
+    const name = auth.clubAdminOf.find(c => c.id === s.club_id)?.name
+    return name ? t('manager.templates.owner_named', { name }) : ''
   }
+  if (s?.region_id) {
+    const name = auth.regionAdminOf.find(r => r.id === s.region_id)?.name
+    return name ? t('manager.templates.owner_named', { name }) : ''
+  }
+  return t('manager.templates.owner_org')
+})
+
+// Which scope eventTemplates was loaded for. Save and Delete go to that
+// one, and a slow answer for a scope we've since left is dropped.
+let eventTemplatesQuery
+let eventTemplatesLoading = null
+function loadEventTemplates(q) {
+  eventTemplatesQuery = q
+  eventTemplates.value = []
+  if (q === null) return Promise.resolve()
+  return auth.apiFetch(`/api/event-templates${q}`)
+    .then((rows) => { if (eventTemplatesQuery === q) eventTemplates.value = rows })
+    .catch(() => { if (eventTemplatesQuery === q) eventTemplates.value = [] })
 }
 // Saved templates only show inside the create form, so fetch them when
-// it first opens. They're an org editor's tool (GET/POST/DELETE
-// /api/event-templates want org_admin or meet_manager), so a club admin
-// running their own club's meet doesn't get a strip that would 403.
-let eventTemplatesLoading = null
+// it opens, and again only if the scope has moved since.
 function ensureEventTemplates() {
-  if (clubMode.value) return Promise.resolve()
-  if (!eventTemplatesLoading) eventTemplatesLoading = loadEventTemplates()
+  const q = templateQuery.value
+  if (eventTemplatesLoading && q === eventTemplatesQuery) return eventTemplatesLoading
+  eventTemplatesLoading = loadEventTemplates(q)
   return eventTemplatesLoading
 }
+// A club admin switching the form to another of their meets can land on
+// a different club's (or region's) templates.
+watch(templateQuery, () => {
+  if (showCreateModal.value) ensureEventTemplates()
+})
 
 function applyEventTemplate(t) {
   const c = t.config || {}
@@ -423,9 +458,11 @@ async function saveAsEventTemplate() {
   templateErr.value = ''
   const name = saveTemplateName.value.trim()
   if (!name) {
-    templateErr.value = 'Pick a template name'
+    templateErr.value = t('manager.templates.name_required')
     return
   }
+  const q = templateQuery.value
+  if (q === null) return
   saveTemplateBusy.value = true
   try {
     // Build the config snapshot from the current form state. Event-
@@ -447,15 +484,18 @@ async function saveAsEventTemplate() {
         : null,
       round_rules: roundRulesFromSections(createRoundSections.value),
     }
-    const saved = await auth.apiFetch('/api/event-templates', {
+    const saved = await auth.apiFetch(`/api/event-templates${q}`, {
       method: 'POST',
       body: JSON.stringify({ name, config }),
     })
-    // Replace any prior entry by name (server upserts).
-    eventTemplates.value = [
-      saved,
-      ...eventTemplates.value.filter(t => t.name !== saved.name),
-    ].sort((a, b) => a.name.localeCompare(b.name))
+    // Replace any prior entry by name (server upserts), unless the form
+    // has moved to another owner's list in the meantime.
+    if (eventTemplatesQuery === q) {
+      eventTemplates.value = [
+        saved,
+        ...eventTemplates.value.filter(x => x.name !== saved.name),
+      ].sort((a, b) => a.name.localeCompare(b.name))
+    }
     saveTemplateOpen.value = false
     saveTemplateName.value = ''
   } catch (err) {
@@ -465,19 +505,21 @@ async function saveAsEventTemplate() {
   }
 }
 
-async function deleteEventTemplate(t) {
+async function deleteEventTemplate(tpl) {
+  // The scope the row was listed under, which is the one it lives in.
+  const q = eventTemplatesQuery ?? ''
   if (!await confirmAction({
-    title: `Delete template "${t.name}"?`,
-    body:  'Templates are scoped to your federation. Existing events keyed off this template are not affected.',
-    confirmLabel: 'Delete template',
+    title: t('manager.templates.delete_title', { name: tpl.name }),
+    body:  t('manager.templates.delete_body'),
+    confirmLabel: t('manager.templates.delete_tip'),
     confirmKind:  'danger',
   })) return
   try {
-    await auth.apiFetch(`/api/event-templates/${t.id}`, { method: 'DELETE' })
-    eventTemplates.value = eventTemplates.value.filter(x => x.id !== t.id)
-    showSuccess(`Deleted template "${t.name}"`)
+    await auth.apiFetch(`/api/event-templates/${tpl.id}${q}`, { method: 'DELETE' })
+    eventTemplates.value = eventTemplates.value.filter(x => x.id !== tpl.id)
+    showSuccess(t('manager.templates.deleted', { name: tpl.name }))
   } catch (err) {
-    showError(`Failed to delete: ${err.message}`)
+    showError(t('manager.templates.delete_failed', { error: err.message }))
   }
 }
 
@@ -1315,7 +1357,7 @@ onUnmounted(() => {
       <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;margin-bottom:1rem;flex-wrap:wrap">
         <h2 style="font-size:22px">{{ $t('manager.modals.new_event_title') }}</h2>
         <div style="display:flex;gap:0.5rem">
-          <button v-if="!clubMode"
+          <button v-if="templateQuery !== null"
                   type="button"
                   class="btn btn-ghost btn-sm"
                   @click="saveTemplateOpen = !saveTemplateOpen">
@@ -1326,8 +1368,11 @@ onUnmounted(() => {
       </div>
 
       <!-- Template strip: apply a saved configuration with one click.
-           Templates are per-org; saving upserts by name. -->
-      <div v-if="eventTemplates.length || saveTemplateOpen" class="event-templates">
+           Each belongs to one org, club or region (templateScope);
+           saving upserts by name within it. -->
+      <div v-if="templateQuery !== null && (eventTemplates.length || saveTemplateOpen)"
+           class="event-templates" data-testid="event-templates">
+        <div v-if="templateOwnerLabel" class="event-templates-owner">{{ templateOwnerLabel }}</div>
         <div v-if="eventTemplates.length" class="event-templates-list">
           <div v-for="t in eventTemplates" :key="t.id" class="event-template-row">
             <button type="button" class="event-template-apply" @click="applyEventTemplate(t)">
@@ -1337,7 +1382,8 @@ onUnmounted(() => {
               </span>
             </button>
             <button type="button" class="btn btn-ghost btn-sm event-template-del"
-                    @click="deleteEventTemplate(t)" v-tip="'Delete template'">✕</button>
+                    :aria-label="$t('manager.templates.delete_tip')"
+                    @click="deleteEventTemplate(t)" v-tip="$t('manager.templates.delete_tip')">✕</button>
           </div>
         </div>
 
@@ -1345,12 +1391,13 @@ onUnmounted(() => {
           <input class="input"
                  type="text"
                  v-model="saveTemplateName"
-                 placeholder='Template name (e.g. "World Aquatics U16 Womens 3m")'
+                 :placeholder="$t('manager.templates.name_placeholder')"
+                 :aria-label="$t('manager.templates.name_placeholder')"
                  @keyup.enter="saveAsEventTemplate">
           <button type="button" class="btn btn-primary btn-sm"
                   :disabled="saveTemplateBusy"
                   @click="saveAsEventTemplate">
-            {{ saveTemplateBusy ? 'Saving…' : 'Save' }}
+            {{ saveTemplateBusy ? $t('common.saving') : $t('common.save') }}
           </button>
         </div>
         <div v-if="templateErr" class="msg msg-error" style="margin-top:0.5rem">{{ templateErr }}</div>

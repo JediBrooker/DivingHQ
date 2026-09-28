@@ -607,7 +607,8 @@
         "step_4": "A versenynapon a <strong>Vezérlőszobából</strong> irányítja a pontozást",
         "step_5": "Amikor szövetsége vagy regionális testülete csatlakozik, szavazzon az igényéről az <strong>Igények</strong> oldalon",
         "cta": "Verseny rendezése ↗",
-        "step_invite": "A <strong>Saját klubom</strong> oldalon ossza meg klubja meghívó linkjét, és állítsa be a klubkódot"
+        "step_invite": "A <strong>Saját klubom</strong> oldalon ossza meg klubja meghívó linkjét, és állítsa be a klubkódot",
+        "step_templates": "A gyakran használt beállításokat mentse <strong>sablonként</strong> az Új esemény űrlapon. A sablon a klubjáé: csak a klub adminisztrátorai látják, a régiója és a szövetsége nem"
       },
       "region_admin": {
         "name": "Régió-adminisztrátor",
@@ -615,7 +616,8 @@
         "step_1": "Nyissa meg a <strong>Saját régióm</strong> oldalt a klubokért és vezetőikért",
         "step_2": "Hozza létre bajnokságait a <strong>Versenymenedzserben</strong> a régió rendezésében",
         "step_3": "Ahol még nincs szövetség, hagyja jóvá a műugrani, bíráskodni vagy edzősködni kívánó tagokat és a régiójához csatlakozni kívánó klubokat",
-        "cta": "Verseny rendezése ↗"
+        "cta": "Verseny rendezése ↗",
+        "step_templates": "Mentse a régió saját <strong>sablonjait</strong> az Új esemény űrlapon. Csak a régió adminisztrátorai látják őket, a klubjai és a szövetsége nem"
       },
       "org_admin": {
         "name": "Szervezeti adminisztrátor",
@@ -1005,6 +1007,17 @@
       "region": "Az államukat / tartományukat (országos bajnokságok)",
       "club": "A klubjukat (klub- és klubközi versenyek)",
       "hint": "Minden műugró mellett megjelenik az eredményjelzőn, az eredményekben és a PDF-ekben, és ez alapján csoportosul az éremtáblázat. Akinek nincs állam- vagy klubkódja, az országával jelenik meg."
+    },
+    "templates": {
+      "owner_org": "A szervezete sablonjai",
+      "owner_named": "Sablonok: {name}",
+      "delete_tip": "Sablon törlése",
+      "delete_title": "Törli a(z) „{name}” sablont?",
+      "delete_body": "Mindenkinek eltűnik, aki ezeket a sablonokat használja. A belőle már létrehozott eseményeket ez nem érinti.",
+      "deleted": "A(z) „{name}” sablon törölve",
+      "delete_failed": "A sablont nem sikerült törölni: {error}",
+      "name_placeholder": "Sablon neve (pl. „U16 nők 3m”)",
+      "name_required": "Adjon nevet a sablonnak"
     }
   },
   "user_manager": {

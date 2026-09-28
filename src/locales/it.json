@@ -607,7 +607,8 @@
         "step_4": "Il giorno della gara, dirigi i punteggi dalla <strong>Sala Controllo</strong>",
         "step_5": "Quando arriva la tua federazione o l'ente regionale, vota la sua rivendicazione in <strong>Rivendicazioni</strong>",
         "cta": "Organizzare una gara ↗",
-        "step_invite": "In <strong>Il mio club</strong>, condividi il link di invito del tuo club e imposta il codice del club"
+        "step_invite": "In <strong>Il mio club</strong>, condividi il link di invito del tuo club e imposta il codice del club",
+        "step_templates": "Salva le impostazioni che riusi come <strong>modello</strong> nel modulo Nuova Gara. Resta del tuo club: lo vedono solo i suoi amministratori, non la tua regione né la federazione"
       },
       "region_admin": {
         "name": "Amministratore regionale",
@@ -615,7 +616,8 @@
         "step_1": "Apri <strong>La mia regione</strong> per vedere i tuoi club e chi li gestisce",
         "step_2": "Crea i tuoi campionati nel <strong>Gestore gare</strong>, organizzati dalla tua regione",
         "step_3": "Dove non c'è ancora una federazione, approva i membri che vogliono tuffarsi, giudicare o allenare, e i club che chiedono di entrare nella tua regione",
-        "cta": "Organizzare una gara ↗"
+        "cta": "Organizzare una gara ↗",
+        "step_templates": "Salva i <strong>modelli</strong> della tua regione nel modulo Nuova Gara. Li vedono solo i suoi amministratori, non i suoi club né la tua federazione"
       },
       "org_admin": {
         "name": "Admin di Organizzazione",
@@ -1005,6 +1007,17 @@
       "region": "Il loro stato / provincia (campionati nazionali)",
       "club": "Il loro club (gare di club e interclub)",
       "hint": "Mostrato accanto a ogni tuffatore sul tabellone, nei risultati e nei PDF, ed è ciò per cui si raggruppa il medagliere. Un tuffatore senza codice di stato o di club compare con il suo paese."
+    },
+    "templates": {
+      "owner_org": "Modelli della tua organizzazione",
+      "owner_named": "Modelli di {name}",
+      "delete_tip": "Elimina modello",
+      "delete_title": "Eliminare il modello \"{name}\"?",
+      "delete_body": "Sparisce per tutti quelli che usano questi modelli. Le gare già create da questo modello non cambiano.",
+      "deleted": "Modello \"{name}\" eliminato",
+      "delete_failed": "Impossibile eliminare il modello: {error}",
+      "name_placeholder": "Nome del modello (es. \"U16 Donne 3m\")",
+      "name_required": "Dai un nome al modello"
     }
   },
   "user_manager": {

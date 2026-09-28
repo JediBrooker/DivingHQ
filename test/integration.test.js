@@ -12019,3 +12019,269 @@ test("orgAdminHold makes a second admin wait for the first one's transaction, th
     await compKit.cleanup(fed);
   }
 });
+
+// ---------------------------------------------------------------------
+// Event templates by owner (migration 104). A template belongs to the
+// org, club or region that saved it and only that owner's admins use it.
+// Deliberately not hierarchical: the federation doesn't see its clubs'
+// templates, a region doesn't see its clubs', and a club sees neither of
+// theirs. Everything here lives in Vatican City, which no other test uses.
+// ---------------------------------------------------------------------
+const tplKit = {
+  CODE: "VAT",
+  // One org with two regions, club A (in region R) and club B, an admin
+  // for each, plus the fixture's own org admin.
+  async world() {
+    const st = await setupFixture({ withEvent: false });
+    await pool.query("UPDATE organisations SET country_code = $2 WHERE id = $1", [st.orgId, tplKit.CODE]);
+    const one = async (sql, params) => (await pool.query(sql, params)).rows[0].id;
+    const regionR = await one("INSERT INTO regions (org_id, name, short_code) VALUES ($1, 'Borgo', 'BRG') RETURNING id", [st.orgId]);
+    const regionR2 = await one("INSERT INTO regions (org_id, name, short_code) VALUES ($1, 'Giardini', 'GIA') RETURNING id", [st.orgId]);
+    const clubA = await one("INSERT INTO clubs (org_id, name, region_id) VALUES ($1, 'Borgo Divers', $2) RETURNING id", [st.orgId, regionR]);
+    const clubB = await one("INSERT INTO clubs (org_id, name) VALUES ($1, 'Giardini Divers') RETURNING id", [st.orgId]);
+    const seat = async (table, col, ownerId) => {
+      const m = await sweepKit.member(st.orgId, "spectator", `Template ${table}`);
+      await pool.query(`INSERT INTO ${table} (${col}, user_id, org_id) VALUES ($1, $2, $3)`, [ownerId, m.id, st.orgId]);
+      return m.token;
+    };
+    return {
+      st, clubA, clubB, regionR, regionR2,
+      org: st.adminToken,
+      a: await seat("club_admins", "club_id", clubA),
+      b: await seat("club_admins", "club_id", clubB),
+      r: await seat("region_admins", "region_id", regionR),
+      r2: await seat("region_admins", "region_id", regionR2),
+    };
+  },
+  async teardown(w) {
+    if (!w) return;
+    await pool.query("DELETE FROM clubs WHERE org_id = $1", [w.st.orgId]);
+    await pool.query("DELETE FROM regions WHERE org_id = $1", [w.st.orgId]);
+    await teardownFixture(w.st);
+  },
+  config: { gender: "Mixed", height: "1m", number_of_judges: 3, total_rounds: 4, event_type: "individual" },
+  list: (token, q = "") => fetchJson("GET", `/api/event-templates${q}`, { token }),
+  save: (token, q, name, config = tplKit.config) =>
+    fetchJson("POST", `/api/event-templates${q}`, { token, body: { name, config } }),
+  del: (token, id, q = "") => fetchJson("DELETE", `/api/event-templates/${id}${q}`, { token }),
+  names: (res) => res.body.map((row) => row.name),
+};
+
+test("event templates by owner: a club's are for its own admins, not the federation's or another club's", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  let w;
+  try {
+    w = await tplKit.world();
+    const { list, save, del } = tplKit;
+    const qA = `?club_id=${w.clubA}`;
+    const qB = `?club_id=${w.clubB}`;
+
+    // Club A's admin saves one into the club.
+    assert.deepEqual((await list(w.a, qA)).body, []);
+    const mine = await save(w.a, qA, "Club Night 1m");
+    assert.equal(mine.status, 201, JSON.stringify(mine.body));
+    assert.equal(mine.body.club_id, w.clubA);
+    assert.equal(mine.body.region_id, null);
+    const row = (await pool.query("SELECT org_id, club_id, created_by FROM event_templates WHERE id = $1", [mine.body.id])).rows[0];
+    assert.equal(row.org_id, null, "the club owns it, not the club's org");
+    assert.equal(row.club_id, w.clubA);
+    // Saving the same name again inside the club is the same template.
+    const again = await save(w.a, qA, "Club Night 1m", { ...tplKit.config, total_rounds: 6 });
+    assert.equal(again.status, 201);
+    assert.equal(again.body.id, mine.body.id);
+    assert.equal((await list(w.a, qA)).body[0].config.total_rounds, 6);
+
+    // Club B's admin can't reach club A's scope at all.
+    assert.equal((await list(w.b, qA)).status, 403);
+    assert.equal((await save(w.b, qA, "Sneaky")).status, 403);
+    assert.equal((await del(w.b, mine.body.id, qA)).status, 403);
+    // Nor delete A's template from inside their own club.
+    assert.equal((await del(w.b, mine.body.id, qB)).status, 404);
+    // Their own club can use the same name: a name is once per owner.
+    const theirs = await save(w.b, qB, "Club Night 1m");
+    assert.equal(theirs.status, 201, JSON.stringify(theirs.body));
+    assert.notEqual(theirs.body.id, mine.body.id);
+    assert.deepEqual((await list(w.b, qB)).body.map((x) => x.id), [theirs.body.id]);
+    assert.equal((await del(w.a, theirs.body.id, qA)).status, 404);
+
+    // The federation's org admin sees neither club's and can't get in.
+    assert.deepEqual((await list(w.org)).body, [], "org scope has no club templates in it");
+    assert.equal((await list(w.org, qA)).status, 403);
+    assert.equal((await save(w.org, qA, "From above")).status, 403);
+    assert.equal((await del(w.org, mine.body.id)).status, 404);
+    const orgs = await save(w.org, "", "Club Night 1m");
+    assert.equal(orgs.status, 201, "the org can use the name too");
+    assert.equal(orgs.body.club_id, null);
+    assert.deepEqual((await list(w.org)).body.map((x) => x.id), [orgs.body.id]);
+
+    // And the other way: a club admin has no org role, so no org scope.
+    assert.equal((await list(w.a)).status, 403);
+    assert.equal((await save(w.a, "", "Up a level")).status, 403);
+    assert.equal((await del(w.a, orgs.body.id)).status, 403);
+    assert.equal((await del(w.a, orgs.body.id, qA)).status, 404);
+
+    // Every template is where it was.
+    const left = await pool.query(
+      "SELECT count(*)::int AS n FROM event_templates WHERE id = ANY($1::uuid[])",
+      [[mine.body.id, theirs.body.id, orgs.body.id]],
+    );
+    assert.equal(left.rows[0].n, 3);
+
+    // The owner deletes their own.
+    assert.equal((await del(w.a, mine.body.id, qA)).status, 200);
+    assert.deepEqual((await list(w.a, qA)).body, []);
+  } finally {
+    await tplKit.teardown(w);
+  }
+});
+
+test("event templates by owner: a region's are for its admins, apart from its clubs' and the next region's", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  let w;
+  try {
+    w = await tplKit.world();
+    const { list, save, del, names } = tplKit;
+    const qR = `?region_id=${w.regionR}`;
+    const qR2 = `?region_id=${w.regionR2}`;
+    const qA = `?club_id=${w.clubA}`;
+
+    const regional = await save(w.r, qR, "Borgo Champs 3m");
+    assert.equal(regional.status, 201, JSON.stringify(regional.body));
+    assert.equal(regional.body.region_id, w.regionR);
+    assert.equal(regional.body.club_id, null);
+    assert.deepEqual(names(await list(w.r, qR)), ["Borgo Champs 3m"]);
+    const clubs = await save(w.a, qA, "Borgo Champs 3m");
+    assert.equal(clubs.status, 201, "a club in the region can use the same name");
+
+    // Club A sits in region R, and still neither sees the other's.
+    assert.equal((await list(w.r, qA)).status, 403, "a region admin doesn't get its clubs' templates");
+    assert.equal((await del(w.r, clubs.body.id, qR)).status, 404);
+    assert.equal((await list(w.a, qR)).status, 403, "a club admin doesn't get its region's");
+    assert.equal((await del(w.a, regional.body.id, qA)).status, 404);
+
+    // The next region over, and the federation, stay out too.
+    assert.equal((await list(w.r2, qR)).status, 403);
+    assert.equal((await save(w.r2, qR, "Sideways")).status, 403);
+    assert.equal((await del(w.r2, regional.body.id, qR2)).status, 404);
+    assert.deepEqual((await list(w.r2, qR2)).body, []);
+    assert.equal((await list(w.org, qR)).status, 403);
+    assert.equal((await del(w.org, regional.body.id)).status, 404);
+    // A region admin with no org role has no org scope either.
+    assert.equal((await list(w.r)).status, 403);
+
+    assert.equal((await del(w.r, regional.body.id, qR)).status, 200);
+    assert.deepEqual((await list(w.r, qR)).body, []);
+    assert.deepEqual(names(await list(w.a, qA)), ["Borgo Champs 3m"], "the club's copy is its own");
+  } finally {
+    await tplKit.teardown(w);
+  }
+});
+
+test("event templates: the sysadmin works in any scope, and bad or pending scopes are refused", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  let w;
+  try {
+    w = await tplKit.world();
+    const { list, save, del, names } = tplKit;
+    const qA = `?club_id=${w.clubA}`;
+    const qB = `?club_id=${w.clubB}`;
+    const qR = `?region_id=${w.regionR}`;
+    const sys = (await claimKit.login("admin", "admin")).token;
+
+    const clubs = await save(w.a, qA, "Twilight 1m");
+    const regional = await save(sys, qR, "Put there by DivingHQ");
+    assert.equal(regional.status, 201, JSON.stringify(regional.body));
+    assert.equal(regional.body.region_id, w.regionR);
+    assert.deepEqual(names(await list(w.r, qR)), ["Put there by DivingHQ"], "the region's admins get it");
+    assert.deepEqual(names(await list(sys, qA)), ["Twilight 1m"]);
+    const bs = await save(w.b, qB, "Giardini Open");
+    // The bypass: a sysadmin deletes by id from whatever scope they're in.
+    assert.equal((await del(sys, bs.body.id)).status, 200);
+    assert.deepEqual((await list(w.b, qB)).body, []);
+    const unknown = crypto.randomUUID();
+    assert.equal((await list(sys, `?club_id=${unknown}`)).status, 404);
+    assert.equal((await list(sys, `?region_id=${unknown}`)).status, 404);
+
+    // Malformed or mixed scopes are a 400; a club that isn't yours looks
+    // the same whether or not it exists.
+    assert.equal((await list(w.a, "?club_id=nope")).status, 400);
+    assert.equal((await list(w.r, "?region_id=nope")).status, 400);
+    assert.equal((await list(w.a, `${qA}&region_id=${w.regionR}`)).status, 400);
+    assert.equal((await list(w.a, `?club_id=${unknown}`)).status, 403);
+    assert.equal((await del(w.a, "not-a-uuid", qA)).status, 404);
+    // Anonymous: no.
+    assert.equal((await list(null, qA)).status, 403);
+
+    // A club still waiting for its federation has no templates to run.
+    await pool.query("UPDATE clubs SET status = 'pending' WHERE id = $1", [w.clubB]);
+    const pending = await list(w.b, qB);
+    assert.equal(pending.status, 409);
+    assert.equal(pending.body.code, "club_pending");
+    assert.equal((await save(w.b, qB, "Too early")).status, 409);
+
+    // One owner per row, whatever writes it.
+    await assert.rejects(
+      pool.query(
+        "INSERT INTO event_templates (org_id, club_id, name, config) VALUES ($1, $2, 'Both', '{}'::jsonb)",
+        [w.st.orgId, w.clubA],
+      ),
+      /event_templates_one_owner/,
+    );
+    await assert.rejects(
+      pool.query("INSERT INTO event_templates (name, config) VALUES ('Nobody', '{}'::jsonb)"),
+      /event_templates_one_owner/,
+    );
+
+    // A club's templates go with the club.
+    await pool.query("DELETE FROM clubs WHERE id = $1", [w.clubA]);
+    const gone = await pool.query("SELECT 1 FROM event_templates WHERE id = $1", [clubs.body.id]);
+    assert.equal(gone.rows.length, 0);
+  } finally {
+    await tplKit.teardown(w);
+  }
+});
+
+// A seat only counts while its holder is still in the club's (or region's)
+// org, same rule as the delegate helpers. Before routes/club-changes.js
+// started dropping them, a transfer left the old club_admins row behind,
+// and a template scope that just looked the row up would have kept
+// handing the old club's templates to somebody who'd left for another
+// federation. This pins that the route goes through the org-pinned seat
+// SQL rather than a bare lookup.
+test("event templates: a seat left behind by a transfer doesn't open the old club's or region's templates", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  let w, elsewhere;
+  try {
+    w = await tplKit.world();
+    elsewhere = await setupFixture({ withEvent: false });
+    const { list, save } = tplKit;
+    const qA = `?club_id=${w.clubA}`;
+    const qR = `?region_id=${w.regionR}`;
+
+    const mover = await sweepKit.member(w.st.orgId, "spectator", "Template mover");
+    await pool.query("INSERT INTO club_admins (club_id, user_id, org_id) VALUES ($1, $2, $3)", [w.clubA, mover.id, w.st.orgId]);
+    await pool.query("INSERT INTO region_admins (region_id, user_id, org_id) VALUES ($1, $2, $3)", [w.regionR, mover.id, w.st.orgId]);
+    assert.equal((await save(mover.token, qA, "Before the move")).status, 201);
+    assert.equal((await list(mover.token, qR)).status, 200);
+
+    // Off to another federation, with both rows stranded behind them.
+    await pool.query("UPDATE users SET org_id = $2 WHERE id = $1", [mover.id, elsewhere.orgId]);
+    const again = await fetchJson("POST", "/api/auth/login", { body: { username: mover.username, password: "not-used-here" } });
+    assert.equal(again.status, 200, JSON.stringify(again.body));
+    const token = again.body.token;
+    assert.equal((await list(token, qA)).status, 403);
+    assert.equal((await save(token, qA, "After the move")).status, 403);
+    assert.equal((await list(token, qR)).status, 403);
+    assert.equal((await save(token, qR, "After the move")).status, 403);
+
+    // The club's template is still the club's, for whoever admins it now.
+    assert.deepEqual(tplKit.names(await list(w.a, qA)), ["Before the move"]);
+  } finally {
+    await tplKit.teardown(w);
+    await teardownFixture(elsewhere);
+  }
+});

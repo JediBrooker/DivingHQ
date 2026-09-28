@@ -243,10 +243,18 @@ Click a template and the form populates: round_dives count, round_rules sections
 
 If you run the same event format every weekend (junior 1 m, U14 3 m, etc.), save the configuration as a **template**.
 
-- From the New Event form, fill in all the fields, then click **Save as Template** before clicking Create. You'll be prompted for a template name.
-- For future events, pick the template from the **Apply Template** drop-down at the top of the New Event form. Every field except the name pre-fills.
+- From the New Event form, fill in all the fields, then click **Save as template** before clicking Create, give it a name and click **Save**.
+- For future events, click the template in the saved-templates strip at the top of the New Event form. Every field except the name pre-fills.
 
-Templates are scoped per-org and keyed by name (overwrite-by-name, not append).
+Saving under a name you've already used overwrites that template rather than adding a second one.
+
+**Whose templates they are.** A template belongs to whoever saved it, and only they (and their fellow admins) see it. It doesn't pass up or down the chain:
+
+- **Federation templates** are shared by the org's admins and meet managers.
+- **Club templates** are saved by a club admin working on one of their club's meets, and shared by that club's admins only.
+- **Region templates** are saved by a region admin, and shared by that region's admins only.
+
+So a federation admin doesn't see its clubs' templates, a region admin doesn't see its clubs', and a club doesn't see its region's or its federation's. Two clubs (or a club and its federation) can each have a template with the same name. The line over the strip says whose list you're looking at. If you admin more than one club, or a club and a region, the strip follows the meet you're adding the event to: the club hosting it, or the region if it's a region meet or one of your region's clubs' meets.
 
 ## Multi-stage progression
 

@@ -13,9 +13,9 @@
 // mode, whatever clubs they also admin.
 import { computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
-import { MANAGER_ROLES, isClubScoped, isMyClubMeetFor, narrowEventsTo } from './club-scope-core.js'
+import { MANAGER_ROLES, isClubScoped, isMyClubMeetFor, narrowEventsTo, templateScopeFor } from './club-scope-core.js'
 
-export { MANAGER_ROLES, CONTROL_ROOM_ROLES } from './club-scope-core.js'
+export { MANAGER_ROLES, CONTROL_ROOM_ROLES, templateScopeQuery } from './club-scope-core.js'
 
 export function useClubScope(screenRoles = MANAGER_ROLES) {
   const auth = useAuthStore()
@@ -39,5 +39,13 @@ export function useClubScope(screenRoles = MANAGER_ROLES) {
     return narrowEventsTo(events, meets, myClubIds.value, myRegionIds.value)
   }
 
-  return { clubMode, myClubIds, myRegionIds, isMyClubMeet, narrowEvents }
+  // Whose saved event templates the create form uses for an event going
+  // into this meet: {} is the org's own, { club_id } / { region_id } a
+  // club's or region's, null none at all (club mode with no meet of mine).
+  function templateScopeForMeet(meet) {
+    if (!clubMode.value) return {}
+    return templateScopeFor(meet, myClubIds.value, myRegionIds.value)
+  }
+
+  return { clubMode, myClubIds, myRegionIds, isMyClubMeet, narrowEvents, templateScopeForMeet }
 }

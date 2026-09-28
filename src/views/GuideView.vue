@@ -256,6 +256,7 @@ onBeforeUnmount(() => observer?.disconnect())
               <ol class="role-steps">
                 <li v-html="$t('guide.role.club_admin.step_1')"></li>
                 <li v-html="$t('guide.role.club_admin.step_2')"></li>
+                <li v-html="$t('guide.role.club_admin.step_templates')"></li>
                 <li v-html="$t('guide.role.club_admin.step_invite')"></li>
                 <li v-html="$t('guide.role.club_admin.step_3')"></li>
                 <li v-html="$t('guide.role.club_admin.step_4')"></li>
@@ -272,6 +273,7 @@ onBeforeUnmount(() => observer?.disconnect())
               <ol class="role-steps">
                 <li v-html="$t('guide.role.region_admin.step_1')"></li>
                 <li v-html="$t('guide.role.region_admin.step_2')"></li>
+                <li v-html="$t('guide.role.region_admin.step_templates')"></li>
                 <li v-html="$t('guide.role.region_admin.step_3')"></li>
               </ol>
               <RouterLink to="/guide/running-a-meet" class="role-cta">{{ $t('guide.role.region_admin.cta') }}</RouterLink>
