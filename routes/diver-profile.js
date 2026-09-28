@@ -22,7 +22,7 @@
 //   app.use(require('./routes/diver-profile')({ … }))
 
 const express = require("express");
-const { PER_DIVE: SHARED_PER_DIVE, FULL_FIELD_RANKING } =
+const { PER_DIVE: SHARED_PER_DIVE, FULL_FIELD_RANKING, diverDivesWhere } =
   require("../db/queries");
 const { perDiveSelect, perDivePointsCte } = require("../lib/scoring-sql");
 const { PUBLIC_CLUB_JOIN } = require("../lib/club-approvals");
@@ -166,7 +166,9 @@ module.exports = function createDiverProfileRouter({
            select:      ["s.event_id", "s.round_number"],
            pointsAlias: "dive_total",
            selectExtra: ["MAX(d.dd) AS dd"],
-           where: `s.competitor_id = $1
+           // The diver's own dives, or the pair's when they're the
+           // partner on a synchro entry stored under the lead.
+           where: `${diverDivesWhere("$1")}
              AND COALESCE(e.is_rehearsal, FALSE) = FALSE
            ${DATE_FILTER}`,
          })}
@@ -195,7 +197,7 @@ module.exports = function createDiverProfileRouter({
            ],
            dd:          "d.dd",
            pointsAlias: "dive_total",
-           where: `s.competitor_id = $1
+           where: `${diverDivesWhere("$1")}
              AND COALESCE(e.is_rehearsal, FALSE) = FALSE
              AND d.id IS NOT NULL
            ${DATE_FILTER}`,
@@ -238,12 +240,17 @@ module.exports = function createDiverProfileRouter({
          FROM ranked
          JOIN events e ON e.id = ranked.event_id
          LEFT JOIN LATERAL (
-           SELECT DISTINCT cdl.partner_id
-           FROM competitor_dive_lists cdl
-           WHERE cdl.event_id = e.id
-             AND cdl.competitor_id = $1
-             AND cdl.partner_id IS NOT NULL
-           LIMIT 1
+           /* When the result came off the lead's rows, the lead is the
+              partner to name. */
+           SELECT COALESCE(
+             NULLIF(ranked.scored_as, $1),
+             (SELECT cdl.partner_id
+                FROM competitor_dive_lists cdl
+               WHERE cdl.event_id = e.id
+                 AND cdl.competitor_id = $1
+                 AND cdl.partner_id IS NOT NULL
+               LIMIT 1)
+           ) AS partner_id
          ) p ON true
          LEFT JOIN users partner ON partner.id = p.partner_id
          LEFT JOIN teams tm ON e.event_type = 'team' AND tm.id = ranked.unit_id
@@ -388,7 +395,11 @@ module.exports = function createDiverProfileRouter({
              COUNT(*)::int                                                  AS total
            FROM scores s
            JOIN events e ON e.id = s.event_id
-           WHERE s.competitor_id = $1
+           LEFT JOIN competitor_dive_lists cdl
+             ON cdl.event_id = s.event_id
+            AND cdl.competitor_id = s.competitor_id
+            AND cdl.round_number = s.round_number
+           WHERE ${diverDivesWhere("$1")}
              AND COALESCE(e.is_rehearsal, FALSE) = FALSE
              AND ($2::date IS NULL OR e.created_at >= $2::date)
              AND ($3::date IS NULL OR e.created_at < $3::date + INTERVAL '1 day')`,
@@ -528,7 +539,7 @@ module.exports = function createDiverProfileRouter({
                     ) ORDER BY ej.judge_number
                   ) AS judges`,
             ],
-            where: `s.competitor_id = $1
+            where: `${diverDivesWhere("$1")}
              AND s.event_id = ANY($2::uuid[])
              AND COALESCE(e.is_rehearsal, FALSE) = FALSE`,
             groupBy: [

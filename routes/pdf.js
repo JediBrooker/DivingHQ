@@ -872,7 +872,35 @@ module.exports = function createPdfRouter({ pool }) {
       const eventId = req.params.id;
       const diverId = req.params.diverId;
 
-      const [evRes, diverRes, divesRes, totalRes] = await Promise.all([
+      // Whose rows carry this diver's dives. Their own, unless they're the
+      // partner on a synchro pair stored once under the lead, where the
+      // scores sit under the lead's id (see diverDivesWhere in
+      // db/queries.js). The sheet used to say "No dives recorded" for the
+      // partner. partner_id is who to name alongside them.
+      const pair = (await pool.query(
+        `SELECT COALESCE(own.id, lead.competitor_id, $2::uuid) AS scored_as,
+                COALESCE(lead.competitor_id, mine.partner_id) AS partner_id
+           FROM (SELECT 1) one
+           LEFT JOIN LATERAL (
+             SELECT $2::uuid AS id WHERE EXISTS (
+               SELECT 1 FROM scores WHERE event_id = $1 AND competitor_id = $2)
+           ) own ON true
+           LEFT JOIN LATERAL (
+             SELECT l.competitor_id FROM competitor_dive_lists l
+              WHERE l.event_id = $1 AND l.partner_id = $2 AND own.id IS NULL
+                AND EXISTS (SELECT 1 FROM scores sc WHERE sc.event_id = $1 AND sc.competitor_id = l.competitor_id)
+              LIMIT 1
+           ) lead ON true
+           LEFT JOIN LATERAL (
+             SELECT m.partner_id FROM competitor_dive_lists m
+              WHERE m.event_id = $1 AND m.competitor_id = $2 AND m.partner_id IS NOT NULL
+              LIMIT 1
+           ) mine ON true`,
+        [eventId, diverId],
+      )).rows[0];
+      const scoredAs = pair.scored_as;
+
+      const [evRes, diverRes, divesRes, totalRes, partnerRes] = await Promise.all([
         pool.query(
           `SELECT e.id, e.name, e.gender, e.age_group, e.height,
                   e.total_rounds, e.number_of_judges, e.event_type,
@@ -914,7 +942,7 @@ module.exports = function createPdfRouter({ pool }) {
             ],
           })}
            ORDER BY s.round_number ASC`,
-          [eventId, diverId],
+          [eventId, scoredAs],
         ),
         // Final placing, from the same standings as the scoreboard: a
         // team member's headline is their team's total and place.
@@ -927,13 +955,17 @@ module.exports = function createPdfRouter({ pool }) {
                      WHERE l.event_id = $1 AND l.competitor_id = $2 AND l.team_id IS NOT NULL
                      LIMIT 1),
                     $2)`,
-          [eventId, diverId],
+          [eventId, scoredAs],
         ),
+        pair.partner_id
+          ? pool.query("SELECT full_name FROM users WHERE id = $1", [pair.partner_id])
+          : Promise.resolve({ rows: [] }),
       ]);
       if (!evRes.rows.length)    return res.status(404).json({ error: "Event not found" });
       if (!diverRes.rows.length) return res.status(404).json({ error: "Diver not found" });
       const event = evRes.rows[0];
       const diver = diverRes.rows[0];
+      const partnerName = partnerRes.rows[0]?.full_name || null;
       const dives = divesRes.rows;
       const totals = totalRes.rows[0] || {};
 
@@ -981,6 +1013,10 @@ module.exports = function createPdfRouter({ pool }) {
       doc.moveDown(0.3);
       doc.font("Helvetica-Bold").fontSize(20).fillColor("#0f172a")
         .text(diver.full_name + (diver.country_code ? `  ${diver.country_code}` : ""), { align: "center" });
+      if (partnerName) {
+        doc.font("Helvetica").fontSize(12).fillColor("#334155")
+          .text(`&  ${partnerName}`, { align: "center" });
+      }
       if (diver.club_name) {
         doc.font("Helvetica").fontSize(11).fillColor("#475569")
           .text(diver.club_name + (diver.club_code ? `  (${diver.club_code})` : ""), { align: "center" });

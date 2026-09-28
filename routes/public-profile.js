@@ -25,7 +25,7 @@
 const express = require("express");
 const sharp = require("sharp");
 const { perDivePointsCte } = require("../lib/scoring-sql");
-const { FULL_FIELD_RANKING } = require("../db/queries");
+const { FULL_FIELD_RANKING, diverDivesWhere } = require("../db/queries");
 const { PUBLIC_CLUB_JOIN } = require("../lib/club-approvals");
 
 // In-memory cache of rendered OG cards. Each crawler hits the
@@ -141,7 +141,8 @@ module.exports = function createPublicProfileRouter({ pool, readPool }) {
            select:      ["s.event_id", "s.round_number"],
            pointsAlias: "dive_total",
            selectExtra: ["MAX(d.dd) AS dd"],
-           where: `s.competitor_id = $1
+           // Synchro partners get the pair's dives, see diverDivesWhere.
+           where: `${diverDivesWhere("$1")}
              AND COALESCE(e.is_rehearsal, FALSE) = FALSE`,
          })}
          SELECT
@@ -234,7 +235,7 @@ module.exports = function createPublicProfileRouter({ pool, readPool }) {
         `WITH ${perDivePointsCte({
            select:      [],
            pointsAlias: "dive_total",
-           where: `s.competitor_id = $1
+           where: `${diverDivesWhere("$1")}
              AND COALESCE(e.is_rehearsal, FALSE) = FALSE`,
            groupBy:     ["s.event_id", "s.round_number"],
          })}

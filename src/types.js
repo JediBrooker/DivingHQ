@@ -299,7 +299,9 @@
  * @property {number}        total_score   In a team event, the team's total.
  * @property {number}        final_rank    Place in the standings: the team's place in a
  *                                         team event (equal totals share it).
- * @property {string}        [partner_name]
+ * @property {string}        [partner_name]  Synchro partner. When the pair was entered under
+ *                                         the other diver (partner_id = this diver), it's that
+ *                                         diver, and the result is the pair's.
  * @property {string}        [team_name]
  */
 

@@ -17,9 +17,40 @@
 const { perDiveSelect, perDivePointsCte } = require("../lib/scoring-sql");
 
 // =====================================================================
+// diverDivesWhere: WHERE fragment for "this diver's scored dives".
+//
+// Their own, plus a synchro pair's dives when the roster stored the pair
+// once under the lead (Control Room import, manual add): the scores sit
+// under the lead's competitor_id and cdl.partner_id names this diver.
+// Profiles and analytics only matched s.competitor_id, so a partner's
+// synchro events were missing from their profile altogether. The
+// partner side only counts when the diver has no scores of their own in
+// that event, because the consent flow (lib/dive-list-submit.js) writes a
+// mirror row per partner and then each side is scored on its own.
+//
+// Needs the canonical cdl join (lib/scoring-sql perDiveJoins, or the
+// same ON clause). `param` is the placeholder bound to the diver id. The
+// IN (...) up front lets the planner use the scores competitor index
+// instead of scanning every score for the OR.
+// =====================================================================
+function diverDivesWhere(param = "$1") {
+  return `s.competitor_id IN (
+      SELECT ${param}::uuid
+      UNION
+      SELECT pl.competitor_id FROM competitor_dive_lists pl WHERE pl.partner_id = ${param}
+    )
+    AND (s.competitor_id = ${param}
+      OR (cdl.partner_id = ${param}
+          AND NOT EXISTS (SELECT 1 FROM scores own
+                           WHERE own.event_id = s.event_id AND own.competitor_id = ${param})))`;
+}
+
+// =====================================================================
 // PER_DIVE: one row per dive the diver performed.
 //
-// Filters to a single competitor and (optionally) a date range.
+// Filters to a single diver (diverDivesWhere, so a synchro partner gets
+// the pair's dives) and (optionally) a date range. competitor_id comes
+// back as the diver's own id either way, the callers filter on it.
 // Columns:
 //   event_id, competitor_id, round_number,
 //   dive_code, position, height, dd, description,
@@ -33,13 +64,13 @@ const { perDiveSelect, perDivePointsCte } = require("../lib/scoring-sql");
 // =====================================================================
 const PER_DIVE = perDiveSelect({
   select: [
-    "s.event_id", "s.competitor_id", "s.round_number",
+    "s.event_id", "$1::uuid AS competitor_id", "s.round_number",
     "d.dive_code", "d.position", "d.height", "d.dd", "d.description",
     "e.event_type::text AS event_type", "e.created_at",
   ],
   pointsAlias: "dive_total",
   selectExtra: ["AVG(s.score) AS avg_judge_score"],
-  where: `s.competitor_id = $1
+  where: `${diverDivesWhere("$1")}
     AND COALESCE(e.is_rehearsal, FALSE) = FALSE
     AND ($2::date IS NULL OR e.created_at >= $2::date)
     AND ($3::date IS NULL OR e.created_at < $3::date + INTERVAL '1 day')`,
@@ -61,7 +92,9 @@ const PER_DIVE = perDiveSelect({
 //
 // CTE chain:
 //   diver_events  : { event_id, scored_as } the events the diver has a
-//                   result in, and whose rows carry it (the diver's own)
+//                   result in, and whose rows carry it: the diver's own,
+//                   or the lead's for a synchro pair stored under the
+//                   lead (see diverDivesWhere)
 //   all_per_dive  : every dive in those events, by every competitor
 //   unit_totals   : per-(event, unit) sum of dive points. The unit is
 //                   what the event ranks: the team in a team event,
@@ -91,7 +124,11 @@ const FULL_FIELD_RANKING = `
     SELECT DISTINCT s.event_id, s.competitor_id AS scored_as
     FROM scores s
     JOIN events e ON e.id = s.event_id
-    WHERE s.competitor_id = $1
+    LEFT JOIN competitor_dive_lists cdl
+      ON cdl.event_id = s.event_id
+     AND cdl.competitor_id = s.competitor_id
+     AND cdl.round_number = s.round_number
+    WHERE ${diverDivesWhere("$1")}
       AND COALESCE(e.is_rehearsal, FALSE) = FALSE
       AND ($2::date IS NULL OR e.created_at >= $2::date)
       AND ($3::date IS NULL OR e.created_at < $3::date + INTERVAL '1 day')
@@ -349,4 +386,4 @@ const JUDGE_PER_DIVE = `
     AND ($3::date IS NULL OR e.created_at <  $3::date + INTERVAL '1 day')
 `;
 
-module.exports = { PER_DIVE, FULL_FIELD_RANKING, JUDGE_PER_DIVE };
+module.exports = { PER_DIVE, FULL_FIELD_RANKING, JUDGE_PER_DIVE, diverDivesWhere };

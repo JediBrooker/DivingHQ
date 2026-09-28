@@ -7290,3 +7290,63 @@ test("team events rank teams everywhere a member's place is shown", async (t) =>
     await teardownFixture(st);
   }
 });
+
+// Synchro pairs entered once (Control Room import, manual add) keep their
+// scores under the lead, partner_id naming the other diver. The partner's
+// profile, analytics, public card and score sheet only ever looked for
+// their own competitor_id, so every synchro event they dived was missing.
+// Pairs entered both ways round (the consent flow's mirror rows) have
+// scores on each side, and mustn't count twice.
+test("a synchro partner's profile, analytics, public card and score sheet show the pair's result", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const dive = await recordKit.threeMetreDive();
+    const lead = await recordKit.diver(st.orgId, null, "female", "Sync Lena Lead");
+    const partner = await recordKit.diver(st.orgId, null, "female", "Sync Pia Partner");
+    const lead2 = await recordKit.diver(st.orgId, null, "female", "Sync Other Lead");
+    const partner2 = await recordKit.diver(st.orgId, null, "female", "Sync Other Partner");
+    const sync = await recordKit.event(st.orgId, { gender: "Female", eventType: "synchro_pair" });
+    await recordKit.dive(sync, lead, 1, dive, 8, { partnerId: partner });
+    await recordKit.dive(sync, lead2, 1, dive, 6, { partnerId: partner2 });
+    // A mirrored pair where both sides were scored.
+    const mirror = await recordKit.event(st.orgId, { gender: "Female", eventType: "synchro_pair" });
+    await recordKit.dive(mirror, lead, 1, dive, 7, { partnerId: partner });
+    await recordKit.dive(mirror, partner, 1, dive, 7, { partnerId: lead });
+
+    const profile = await fetchJson("GET", `/api/divers/${partner}/profile`);
+    assert.equal(profile.status, 200, JSON.stringify(profile.body));
+    assert.equal(profile.body.stats.total_dives, 2, "one per event, the mirror isn't doubled");
+    assert.equal(profile.body.stats.total_meets, 2);
+    const trend = profile.body.score_trend.find((r) => r.event_id === sync.id);
+    assert.ok(trend, "the pair's event is on the partner's trend");
+    assert.equal(trend.final_rank, 1);
+    assert.equal(trend.partner_name, "Sync Lena Lead");
+    assert.ok(profile.body.personal_bests.length >= 1);
+
+    const a = await fetchJson("GET", `/api/divers/${partner}/analytics`);
+    assert.equal(a.status, 200, JSON.stringify(a.body));
+    const recent = a.body.recent_form.find((r) => r.event_id === sync.id);
+    assert.equal(Number(recent.rank), 1);
+    assert.equal(recent.field_size, 2);
+    assert.equal(recent.dives.length, 1, "the expanded card has the pair's dive");
+    assert.equal(a.body.quality_mix.total, 10, "five judges on each of the two dives");
+    assert.equal(a.body.round_stamina[0].dive_count, 2);
+
+    const slug = crypto.randomBytes(16).toString("hex");
+    await pool.query("UPDATE users SET public_slug = $1 WHERE id = $2", [slug, partner]);
+    const pub = await fetchJson("GET", `/api/public/divers/${slug}`);
+    assert.equal(pub.body.stats.total_meets, 2);
+    assert.ok(pub.body.recent_meets.some((m) => m.event_id === sync.id && m.rank === 1));
+
+    const sheet = await fetch(`${baseUrl}/api/events/${sync.id}/divers/${partner}/score-sheet.pdf`);
+    const text = pdfText(Buffer.from(await sheet.arrayBuffer())).join("\n");
+    assert.match(text, /1st of 2/);
+    assert.ok(!/No dives recorded/.test(text));
+    assert.match(text, /Sync Lena Lead/, "the sheet names the pair");
+  } finally {
+    await recordKit.cleanup(st.orgId);
+    await teardownFixture(st);
+  }
+});
