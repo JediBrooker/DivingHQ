@@ -497,7 +497,8 @@
       "dialog_what_stays_items": "Vaše jméno u skoků, ve kterých jste závodili, u panelů rozhodčích, ve kterých jste zasedali, a u disciplín, ve kterých jste vystupovali. Záznamy protokolu auditu, které jste vyvolali (mazány při běžné 30denní rotaci).",
       "confirmation_toast": "Účet smazán. Vaše závodní historie je anonymizována. Přihlaste se novým účtem, abyste si ji později nárokovali zpět.",
       "password_wrong": "Nesprávné heslo",
-      "deleting": "Mazání…"
+      "deleting": "Mazání…",
+      "last_org_admin": "Jste posledním administrátorem své organizace, takže váš účet zatím nelze smazat. Nejprve jmenujte jiného administrátora, nebo napište na {email} a pomůžeme vám."
     },
     "claim": {
       "title": "Nárokovat minulé závodní záznamy",
@@ -1103,7 +1104,8 @@
     "org_suspended": "Pozastaveno",
     "orgs_show_all": "Zobrazit všech {n}",
     "guardian_requests_title": "Žádosti o propojení s opatrovníkem",
-    "guardian_request_by": "{name} žádá o možnost platit za tuto osobu"
+    "guardian_request_by": "{name} žádá o možnost platit za tuto osobu",
+    "last_org_admin": "Organizace by tím zůstala bez administrátora. Nejprve jmenujte jiného administrátora, nebo napište na {email} a pomůžeme vám."
   },
   "audit": {
     "page_label": "Protokol auditu",

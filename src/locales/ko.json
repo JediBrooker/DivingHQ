@@ -497,7 +497,8 @@
       "dialog_what_stays_items": "출전한 다이빙, 참여한 심판단, 등장한 경기에서의 이름. 사용자가 발생시킨 감사 로그 항목(일반적인 30일 순환에 따라 삭제).",
       "confirmation_toast": "계정이 삭제되었습니다. 경기 기록은 익명화되었습니다. 나중에 새 계정으로 로그인하여 되찾을 수 있습니다.",
       "password_wrong": "비밀번호가 올바르지 않습니다",
-      "deleting": "삭제 중…"
+      "deleting": "삭제 중…",
+      "last_org_admin": "조직의 마지막 관리자이므로 아직 계정을 삭제할 수 없습니다. 먼저 다른 관리자를 지정하거나 {email}로 연락해 주시면 도와드리겠습니다."
     },
     "claim": {
       "title": "과거 대회 기록 되찾기",
@@ -1103,7 +1104,8 @@
     "org_suspended": "정지됨",
     "orgs_show_all": "모두 보기 ({n})",
     "guardian_requests_title": "보호자 연결 요청",
-    "guardian_request_by": "{name} 님이 대신 결제하기를 요청했습니다"
+    "guardian_request_by": "{name} 님이 대신 결제하기를 요청했습니다",
+    "last_org_admin": "이렇게 하면 조직에 관리자가 한 명도 남지 않습니다. 먼저 다른 관리자를 지정하거나 {email}로 연락해 주시면 도와드리겠습니다."
   },
   "setup": {
     "title": "연맹 설정",

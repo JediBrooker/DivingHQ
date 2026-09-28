@@ -497,7 +497,8 @@
       "dialog_what_stays_items": "你参赛跳水的姓名、你担任评委的裁判组以及你出现的赛事。你触发的审计日志条目（按正常 30 天轮换清理）。",
       "confirmation_toast": "账户已删除。你的比赛历史已匿名化。稍后可以使用新账户登录以重新认领。",
       "password_wrong": "密码不正确",
-      "deleting": "删除中…"
+      "deleting": "删除中…",
+      "last_org_admin": "你是所在组织的最后一名管理员，因此暂时无法删除账户。请先任命另一名管理员，或发送邮件至 {email}，我们会协助处理。"
     },
     "claim": {
       "title": "认领过往参赛记录",
@@ -1103,7 +1104,8 @@
     "org_suspended": "已暂停",
     "orgs_show_all": "显示全部（{n}）",
     "guardian_requests_title": "监护人关联请求",
-    "guardian_request_by": "{name} 请求代其付款"
+    "guardian_request_by": "{name} 请求代其付款",
+    "last_org_admin": "这样会使组织没有任何管理员。请先任命另一名管理员，或发送邮件至 {email}，我们会协助处理。"
   },
   "setup": {
     "title": "联合会初始化设置",

@@ -508,7 +508,8 @@
       "dialog_what_stays_items": "Dein Name bei den Sprüngen, bei denen du angetreten bist, bei den Kampfgerichten, in denen du gesessen hast, und bei den Veranstaltungen, an denen du teilgenommen hast. Audit-Log-Einträge, die du ausgelöst hast (werden in der normalen 30-Tage-Rotation gelöscht).",
       "confirmation_toast": "Konto gelöscht. Dein Wettkampfverlauf wurde anonymisiert. Melde dich später mit einem neuen Konto an, um ihn zurückzufordern.",
       "password_wrong": "Passwort falsch",
-      "deleting": "Löschen…"
+      "deleting": "Löschen…",
+      "last_org_admin": "Sie sind der letzte Administrator Ihres Verbands, deshalb kann Ihr Konto noch nicht gelöscht werden. Ernennen Sie zuerst einen anderen Administrator, oder schreiben Sie an {email}, dann helfen wir Ihnen weiter."
     },
     "claim": {
       "title": "Frühere Wettkämpfe zurückfordern",
@@ -1114,7 +1115,8 @@
     "org_suspended": "Gesperrt",
     "orgs_show_all": "Alle {n} anzeigen",
     "guardian_requests_title": "Anfragen zur Verknüpfung von Erziehungsberechtigten",
-    "guardian_request_by": "{name} möchte im Namen dieser Person zahlen"
+    "guardian_request_by": "{name} möchte im Namen dieser Person zahlen",
+    "last_org_admin": "Damit hätte der Verband keinen Administrator mehr. Ernennen Sie zuerst einen anderen Administrator, oder schreiben Sie an {email}, dann helfen wir Ihnen weiter."
   },
   "setup": {
     "title": "Verbands-Einrichtung",

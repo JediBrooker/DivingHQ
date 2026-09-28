@@ -508,7 +508,8 @@
       "dialog_what_stays_items": "Dit navn på de spring, du konkurrerede i, de dommerpaneler, du sad i, og de stævner, du optrådte i. Auditlogposter, du udløste (slettes ved den normale 30-dages rotation).",
       "confirmation_toast": "Konto slettet. Din konkurrencehistorik er anonymiseret. Log ind med en ny konto for at gøre krav på den senere.",
       "password_wrong": "Forkert adgangskode",
-      "deleting": "Sletter…"
+      "deleting": "Sletter…",
+      "last_org_admin": "Du er den sidste administrator i dit forbund, så din konto kan ikke slettes endnu. Udpeg en anden administrator først, eller skriv til {email}, så hjælper vi."
     },
     "claim": {
       "title": "Gør krav på tidligere stævner",
@@ -1114,7 +1115,8 @@
     "org_suspended": "Suspenderet",
     "orgs_show_all": "Vis alle {n}",
     "guardian_requests_title": "Anmodninger om værgetilknytning",
-    "guardian_request_by": "{name} beder om at betale på vegne af denne person"
+    "guardian_request_by": "{name} beder om at betale på vegne af denne person",
+    "last_org_admin": "Så ville forbundet stå uden administrator. Udpeg en anden administrator først, eller skriv til {email}, så hjælper vi."
   },
   "setup": {
     "title": "Forbundsopsætning",

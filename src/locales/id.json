@@ -497,7 +497,8 @@
       "dialog_what_stays_items": "Nama Anda pada loncatan yang Anda ikuti, panel juri yang Anda jalani, dan acara di mana Anda muncul. Entri log audit yang Anda picu (dihapus dalam rotasi normal 30 hari).",
       "confirmation_toast": "Akun dihapus. Riwayat kompetisi Anda telah dianonimkan. Masuk dengan akun baru untuk mengklaimnya kembali nanti.",
       "password_wrong": "Kata sandi salah",
-      "deleting": "Menghapus…"
+      "deleting": "Menghapus…",
+      "last_org_admin": "Anda adalah administrator terakhir di organisasi Anda, jadi akun Anda belum bisa dihapus. Tunjuk administrator lain terlebih dahulu, atau kirim email ke {email} dan kami akan membantu."
     },
     "claim": {
       "title": "Klaim entri kompetisi sebelumnya",
@@ -1103,7 +1104,8 @@
     "org_suspended": "Ditangguhkan",
     "orgs_show_all": "Tampilkan semua {n}",
     "guardian_requests_title": "Permintaan tautan wali",
-    "guardian_request_by": "{name} meminta untuk membayar atas namanya"
+    "guardian_request_by": "{name} meminta untuk membayar atas namanya",
+    "last_org_admin": "Tindakan ini akan membuat organisasi tanpa administrator. Tunjuk administrator lain terlebih dahulu, atau kirim email ke {email} dan kami akan membantu."
   },
   "setup": {
     "title": "Penyiapan federasi",

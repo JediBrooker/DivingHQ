@@ -8,11 +8,24 @@ import { useFeaturesStore } from '@/stores/features'
 import { confirmAction } from '@/composables/useConfirm'
 import { showSuccess, showError } from '@/composables/useNotify'
 import { useCountryOptions, isKnownCountry } from '@/composables/useCountryOptions'
+import { useSupportEmail, DEFAULT_SUPPORT_EMAIL } from '@/composables/useSupportEmail'
 
 const { t } = useI18n()
 const auth = useAuthStore()
 const features = useFeaturesStore()
 const { countryOptions, countryName } = useCountryOptions()
+const supportEmail = useSupportEmail()
+
+// The server keeps one live org admin in every federation and answers
+// 409 last_org_admin to anything that would take the last one away
+// (unticking Org Admin, suspending, a transfer). Its message is English,
+// this one follows the viewer's language.
+function isLastAdminRefusal(err) {
+  return err?.code === 'last_org_admin'
+}
+function lastAdminMessage() {
+  return t('user_manager.last_org_admin', { email: supportEmail.value || DEFAULT_SUPPORT_EMAIL })
+}
 
 const requests = ref([])
 const clubRequests = ref([])     // club-change / org-transfer requests
@@ -382,7 +395,7 @@ async function runAccountAction(path, successMsg, opts = {}) {
     if (opts.refresh !== false) await loadUsers()
     showSuccess(successMsg)
   } catch (err) {
-    showError(err.message || successMsg)
+    showError(isLastAdminRefusal(err) ? lastAdminMessage() : (err.message || successMsg))
   } finally {
     drawerAccountBusy.value = false
   }
@@ -589,7 +602,7 @@ async function reviewClubRequest(id, decision) {
     // A club move can change the affected user's row, so refresh both.
     await Promise.all([loadClubRequests(), loadUsers()])
   } catch (err) {
-    showError(err.message)
+    showError(isLastAdminRefusal(err) ? lastAdminMessage() : err.message)
   }
 }
 
@@ -739,7 +752,17 @@ async function saveUserRoles(userId) {
     // If the drawer is currently showing this user, refresh the
     // audit log so the new grant/revoke entries appear immediately.
     if (drawerUserId.value === userId) loadAudit(userId)
-  } catch {
+  } catch (err) {
+    if (isLastAdminRefusal(err)) {
+      // Refused as a whole, so nothing changed. Put the boxes back to
+      // what the server still has rather than leave Org Admin unticked
+      // behind a retry that can't work.
+      const u = allUsers.value.find(x => x.id === userId)
+      userRoles.value[userId] = new Set(u?.org_roles || [])
+      rowState.value[userId] = null
+      showError(lastAdminMessage())
+      return
+    }
     rowState.value[userId] = 'error'
   }
 }
@@ -844,6 +867,7 @@ async function applyBulkRole(action) {
   bulkBusy.value = true
   bulkSummary.value = ''
   let ok = 0, skipped = 0, failed = 0
+  let lastAdminRefused = false
 
   await runWithConcurrency(ids, async (id) => {
     const set = userRoles.value[id]
@@ -869,18 +893,22 @@ async function applyBulkRole(action) {
       setTimeout(() => {
         if (rowState.value[id] === 'saved') rowState.value[id] = null
       }, 1500)
-    } catch {
+    } catch (err) {
       // Revert local state so the UI matches the server
       if (action === 'add') set.delete(role)
       else set.add(role)
       userRoles.value[id] = new Set(set)
-      rowState.value[id] = 'error'
+      // A refusal isn't a failed save to retry, the row is as it was.
+      if (isLastAdminRefusal(err)) lastAdminRefused = true
+      rowState.value[id] = isLastAdminRefusal(err) ? null : 'error'
       failed++
     }
   })
 
   bulkBusy.value = false
   selectedIds.value = new Set()
+  // Once, however many rows it stopped: it's the same reason every time.
+  if (lastAdminRefused) showError(lastAdminMessage())
   const skippedStr = skipped ? t('user_manager.bulk_skipped_suffix', { n: skipped }) : ''
   const failedStr = failed ? t('user_manager.bulk_failed_suffix', { n: failed }) : ''
   const roleLabel = ROLE_LABELS.value[role] || role

@@ -497,7 +497,8 @@
       "dialog_what_stays_items": "Tvoje ime na skokovima u kojima si se natjecao, sudačkim panelima u kojima si sudjelovao i događajima u kojima si se pojavio. Zapisi revizijskog dnevnika koje si pokrenuo (brišu se uobičajenom rotacijom od 30 dana).",
       "confirmation_toast": "Račun izbrisan. Tvoja povijest natjecanja je anonimizirana. Prijavi se s novim računom da je kasnije zatražiš natrag.",
       "password_wrong": "Netočna lozinka",
-      "deleting": "Brisanje…"
+      "deleting": "Brisanje…",
+      "last_org_admin": "Ti si posljednji administrator svoje organizacije pa se tvoj račun još ne može izbrisati. Najprije imenuj drugog administratora ili piši na {email} pa ćemo pomoći."
     },
     "claim": {
       "title": "Zatraži prošla natjecanja",
@@ -1103,7 +1104,8 @@
     "org_suspended": "Suspendirano",
     "orgs_show_all": "Prikaži svih {n}",
     "guardian_requests_title": "Zahtjevi za povezivanje skrbnika",
-    "guardian_request_by": "{name} traži da plaća u ime ove osobe"
+    "guardian_request_by": "{name} traži da plaća u ime ove osobe",
+    "last_org_admin": "Organizacija bi tako ostala bez administratora. Najprije imenuj drugog administratora ili piši na {email} pa ćemo pomoći."
   },
   "setup": {
     "title": "Postavljanje federacije",

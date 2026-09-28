@@ -508,7 +508,8 @@
       "dialog_what_stays_items": "O teu nome nos saltos em que competiste, nos júris em que estiveste e nas provas em que apareceste. Entradas do registo de auditoria que geraste (eliminadas na rotação normal de 30 dias).",
       "confirmation_toast": "Conta eliminada. O teu historial de competição foi anonimizado. Inicia sessão com uma nova conta para o reclamares mais tarde.",
       "password_wrong": "Palavra-passe incorreta",
-      "deleting": "A eliminar…"
+      "deleting": "A eliminar…",
+      "last_org_admin": "És o último administrador da tua organização, por isso a tua conta ainda não pode ser eliminada. Nomeia primeiro outro administrador, ou escreve para {email} e nós ajudamos."
     },
     "claim": {
       "title": "Reclamar competições anteriores",
@@ -1114,7 +1115,8 @@
     "org_suspended": "Suspensa",
     "orgs_show_all": "Mostrar todas ({n})",
     "guardian_requests_title": "Pedidos de associação de responsáveis",
-    "guardian_request_by": "{name} pede para pagar em seu nome"
+    "guardian_request_by": "{name} pede para pagar em seu nome",
+    "last_org_admin": "A organização ficaria sem administrador. Nomeia primeiro outro administrador, ou escreve para {email} e nós ajudamos."
   },
   "setup": {
     "title": "Configuração da Federação",

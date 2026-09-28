@@ -497,7 +497,8 @@
       "dialog_what_stays_items": "Your name on the dives you competed in, judging panels you sat on, and the events you appeared in. Audit log entries you triggered (purged on the normal 30-day rotation).",
       "confirmation_toast": "Account deleted. Your competition history is anonymised. Sign in with a new account to claim it back later.",
       "password_wrong": "Password incorrect",
-      "deleting": "Deleting…"
+      "deleting": "Deleting…",
+      "last_org_admin": "You're the last administrator of your organisation, so your account can't be deleted yet. Appoint another administrator first, or write to {email} and we'll help."
     },
     "claim": {
       "title": "Claim past competition entries",
@@ -1103,7 +1104,8 @@
     "org_suspended": "Suspended",
     "orgs_show_all": "Show all {n}",
     "guardian_requests_title": "Guardian link requests",
-    "guardian_request_by": "{name} is asking to pay on their behalf"
+    "guardian_request_by": "{name} is asking to pay on their behalf",
+    "last_org_admin": "That would leave the organisation with no administrator. Appoint another administrator first, or write to {email} for help."
   },
   "audit": {
     "page_label": "Audit Log",

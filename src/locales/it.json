@@ -508,7 +508,8 @@
       "dialog_what_stays_items": "Il tuo nome sui tuffi in cui hai gareggiato, sulle giurie a cui hai partecipato e sugli eventi in cui sei comparso. Le voci del registro di audit che hai generato (eliminate con la normale rotazione di 30 giorni).",
       "confirmation_toast": "Account eliminato. Il tuo storico gare è anonimizzato. Accedi con un nuovo account per riprenderlo in seguito.",
       "password_wrong": "Password errata",
-      "deleting": "Eliminazione…"
+      "deleting": "Eliminazione…",
+      "last_org_admin": "Sei l’ultimo amministratore della tua organizzazione, quindi il tuo account non può ancora essere eliminato. Nomina prima un altro amministratore, oppure scrivi a {email} e ti aiuteremo."
     },
     "claim": {
       "title": "Recupera gare passate",
@@ -1114,7 +1115,8 @@
     "org_suspended": "Sospesa",
     "orgs_show_all": "Mostra tutte ({n})",
     "guardian_requests_title": "Richieste di collegamento tutore",
-    "guardian_request_by": "{name} chiede di pagare per suo conto"
+    "guardian_request_by": "{name} chiede di pagare per suo conto",
+    "last_org_admin": "L’organizzazione resterebbe senza amministratore. Nomina prima un altro amministratore, oppure scrivi a {email} e ti aiuteremo."
   },
   "setup": {
     "title": "Configurazione federazione",

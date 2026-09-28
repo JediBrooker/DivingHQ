@@ -508,7 +508,8 @@
       "dialog_what_stays_items": "Nimesi hypyissä, joissa kilpailit, tuomaristoissa, joissa istuit, ja tapahtumissa, joissa esiinnyit. Auditointilokin merkinnät, jotka aiheutit (poistetaan normaalin 30 päivän kierron mukaan).",
       "confirmation_toast": "Tili poistettu. Kilpailuhistoriasi on anonymisoitu. Kirjaudu uudella tilillä saadaksesi sen takaisin myöhemmin.",
       "password_wrong": "Virheellinen salasana",
-      "deleting": "Poistetaan…"
+      "deleting": "Poistetaan…",
+      "last_org_admin": "Olet organisaatiosi viimeinen ylläpitäjä, joten tiliäsi ei voi vielä poistaa. Nimeä ensin toinen ylläpitäjä tai kirjoita osoitteeseen {email}, niin autamme."
     },
     "claim": {
       "title": "Hae aiemmat kilpailut",
@@ -1114,7 +1115,8 @@
     "org_suspended": "Keskeytetty",
     "orgs_show_all": "Näytä kaikki {n}",
     "guardian_requests_title": "Huoltajalinkityspyynnöt",
-    "guardian_request_by": "{name} pyytää saada maksaa tämän henkilön puolesta"
+    "guardian_request_by": "{name} pyytää saada maksaa tämän henkilön puolesta",
+    "last_org_admin": "Organisaatio jäisi ilman ylläpitäjää. Nimeä ensin toinen ylläpitäjä tai kirjoita osoitteeseen {email}, niin autamme."
   },
   "setup": {
     "title": "Liiton käyttöönotto",

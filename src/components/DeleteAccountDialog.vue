@@ -17,9 +17,11 @@ import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
+import { useSupportEmail, DEFAULT_SUPPORT_EMAIL } from '@/composables/useSupportEmail'
 
 const { t } = useI18n()
 const auth = useAuthStore()
+const supportEmail = useSupportEmail()
 
 // Component is mounted only while open, so lock for its lifetime
 // and rely on the composable's onUnmounted to release.
@@ -45,6 +47,14 @@ async function submit() {
     })
     emit('deleted')
   } catch (err) {
+    // The last admin of a federation can't leave it with nobody
+    // (409 last_org_admin). Our own wording for that one, in their
+    // language, with the support address this server uses.
+    if (err?.code === 'last_org_admin') {
+      error.value = t('profile.delete.last_org_admin', { email: supportEmail.value || DEFAULT_SUPPORT_EMAIL })
+      submitting.value = false
+      return
+    }
     // Heads up: server returns a generic "Password incorrect" for
     // wrong-password (401). Anything else is a server-side wobble or
     // a rate-limit trip, so just surface the message verbatim,
@@ -90,7 +100,7 @@ async function submit() {
           >
         </div>
 
-        <div v-if="error" class="msg msg-error">{{ error }}</div>
+        <div v-if="error" class="msg msg-error" data-test-id="delete-account-error">{{ error }}</div>
 
         <div class="modal-actions">
           <button class="btn btn-ghost btn-sm" :disabled="submitting" @click="$emit('close')">

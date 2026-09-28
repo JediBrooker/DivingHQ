@@ -508,7 +508,8 @@
       "dialog_what_stays_items": "Ditt namn på de hopp du tävlade i, de domarpaneler du satt i och de tävlingar du deltog i. Granskningsloggposter du utlöste (rensas i normal 30-dagars rotation).",
       "confirmation_toast": "Konto borttaget. Din tävlingshistorik är anonymiserad. Logga in med ett nytt konto för att återta den senare.",
       "password_wrong": "Fel lösenord",
-      "deleting": "Tar bort…"
+      "deleting": "Tar bort…",
+      "last_org_admin": "Du är den sista administratören i ditt förbund, så ditt konto kan inte tas bort än. Utse en annan administratör först, eller skriv till {email} så hjälper vi dig."
     },
     "claim": {
       "title": "Återta tidigare tävlingar",
@@ -1114,7 +1115,8 @@
     "org_suspended": "Avstängd",
     "orgs_show_all": "Visa alla {n}",
     "guardian_requests_title": "Förfrågningar om vårdnadshavarlänk",
-    "guardian_request_by": "{name} ber om att få betala för denna person"
+    "guardian_request_by": "{name} ber om att få betala för denna person",
+    "last_org_admin": "Då skulle förbundet stå utan administratör. Utse en annan administratör först, eller skriv till {email} så hjälper vi dig."
   },
   "setup": {
     "title": "Förbundsuppsättning",

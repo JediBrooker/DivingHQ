@@ -497,7 +497,8 @@
       "dialog_what_stays_items": "Nama anda pada terjunan yang anda sertai, panel hakim yang anda duduki, dan acara di mana anda muncul. Catatan log audit yang anda cetuskan (dipadam dalam putaran biasa 30 hari).",
       "confirmation_toast": "Akaun dipadam. Sejarah pertandingan anda telah dianonimkan. Log masuk dengan akaun baharu untuk menuntutnya semula kemudian.",
       "password_wrong": "Kata laluan salah",
-      "deleting": "Memadam…"
+      "deleting": "Memadam…",
+      "last_org_admin": "Anda pentadbir terakhir organisasi anda, jadi akaun anda belum boleh dipadam. Lantik pentadbir lain dahulu, atau tulis kepada {email} dan kami akan membantu."
     },
     "claim": {
       "title": "Tuntut entri pertandingan lampau",
@@ -1103,7 +1104,8 @@
     "org_suspended": "Digantung",
     "orgs_show_all": "Tunjuk semua {n}",
     "guardian_requests_title": "Permintaan pautan penjaga",
-    "guardian_request_by": "{name} meminta untuk membayar bagi pihaknya"
+    "guardian_request_by": "{name} meminta untuk membayar bagi pihaknya",
+    "last_org_admin": "Ini akan menyebabkan organisasi tiada pentadbir. Lantik pentadbir lain dahulu, atau tulis kepada {email} dan kami akan membantu."
   },
   "setup": {
     "title": "Penyediaan persekutuan",

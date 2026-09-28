@@ -497,7 +497,8 @@
       "dialog_what_stays_items": "Ang iyong pangalan sa mga dive na sinalihan mo, mga judging panel na inupuan mo, at mga event na ginanapan mo. Mga audit log entry na pinagana mo (mapupurga sa normal na 30-araw na rotation).",
       "confirmation_toast": "Na-delete ang account. Anonymized ang iyong competition history. Mag-sign in gamit ang bagong account para ma-claim ito ulit mamaya.",
       "password_wrong": "Mali ang password",
-      "deleting": "Dini-delete…"
+      "deleting": "Dini-delete…",
+      "last_org_admin": "Ikaw ang huling administrator ng organisasyon mo, kaya hindi pa pwedeng i-delete ang account mo. Magtalaga muna ng ibang administrator, o sumulat sa {email} at tutulungan ka namin."
     },
     "claim": {
       "title": "I-claim ang mga nakaraang competition entry",
@@ -1103,7 +1104,8 @@
     "org_suspended": "Suspendido",
     "orgs_show_all": "Ipakita lahat ({n})",
     "guardian_requests_title": "Mga kahilingan sa pag-link ng guardian",
-    "guardian_request_by": "Humihiling si {name} na magbayad para sa kanya"
+    "guardian_request_by": "Humihiling si {name} na magbayad para sa kanya",
+    "last_org_admin": "Mawawalan ng administrator ang organisasyon. Magtalaga muna ng ibang administrator, o sumulat sa {email} at tutulungan ka namin."
   },
   "setup": {
     "title": "Federation Setup",

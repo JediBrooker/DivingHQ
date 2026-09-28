@@ -508,7 +508,8 @@
       "dialog_what_stays_items": "Twoje imię przy skokach, w których startowałeś, panelach sędziowskich, w których zasiadałeś, i wydarzeniach, w których wystąpiłeś. Wpisy dziennika audytu, które wywołałeś (usuwane w normalnej rotacji 30-dniowej).",
       "confirmation_toast": "Konto usunięte. Twoja historia startów została zanonimizowana. Zaloguj się na nowe konto, aby odzyskać ją później.",
       "password_wrong": "Nieprawidłowe hasło",
-      "deleting": "Usuwanie…"
+      "deleting": "Usuwanie…",
+      "last_org_admin": "Jesteś ostatnim administratorem swojej organizacji, więc Twojego konta nie można jeszcze usunąć. Najpierw wyznacz innego administratora albo napisz na {email}, a pomożemy."
     },
     "claim": {
       "title": "Odzyskaj wcześniejsze zawody",
@@ -1114,7 +1115,8 @@
     "org_suspended": "Zawieszona",
     "orgs_show_all": "Pokaż wszystkie ({n})",
     "guardian_requests_title": "Prośby o połączenie z opiekunem",
-    "guardian_request_by": "{name} prosi o możliwość płacenia w imieniu tej osoby"
+    "guardian_request_by": "{name} prosi o możliwość płacenia w imieniu tej osoby",
+    "last_org_admin": "Organizacja zostałaby bez administratora. Najpierw wyznacz innego administratora albo napisz na {email}, a pomożemy."
   },
   "setup": {
     "title": "Konfiguracja federacji",
