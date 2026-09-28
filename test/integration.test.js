@@ -7144,7 +7144,20 @@ test("migrate resyncs a drifted schema_meta even when nothing is pending", async
   if (!dbReachable) return t.skip("DB not reachable");
   const { spawnSync } = require("node:child_process");
   const path = require("node:path");
-  const ledgerMax = (await pool.query("SELECT max(version) AS v FROM applied_migrations")).rows[0].v;
+  const fs = require("node:fs");
+  // This runs the real migrator against the suite's database. With a
+  // migration file the DB hasn't had yet (a fresh branch, before `npm run
+  // migrate`) it would apply it halfway through the run, under every other
+  // test file, and then fail for not saying "up to date". Only the
+  // nothing-pending path is under test, so stay out of the way otherwise.
+  const ledger = await pool.query("SELECT version FROM applied_migrations").catch(() => null);
+  if (!ledger) return t.skip("no applied_migrations ledger, run npm run migrate first");
+  const applied = new Set(ledger.rows.map((r) => r.version));
+  const pending = fs.readdirSync(path.join(__dirname, "..", "migrations"))
+    .map((f) => f.match(/^(\d+)_.*\.sql$/)).filter(Boolean).map((m) => Number(m[1]))
+    .filter((v) => !applied.has(v));
+  if (pending.length) return t.skip(`migrations ${pending.join(", ")} not applied yet, run npm run migrate first`);
+  const ledgerMax = Math.max(...applied);
   const before = (await pool.query("SELECT version FROM schema_meta WHERE id = 1")).rows[0].version;
   try {
     await pool.query("UPDATE schema_meta SET version = 98 WHERE id = 1");
