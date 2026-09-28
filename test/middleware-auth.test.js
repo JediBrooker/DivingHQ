@@ -224,9 +224,12 @@ test("optionalAuth: deleted or stale-tv sessions read as guests", async () => {
   }
 });
 
-test("isTokenVersionCurrent: missing row and missing tv both pass, a stale tv doesn't", async () => {
+test("isTokenVersionCurrent: a missing row fails, a missing tv passes, a stale tv doesn't", async () => {
+  // A users row that's gone (the claim flow hard-deletes a self-deleted
+  // account) must not bring that account's old sessions back to life.
   const noRow = createMiddleware({ pool: { async query() { return { rows: [] }; } }, JWT_SECRET });
-  assert.equal(await noRow.isTokenVersionCurrent(USER_ID, 1), true);
+  assert.equal(await noRow.isTokenVersionCurrent(USER_ID, 1), false);
+  assert.equal(await noRow.isTokenVersionCurrent(undefined, 1), false);
   const { isTokenVersionCurrent } = build({ token_version: 3 });
   assert.equal(await isTokenVersionCurrent(USER_ID, null), true);
   assert.equal(await isTokenVersionCurrent(USER_ID, 2), false);
@@ -350,4 +353,31 @@ test("socketCanManageEvent: maintenance mode refuses a non-admin, lets a sysadmi
   on = false;
   assert.equal(await mw.socketCanManageEvent(s, EVENT_ID), true);
   assert.equal(mw.socketMaintenanceBlocked(s), false);
+});
+
+// A token is only a session if it names a user that still exists. The
+// org_roles and is_system_admin baked into it mean nothing otherwise.
+test("verifyToken: a token for a user row that no longer exists is revoked", async () => {
+  const noRow = createMiddleware({ pool: { async query() { return { rows: [] }; } }, JWT_SECRET });
+  const out = await runVerify(noRow.verifyToken, sign({ id: USER_ID, tv: 1, org_roles: ["org_admin"] }));
+  assert.equal(out.type, "res");
+  assert.equal(out.statusCode, 401);
+  const guest = await runVerify(noRow.optionalAuth, sign({ id: USER_ID, tv: 1, org_roles: ["org_admin"] }));
+  assert.equal(guest.type, "next");
+  assert.equal(guest.req.user, undefined);
+});
+
+test("verifyToken: email-verify, password-reset and 2FA-step tokens aren't sessions", async () => {
+  const { verifyToken, optionalAuth } = build();
+  for (const type of ["email_verify", "password_reset", "totp_pending"]) {
+    const tok = sign({ sub: USER_ID, type });
+    const out = await runVerify(verifyToken, tok);
+    assert.equal(out.statusCode, 401, type);
+    const guest = await runVerify(optionalAuth, tok);
+    assert.equal(guest.req.user, undefined, type);
+  }
+  // Even with an id alongside, a typed token stays a link token.
+  assert.equal((await runVerify(verifyToken, sign({ id: USER_ID, tv: 1, type: "email_verify" }))).statusCode, 401);
+  // And an id has to look like one.
+  assert.equal((await runVerify(verifyToken, sign({ id: "not-a-uuid", tv: 1 }))).statusCode, 401);
 });

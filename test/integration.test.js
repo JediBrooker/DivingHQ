@@ -7561,3 +7561,26 @@ test("rate limits: a venue's scoreboard loads and sign-ins don't run each other 
     await teardownFixture(st);
   }
 });
+
+test("a JWT for a user that no longer exists, or a link token, isn't a session", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const ghost = claimKit.jwt.sign(
+      { id: crypto.randomUUID(), org_id: st.orgId, org_roles: ["org_admin"], is_system_admin: false, tv: 0 },
+      process.env.JWT_SECRET, { expiresIn: "1h" },
+    );
+    const users = await fetchJson("GET", "/api/users", { token: ghost });
+    assert.equal(users.status, 401, JSON.stringify(users.body).slice(0, 200));
+
+    const link = claimKit.jwt.sign({ sub: st.adminId, type: "email_verify" }, process.env.JWT_SECRET, { expiresIn: "1h" });
+    const inbox = await fetchJson("GET", "/api/notifications/me", { token: link });
+    assert.equal(inbox.status, 401);
+
+    // The real session still works.
+    assert.equal((await fetchJson("GET", "/api/notifications/me", { token: st.adminToken })).status, 200);
+  } finally {
+    await teardownFixture(st);
+  }
+});
