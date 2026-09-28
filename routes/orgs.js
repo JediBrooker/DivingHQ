@@ -457,9 +457,7 @@ module.exports = function createOrgsRouter({
       // The approve dialog is where a waiting club's details get fixed.
       if (target.rows[0].status === "pending") return pendingConflict(res);
       const code = clubApprovals.normaliseClubCode(short_code);
-      const client = await pool.connect();
-      try {
-        await client.query("BEGIN");
+      const club = await clubApprovals.withTx(pool, async (client) => {
         // Only a code that's actually changing is checked, so a club that
         // already shares one from before the rule can still be renamed.
         const current = (await client.query(
@@ -474,14 +472,9 @@ module.exports = function createOrgsRouter({
            RETURNING id, name, short_code`,
           [name.trim(), code, req.params.id],
         );
-        await client.query("COMMIT");
-        res.json(r.rows[0]);
-      } catch (err) {
-        await client.query("ROLLBACK").catch(() => {});
-        throw err;
-      } finally {
-        client.release();
-      }
+        return r.rows[0];
+      });
+      res.json(club);
     } catch (err) {
       approvalError(res, err, "[Update Club Error]");
     }

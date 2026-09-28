@@ -24,6 +24,7 @@ const { supportContact, suspendedAccountMessage } = require("../lib/support");
 const { liveAdminCount, sysadminIds } = require("../lib/admin-rows");
 const roleRequests = require("../lib/role-requests");
 const clubApprovals = require("../lib/club-approvals");
+const { withTx } = clubApprovals;
 const notices = require("../lib/notices");
 const { recordAudit } = require("../lib/audit");
 const createAuthLinks = require("../lib/auth-links");
@@ -656,9 +657,7 @@ module.exports = function createAuthRouter({
       if (matchedStep == null) {
         return res.status(401).json({ error: "Code didn't verify against the new secret. Check your authenticator clock and try again." });
       }
-      const client = await pool.connect();
-      try {
-        await client.query("BEGIN");
+      await withTx(pool, async (client) => {
         // Record the consumed step alongside the enable stamp so
         // the very first login can't replay the confirm code
         // within its ~90s verify window (migration 063). GREATEST
@@ -674,13 +673,7 @@ module.exports = function createAuthRouter({
         // Bump token_version so every device this user is signed
         // in on is forced through the new 2FA flow on next request.
         await bumpTokenVersion(client, req.user.id);
-        await client.query("COMMIT");
-      } catch (txErr) {
-        await client.query("ROLLBACK").catch(() => {});
-        throw txErr;
-      } finally {
-        client.release();
-      }
+      });
       res.json({ ok: true, message: "2FA enabled. You'll be asked for a code on your next login." });
     } catch (err) {
       console.error("[2FA Confirm Error]", err.message);
@@ -729,9 +722,7 @@ module.exports = function createAuthRouter({
           error: "Provide a current 6-digit TOTP or a recovery code to disable 2FA",
         });
       }
-      const client = await pool.connect();
-      try {
-        await client.query("BEGIN");
+      await withTx(pool, async (client) => {
         await client.query(
           `UPDATE users
            SET totp_secret = NULL,
@@ -745,13 +736,7 @@ module.exports = function createAuthRouter({
         // baked in is no different from one without, but bumping
         // is the consistent posture after every privilege change.
         await bumpTokenVersion(client, req.user.id);
-        await client.query("COMMIT");
-      } catch (txErr) {
-        await client.query("ROLLBACK").catch(() => {});
-        throw txErr;
-      } finally {
-        client.release();
-      }
+      });
       res.json({ ok: true, message: "2FA disabled. Re-enable from your account settings any time." });
     } catch (err) {
       console.error("[2FA Disable Error]", err.message);
@@ -1873,23 +1858,15 @@ module.exports = function createAuthRouter({
       // Bump token_version atomically with the password write so a
       // racing reset can't end with the password rotated but stale
       // JWTs still valid.
-      const client2 = await pool.connect();
-      try {
-        await client2.query("BEGIN");
+      await withTx(pool, async (client) => {
         // Following a reset link proves the inbox as well as a verify
         // link does, so someone who lost the sign-up mail isn't stuck.
-        await client2.query(
+        await client.query(
           "UPDATE users SET password = $1, email_verified_at = COALESCE(email_verified_at, now()) WHERE id = $2",
           [hash, user.id],
         );
-        await bumpTokenVersion(client2, user.id);
-        await client2.query("COMMIT");
-      } catch (txErr) {
-        await client2.query("ROLLBACK").catch(() => {});
-        throw txErr;
-      } finally {
-        client2.release();
-      }
+        await bumpTokenVersion(client, user.id);
+      });
       sendPasswordChangedEmail(user.id).catch(() => {});
       await afterInboxProven(user.id);
       res.json({ ok: true });
