@@ -98,9 +98,10 @@ Runs one club. In a country whose federation isn't on DivingHQ yet, a club admin
 - Create meets hosted by their club and run them end to end: events, entries, judging panels, the schedule and the Control Room
 - Where there's no federation yet, approve their members' requests to dive, judge or coach on **My club** (under a federation, its admins review them). Referee requests go to DivingHQ where the country has no federation yet, since a referee can act at any club's meet in the country. Nobody approves their own request for anything but diver: that goes to another admin, the region, or DivingHQ
 - Add and remove co-admins, and say which region the club is in (while the country has no federation; under one, the federation does both)
+- Where there's no federation yet, approve a parent's request to pay on behalf of a child in the club (**Guardian link requests** on **My club**, while payments is switched on). Nobody decides a request they're part of
 - Vote on a [claim](#claims) when a federation or state body applies to take over
 
-Club admins see their own members' names, usernames and role requests, not the rest of the country.
+Club admins see their own members' names, usernames and role requests, and the guardian link requests they decide (who's asking, and the child's age), not the rest of the country.
 
 ## Region admin
 
@@ -109,7 +110,7 @@ Looks after a state, province or home nation. The federation appoints region adm
 **Can:**
 - See every club in the region and who runs it, on **My region**
 - Create the region's championships in Meet Manager, hosted by the region, and step in on any of its clubs' meets
-- Where there's no federation yet, approve role requests from members of the region's clubs (under a federation, its admins review them)
+- Where there's no federation yet, approve role requests and guardian link requests from members of the region's clubs (under a federation, its admins review them)
 - Vote on a national claim, once the region itself is claimed
 
 ## Claims
@@ -228,6 +229,7 @@ Friends, family, sponsors. Often anonymous — no account, no token. Frequently 
 In a country whose federation isn't on DivingHQ yet, the clubs run themselves. Whoever founds a club is its first **club admin**; a state, province or home nation can have **region admins** above its clubs (appointed by DivingHQ, or a state body whose claim on the region passed). Both run the meets their club or region hosts from Meet Manager and the Control Room. On **My club** and **My region** they:
 
 - Approve their members' role requests for **diver, judge and coach**. Referee requests go to DivingHQ instead: a referee can act at any club's meet in the country, so no single club hands that out. Nobody approves their own request for anything but diver.
+- Approve **guardian link requests**, a parent asking to pay on behalf of a child in the club (while payments is switched on). The child's club admins are asked first, the region if the club has nobody live, then DivingHQ. Nobody decides one they're part of.
 - Approve **join requests**. People who pick your club when they sign up (or use your invite link) join it straight away, and their role requests come to you as usual. Anyone already on DivingHQ who wants to move in asks with **Change Club** on their profile, and the club's admins (or its region's) say yes or no. Nobody approves their own.
 - Add and remove **co-admins** from their own members. A club or region always keeps at least one live admin: deleted or suspended accounts don't count, and two admins removing each other at the same moment can't leave it with none. A region whose admins have all gone can be claimed again.
 - Pick the club's **region**. Between regions nobody has claimed, that's the club's call. A region its state body has claimed decides which clubs it takes: the club's admin asks, the region's admin accepts or declines on **My region**, and only the region can take a club back out. If a claimed region's admins have all gone, it has no say until someone claims it again.
