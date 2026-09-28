@@ -59,6 +59,8 @@ Top of the food chain inside one country, the person whose name is on the record
 - Approve role requests from every member in the country
 - Decide a state body's claim on one of its regions
 
+A federation always keeps at least one live org admin. The last one can't delete their account, take the role off themselves, or finish a transfer to another federation until they've appointed someone else (or asked DivingHQ support). Deleted or suspended accounts don't count, and two admins stepping down at the same moment can't leave it with none: one of them is told to appoint someone first.
+
 ### User Manager — per-user drawer
 
 Clicking any row in User Manager slides out this drawer. It's where roles are actually granted and revoked, so it's the screen to know if you administer a federation.
