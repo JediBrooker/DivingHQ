@@ -124,16 +124,21 @@ export function useOutbox() {
     lastSyncedAt,
     isOffline: computed(() => offlineSince.value !== null),
     pendingCount: computed(() => counts.value.pending),
+    // Everything the server hasn't confirmed yet: queued plus mid-send.
+    // An inflight entry is just as unsent as a queued one if the tab
+    // goes away now, so leave-page guards should count both.
+    unsyncedCount: computed(() => counts.value.pending + counts.value.inflight),
     failedCount: computed(() => counts.value.failed),
     conflictCount: computed(() => counts.value.conflict),
     // "hasActivity": a single boolean components use to decide
     // whether to render the offline banner / sync chips at all.
-    // True when offline OR when there are pending / failed /
-    // conflict entries even though we're online (the drain might
-    // still be in flight, or hit a transient retry).
+    // True when offline OR when there are pending / inflight /
+    // failed / conflict entries even though we're online (the drain
+    // might still be in flight, or hit a transient retry).
     hasActivity: computed(() =>
       offlineSince.value !== null
       || counts.value.pending > 0
+      || counts.value.inflight > 0
       || counts.value.failed > 0
       || counts.value.conflict > 0
     ),
