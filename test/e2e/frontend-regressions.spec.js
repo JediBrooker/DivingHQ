@@ -204,6 +204,59 @@ test("A6-05 the offline banner shows when the connection drops", async ({ page, 
   });
 });
 
+// With the banner back, an action that failed days ago would pin it up
+// for good: nothing ever ran the outbox's gc(), so finished entries past
+// the 72h retention never left IndexedDB. A recent failure still shows.
+test("A6-05 a failure past the retention window doesn't keep the banner up", async ({ page, request }) => {
+  await withOrg(request, async (org) => {
+    const diver = await setup.insertUser({ orgId: org.orgId, role: "diver", fullName: "Gary Garbage" });
+    await quiet(page);
+    await signIn(page, diver.username);
+    await page.goto("/competitor");
+    await expect(page.locator(".offline-banner")).toHaveCount(0);
+
+    const seed = async (entries) => page.evaluate((rows) => new Promise((resolve, reject) => {
+      const req = indexedDB.open("divinghq-outbox");
+      req.onerror = () => reject(req.error);
+      req.onsuccess = () => {
+        const tx = req.result.transaction("outbox", "readwrite");
+        for (const r of rows) tx.objectStore("outbox").put(r);
+        tx.oncomplete = () => { req.result.close(); resolve(); };
+        tx.onerror = () => reject(tx.error);
+      };
+    }), entries);
+    const entry = (key, ageMs) => {
+      const at = new Date(Date.now() - ageMs).toISOString();
+      return {
+        idempotency_key: key, action_type: "submit_score", payload: {},
+        actor_local_time: at, user_fingerprint: diver.userId.slice(0, 24),
+        status: "failed", attempts: 5, last_attempt_at: at, last_error: "rejected",
+        conflict_info: null, created_at: at, synced_at: null, server_response: null,
+      };
+    };
+    const old = `b6-old-${diver.userId}`;
+    await seed([entry(old, 4 * 24 * 3600 * 1000)]);
+    await page.reload();
+    await expect(page.locator(".page-header")).toBeVisible();
+    // Give the startup scan its moment; the banner renders off it.
+    await page.waitForTimeout(500);
+    await expect(page.locator(".offline-banner")).toHaveCount(0);
+    const left = await page.evaluate((key) => new Promise((resolve) => {
+      const req = indexedDB.open("divinghq-outbox");
+      req.onsuccess = () => {
+        const get = req.result.transaction("outbox").objectStore("outbox").get(key);
+        get.onsuccess = () => { req.result.close(); resolve(!!get.result); };
+      };
+    }), old);
+    expect(left, "the stale entry is gone from IndexedDB").toBe(false);
+
+    await seed([entry(`b6-new-${diver.userId}`, 60 * 60 * 1000)]);
+    await page.reload();
+    await expect(page.locator(".offline-banner")).toContainText("1 failed");
+    await expect(page.getByTestId("offline-banner-retry")).toBeVisible();
+  });
+});
+
 // ---------------------------------------------------------------------
 // A6-06 + A6-24: sign-out on a shared laptop.
 // ---------------------------------------------------------------------

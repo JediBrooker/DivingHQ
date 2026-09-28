@@ -162,6 +162,9 @@ function scheduleDrain(auth) {
 export async function retryFailedActions() {
   const outbox = getOutbox()
   if (!outbox) return 0
+  // Nothing past the retention window gets resent: the server has
+  // forgotten its idempotency key by then, so a replay could land twice.
+  await outbox.gc().catch(() => {})
   const n = await outbox.retryFailed()
   if (n) scheduleDrain(useAuthStore())
   return n

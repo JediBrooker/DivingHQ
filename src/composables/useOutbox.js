@@ -78,8 +78,12 @@ export function getOutbox() {
     instance.on('change', refresh)
 
     // Initial scan, the outbox might have leftover entries from a
-    // prior session that didn't drain before the tab closed.
-    refresh()
+    // prior session that didn't drain before the tab closed. Clear out
+    // finished entries past the 72h retention first. outbox.js always
+    // said that happens at startup but nothing called gc(), so every
+    // synced score sat in IndexedDB for good, and a failed or conflicted
+    // one from last week kept the offline banner up on every visit.
+    instance.gc().catch(() => {}).finally(refresh)
 
     // Periodic refresh as a safety net in case a 'change' event
     // is dropped (e.g., the page was hidden and Visibility-paused).
