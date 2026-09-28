@@ -22,6 +22,7 @@
 
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useDiveSearch } from '@/composables/useDiveSearch'
 import { useDiveDirectory } from '@/composables/useDiveDirectory'
@@ -31,6 +32,10 @@ import EmptyState from '@/components/EmptyState.vue'
 
 const route = useRoute()
 const auth = useAuthStore()
+// Every string below had a translated coach.dive_lists.* key in all the
+// locales, but the view never used them, so a French coach got this
+// whole page in English.
+const { t } = useI18n()
 
 const eventId = computed(() => route.params.event_id)
 const event = ref(null)
@@ -56,7 +61,7 @@ async function load() {
     event.value = data.event
     divers.value = data.divers
   } catch (err) {
-    error.value = err.message || 'Failed to load dive lists'
+    error.value = err.message || t('coach.dive_lists.load_failed')
   } finally {
     loading.value = false
   }
@@ -89,37 +94,37 @@ function coachEligibilityBadges(eligibility) {
   const badges = []
   if (eligibility.host_federation) {
     badges.push({
-      label: 'Host federation',
+      label: t('coach.dive_lists.badge_host'),
       tone: 'cyan',
-      tip: 'Your coach link is in the event host federation.',
+      tip: t('coach.dive_lists.badge_host_tip'),
     })
   }
   if (eligibility.invited_federation) {
     badges.push({
-      label: 'Invited federation',
+      label: t('coach.dive_lists.badge_invited'),
       tone: 'amber',
-      tip: "Your coach link matches the diver's invited federation.",
+      tip: t('coach.dive_lists.badge_invited_tip'),
     })
   }
   if (eligibility.can_submit) {
     badges.push({
-      label: 'Can submit',
+      label: t('coach.dive_lists.badge_can_submit'),
       tone: 'green',
-      tip: 'You can submit or edit dive lists while entries are open.',
+      tip: t('coach.dive_lists.badge_can_submit_tip'),
     })
   }
   if (eligibility.can_withdraw) {
     badges.push({
-      label: 'Can withdraw',
+      label: t('coach.dive_lists.badge_can_withdraw'),
       tone: 'green',
-      tip: 'You can withdraw entered divers from this event.',
+      tip: t('coach.dive_lists.badge_can_withdraw_tip'),
     })
   }
   if (eligibility.read_only) {
     badges.push({
-      label: 'Read only',
+      label: t('coach.dive_lists.badge_read_only'),
       tone: 'muted',
-      tip: 'You can view this event, but writes are closed or not permitted by your coach link.',
+      tip: t('coach.dive_lists.badge_read_only_tip'),
     })
   }
   return badges
@@ -179,7 +184,7 @@ async function submitEdit(diver) {
     .map((id, idx) => (id ? null : idx + 1))
     .filter(Boolean)
   if (missing.length) {
-    state.errors = [`Missing dives for round(s): ${missing.join(', ')}`]
+    state.errors = [t('coach.dive_lists.missing_dives', { rounds: missing.join(', ') })]
     state.submitting = false
     return
   }
@@ -196,14 +201,14 @@ async function submitEdit(diver) {
       `/api/coach/dive-lists/${eventId.value}/${diver.diver_id}`,
       { method: 'POST', body: JSON.stringify(body) },
     )
-    showSuccess(res.message || 'Dive list submitted')
+    showSuccess(res?.message || t('coach.dive_lists.submitted_toast'))
     cancelEdit(diver.diver_id)
     await load() // re-render with the saved list
   } catch (err) {
     if (err.violations && Array.isArray(err.violations)) {
       state.errors = err.violations
     } else {
-      state.errors = [err.message || 'Submission failed']
+      state.errors = [err.message || t('coach.dive_lists.submission_failed')]
     }
     showError(state.errors[0])
   } finally {
@@ -226,17 +231,18 @@ async function withdrawDiver(diver) {
   // Operator and diver both see the consequence (Control Room
   // queue + spectator scoreboard), so we want intentional clicks here.
   const reason = window.prompt(
-    `Withdraw ${diver.full_name} from ${event.value?.name || 'this event'}?\n\n` +
-    `Optionally enter a reason (visible in the audit log + Control Room):`,
+    t('coach.dive_lists.withdraw_prompt', {
+      name: diver.full_name,
+      event: event.value?.name || t('coach.dive_lists.this_event'),
+    }),
     '',
   )
   if (reason === null) return // cancelled
   const proceed = await confirmAction({
-    title: `Withdraw ${diver.full_name}?`,
-    body: `This marks every round in this event as withdrawn for ${diver.full_name}. ` +
-          `The operator will see it in the Control Room and the spectator scoreboard will reflect the change. ` +
-          `Reinstating requires the meet manager.`,
-    confirmLabel: 'Withdraw',
+    title: t('coach.dive_lists.withdraw_confirm_title', { name: diver.full_name }),
+    body: t('coach.dive_lists.withdraw_confirm_body', { name: diver.full_name }),
+    confirmLabel: t('coach.dive_lists.withdraw'),
+    cancelLabel: t('common.cancel'),
     confirmKind: 'danger',
   })
   if (!proceed) return
@@ -248,10 +254,10 @@ async function withdrawDiver(diver) {
         body: JSON.stringify({ reason: reason.trim() || undefined }),
       },
     )
-    showSuccess(res.message || `${diver.full_name} withdrawn`)
+    showSuccess(res?.message || t('coach.dive_lists.withdrawn_toast', { name: diver.full_name }))
     await load()
   } catch (err) {
-    showError(err.message || 'Withdraw failed')
+    showError(err.message || t('coach.dive_lists.withdraw_failed'))
   }
 }
 
@@ -267,15 +273,15 @@ onMounted(load)
   <div class="coach-lists-wrap">
     <div class="page-header">
       <div>
-        <div class="page-label">Coach → Dive Lists</div>
-        <h1 class="page-title">{{ event ? event.name : 'Dive Lists' }}</h1>
+        <div class="page-label">{{ t('coach.dive_lists.page_label') }}</div>
+        <h1 class="page-title">{{ event ? event.name : t('coach.dive_lists.title') }}</h1>
         <div v-if="event" class="page-sub">
           <span v-if="event.height">{{ event.height }}m</span>
-          <span v-if="event.event_type === 'synchro_pair'"> · Synchro</span>
-          <span v-if="event.total_rounds"> · {{ event.total_rounds }} rounds</span>
+          <span v-if="event.event_type === 'synchro_pair'"> · {{ t('coach.dive_lists.synchro') }}</span>
+          <span v-if="event.total_rounds"> · {{ t('coach.dive_lists.rounds_count', { n: event.total_rounds }) }}</span>
           <span v-if="event.meet_name"> · {{ event.meet_name }}</span>
         </div>
-        <div v-if="eventEligibilityBadges.length" class="eligibility-strip" aria-label="Coach write eligibility">
+        <div v-if="eventEligibilityBadges.length" class="eligibility-strip" :aria-label="t('coach.dive_lists.eligibility_aria')">
           <span v-for="badge in eventEligibilityBadges"
                 :key="badge.label"
                 :class="['badge', `badge-${badge.tone}`, 'eligibility-badge']"
@@ -286,26 +292,26 @@ onMounted(load)
       </div>
       <div class="header-actions">
         <button class="btn btn-ghost btn-sm" @click="load" :disabled="loading">
-          {{ loading ? '↻ Refreshing' : '↻ Refresh' }}
+          {{ loading ? t('common.refreshing') : t('common.refresh') }}
         </button>
-        <RouterLink to="/coach" class="btn btn-ghost btn-sm">← Coach</RouterLink>
+        <RouterLink to="/coach" class="btn btn-ghost btn-sm">{{ t('coach.dive_lists.back_to_coach') }}</RouterLink>
       </div>
     </div>
 
-    <div v-if="loading && !event" class="empty">Loading dive lists…</div>
+    <div v-if="loading && !event" class="empty">{{ t('coach.dive_lists.loading') }}</div>
     <EmptyState
       v-else-if="error"
       icon="!"
-      title="Could not load dive lists"
+      :title="t('coach.dive_lists.load_failed_title')"
       :body="error"
-      action-label="Retry"
+      :action-label="t('common.retry')"
       :on-action="load"
     />
 
     <template v-else-if="event">
       <!-- Deadline / lock banner -->
       <div v-if="event.entries_close_at" class="deadline-banner">
-        <span class="deadline-label">Entries close</span>
+        <span class="deadline-label">{{ t('coach.dive_lists.entries_close') }}</span>
         <span class="deadline-value">{{ new Date(event.entries_close_at).toLocaleString() }}</span>
       </div>
 
@@ -313,9 +319,9 @@ onMounted(load)
       <EmptyState
         v-if="!divers.length"
         icon="🤝"
-        title="No linked divers"
-        body="You don't have any divers linked yet. Ask your org admin to add coach links in the User Manager."
-        action-label="Back to coach dashboard"
+        :title="t('coach.dive_lists.no_divers_title')"
+        :body="t('coach.dive_lists.no_divers_body')"
+        :action-label="t('coach.dive_lists.back_to_dashboard')"
         action-to="/coach"
       />
 
@@ -331,8 +337,8 @@ onMounted(load)
               <span v-if="diver.club_code || diver.club_name" class="diver-club">
                 {{ diver.club_code || diver.club_name }}
               </span>
-              <span v-if="diver.is_reserve" class="diver-reserve">RESERVE</span>
-              <span v-if="diver.withdrawn_at" class="diver-withdrawn">WITHDRAWN</span>
+              <span v-if="diver.is_reserve" class="diver-reserve">{{ t('coach.dive_lists.reserve_tag') }}</span>
+              <span v-if="diver.withdrawn_at" class="diver-withdrawn">{{ t('coach.dive_lists.withdrawn_tag') }}</span>
               <span v-for="badge in coachEligibilityBadges(diver.coach_eligibility)"
                     :key="`${diver.diver_id}-${badge.label}`"
                     :class="['badge', `badge-${badge.tone}`, 'eligibility-badge']"
@@ -342,21 +348,21 @@ onMounted(load)
             </div>
             <div class="diver-actions">
               <span v-if="diver.confirmed_at && !editing[diver.diver_id]" class="diver-status confirmed">
-                ✓ Submitted {{ new Date(diver.confirmed_at).toLocaleDateString() }}
+                {{ t('coach.dive_lists.submitted_at', { date: new Date(diver.confirmed_at).toLocaleDateString() }) }}
               </span>
               <span v-else-if="!diver.confirmed_at && !editing[diver.diver_id]" class="diver-status pending">
-                Not submitted
+                {{ t('coach.dive_lists.not_submitted') }}
               </span>
               <button v-if="!editing[diver.diver_id] && canSubmitDiver(diver)"
                       class="btn btn-primary btn-sm"
                       @click="startEdit(diver)">
-                {{ diver.confirmed_at ? 'Edit list' : 'Submit list' }}
+                {{ diver.confirmed_at ? t('coach.dive_lists.edit_list') : t('coach.dive_lists.submit_list') }}
               </button>
               <button v-if="!editing[diver.diver_id] && canWithdrawDiver(diver)"
                       class="btn btn-ghost btn-sm withdraw-btn"
                       @click="withdrawDiver(diver)"
-                      v-tip="'Scratch this diver from the event'">
-                Withdraw
+                      v-tip="t('coach.dive_lists.withdraw_tooltip')">
+                {{ t('coach.dive_lists.withdraw') }}
               </button>
             </div>
           </div>
@@ -371,7 +377,7 @@ onMounted(load)
             </div>
           </div>
           <div v-else-if="!editing[diver.diver_id]" class="diver-empty">
-            <em>No dive list submitted yet.</em>
+            <em>{{ t('coach.dive_lists.no_list_yet') }}</em>
           </div>
 
           <!-- Edit mode: one dropdown per round -->
@@ -383,7 +389,7 @@ onMounted(load)
               <select class="select edit-select"
                       v-model="editing[diver.diver_id].dives[idx]"
                       :disabled="isPrescribedDiveLocked(idx + 1)">
-                <option :value="null">— Pick a dive —</option>
+                <option :value="null">{{ t('coach.dive_lists.pick_a_dive') }}</option>
                 <option v-for="d in validDives"
                         :key="d.id"
                         :value="d.id"
@@ -391,9 +397,9 @@ onMounted(load)
                   {{ diveLabel(d) }}
                 </option>
               </select>
-              <span v-if="isPrescribedDiveLocked(idx + 1)" class="edit-lock-note">prescribed</span>
+              <span v-if="isPrescribedDiveLocked(idx + 1)" class="edit-lock-note">{{ t('coach.dive_lists.prescribed_lock') }}</span>
               <span v-else-if="isPrescribedHeight(idx + 1)" class="edit-lock-note">
-                must be {{ prescribedHeightLabel(idx + 1) }}m
+                {{ t('coach.dive_lists.prescribed_height', { height: prescribedHeightLabel(idx + 1) }) }}
               </span>
             </div>
 
@@ -401,15 +407,15 @@ onMounted(load)
                  For now we accept a partner_id paste, a full picker
                  would need the org_divers fetch from CompetitorView. -->
             <div v-if="event.event_type === 'synchro_pair'" class="edit-row">
-              <span class="edit-round">Partner</span>
+              <span class="edit-round">{{ t('coach.dive_lists.partner_label') }}</span>
               <input class="input"
                      type="text"
                      v-model="editing[diver.diver_id].partner_id"
-                     placeholder="Partner user ID (UUID)">
+                     :placeholder="t('coach.dive_lists.partner_placeholder')">
             </div>
 
             <div v-if="editing[diver.diver_id].errors.length" class="msg msg-error">
-              <strong>Validation errors:</strong>
+              <strong>{{ t('coach.dive_lists.validation_errors') }}</strong>
               <ul class="error-list">
                 <li v-for="e in editing[diver.diver_id].errors" :key="e">{{ e }}</li>
               </ul>
@@ -419,12 +425,12 @@ onMounted(load)
               <button class="btn btn-ghost btn-sm"
                       :disabled="editing[diver.diver_id].submitting"
                       @click="cancelEdit(diver.diver_id)">
-                Cancel
+                {{ t('common.cancel') }}
               </button>
               <button class="btn btn-primary btn-sm"
                       :disabled="editing[diver.diver_id].submitting"
                       @click="submitEdit(diver)">
-                {{ editing[diver.diver_id].submitting ? 'Submitting…' : 'Save list' }}
+                {{ editing[diver.diver_id].submitting ? t('coach.dive_lists.submitting') : t('coach.dive_lists.save_list') }}
               </button>
             </div>
           </div>
