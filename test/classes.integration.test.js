@@ -296,6 +296,27 @@ test("club admin enrols a diver; duplicates + bad input rejected", async (t) => 
     { diver_user_id: U.foreignDiver.id }, tokenFor(U.clubAdmin))).status, 400);
 });
 
+// clubAudit: club-private actions land in audit_log with org_id NULL, so
+// the federation's audit view never lists them, and club_id rides in the
+// metadata next to whatever the call site passed.
+test("class audit rows stay club-private (no org_id, club_id in metadata)", async (t) => {
+  if (!ready) return t.skip();
+  const rows = (await pool.query(
+    `SELECT action, org_id, actor_id, metadata FROM audit_log
+      WHERE (action = 'class.created' AND entity_id = $1)
+         OR (action = 'class.enrolment_added' AND metadata->>'class_id' = $1::text)
+      ORDER BY created_at`,
+    [classId],
+  )).rows;
+  assert.deepEqual(rows.map((r) => r.action), ["class.created", "class.enrolment_added"]);
+  for (const r of rows) {
+    assert.equal(r.org_id, null);
+    assert.equal(r.actor_id, U.clubAdmin.id);
+  }
+  assert.deepEqual(rows[0].metadata, { club_id: clubId });
+  assert.deepEqual(rows[1].metadata, { club_id: clubId, class_id: classId, diver_id: U.diver1.id });
+});
+
 test("roster shows the enrolled diver (club admin)", async (t) => {
   if (!ready) return t.skip();
   const res = await api("GET", `/api/clubs/${clubId}/classes/${classId}/roster`, null, tokenFor(U.clubAdmin));

@@ -24,6 +24,8 @@ const {
   perDiveSelect,
   perDivePointsCte,
   teamStandingsCte,
+  compStandingsCte,
+  PUBLIC_PANEL_SQL,
 } = require("../lib/scoring-sql");
 
 // ---------------------------------------------------------------
@@ -805,4 +807,79 @@ test("teamStandingsCte: name, source and event placeholder are the caller's", ()
   assert.ok(sql.includes("event_team_rep_code($2, t.id)"));
   assert.ok(sql.includes("WHERE id = $2) = 'team'"));
   assert.ok(!sql.includes("$1"));
+});
+
+// ---------------------------------------------------------------
+// 5. Individual standings + public judge panel (scoreboard, archive
+//    recap, results.pdf). Pinned so the three surfaces can't drift
+//    apart again the way their inline copies did.
+// ---------------------------------------------------------------
+
+test("snapshot: compStandingsCte default", () => {
+  assert.equal(
+    compStandingsCte(),
+    `comp_standings AS (
+SELECT u.id AS competitor_id,
+       u.full_name,
+       event_rep_code($1, u.id, o.country_code) AS country_code,
+       cl.name AS club_name,
+       p.partner_id AS partner_id,
+       pu.full_name AS partner_name,
+       event_rep_code($1, p.partner_id, pl.country_code) AS partner_country,
+       SUM(pd.dive_points) AS total
+FROM per_dive pd
+JOIN users u ON u.id = pd.competitor_id
+JOIN organisations o ON o.id = u.org_id
+LEFT JOIN clubs cl ON cl.id = u.club_id AND cl.status = 'active'
+LEFT JOIN LATERAL (
+  SELECT DISTINCT cdl.partner_id FROM competitor_dive_lists cdl
+  WHERE cdl.event_id = $1 AND cdl.competitor_id = pd.competitor_id
+    AND cdl.partner_id IS NOT NULL LIMIT 1
+) p ON true
+LEFT JOIN users pu ON pu.id = p.partner_id
+LEFT JOIN organisations pl ON pl.id = pu.org_id
+WHERE (SELECT event_type FROM events WHERE id = $1) <> 'team'
+GROUP BY u.id, u.full_name, o.country_code, cl.name,
+         p.partner_id, pu.full_name, pl.country_code
+)`,
+  );
+});
+
+test("compStandingsCte: unions with the team branch by column name", () => {
+  const cols = (sql) => sql.split("\nFROM ")[0]
+    .replace(/^[^\n]*\nSELECT /, "")
+    .split(",\n")
+    .map((c) => c.trim().split(/\s+AS\s+|\s+/i).pop().replace(/^[a-z]+\./, ""));
+  const comp = cols(compStandingsCte());
+  const team = cols(teamStandingsCte());
+  // Same shape after the id column (competitor_id vs team_id).
+  assert.deepEqual(comp.slice(1), team.slice(1));
+  assert.equal(comp[0], "competitor_id");
+  assert.equal(team[0], "team_id");
+});
+
+test("compStandingsCte: one row per diver, gated off team events", () => {
+  const sql = compStandingsCte();
+  assert.ok(/GROUP BY u\.id\b/.test(sql), "grouped by id, so same-named divers stay apart");
+  assert.ok(sql.includes("<> 'team'"));
+  assert.ok(sql.includes("cl.status = 'active'"), "only approved club names are public");
+});
+
+test("compStandingsCte: name, source and event placeholder are the caller's", () => {
+  const sql = compStandingsCte({ name: "divers_x", perDive: "pd_src", eventId: "$2" });
+  assert.ok(sql.startsWith("divers_x AS (\n"));
+  assert.ok(sql.includes("FROM pd_src pd"));
+  assert.ok(sql.includes("event_rep_code($2, u.id, o.country_code)"));
+  assert.ok(sql.includes("WHERE id = $2) <> 'team'"));
+  assert.ok(!sql.includes("$1"));
+});
+
+test("PUBLIC_PANEL_SQL: judge chips, approved clubs only, panel order", () => {
+  assert.ok(PUBLIC_PANEL_SQL.includes("FROM event_judges ej"));
+  assert.ok(PUBLIC_PANEL_SQL.includes("LEFT JOIN clubs cl ON cl.id = u.club_id AND cl.status = 'active'"));
+  assert.ok(PUBLIC_PANEL_SQL.includes("WHERE ej.event_id = $1"));
+  assert.ok(PUBLIC_PANEL_SQL.trim().endsWith("ORDER BY ej.judge_number ASC"));
+  for (const col of ["judge_id", "judge_number", "full_name", "country_code", "org_name", "club_name", "club_code"]) {
+    assert.ok(new RegExp(`\\b${col}\\b`).test(PUBLIC_PANEL_SQL), `panel keeps ${col}`);
+  }
 });

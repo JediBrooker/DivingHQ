@@ -8,9 +8,11 @@
 //     own club's classes. They never see anyone else's enrolment.
 //
 // Pricing is flexible: each class has price OPTIONS a diver picks from; the
-// club may apply a manual per-enrolment discount. Enrolment PAYMENT + club
-// payouts arrive in a later change; here enrolment is the roster model and
-// works while payments are dormant.
+// club may apply a manual per-enrolment discount. A diver (or their
+// guardian) pays for a pending enrolment through the checkout below; that
+// money is owed to the CLUB (recipient_type 'club') and paid out to the
+// club's own Stripe recipient account. With payments switched off,
+// enrolment still works as a plain roster.
 //
 // Mounted via:
 //   app.use(require('./routes/classes')({ pool, verifyToken, requireClubAdminOnly, logger }))
@@ -20,7 +22,7 @@ const { recordAudit, auditFromReq } = require("../lib/audit");
 const { priceCharge } = require("../lib/fee-pricing");
 const ledger = require("../lib/payout-ledger");
 const { toAlpha2 } = require("../lib/stripe");
-const { retirePendingPayment, resumeOrRetireCheckout } = require("../lib/payment-lifecycle");
+const { retirePendingPayment, retireBlocked, resumeOrRetireCheckout } = require("../lib/payment-lifecycle");
 
 const APP_BASE_URL =
   process.env.APP_BASE_URL || process.env.CORS_ORIGIN || "http://localhost:5173";
@@ -67,18 +69,19 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
     return retirePendingPayment({ pool, payments, logger: log }, p);
   }
 
-  // Map a retire outcome onto the HTTP response for state-change endpoints.
-  // Returns true when the caller must stop (response already sent).
-  function retireBlocked(res, outcome, paidMessage) {
-    if (outcome === "paid") {
-      res.status(409).json({ error: paidMessage });
-      return true;
-    }
-    if (outcome === "unavailable") {
-      res.status(503).json({ error: "Couldn't verify the in-flight payment with Stripe — please try again." });
-      return true;
-    }
-    return false;
+  // Audit a club-private action. org_id is forced to NULL: audit rows
+  // carrying the federation's org_id show up in the org-admin audit log,
+  // and that would leak club-private class and payout activity across the
+  // #98 boundary. Sysadmin tooling finds these rows by metadata.club_id,
+  // which is always filled in here. Hands back recordAudit's promise, so
+  // callers await it or not exactly as before.
+  function clubAudit(req, { metadata, ...entry }) {
+    return recordAudit(pool, {
+      ...auditFromReq(req),
+      ...entry,
+      org_id: null,
+      metadata: { club_id: req.club.id, ...metadata },
+    });
   }
 
   // ---- validation helpers ----------------------------------------
@@ -240,15 +243,9 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
         insertedPrices.push(pr);
       }
       await client.query("COMMIT");
-      await recordAudit(pool, {
-        ...auditFromReq(req),
-        // CLUB-PRIVATE: org_id deliberately NULL. Audit rows with the
-        // federation's org_id surface in the org-admin audit log, leaking
-        // club-private class/payout activity (#98's boundary). Sysadmin
-        // tooling finds these via metadata.club_id.
-        org_id: null,
+      await clubAudit(req, {
         entity_type: "class", entity_id: cls.id, entity_name: cls.name,
-        action: "class.created", metadata: { club_id: req.club.id },
+        action: "class.created",
       }).catch(() => {});
       cls.price_options = insertedPrices;
       cls.enrolment_count = 0;
@@ -331,15 +328,9 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
         if (retireBlocked(res, outcome, "An enrolment in this class was just paid for — refresh and handle it before deleting.")) return;
       }
       await pool.query("DELETE FROM classes WHERE id = $1 AND club_id = $2", [req.params.classId, req.club.id]);
-      await recordAudit(pool, {
-        ...auditFromReq(req),
-        // CLUB-PRIVATE: org_id deliberately NULL. Audit rows with the
-        // federation's org_id surface in the org-admin audit log, leaking
-        // club-private class/payout activity (#98's boundary). Sysadmin
-        // tooling finds these via metadata.club_id.
-        org_id: null,
+      await clubAudit(req, {
         entity_type: "class", entity_id: cls.id, entity_name: cls.name,
-        action: "class.deleted", metadata: { club_id: req.club.id },
+        action: "class.deleted",
       }).catch(() => {});
       return res.json({ message: "Class deleted" });
     } catch (err) {
@@ -478,15 +469,9 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
          chosen ? chosen.id : null, chosen ? chosen.amount_cents : null,
          discount, chosen ? chosen.currency : null, cleanName(body.note, 500), req.user.id],
       );
-      await recordAudit(pool, {
-        ...auditFromReq(req),
-        // CLUB-PRIVATE: org_id deliberately NULL. Audit rows with the
-        // federation's org_id surface in the org-admin audit log, leaking
-        // club-private class/payout activity (#98's boundary). Sysadmin
-        // tooling finds these via metadata.club_id.
-        org_id: null,
+      await clubAudit(req, {
         entity_type: "class_enrolment", entity_id: r.rows[0].id, entity_name: cls.name,
-        action: "class.enrolment_added", metadata: { club_id: req.club.id, class_id: cls.id, diver_id: diverId },
+        action: "class.enrolment_added", metadata: { class_id: cls.id, diver_id: diverId },
       }).catch(() => {});
       return res.status(201).json({ id: r.rows[0].id, status: r.rows[0].status });
     } catch (err) {
@@ -615,15 +600,9 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
       if (!r.rows.length) {
         return res.status(409).json({ error: "This enrolment changed — refresh and try again." });
       }
-      await recordAudit(pool, {
-        ...auditFromReq(req),
-        // CLUB-PRIVATE: org_id deliberately NULL. Audit rows with the
-        // federation's org_id surface in the org-admin audit log, leaking
-        // club-private class/payout activity (#98's boundary). Sysadmin
-        // tooling finds these via metadata.club_id.
-        org_id: null,
+      await clubAudit(req, {
         entity_type: "class_enrolment", entity_id: req.params.enrolId, entity_name: cls.name,
-        action: "class.enrolment_removed", metadata: { club_id: req.club.id, class_id: cls.id },
+        action: "class.enrolment_removed", metadata: { class_id: cls.id },
       }).catch(() => {});
       return res.json({ message: "Enrolment removed" });
     } catch (err) {
@@ -707,10 +686,9 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
           "UPDATE clubs SET stripe_account_id = $2, stripe_account_country = $3 WHERE id = $1",
           [req.club.id, accountId, country],
         );
-        recordAudit(pool, {
-          ...auditFromReq(req), org_id: null,
+        clubAudit(req, {
           entity_type: "club", entity_id: req.club.id,
-          action: "connect.account_created", metadata: { club_id: req.club.id, account_id: accountId, country },
+          action: "connect.account_created", metadata: { account_id: accountId, country },
         }).catch(() => {});
       }
       const url = await payments.createOnboardingLink({
@@ -741,16 +719,10 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
         "UPDATE clubs SET auto_withdraw_enabled = $1, auto_withdraw_min_cents = $2 WHERE id = $3",
         [enabled, minCents, req.club.id],
       );
-      recordAudit(pool, {
-        ...auditFromReq(req),
-        // CLUB-PRIVATE: org_id deliberately NULL. Audit rows with the
-        // federation's org_id surface in the org-admin audit log, leaking
-        // club-private class/payout activity (#98's boundary). Sysadmin
-        // tooling finds these via metadata.club_id.
-        org_id: null,
+      clubAudit(req, {
         entity_type: "club", entity_id: req.club.id,
         action: "withdrawal_settings.updated",
-        metadata: { club_id: req.club.id, auto_withdraw_enabled: enabled, auto_withdraw_min_cents: minCents },
+        metadata: { auto_withdraw_enabled: enabled, auto_withdraw_min_cents: minCents },
       }).catch(() => {});
       return res.json({ ok: true, auto_withdraw_enabled: enabled, auto_withdraw_min_cents: minCents });
     } catch (err) {
@@ -782,16 +754,10 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
       // error 'failed' (balance auto-restores). No operator step.
       const { payouts, accountId } = await ledger.createWithdrawal(pool, { clubId: req.club.id, note });
       const settled = await ledger.executePayouts(pool, payments, payouts, accountId, { logger: log });
-      recordAudit(pool, {
-        ...auditFromReq(req),
-        // CLUB-PRIVATE: org_id deliberately NULL. Audit rows with the
-        // federation's org_id surface in the org-admin audit log, leaking
-        // club-private class/payout activity (#98's boundary). Sysadmin
-        // tooling finds these via metadata.club_id.
-        org_id: null,
+      clubAudit(req, {
         entity_type: "payout", entity_id: settled[0]?.id || null,
         action: "payout.executed",
-        metadata: { club_id: req.club.id, payouts: settled.map((p) => ({ id: p.id, amount_cents: p.amount_cents, currency: p.currency, status: p.status })) },
+        metadata: { payouts: settled.map((p) => ({ id: p.id, amount_cents: p.amount_cents, currency: p.currency, status: p.status })) },
       }).catch(() => {});
       email?.sendPayoutFailedEmail({ clubId: req.club.id, payouts: settled });
       return res.status(201).json(settled);
@@ -971,19 +937,12 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
       )).rows[0];
       if (!enr) return res.status(404).json({ error: "Enrolment not found" });
       const isDiver = enr.diver_user_id === req.user.id;
-      let isGuardian = false;
-      if (!isDiver) {
-        try {
-          isGuardian = (await pool.query(
-            `SELECT 1 FROM guardians
-              WHERE guardian_user_id = $1 AND dependent_user_id = $2
-                AND org_id = $3 AND status = 'approved' LIMIT 1`,
-            [req.user.id, enr.diver_user_id, enr.org_id],
-          )).rows.length > 0;
-        } catch (e) {
-          if (!/relation "guardians" does not exist/.test(e.message)) throw e;
-        }
-      }
+      const isGuardian = !isDiver && (await pool.query(
+        `SELECT 1 FROM guardians
+          WHERE guardian_user_id = $1 AND dependent_user_id = $2
+            AND org_id = $3 AND status = 'approved' LIMIT 1`,
+        [req.user.id, enr.diver_user_id, enr.org_id],
+      )).rows.length > 0;
       if (!isDiver && !isGuardian) return res.status(403).json({ error: "Forbidden" });
       if (enr.status !== "pending") return res.status(409).json({ error: `This enrolment is ${enr.status}.` });
       // A pending enrolment with NO price (amount_cents NULL) is un-priced,
@@ -1010,18 +969,18 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
       let paymentId;
       for (let attemptNo = 0; ; attemptNo++) {
         try {
-          const classSubjectId = isGuardian ? enr.diver_user_id : null;
-          const cols = "org_id, payer_user_id, payer_type, subject_type, club_id, recipient_type, class_enrolment_id, amount_cents, platform_fee_cents, currency, fee_payer, status";
-          const vals = "$1, $2, 'user', 'class_enrolment', $3, 'club', $4, $5, $6, $7, 'absorb', 'pending'";
-          const params = [enr.org_id, req.user.id, enr.club_id, enr.id, chargeAmountCents, applicationFeeCents, currency];
-          if (classSubjectId) {
-            params.push(classSubjectId);
-          }
+          // subject_user_id (the dependent, when a guardian pays) has no
+          // default, so NULL for the diver's own payment is the same row as
+          // leaving the column out.
           paymentId = (await pool.query(
-            `INSERT INTO payments (${cols}${classSubjectId ? ", subject_user_id" : ""})
-             VALUES (${vals}${classSubjectId ? `, $${params.length}` : ""})
+            `INSERT INTO payments
+                (org_id, payer_user_id, payer_type, subject_type, club_id, recipient_type,
+                 class_enrolment_id, amount_cents, platform_fee_cents, currency, fee_payer, status,
+                 subject_user_id)
+             VALUES ($1, $2, 'user', 'class_enrolment', $3, 'club', $4, $5, $6, $7, 'absorb', 'pending', $8)
              RETURNING id`,
-            params,
+            [enr.org_id, req.user.id, enr.club_id, enr.id, chargeAmountCents, applicationFeeCents, currency,
+             isGuardian ? enr.diver_user_id : null],
           )).rows[0].id;
           break;
         } catch (e) {

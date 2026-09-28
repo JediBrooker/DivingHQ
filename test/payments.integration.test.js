@@ -35,6 +35,7 @@ let lateEventId;
 let lastRefundArgs = null;
 let lastExpireArgs = null;
 let lastCheckoutArgs = null;
+let failNextCheckout = false;
 let retrieveCheckoutSessionImpl = async (args) => ({ id: args.sessionId, status: "open", url: "https://stripe.test/resume" });
 let expireCheckoutSessionImpl = async (args) => { lastExpireArgs = args; return { status: "expired" }; };
 
@@ -52,6 +53,10 @@ const fakePayments = {
   // fixed, and short fake ids were exactly why this suite missed it.
   createCheckoutSession: async (args) => {
     lastCheckoutArgs = args;
+    if (failNextCheckout) {
+      failNextCheckout = false;
+      throw new Error("Stripe is having a moment");
+    }
     return {
       id: ("cs_test_" + crypto.randomUUID().replaceAll("-", "") + crypto.randomUUID().replaceAll("-", "")).slice(0, 66),
       url: "https://stripe.test/pay",
@@ -949,6 +954,59 @@ test("donating a chosen amount records a donation payment with the 15% fee", asy
   assert.equal(row.payer_user_id, userId);
   assert.equal(row.amount_cents, 3000);
   assert.equal(row.platform_fee_cents, 450); // 15% of 3000
+});
+
+// Every start*Checkout shares openCheckoutSession for the Stripe half, so
+// pin its two jobs here: the return URLs it builds from the flow name, and
+// giving the one-live slot back when Stripe refuses the session.
+test("checkout sessions return to the right flow page", async (t) => {
+  if (!ready) return t.skip();
+  lastCheckoutArgs = null;
+  const res = await api("POST", `/api/orgs/${orgId}/donate/checkout`, { amount_cents: 2500 });
+  assert.equal(res.status, 200);
+  const payId = (await res.json()).payment_id;
+  assert.equal(lastCheckoutArgs.clientReferenceId, payId);
+  assert.match(lastCheckoutArgs.successUrl, /\/payments\/return\?status=paid&flow=donation$/);
+  assert.match(lastCheckoutArgs.cancelUrl, /\/payments\/return\?status=canceled&flow=donation$/);
+  const row = (await pool.query("SELECT stripe_checkout_session FROM payments WHERE id = $1", [payId])).rows[0];
+  assert.ok(row.stripe_checkout_session, "the session id is stamped on the row");
+});
+
+test("a Stripe failure opening the session marks the row failed", async (t) => {
+  if (!ready) return t.skip();
+  failNextCheckout = true;
+  const res = await api("POST", `/api/orgs/${orgId}/donate/checkout`, { amount_cents: 2600 });
+  assert.equal(res.status, 500);
+  assert.equal((await res.json()).error, "Stripe is having a moment");
+  const row = (await pool.query(
+    `SELECT status, stripe_checkout_session FROM payments
+      WHERE payer_user_id = $1 AND subject_type = 'donation' AND amount_cents = 2600`,
+    [userId],
+  )).rows[0];
+  assert.equal(row.status, "failed");
+  assert.equal(row.stripe_checkout_session, null);
+});
+
+// requireChosenPrice: a fee whose only variant isn't on sale yet refuses
+// before any payment row exists. Editors always save these flat, so the
+// window is pushed out by hand here.
+test("a checkout with no price on sale is a 409 and inserts nothing", async (t) => {
+  if (!ready) return t.skip();
+  const put = await api("PUT", `/api/orgs/${orgId}/official-fee`, {
+    role_type: "meet_manager", currency: "GBP",
+    prices: [{ label: "annual", amount_cents: 2000, audience: "all" }],
+  });
+  assert.equal(put.status, 200);
+  const feeId = (await put.json()).id;
+  await pool.query(
+    "UPDATE fee_prices SET starts_at = now() + interval '30 days' WHERE fee_definition_id = $1",
+    [feeId],
+  );
+  const res = await api("POST", `/api/orgs/${orgId}/official-accreditation/checkout?role_type=meet_manager`, {});
+  assert.equal(res.status, 409);
+  assert.equal((await res.json()).error, "This isn't open for purchase right now.");
+  const rows = (await pool.query("SELECT 1 FROM payments WHERE fee_definition_id = $1", [feeId])).rows;
+  assert.equal(rows.length, 0);
 });
 
 // ---- Fines (disciplinary, appealable) -------------------------------

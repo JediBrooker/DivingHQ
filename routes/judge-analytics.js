@@ -426,9 +426,8 @@ module.exports = function createJudgeAnalyticsRouter({
   // Public-read endpoints (profile + analytics + directory) decode
   // the token if one is sent so we still see req.user for owner-
   // only branches (e.g. dashboard_widgets), but anonymous requests
-  // are accepted. Falls back to verifyToken if the host hasn't
-  // been updated yet, belt-and-braces during the rollout.
-  const maybeAuth = optionalAuth || verifyToken;
+  // are accepted.
+  const maybeAuth = optionalAuth;
   // Profile + analytics are heavy historical reads; route through
   // the optional read replica when available.
   const reads = readPool || pool;
@@ -578,24 +577,11 @@ module.exports = function createJudgeAnalyticsRouter({
 
       const baseParams = [id, fromDate, toDate];
 
-      // The non-date widgets used to run as 16 separate queries in
-      // bounded batches; they now share ONE per_dive materialisation
-      // (JUDGE_ANALYTICS_BUNDLE, above). runBatched still runs the
-      // 3 remaining native (date-bearing) widgets, without holding
-      // more than a batch's worth of pool slots at once.
-      const runBatched = async (tasks, batchSize = 4) => {
-        const results = [];
-        for (let i = 0; i < tasks.length; i += batchSize) {
-          const batch = tasks.slice(i, i + batchSize);
-          results.push(...(await Promise.all(batch.map((t) => t()))));
-        }
-        return results;
-      };
-
-      // The 13 date-free widgets share one per_dive materialisation.
-      // On error the bundle degrades to empty widgets (mirroring the
-      // old per-widget try/catch) so a bundle failure still serves
-      // the 3 native widgets below instead of 500-ing the whole page.
+      // The 13 date-free widgets share one per_dive materialisation
+      // (JUDGE_ANALYTICS_BUNDLE, above). On error the bundle degrades to
+      // empty widgets (mirroring the old per-widget try/catch) so a
+      // bundle failure still serves the 3 native widgets below instead
+      // of 500-ing the whole page.
       const EMPTY_BUNDLE = {
         bias_summary: null, deviation_distribution: [], agreement_rate: null,
         drop_rate: null, height_breakdown: [], group_breakdown: [],
@@ -603,22 +589,25 @@ module.exports = function createJudgeAnalyticsRouter({
         round_breakdown: [], dd_breakdown: [], panel_compare: null,
         panel_deviation_summary: null,
       };
-      let bundle = EMPTY_BUNDLE;
-      try {
-        const r = await reads.query(JUDGE_ANALYTICS_BUNDLE, baseParams);
-        if (r.rows.length) bundle = r.rows[0];
-      } catch (err) {
-        console.error("[Judge Analytics bundle]", err.message);
-      }
 
-      // The 3 date-bearing widgets stay native (unchanged SQL), their
+      // The bundle and the 3 date-bearing widgets are independent, so
+      // they all go at once. That's 4 pool slots at most, same bound the
+      // old batching kept, but the wall time is now the slowest query
+      // rather than the bundle plus the slowest native one. The 3
+      // natives stay separate (unchanged SQL) because their
       // timestamp/date columns serialise differently through jsonb, so
       // folding them into the bundle would change the wire shape.
-      const [recent_meets, score_trend, panel_deviation_per_event] =
-        await runBatched([
+      const [bundle, recent_meets, score_trend, panel_deviation_per_event] =
+        await Promise.all([
+          reads.query(JUDGE_ANALYTICS_BUNDLE, baseParams)
+            .then((r) => r.rows[0] || EMPTY_BUNDLE)
+            .catch((err) => {
+              console.error("[Judge Analytics bundle]", err.message);
+              return EMPTY_BUNDLE;
+            }),
           // ---- recent_meets: last 10 events officiated, with mean
           // signed deviation + dive count + drop rate per event.
-          () => runQuery("recent_meets",
+          runQuery("recent_meets",
             `WITH per_dive AS (${JUDGE_PER_DIVE})
              SELECT
                p.event_id,
@@ -641,7 +630,7 @@ module.exports = function createJudgeAnalyticsRouter({
           ),
           // ---- score_trend: weekly mean signed deviation, oldest
           // first. Shows drift or steadiness over time.
-          () => runQuery("score_trend",
+          runQuery("score_trend",
             `WITH per_dive AS (${JUDGE_PER_DIVE})
              SELECT
                date_trunc('week', created_at)::date AS week,
@@ -657,7 +646,7 @@ module.exports = function createJudgeAnalyticsRouter({
           ),
           // ---- panel_deviation_per_event: the differ-tight rate
           // aggregated per event; most-recent first, cap 10.
-          () => runQuery("panel_deviation_per_event",
+          runQuery("panel_deviation_per_event",
             `WITH per_dive AS (${JUDGE_PER_DIVE}),
              per_event AS (
                SELECT pd.event_id, e.name AS event_name, e.created_at,

@@ -10,7 +10,8 @@
 //       to the SPA's index.html.
 //
 //   GET /api/public/divers/:public_slug/og-card.png
-//       (left as a TODO, static fallback used for now)
+//       per-diver og:image, rendered with sharp and cached for
+//       an hour
 //
 // Permission model: completely public. The profile shows only
 // data already visible on the live scoreboard / archive: name,
@@ -83,6 +84,23 @@ module.exports = function createPublicProfileRouter({ pool, readPool }) {
   const reads = readPool || pool;
   const router = express.Router();
 
+  // The diver behind a public slug, or undefined. All three routes below
+  // read this row, each using a few of the columns. Deleted accounts
+  // don't resolve.
+  async function diverBySlug(slug) {
+    return (await reads.query(
+      `SELECT u.id, u.full_name,
+              u.org_id, o.name AS org_name, o.country_code,
+              u.club_id, cl.name AS club_name, cl.short_code AS club_code
+       FROM users u
+       JOIN organisations o ON u.org_id = o.id
+       ${PUBLIC_CLUB_JOIN}
+       WHERE u.public_slug = $1
+         AND u.deleted_at IS NULL`,
+      [slug],
+    )).rows[0];
+  }
+
   // -------------------------------------------------------------
   // GET /api/public/divers/:public_slug: JSON payload.
   //
@@ -108,25 +126,15 @@ module.exports = function createPublicProfileRouter({ pool, readPool }) {
       if (!/^[0-9a-f]{32}$/i.test(slug)) {
         return res.status(404).json({ error: "Diver not found" });
       }
-      const diverRes = await reads.query(
-        `SELECT u.id, u.full_name,
-                u.org_id, o.name AS org_name, o.country_code,
-                u.club_id, cl.name AS club_name, cl.short_code AS club_code
-         FROM users u
-         JOIN organisations o ON u.org_id = o.id
-         ${PUBLIC_CLUB_JOIN}
-         WHERE u.public_slug = $1
-           AND u.deleted_at IS NULL`,
-        [slug],
-      );
-      if (!diverRes.rows.length) {
+      const diver = await diverBySlug(slug);
+      if (!diver) {
         return res.status(404).json({ error: "Diver not found" });
       }
-      const diver = diverRes.rows[0];
 
-      // Stats query, same shape as /api/divers/:id/profile but
-      // without the date filter (public profile is "all time").
-      const stats = await reads.query(
+      // The two reads don't depend on each other, so run them together.
+      // Stats: same shape as /api/divers/:id/profile but without the
+      // date filter (public profile is "all time").
+      const [stats, recent] = await Promise.all([reads.query(
         `WITH ${perDivePointsCte({
            name:        "dive_totals",
            select:      ["s.event_id", "s.round_number"],
@@ -142,12 +150,12 @@ module.exports = function createPublicProfileRouter({ pool, readPool }) {
            MAX(dive_total)::numeric(6,2) AS best_single_dive
          FROM dive_totals`,
         [diver.id],
-      );
+      ),
 
       // Last 5 meets ranked against the full field. Same FULL_FIELD
       // ranking shape as the analytics dashboard's recent_form,
       // simplified for public consumption.
-      const recent = await reads.query(
+      reads.query(
         `WITH ${perDivePointsCte({
            select:      ["s.event_id", "s.competitor_id", "s.round_number"],
            pointsAlias: "pts",
@@ -180,7 +188,7 @@ module.exports = function createPublicProfileRouter({ pool, readPool }) {
          ORDER BY e.created_at DESC
          LIMIT 5`,
         [diver.id],
-      );
+      )]);
 
       res.json({
         diver: {
@@ -238,18 +246,8 @@ module.exports = function createPublicProfileRouter({ pool, readPool }) {
       // The best-dive scalar is fine to send to the replica since
       // the OG card is allowed to be a few seconds stale on
       // purpose (hit ratio matters more than freshness here).
-      const r = await reads.query(
-        `SELECT u.id, u.full_name, o.name AS org_name, o.country_code,
-                cl.name AS club_name
-         FROM users u
-         JOIN organisations o ON u.org_id = o.id
-         ${PUBLIC_CLUB_JOIN}
-         WHERE u.public_slug = $1
-           AND u.deleted_at IS NULL`,
-        [slug],
-      );
-      if (!r.rows.length) return res.status(404).end();
-      const d = r.rows[0];
+      const d = await diverBySlug(slug);
+      if (!d) return res.status(404).end();
 
       const stat = await reads.query(
         `WITH ${perDivePointsCte({
@@ -271,12 +269,7 @@ module.exports = function createPublicProfileRouter({ pool, readPool }) {
       // the DB (sanitised at registration) but a missed code
       // path that lets a bad string land would otherwise pop
       // an SVG attribute and either break the render or leak.
-      const e = (s) => String(s ?? "")
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#39;");
+      const e = htmlEscape;
 
       const subline = [d.org_name, d.country_code, d.club_name]
         .filter(Boolean)
@@ -348,17 +341,8 @@ module.exports = function createPublicProfileRouter({ pool, readPool }) {
     if (!/^[0-9a-f]{32}$/i.test(slug)) return next();
 
     try {
-      const r = await reads.query(
-        `SELECT u.full_name, o.name AS org_name, o.country_code, cl.name AS club_name
-         FROM users u
-         JOIN organisations o ON u.org_id = o.id
-         ${PUBLIC_CLUB_JOIN}
-         WHERE u.public_slug = $1
-           AND u.deleted_at IS NULL`,
-        [slug],
-      );
-      if (!r.rows.length) return next();
-      const d = r.rows[0];
+      const d = await diverBySlug(slug);
+      if (!d) return next();
 
       // APP_BASE_URL is preferred; when unset we fall back to the
       // request's protocol + Host header, but only if Host passes

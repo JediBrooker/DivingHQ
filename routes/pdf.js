@@ -25,31 +25,11 @@
 const express = require("express");
 const PDFDocument = require("pdfkit");
 const { t: serverTranslate } = require("../lib/server-i18n");
-const { perDiveSelect, perDivePointsCte, teamStandingsCte } = require("../lib/scoring-sql");
+const { perDiveSelect, perDivePointsCte, teamStandingsCte, compStandingsCte } = require("../lib/scoring-sql");
 const { PUBLIC_CLUB_JOIN } = require("../lib/club-approvals");
-
-// CSV escaping + spreadsheet-formula-injection guard.
-//
-// RFC 4180 quoting handles commas, quotes, newlines. The
-// leading-character guard handles the Excel/Google Sheets
-// "if the cell starts with =, +, -, @, tab, or CR, evaluate
-// it as a formula" foot-gun. A diver registering with
-// full_name = "=cmd|'/c calc'!A0" would otherwise execute on
-// every operator's machine when they open the exported CSV.
-// Prepending a single quote forces Excel to treat the cell as
-// literal text; the apostrophe doesn't render in the cell but
-// is still valid CSV.
-function csvCell(s) {
-  if (s == null) return "";
-  let text = String(s);
-  const dangerous = /^[=+\-@\t\r]/.test(text);
-  if (dangerous) text = "'" + text;
-  if (/[",\n\r]/.test(text) || dangerous) {
-    return `"${text.replace(/"/g, '""')}"`;
-  }
-  return text;
-}
-function csvRow(cells) { return cells.map(csvCell).join(",") + "\n"; }
+// RFC 4180 quoting plus the spreadsheet formula-injection guard, see
+// lib/csv.js.
+const { csvRow, slugify } = require("../lib/csv");
 
 module.exports = function createPdfRouter({ pool }) {
   if (!pool) throw new Error("createPdfRouter requires { pool }");
@@ -96,7 +76,7 @@ module.exports = function createPdfRouter({ pool }) {
   // right slice when it walks the schedule. Each slice is null when
   // its include token wasn't requested, so the renderer can do a
   // simple presence check before printing the section.
-  async function loadProgramEnrichments(meetId, events, include) {
+  async function loadProgramEnrichments(events, include) {
     const eventIds = events.map((e) => e.id);
     const empty = { diveLists: null, judges: null };
     if (!eventIds.length || (!include.has("dive_lists") && !include.has("judges"))) {
@@ -260,6 +240,43 @@ module.exports = function createPdfRouter({ pool }) {
     return { totalDives, totalSeconds, minutes, seconds, label };
   }
 
+  // The meet header and its schedule, for program.pdf and program.csv.
+  // meetCols is the meet side of the SELECT (always a literal from this
+  // file: the PDF wants m.*, the CSV just id and name). meet comes back
+  // undefined when there's no such meet. Events are in schedule order
+  // with a live competitor count.
+  async function loadProgram(meetId, meetCols) {
+    const [meetRes, eventsRes] = await Promise.all([
+      pool.query(
+        `SELECT ${meetCols}, o.name AS org_name, o.country_code
+         FROM meets m
+         JOIN organisations o ON o.id = m.org_id
+         WHERE m.id = $1`,
+        [meetId],
+      ),
+      pool.query(
+        `SELECT e.id, e.name, e.gender, e.age_group, e.height,
+                e.total_rounds, e.number_of_judges, e.event_type,
+                e.event_format, e.parent_event_id, e.scheduled_at,
+                e.dd_limit_rounds, e.dd_limit_value, e.status,
+                COALESCE(stat.competitor_count, 0)::int AS competitor_count
+         FROM events e
+         LEFT JOIN LATERAL (
+           SELECT COUNT(DISTINCT cdl.competitor_id) AS competitor_count
+           FROM competitor_dive_lists cdl
+           WHERE cdl.event_id = e.id AND cdl.withdrawn_at IS NULL
+         ) stat ON true
+         WHERE e.meet_id = $1
+         ORDER BY
+           e.scheduled_at NULLS LAST,
+           CASE e.event_format WHEN 'preliminary' THEN 0 ELSE 1 END,
+           e.created_at ASC`,
+        [meetId],
+      ),
+    ]);
+    return { meet: meetRes.rows[0], events: eventsRes.rows };
+  }
+
   // -------------------------------------------------------------
   // Public meet program PDF: full schedule, every event in the
   // bundle, competitor count per event, sponsor strip on the
@@ -273,51 +290,18 @@ module.exports = function createPdfRouter({ pool }) {
   router.get("/api/meets/:id/program.pdf", async (req, res) => {
     try {
       const { include, secondsPerDive } = parseProgramOptions(req.query);
-      const [meetRes, eventsRes] = await Promise.all([
-        pool.query(
-          `SELECT m.*, o.name AS org_name, o.country_code
-           FROM meets m
-           JOIN organisations o ON o.id = m.org_id
-           WHERE m.id = $1`,
-          [req.params.id],
-        ),
-        pool.query(
-          `SELECT e.id, e.name, e.gender, e.age_group, e.height,
-                  e.total_rounds, e.number_of_judges, e.event_type,
-                  e.event_format, e.parent_event_id, e.scheduled_at,
-                  e.dd_limit_rounds, e.dd_limit_value, e.status,
-                  COALESCE(stat.competitor_count, 0)::int AS competitor_count
-           FROM events e
-           LEFT JOIN LATERAL (
-             SELECT COUNT(DISTINCT cdl.competitor_id) AS competitor_count
-             FROM competitor_dive_lists cdl
-             WHERE cdl.event_id = e.id AND cdl.withdrawn_at IS NULL
-           ) stat ON true
-           WHERE e.meet_id = $1
-           ORDER BY
-             e.scheduled_at NULLS LAST,
-             CASE e.event_format WHEN 'preliminary' THEN 0 ELSE 1 END,
-             e.created_at ASC`,
-          [req.params.id],
-        ),
-      ]);
-
-      if (!meetRes.rows.length) {
+      const { meet, events } = await loadProgram(req.params.id, "m.*");
+      if (!meet) {
         return res.status(404).json({ error: "Meet not found" });
       }
-      const meet = meetRes.rows[0];
-      const events = eventsRes.rows;
 
       // Pre-fetch every per-event enrichment the operator asked
       // for so the schedule loop can stream sections inline. The
       // single batched query per enrichment is cheaper than
       // running one-per-event inside the loop.
-      const enrichments = await loadProgramEnrichments(meet.id, events, include);
+      const enrichments = await loadProgramEnrichments(events, include);
 
-      const slug = (meet.name || "meet")
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "_")
-        .replace(/^_+|_+$/g, "");
+      const slug = slugify(meet.name, "meet");
       const doc = new PDFDocument({ margin: 50, size: "A4" });
       res.setHeader("Content-Type", "application/pdf");
       res.setHeader("Content-Disposition", `attachment; filename="${slug}_program.pdf"`);
@@ -544,45 +528,13 @@ module.exports = function createPdfRouter({ pool }) {
   router.get("/api/meets/:id/program.csv", async (req, res) => {
     try {
       const { include, secondsPerDive } = parseProgramOptions(req.query);
-      const [meetRes, eventsRes] = await Promise.all([
-        pool.query(
-          `SELECT m.id, m.name, o.name AS org_name, o.country_code
-             FROM meets m
-             JOIN organisations o ON o.id = m.org_id
-            WHERE m.id = $1`,
-          [req.params.id],
-        ),
-        pool.query(
-          `SELECT e.id, e.name, e.gender, e.age_group, e.height,
-                  e.total_rounds, e.number_of_judges, e.event_type,
-                  e.event_format, e.parent_event_id, e.scheduled_at,
-                  e.dd_limit_rounds, e.dd_limit_value, e.status,
-                  COALESCE(stat.competitor_count, 0)::int AS competitor_count
-             FROM events e
-             LEFT JOIN LATERAL (
-               SELECT COUNT(DISTINCT cdl.competitor_id) AS competitor_count
-                 FROM competitor_dive_lists cdl
-                WHERE cdl.event_id = e.id AND cdl.withdrawn_at IS NULL
-             ) stat ON true
-            WHERE e.meet_id = $1
-            ORDER BY
-              e.scheduled_at NULLS LAST,
-              CASE e.event_format WHEN 'preliminary' THEN 0 ELSE 1 END,
-              e.created_at ASC`,
-          [req.params.id],
-        ),
-      ]);
-      if (!meetRes.rows.length) {
+      const { meet, events } = await loadProgram(req.params.id, "m.id, m.name");
+      if (!meet) {
         return res.status(404).json({ error: "Meet not found" });
       }
-      const meet = meetRes.rows[0];
-      const events = eventsRes.rows;
-      const enrichments = await loadProgramEnrichments(meet.id, events, include);
+      const enrichments = await loadProgramEnrichments(events, include);
 
-      const slug = (meet.name || "meet")
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "_")
-        .replace(/^_+|_+$/g, "");
+      const slug = slugify(meet.name, "meet");
       res.setHeader("Content-Type", "text/csv; charset=utf-8");
       res.setHeader(
         "Content-Disposition",
@@ -762,8 +714,7 @@ module.exports = function createPdfRouter({ pool }) {
       }
       const divers = [...byDiver.values()];
 
-      const slug = (event.name || "event")
-        .toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+      const slug = slugify(event.name, "event");
       const doc = new PDFDocument({ margin: 40, size: "A4", layout: "landscape" });
       res.setHeader("Content-Type", "application/pdf");
       res.setHeader("Content-Disposition", `attachment; filename="${slug}_start_list.pdf"`);
@@ -998,8 +949,7 @@ module.exports = function createPdfRouter({ pool }) {
         return flagged;
       }
 
-      const slug = (diver.full_name || "diver").toLowerCase()
-        .replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+      const slug = slugify(diver.full_name, "diver");
       const doc = new PDFDocument({ margin: 50, size: "A4" });
       res.setHeader("Content-Type", "application/pdf");
       res.setHeader("Content-Disposition", `attachment; filename="${slug}_score_sheet.pdf"`);
@@ -1105,7 +1055,7 @@ module.exports = function createPdfRouter({ pool }) {
   // -------------------------------------------------------------
   router.get("/api/events/:id/results.csv", async (req, res) => {
     try {
-      const [evRes, divesRes] = await Promise.all([
+      const [evRes, divesRes, totalsRes] = await Promise.all([
         pool.query(
           "SELECT e.name, e.gender, e.height, e.event_type, o.name AS org_name FROM events e JOIN organisations o ON o.id = e.org_id WHERE e.id = $1",
           [req.params.id],
@@ -1143,37 +1093,36 @@ module.exports = function createPdfRouter({ pool }) {
            ORDER BY u.full_name ASC, u.id ASC, s.round_number ASC`,
           [req.params.id],
         ),
+        // Final placings, fetched alongside so the CSV's per-dive rows
+        // can carry both the dive total and the diver's final rank.
+        // Keyed by competitor_id (not full_name) so two same-named
+        // divers don't collide. World Aquatics Art 4.1.5: equal totals
+        // share a place, so RANK() over total alone gives the placing.
+        pool.query(
+          `WITH ${perDivePointsCte({
+             select:      ["s.competitor_id"],
+             pointsAlias: "pts",
+             groupBy:     ["s.competitor_id", "s.round_number"],
+           })},
+           totals AS (
+             SELECT competitor_id, SUM(pts)::numeric(8,2) AS total
+             FROM per_dive GROUP BY competitor_id
+           )
+           SELECT u.id AS competitor_id, u.full_name AS diver_name,
+                  t.total,
+                  RANK() OVER (ORDER BY t.total DESC) AS final_rank
+           FROM totals t
+           JOIN users u ON u.id = t.competitor_id`,
+          [req.params.id],
+        ),
       ]);
       if (!evRes.rows.length) return res.status(404).json({ error: "Event not found" });
       const event = evRes.rows[0];
-      const slug = (event.name || "event").toLowerCase()
-        .replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+      const slug = slugify(event.name, "event");
 
       res.setHeader("Content-Type", "text/csv; charset=utf-8");
       res.setHeader("Content-Disposition", `attachment; filename="${slug}_results.csv"`);
 
-      // Compute final placings up front so the CSV's per-dive rows
-      // can carry both the dive total and the diver's final rank.
-      // Keyed by competitor_id (not full_name) so two same-named
-      // divers don't collide. World Aquatics Art 4.1.5: equal totals
-      // share a place, so RANK() over total alone gives the placing.
-      const totalsRes = await pool.query(
-        `WITH ${perDivePointsCte({
-           select:      ["s.competitor_id"],
-           pointsAlias: "pts",
-           groupBy:     ["s.competitor_id", "s.round_number"],
-         })},
-         totals AS (
-           SELECT competitor_id, SUM(pts)::numeric(8,2) AS total
-           FROM per_dive GROUP BY competitor_id
-         )
-         SELECT u.id AS competitor_id, u.full_name AS diver_name,
-                t.total,
-                RANK() OVER (ORDER BY t.total DESC) AS final_rank
-         FROM totals t
-         JOIN users u ON u.id = t.competitor_id`,
-        [req.params.id],
-      );
       const placingById = new Map(
         totalsRes.rows.map((r) => [r.competitor_id, { total: r.total, rank: r.final_rank }]),
       );
@@ -1223,30 +1172,10 @@ module.exports = function createPdfRouter({ pool }) {
               team name, the code its divers share, team short code
               underneath. This used to list every member separately. */
            ${teamStandingsCte()},
-           /* Group by u.id (not u.full_name) so two divers with the
-              same full name don't collapse into one row with summed
-              totals. Prior versions of this query merged "Sarah
-              Williams" + "Sarah Williams" into a single PDF line
-              with double points. */
-           comp_standings AS (
-             SELECT u.full_name,
-                    event_rep_code($1, u.id, o.country_code) AS country_code,
-                    cl.name AS club_name,
-                    pu.full_name AS partner_name,
-                    SUM(pd.dive_points) AS total
-             FROM per_dive pd
-             JOIN users u ON u.id = pd.competitor_id
-             JOIN organisations o ON o.id = u.org_id
-             ${PUBLIC_CLUB_JOIN}
-             LEFT JOIN LATERAL (
-               SELECT DISTINCT cdl.partner_id FROM competitor_dive_lists cdl
-               WHERE cdl.event_id = $1 AND cdl.competitor_id = pd.competitor_id
-                 AND cdl.partner_id IS NOT NULL LIMIT 1
-             ) p ON true
-             LEFT JOIN users pu ON pu.id = p.partner_id
-             WHERE (SELECT event_type FROM events WHERE id = $1) <> 'team'
-             GROUP BY u.id, u.full_name, o.country_code, cl.name, pu.full_name
-           ),
+           /* Same per-diver standings as the scoreboard (grouped by
+              u.id, so two Sarah Williamses stay two lines). The PDF
+              only prints the columns merged picks out below. */
+           ${compStandingsCte()},
            merged AS (
              SELECT team_id, full_name, country_code, club_name, partner_name, total
              FROM team_standings

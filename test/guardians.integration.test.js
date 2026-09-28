@@ -184,6 +184,7 @@ after(async () => {
     await pool.query("DELETE FROM fee_prices WHERE fee_definition_id IN (SELECT id FROM fee_definitions WHERE org_id = $1)", [orgId]).catch(() => {});
     await pool.query("DELETE FROM fee_definitions WHERE org_id = $1", [orgId]).catch(() => {});
     await pool.query("DELETE FROM events WHERE org_id = $1", [orgId]).catch(() => {});
+    await pool.query("DELETE FROM meets WHERE org_id = $1", [orgId]).catch(() => {});
     await pool.query("DELETE FROM users WHERE org_id = $1", [orgId]).catch(() => {});
     await pool.query("DELETE FROM organisations WHERE id = $1", [orgId]).catch(() => {});
   }
@@ -293,6 +294,75 @@ test("event checkout with subject_user_id for approved dependent succeeds", asyn
     assert.equal(row.payer_user_id, guardianUserId, "payer should be guardian");
     assert.equal(row.subject_user_id, minorUserId, "subject should be minor");
   }
+});
+
+// The webhook's grantMeetBundle turns one paid bundle into a zero-amount
+// event_entry row per bundled event. It's one INSERT now whether or not
+// there's a subject (there used to be two), and nothing ran it through the
+// webhook before. So: the guardian-buys-for-a-dependent case and the
+// buy-for-yourself case, each delivered twice to make sure a redelivery
+// doesn't grant again.
+test("a paid meet bundle grants each event to the right diver, once", async (t) => {
+  if (!ready) return t.skip();
+  const meetId = (await pool.query(
+    "INSERT INTO meets (org_id, name) VALUES ($1, 'Guardian bundle meet') RETURNING id",
+    [orgId],
+  )).rows[0].id;
+  const evs = [];
+  for (const name of ["Bundle 1m", "Bundle 3m"]) {
+    evs.push((await pool.query(
+      "INSERT INTO events (org_id, meet_id, name, gender, number_of_judges) VALUES ($1, $2, $3, 'Male', 5) RETURNING id",
+      [orgId, meetId, name],
+    )).rows[0].id);
+  }
+  const put = await api("PUT", `/api/meets/${meetId}/bundle`, {
+    currency: "GBP",
+    event_ids: evs,
+    prices: [{ label: "bundle", amount_cents: 5000, audience: "all" }],
+  });
+  assert.equal(put.status, 200);
+
+  const buyAndComplete = async (body) => {
+    const co = await api("POST", `/api/meets/${meetId}/bundle/checkout`, body);
+    assert.equal(co.status, 200);
+    const paymentId = (await co.json()).payment_id;
+    const deliver = () => api("POST", "/webhooks/stripe", {
+      type: "checkout.session.completed",
+      data: { object: { id: `cs_bundle_${paymentId}`, client_reference_id: paymentId, payment_status: "paid" } },
+    });
+    assert.equal((await deliver()).status, 200);
+    assert.equal((await deliver()).status, 200, "the redelivery is accepted as well");
+    const bundle = (await pool.query("SELECT status, fee_definition_id FROM payments WHERE id = $1", [paymentId])).rows[0];
+    assert.equal(bundle.status, "paid");
+    return bundle.fee_definition_id;
+  };
+  const granted = async (feeId) => (await pool.query(
+    `SELECT event_id, payer_user_id, subject_user_id, amount_cents, status
+       FROM payments
+      WHERE fee_definition_id = $1 AND subject_type = 'event_entry'`,
+    [feeId],
+  )).rows;
+
+  // For the dependent: the minor is the subject, the guardian paid.
+  const feeId = await buyAndComplete({ subject_user_id: minorUserId });
+  let rows = await granted(feeId);
+  assert.equal(rows.length, 2, "one entry per bundled event, the redelivery added none");
+  for (const r of rows) {
+    assert.equal(r.payer_user_id, guardianUserId);
+    assert.equal(r.subject_user_id, minorUserId);
+    assert.equal(r.amount_cents, 0);
+    assert.equal(r.status, "paid");
+  }
+  assert.deepEqual(rows.map((r) => r.event_id).sort(), [...evs].sort());
+
+  // For yourself: no subject, the same two events.
+  await buyAndComplete({});
+  rows = await granted(feeId);
+  assert.equal(rows.length, 4);
+  const own = rows.filter((r) => r.subject_user_id === null);
+  assert.equal(own.length, 2);
+  for (const r of own) assert.equal(r.payer_user_id, guardianUserId);
+  assert.deepEqual(own.map((r) => r.event_id).sort(), [...evs].sort());
 });
 
 test("event checkout with subject_user_id for non-dependent is rejected", async (t) => {

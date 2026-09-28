@@ -29,19 +29,9 @@
 // checkout.session.expired's job.)
 
 const { fromStripeAmount } = require("../lib/stripe");
-const { applyFullRefundSideEffects } = require("../lib/payment-lifecycle");
-
-// Can we still talk to Stripe about money that already moved?
-//
-// Note this asks `configured` (is there a client) and NOT `enabled` (is the
-// payments feature flag on). Deliveries for charges taken before someone
-// switched payments off must still be verified and fulfilled, otherwise
-// flipping the flag would strand every in-flight checkout. See lib/stripe.
-// The `?? enabled` fallback is for the fake payments objects in the test
-// suite, which never grew a `configured` property.
-function canReconcile(payments) {
-  return (payments?.configured ?? payments?.enabled) === true;
-}
+// canReconcile asks `configured`, not `enabled`: deliveries for charges
+// taken before payments was switched off still have to verify and fulfil.
+const { canReconcile, applyFullRefundSideEffects } = require("../lib/payment-lifecycle");
 
 // Advance a pending payment to 'paid' exactly once, and fulfil it
 // (grant membership for a membership payment; entry confirmation is
@@ -220,7 +210,7 @@ async function onCheckoutCompleted(pool, logger, payments, email, session) {
 // while active" is the checkout's renewal-window guard).
 async function grantMembership(client, payment) {
   const def = await client.query(
-    "SELECT membership_period, tier FROM fee_definitions WHERE id = $1",
+    "SELECT tier FROM fee_definitions WHERE id = $1",
     [payment.fee_definition_id],
   );
   const tier = def.rows[0]?.tier ?? null;
@@ -270,31 +260,22 @@ async function grantOfficialAccreditation(client, payment) {
 // re-delivery of THIS bundle (same event_id + bundle fee_definition_id); it
 // does NOT dedupe against a separately-purchased per-event entry, which uses
 // a different fee_definition_id (see the known double-purchase limitation).
+//
+// subject_user_id is copied over when a guardian bought the bundle for a
+// dependent. It has no default, so passing NULL for a self-purchase is the
+// same row as leaving the column out.
 async function grantMeetBundle(client, payment) {
-  const sub = payment.subject_user_id || null;
-  if (sub) {
-    await client.query(
-      `INSERT INTO payments
-          (org_id, fee_definition_id, payer_user_id, subject_user_id, subject_type, event_id,
-           amount_cents, platform_fee_cents, currency, fee_payer, status, paid_at)
-       SELECT $1, $2, $3, $4, 'event_entry', mbi.event_id, 0, 0, $5, 'absorb', 'paid', now()
-         FROM meet_bundle_items mbi
-        WHERE mbi.fee_definition_id = $2
-       ON CONFLICT DO NOTHING`,
-      [payment.org_id, payment.fee_definition_id, payment.payer_user_id, sub, payment.currency || "GBP"],
-    );
-  } else {
-    await client.query(
-      `INSERT INTO payments
-          (org_id, fee_definition_id, payer_user_id, subject_type, event_id,
-           amount_cents, platform_fee_cents, currency, fee_payer, status, paid_at)
-       SELECT $1, $2, $3, 'event_entry', mbi.event_id, 0, 0, $4, 'absorb', 'paid', now()
-         FROM meet_bundle_items mbi
-        WHERE mbi.fee_definition_id = $2
-       ON CONFLICT DO NOTHING`,
-      [payment.org_id, payment.fee_definition_id, payment.payer_user_id, payment.currency || "GBP"],
-    );
-  }
+  await client.query(
+    `INSERT INTO payments
+        (org_id, fee_definition_id, payer_user_id, subject_user_id, subject_type, event_id,
+         amount_cents, platform_fee_cents, currency, fee_payer, status, paid_at)
+     SELECT $1, $2, $3, $4, 'event_entry', mbi.event_id, 0, 0, $5, 'absorb', 'paid', now()
+       FROM meet_bundle_items mbi
+      WHERE mbi.fee_definition_id = $2
+     ON CONFLICT DO NOTHING`,
+    [payment.org_id, payment.fee_definition_id, payment.payer_user_id,
+     payment.subject_user_id || null, payment.currency || "GBP"],
+  );
 }
 
 // Record a paid club affiliation/accreditation period. Renewals extend from
