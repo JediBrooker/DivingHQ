@@ -410,9 +410,13 @@ module.exports = function createClubChangesRouter({ pool, verifyToken, bumpToken
     }
   });
 
+  // Locked for the rest of the caller's transaction. Review and confirm
+  // both read it and then decide, and without the lock a cancel landing
+  // in between got overwritten by the approval (or overwrote it).
   async function loadPending(client, id) {
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(id))) return null;
     const r = await client.query(
-      "SELECT * FROM club_change_requests WHERE id = $1 AND status = 'pending'",
+      "SELECT * FROM club_change_requests WHERE id = $1 AND status = 'pending' FOR UPDATE",
       [id],
     );
     return r.rows[0] || null;
@@ -518,15 +522,18 @@ module.exports = function createClubChangesRouter({ pool, verifyToken, bumpToken
   // --- CANCEL (withdraw a pending request) --------------------
   router.post("/api/club-change-requests/:id/cancel", verifyToken, async (req, res) => {
     try {
-      const r = (await pool.query(
-        "SELECT * FROM club_change_requests WHERE id=$1 AND status='pending'",
-        [req.params.id])).rows[0];
+      const r = await loadPending(pool, req.params.id);
       if (!r) return res.status(404).json({ error: "Request not found" });
       const allowed = r.user_id === req.user.id || isOrgAdminOf(req.user, r.from_org_id) || isOrgAdminOf(req.user, r.to_org_id);
       if (!allowed) return res.status(403).json({ error: "Not allowed to cancel this request" });
-      await pool.query(
-        "UPDATE club_change_requests SET status='rejected', reviewed_by=$1, reviewed_at=now(), note=COALESCE(note,'') WHERE id=$2",
+      // Only while it's still pending. An approval that finalised in the
+      // meantime has already moved the diver, and marking that request
+      // 'rejected' afterwards left the two disagreeing.
+      const done = await pool.query(
+        `UPDATE club_change_requests SET status='rejected', reviewed_by=$1, reviewed_at=now(), note=COALESCE(note,'')
+          WHERE id=$2 AND status='pending'`,
         [req.user.id, r.id]);
+      if (!done.rowCount) return res.status(409).json({ error: "This request has already been decided" });
       res.json({ status: "cancelled" });
     } catch (err) {
       console.error("[club-change cancel]", err.message);

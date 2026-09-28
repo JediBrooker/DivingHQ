@@ -48,6 +48,10 @@ const { supportContact } = require("../lib/support");
 const { ADMIN_ORG_ID } = require("../lib/admin-org");
 const { isOrgAdminOf } = require("../lib/admin-rows");
 
+// Ids off the URL or out of a body, checked before they reach a uuid
+// column (pg throws on anything else and it came back as a 500).
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 // Enum values from init.sql's CREATE TYPE org_role. system_admin is
 // intentionally NOT in this set, it's a column on users, not a role
 // assignable here. Keeping this in sync with init.sql is flagged in
@@ -272,6 +276,7 @@ module.exports = function createUsersRouter({
     if (!["approved", "rejected"].includes(decision)) {
       return res.status(400).json({ error: "decision must be 'approved' or 'rejected'" });
     }
+    if (!UUID_RE.test(String(req.params.id))) return res.status(404).json({ error: "Request not found" });
     const client = await pool.connect();
     try {
       await client.query("BEGIN");
@@ -280,8 +285,12 @@ module.exports = function createUsersRouter({
       // request once we know which org it belongs to. Granting the
       // role uses rq.org_id, not the caller's org_id, so system
       // admins approving cross-org requests work too.
+      // FOR UPDATE: two decisions on one request (two admins, a
+      // double-click) used to both read it pending and both commit, the
+      // role granted while the row said 'rejected'. The second one now
+      // waits, finds it decided, and gets the 404.
       const rqRes = await client.query(
-        "SELECT * FROM role_requests WHERE id = $1 AND status = 'pending'",
+        "SELECT * FROM role_requests WHERE id = $1 AND status = 'pending' FOR UPDATE",
         [req.params.id],
       );
       if (!rqRes.rows.length) {
@@ -902,10 +911,7 @@ module.exports = function createUsersRouter({
         // quietly so the rest of the batch still goes through, and so it
         // doesn't say whether the id exists somewhere else. FOR UPDATE so
         // two claims of one tombstone can't both move it.
-        if (typeof oldId !== "string"
-            || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(oldId)) {
-          continue;
-        }
+        if (typeof oldId !== "string" || !UUID_RE.test(oldId)) continue;
         const oldRes = await client.query(
           `SELECT id FROM users
             WHERE id = $1 AND org_id = $2 AND deleted_at IS NOT NULL
@@ -1391,6 +1397,7 @@ module.exports = function createUsersRouter({
     if (!["approved", "rejected"].includes(decision)) {
       return res.status(400).json({ error: "decision must be 'approved' or 'rejected'" });
     }
+    if (!UUID_RE.test(String(req.params.id))) return res.status(404).json({ error: "Request not found" });
     try {
       const g = (await pool.query(
         "SELECT * FROM guardians WHERE id = $1 AND status = 'pending'",
@@ -1400,10 +1407,14 @@ module.exports = function createUsersRouter({
       if (!req.user.is_system_admin && g.org_id !== req.user.org_id) {
         return res.status(403).json({ error: "Cannot review requests in other organisations" });
       }
-      await pool.query(
-        "UPDATE guardians SET status = $1, reviewed_by = $2, reviewed_at = now() WHERE id = $3",
+      // Only while it's still pending: an approve and a reject racing
+      // each other both passed the read above.
+      const done = await pool.query(
+        `UPDATE guardians SET status = $1, reviewed_by = $2, reviewed_at = now()
+          WHERE id = $3 AND status = 'pending'`,
         [decision, req.user.id, req.params.id],
       );
+      if (!done.rowCount) return res.status(409).json({ error: "This request has already been decided" });
       res.json({ message: `Guardian request ${decision}` });
     } catch (err) {
       console.error("[Guardians]", err.message);
@@ -1422,7 +1433,8 @@ module.exports = function createUsersRouter({
       const isAdmin = isOrgAdminOf(req.user, g.org_id);
       if (!isGuardian && !isAdmin) return res.status(403).json({ error: "Forbidden" });
       await pool.query(
-        "UPDATE guardians SET status = 'revoked', reviewed_by = $1, reviewed_at = now() WHERE id = $2",
+        `UPDATE guardians SET status = 'revoked', reviewed_by = $1, reviewed_at = now()
+          WHERE id = $2 AND status = 'approved'`,
         [req.user.id, req.params.id],
       );
       res.json({ message: "Guardian link revoked" });

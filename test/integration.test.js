@@ -7259,3 +7259,64 @@ test("a dive list can't use another org's custom dive, and the picker doesn't of
     await teardownFixture(away);
   }
 });
+
+// Decisions read the pending row without a lock and then wrote their
+// verdict unconditionally, so two admins (or one double-click) acting at
+// once both "won": the role granted while the request read 'rejected', a
+// guardian link flipping twice, a cancel overwriting a finished transfer.
+// Exactly one decision per request may land.
+test("overlapping decisions on one request: exactly one lands", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const both = (a, b) => Promise.all([a(), b()]);
+    for (let i = 0; i < 4; i++) {
+      // Role request: approve and reject at the same moment.
+      const who = await insertUser({ orgId: st.orgId, role: "diver", username: `int-sw-rr-${st.slug}-${i}`, fullName: "Racing Request" });
+      const rq = (await pool.query(
+        "INSERT INTO role_requests (user_id, org_id, requested_role) VALUES ($1, $2, 'coach') RETURNING id",
+        [who, st.orgId],
+      )).rows[0].id;
+      const review = (decision) => () => fetchJson("POST", `/api/role-requests/${rq}/review`, { token: st.adminToken, body: { decision } });
+      const [ap, rj] = await both(review("approved"), review("rejected"));
+      assert.equal([ap.status, rj.status].filter((s) => s === 200).length, 1, `role request run ${i}: ${ap.status}/${rj.status}`);
+      const status = (await pool.query("SELECT status::text FROM role_requests WHERE id = $1", [rq])).rows[0].status;
+      const granted = (await pool.query(
+        "SELECT 1 FROM user_org_roles WHERE user_id = $1 AND org_id = $2 AND role = 'coach'", [who, st.orgId],
+      )).rows.length === 1;
+      assert.equal(granted, status === "approved", `role request run ${i}: status ${status}, granted ${granted}`);
+
+      // Guardian request, the same race.
+      const parent = await insertUser({ orgId: st.orgId, role: "spectator", username: `int-sw-gp-${st.slug}-${i}`, fullName: "Racing Parent" });
+      const g = (await pool.query(
+        "INSERT INTO guardians (org_id, guardian_user_id, dependent_user_id) VALUES ($1, $2, $3) RETURNING id",
+        [st.orgId, parent, who],
+      )).rows[0].id;
+      const decide = (decision) => () => fetchJson("POST", `/api/guardian-requests/${g}/review`, { token: st.adminToken, body: { decision } });
+      const [ga, gr] = await both(decide("approved"), decide("rejected"));
+      assert.equal([ga.status, gr.status].filter((s) => s === 200).length, 1, `guardian run ${i}: ${ga.status}/${gr.status}`);
+    }
+
+    // A club change: the admin approves (which finalises it) while the
+    // diver cancels.
+    const [from, to] = [await recordKit.club(st.orgId, "Race From", "RFR"), await recordKit.club(st.orgId, "Race To", "RTO")];
+    for (let i = 0; i < 4; i++) {
+      const diver = await sweepKit.member(st.orgId, "diver", "Racing Mover");
+      await pool.query("UPDATE users SET club_id = $2 WHERE id = $1", [diver.id, from]);
+      const made = await fetchJson("POST", "/api/club-change-requests", { token: diver.token, body: { to_club_id: to } });
+      assert.equal(made.status, 201, JSON.stringify(made.body));
+      const [ok, cancel] = await both(
+        () => fetchJson("POST", `/api/club-change-requests/${made.body.id}/review`, { token: st.adminToken, body: { decision: "approved" } }),
+        () => fetchJson("POST", `/api/club-change-requests/${made.body.id}/cancel`, { token: diver.token }),
+      );
+      assert.equal([ok.status, cancel.status].filter((s) => s === 200).length, 1, `club change run ${i}: ${ok.status}/${cancel.status}`);
+      const row = (await pool.query("SELECT status::text FROM club_change_requests WHERE id = $1", [made.body.id])).rows[0];
+      const club = (await pool.query("SELECT club_id FROM users WHERE id = $1", [diver.id])).rows[0].club_id;
+      assert.equal(club === to, row.status === "approved", `club change run ${i}: ${row.status} with club ${club === to ? "moved" : "kept"}`);
+    }
+  } finally {
+    await pool.query("DELETE FROM club_change_requests WHERE to_org_id = $1", [st.orgId]);
+    await teardownFixture(st);
+  }
+});
