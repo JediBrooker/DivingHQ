@@ -117,3 +117,28 @@ test("toStripeAmount / fromStripeAmount round-trip per currency class", () => {
   assert.equal(createStripe.fromStripeAmount("kwd", 123450), 12345);
   assert.throws(() => createStripe.toStripeAmount("jpy", 550), (e) => e.status === 400);
 });
+
+// Recipient accounts are created in the federation's own country, and a
+// Connect account's country can't be changed afterwards. Anything
+// countries.json knows maps; an unknown or missing code is null, never a
+// guess (it used to fall back to 'au' outside a 21-country table).
+test("toAlpha2 maps every known country and refuses to guess", () => {
+  const { toAlpha2 } = createStripe;
+  assert.equal(toAlpha2("BRA"), "br");
+  assert.equal(toAlpha2("POL"), "pl");
+  assert.equal(toAlpha2("KOR"), "kr");
+  assert.equal(toAlpha2("AUS"), "au");
+  assert.equal(toAlpha2("gbr"), "gb");
+  assert.equal(toAlpha2("MEX "), "mx", "char(3) padding is fine");
+  assert.equal(toAlpha2("GB"), "gb", "legacy alpha-2 rows still map");
+  assert.equal(toAlpha2("TST"), null);
+  assert.equal(toAlpha2(null), null);
+  assert.equal(toAlpha2(""), null);
+});
+
+test("createRecipientAccount won't open an account without a country", async () => {
+  const { s, calls } = withFake();
+  await assert.rejects(() => s.createRecipientAccount({ country: null, name: "X" }), (e) => e.status === 409);
+  await s.createRecipientAccount({ country: "br", name: "Fed" });
+  assert.equal(calls().accountCreate.identity.country, "br");
+});

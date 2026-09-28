@@ -9,7 +9,7 @@ This page covers setup, fee configuration, paying and receiving money, fines and
 Before your organisation can collect fees or receive payouts, an org admin needs to complete Stripe onboarding.
 
 1. Go to `/payments`. The **Overview** tab shows a four-step "How it works" explainer summarising the flow: configure fees, collect payments, platform keeps 15%, you withdraw the rest.
-2. Open the **Account details** tab and click **Set up payouts**. This redirects to Stripe's hosted onboarding where you enter bank account details and complete identity verification. Bank details are held only by Stripe — DivingHQ never stores them.
+2. Open the **Account details** tab and click **Set up payouts**. This redirects to Stripe's hosted onboarding where you enter bank account details and complete identity verification. Bank details are held only by Stripe — DivingHQ never stores them. Stripe opens the payout account in your federation's country (clubs use their federation's), and that can't be changed later, so the button refuses until the federation's country is set.
 3. When onboarding completes, you're redirected back to DivingHQ. The status refreshes to "Payouts are set up".
 4. Open the **Fees & pricing** tab to configure what you charge (see the next section).
 5. Optionally, enable **automatic withdrawals** with a threshold on the **Withdrawals** tab — for example, "withdraw when balance reaches $100".

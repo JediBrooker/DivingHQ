@@ -556,10 +556,18 @@ test("club payout status/onboard/withdrawals are club-private (federation blocke
 test("club onboards with Stripe, sees balance, and withdraws via a transfer (club_id set, org_id null)", async (t) => {
   if (!ready) return t.skip();
   const tok = tokenFor(U.clubAdmin);
+  // No federation country, no payout account: Stripe fixes the account's
+  // country at creation, so guessing one (it used to default to 'au') is
+  // worse than refusing.
+  const noCountry = await api("POST", `/api/clubs/${clubId}/connect/onboard`, {}, tok);
+  assert.equal(noCountry.status, 409, JSON.stringify(noCountry.body));
+  await pool.query("UPDATE organisations SET country_code = 'BRA' WHERE id = $1", [orgId]);
   // Onboard the club (fake account) then refresh status (fake → payouts ready).
   const onb = await api("POST", `/api/clubs/${clubId}/connect/onboard`, {}, tok);
   assert.equal(onb.status, 200);
   assert.match(onb.body.url, /connect\.stripe/);
+  const acct = (await pool.query("SELECT stripe_account_country FROM clubs WHERE id = $1", [clubId])).rows[0];
+  assert.equal(acct.stripe_account_country, "br", "the club's own country, not Australia");
 
   const cls = (await api("POST", `/api/clubs/${clubId}/classes`, {
     name: "Payout Class", price_options: [{ label: "Fee", amount_cents: 8000, currency: "GBP" }],

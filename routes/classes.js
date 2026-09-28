@@ -674,6 +674,11 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
       let accountId = club.stripe_account_id;
       if (!accountId) {
         const country = toAlpha2(club.country_code);
+        if (!country) {
+          return res.status(409).json({
+            error: "Your federation's country isn't set, so payouts can't be set up yet. Stripe opens the payout account in that country, and it can't be changed afterwards.",
+          });
+        }
         // Stripe requires a contact email on the recipient account; the JWT
         // doesn't carry one, so fetch the acting admin's.
         const contactEmail = (await pool.query("SELECT email FROM users WHERE id = $1", [req.user.id])).rows[0]?.email

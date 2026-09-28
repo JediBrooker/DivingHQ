@@ -975,6 +975,11 @@ module.exports = function createPaymentsRouter({
       let accountId = org.stripe_account_id;
       if (!accountId) {
         const country = toAlpha2(org.country_code);
+        if (!country) {
+          return res.status(409).json({
+            error: "Set your federation's country before setting up payouts. Stripe opens the payout account in that country, and it can't be changed afterwards.",
+          });
+        }
         // Stripe requires a contact email on the recipient account. The JWT
         // doesn't carry email, so fetch the acting admin's; the recipient
         // can change it during onboarding anyway.
