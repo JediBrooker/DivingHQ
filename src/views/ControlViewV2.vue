@@ -420,7 +420,7 @@ async function advancePool(ev) {
       })
       : await confirmAction({
         title: `Skip ${name}?`,
-        body: `No judge has scored this dive in "${ev.name}" yet.`,
+        body: `No judge scores have reached this screen for this dive in "${ev.name}".`,
         consequences: [
           'No score is recorded for this dive',
           'Use it for a no-show or a diver who can\'t dive',
