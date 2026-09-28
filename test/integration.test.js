@@ -11759,6 +11759,22 @@ test("guardian links in an unclaimed country: the child's club decides, and the 
     assert.equal((await guardianKit.review(A.token, link2.id, "rejected")).status, 200);
     assert.equal(await guardianKit.status(link2.id), "rejected");
     assert.match((await approvalKit.notices(parent.id, "guardian_decision"))[1].title, /turned down/);
+
+    // Turned down means a day's wait before asking again, as with roles.
+    const again = await fetchJson("POST", "/api/guardians/request", { token: parent.token, body: { dependent_user_id: kid2.id } });
+    assert.equal(again.status, 409, JSON.stringify(again.body));
+    assert.equal(again.body.code, "recently_declined");
+
+    // Withdrawing and asking again is fine, but the club hears once a day.
+    const kid3 = await delegateSignUp({ country_code: CODE, club_id: A.clubId, full_name: "Enkh Bold" });
+    await guardianKit.minor(kid3.id, 8);
+    const first = await guardianKit.ask(parent.token, kid3.id);
+    assert.equal((await fetchJson("POST", `/api/guardians/${first.id}/revoke`, { token: parent.token })).status, 200);
+    const second = await guardianKit.ask(parent.token, kid3.id);
+    assert.notEqual(second.id, first.id);
+    const aboutKid3 = (await approvalKit.notices(A.id, "guardian_request")).filter((n) => n.data.dependent_user_id === kid3.id);
+    assert.equal(aboutKid3.length, 1, "one notice, not one per re-ask");
+    assert.ok((await guardianKit.queue(A.token)).some((g) => g.id === second.id), "the new request is still in the queue");
   } finally {
     await claimKit.wipe(CODE);
   }

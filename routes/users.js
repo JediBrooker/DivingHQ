@@ -1482,7 +1482,9 @@ module.exports = function createUsersRouter({
     }
   });
 
-  router.post("/api/guardians/request", verifyToken, async (req, res) => {
+  // Rate-limited like role requests, since each one now emails whoever
+  // decides it (lib/guardian-requests.js).
+  router.post("/api/guardians/request", writeLimiter, verifyToken, async (req, res) => {
     const { dependent_user_id } = req.body || {};
     if (!dependent_user_id) return res.status(400).json({ error: "dependent_user_id is required" });
     if (!isUuid(dependent_user_id)) return res.status(404).json({ error: "User not found" });
@@ -1502,6 +1504,21 @@ module.exports = function createUsersRouter({
       const age = Math.floor((Date.now() - new Date(dep.date_of_birth).getTime()) / (365.25 * 86400000));
       if (age >= 18) {
         return res.status(400).json({ error: "Dependent must be under 18" });
+      }
+      // Turned down in the last day? Same wait as a declined role request,
+      // so one parent can't keep a club admin's inbox busy asking again.
+      const recent = await pool.query(
+        `SELECT 1 FROM guardians
+          WHERE org_id = $1 AND guardian_user_id = $2 AND dependent_user_id = $3
+            AND status = 'rejected' AND reviewed_at > now() - interval '24 hours'
+          LIMIT 1`,
+        [req.user.org_id, req.user.id, dependent_user_id],
+      );
+      if (recent.rows.length) {
+        return res.status(409).json({
+          error: "That request was turned down recently. You can ask again tomorrow.",
+          code: "recently_declined",
+        });
       }
       const link = (await pool.query(
         `INSERT INTO guardians (org_id, guardian_user_id, dependent_user_id)
