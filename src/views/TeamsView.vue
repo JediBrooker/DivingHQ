@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 import { RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
@@ -81,10 +81,13 @@ async function loadTeams() {
   try {
     if (isSysAdmin.value) {
       // Fetch teams across all orgs by hitting each org's endpoint
-      // (no global teams listing yet, this is wired off of org).
+      // (no global teams listing yet, this is wired off of org). The
+      // same org list feeds the filter and create pickers, so it's
+      // kept rather than asked for a second time.
       const allOrgs = await auth.apiFetch('/api/orgs/active')
+      orgs.value = Array.isArray(allOrgs) ? allOrgs : []
       const lists = await Promise.all(
-        (Array.isArray(allOrgs) ? allOrgs : []).map(o =>
+        orgs.value.map(o =>
           auth.apiFetch(`/api/orgs/${o.id}/teams`).then(rows =>
             rows.map(t => ({ ...t, org_id: o.id, org_name: o.name, country_code: o.country_code })),
           ).catch(() => []),
@@ -101,14 +104,6 @@ async function loadTeams() {
   } finally {
     loading.value = false
   }
-}
-
-async function loadOrgs() {
-  if (!isSysAdmin.value) return
-  try {
-    const body = await auth.apiFetch('/api/orgs/active')
-    orgs.value = Array.isArray(body) ? body : []
-  } catch { orgs.value = [] }
 }
 
 async function loadOrgDivers(orgId) {
@@ -297,12 +292,7 @@ function onKeyDown(e) {
 
 onMounted(async () => {
   window.addEventListener('keydown', onKeyDown)
-  await Promise.all([loadTeams(), loadOrgs()])
-})
-
-watch(() => drawerTeam.value, (val) => {
-  if (!val) return
-  // Loading already kicked off in openMembers; nothing extra here.
+  await loadTeams()
 })
 </script>
 
