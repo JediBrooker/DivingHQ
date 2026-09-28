@@ -7607,3 +7607,41 @@ test("the event-is-live email skips withdrawn divers and reserves", async (t) =>
     await teardownFixture(st);
   }
 });
+
+test("role requests in an unclaimed country skip a suspended club admin and reach the region", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const { reviewersFor } = require("../lib/role-requests");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    await pool.query("UPDATE organisations SET claim_state = 'unclaimed' WHERE id = $1", [st.orgId]);
+    const region = (await pool.query(
+      "INSERT INTO regions (org_id, name, short_code) VALUES ($1, 'Paramaribo', 'PM') RETURNING id", [st.orgId],
+    )).rows[0].id;
+    const club = (await pool.query(
+      "INSERT INTO clubs (org_id, name, region_id) VALUES ($1, 'Suriname Divers', $2) RETURNING id", [st.orgId, region],
+    )).rows[0].id;
+    const mk = async (tag, name) => {
+      const id = await insertUser({ orgId: st.orgId, role: "spectator", username: `int-b3rv${tag}-${st.slug}`, fullName: name });
+      await pool.query("UPDATE users SET email = $2, club_id = $3 WHERE id = $1", [id, `${tag}-${st.slug}@example.test`, club]);
+      return id;
+    };
+    const clubAdmin = await mk("ca", "Club Admin");
+    const regionAdmin = await mk("ra", "Region Admin");
+    const member = await mk("m", "Member");
+    await pool.query("INSERT INTO club_admins (club_id, user_id, org_id) VALUES ($1, $2, $3)", [club, clubAdmin, st.orgId]);
+    await pool.query("INSERT INTO region_admins (region_id, user_id, org_id) VALUES ($1, $2, $3)", [region, regionAdmin, st.orgId]);
+
+    assert.equal((await reviewersFor(pool, member, st.orgId, "judge")).via, "club");
+    await pool.query("UPDATE users SET suspended_at = now() WHERE id = $1", [clubAdmin]);
+    const next = await reviewersFor(pool, member, st.orgId, "judge");
+    assert.equal(next.via, "region", "not the club admin who can't sign in");
+    assert.deepEqual(next.recipients.map((r) => r.full_name), ["Region Admin"]);
+    await pool.query("UPDATE users SET suspended_at = now() WHERE id = $1", [regionAdmin]);
+    assert.equal((await reviewersFor(pool, member, st.orgId, "judge")).via, "sysadmin");
+  } finally {
+    await pool.query("DELETE FROM clubs WHERE org_id = $1", [st.orgId]);
+    await pool.query("DELETE FROM regions WHERE org_id = $1", [st.orgId]);
+    await teardownFixture(st);
+  }
+});
