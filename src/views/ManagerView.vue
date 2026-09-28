@@ -344,9 +344,12 @@ async function loadEventTemplates() {
   }
 }
 // Saved templates only show inside the create form, so fetch them when
-// it first opens.
+// it first opens. They're an org editor's tool (GET/POST/DELETE
+// /api/event-templates want org_admin or meet_manager), so a club admin
+// running their own club's meet doesn't get a strip that would 403.
 let eventTemplatesLoading = null
 function ensureEventTemplates() {
+  if (clubMode.value) return Promise.resolve()
   if (!eventTemplatesLoading) eventTemplatesLoading = loadEventTemplates()
   return eventTemplatesLoading
 }
@@ -1319,7 +1322,8 @@ onUnmounted(() => {
       <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;margin-bottom:1rem;flex-wrap:wrap">
         <h2 style="font-size:22px">{{ $t('manager.modals.new_event_title') }}</h2>
         <div style="display:flex;gap:0.5rem">
-          <button type="button"
+          <button v-if="!clubMode"
+                  type="button"
                   class="btn btn-ghost btn-sm"
                   @click="saveTemplateOpen = !saveTemplateOpen">
             {{ saveTemplateOpen ? $t('manager.modals.save_template_cancel') : $t('manager.modals.save_template_btn') }}

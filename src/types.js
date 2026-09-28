@@ -436,6 +436,23 @@
  * @property {number}      podiums
  */
 
+// ---- /api/event-templates ----------------------------------------
+
+/**
+ * @typedef {Object} EventTemplate
+ * A saved create-form configuration, org-scoped (GET / POST upsert by
+ * name / DELETE /api/event-templates). config is the form state as the
+ * Meet Manager saved it: gender, height, number_of_judges, total_rounds,
+ * event_type, age_group, event_format, advance_count, dd_limit_*,
+ * round_rules, optionally round_dives.
+ *
+ * @property {string} id
+ * @property {string} name
+ * @property {Object} config
+ * @property {string} created_at
+ * @property {string} updated_at
+ */
+
 // ---- /api/events/:id/roster --------------------------------------
 
 /**

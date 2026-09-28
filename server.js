@@ -1139,6 +1139,9 @@ app.use(require("./routes/audit")({
 // extracted into routes/templates.js.
 // =============================================================
 app.use(require("./routes/templates")({ pool, verifyToken }));
+// Meet Manager's saved event templates (org-scoped). See the file header
+// for why these came back.
+app.use(require("./routes/event-templates")({ pool, requireMeetEditor }));
 
 // =============================================================
 // CONFLICT RESOLUTION
