@@ -233,3 +233,27 @@ test("an installed iPhone app keeps the chrome clear of the notch and status bar
   expect(layoutTop).toBeGreaterThanOrEqual(47);
   expect((await header.boundingBox()).y).toBeGreaterThanOrEqual(47);
 });
+
+test("the dashboard's .panel frame doesn't leak into the Classes tabs", async ({ page, request }) => {
+  const { orgId, username } = await setup.createOrgAndAdmin(request, { orgName: "Panel Leak Fed" });
+  try {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await signIn(page, username);
+    await page.goto("/classes");
+    const panel = page.locator(".classes-view > .tab-panel, .classes-view > .panel").first();
+    await expect(panel).toBeVisible({ timeout: 10_000 });
+    const m = await panel.evaluate((el) => {
+      const cs = getComputedStyle(el);
+      const p = el.parentElement;
+      const ps = getComputedStyle(p);
+      // The parent's content box, i.e. the column the tab should fill.
+      const pw = p.clientWidth - parseFloat(ps.paddingLeft) - parseFloat(ps.paddingRight);
+      return { w: el.getBoundingClientRect().width, pw, ml: parseFloat(cs.marginLeft), pl: parseFloat(cs.paddingLeft) };
+    });
+    expect(m.ml).toBe(0);
+    expect(m.pl).toBe(0);
+    expect(Math.abs(m.w - m.pw)).toBeLessThan(2);
+  } finally {
+    await setup.deleteOrg(orgId);
+  }
+});

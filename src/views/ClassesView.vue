@@ -64,7 +64,7 @@ onMounted(async () => {
         <button v-for="tt in TABS" :key="tt.key" type="button" :class="['tab', { active: tab === tt.key }]" @click="tab = tt.key">{{ tt.label }}</button>
       </nav>
 
-      <div v-if="tab === 'manage'" class="panel">
+      <div v-if="tab === 'manage'" class="tab-panel">
         <div v-if="adminClubs.length > 1" class="club-picker">
           <label>{{ t('classes.pick_club') }}</label>
           <select class="in" v-model="selectedClubId">
@@ -79,11 +79,11 @@ onMounted(async () => {
         <ClubPayoutsPanel v-if="selectedClubId && manageSubTab === 'payouts'" :key="'pay-' + selectedClubId" :club-id="selectedClubId" />
       </div>
 
-      <div v-else-if="tab === 'coach'" class="panel">
+      <div v-else-if="tab === 'coach'" class="tab-panel">
         <CoachClassesView />
       </div>
 
-      <div v-else class="panel">
+      <div v-else class="tab-panel">
         <MyClassesView />
       </div>
     </template>
@@ -100,7 +100,9 @@ onMounted(async () => {
 .tab { appearance: none; border: 0; background: transparent; padding: .55rem .9rem; cursor: pointer; color: var(--fg-2, #555); font: inherit; border-bottom: 2px solid transparent; margin-bottom: -1px; }
 .tab:hover { color: var(--fg, #222); }
 .tab.active { color: var(--accent, #3b6); border-bottom-color: var(--accent, #3b6); font-weight: 600; }
-.panel { display: flex; flex-direction: column; gap: 1rem; }
+/* tab-panel, not panel: app.css has a global .panel (the dashboard role
+   panels) whose auto margins shrank these to a narrow centred column. */
+.tab-panel { display: flex; flex-direction: column; gap: 1rem; }
 .club-picker { display: flex; align-items: center; gap: .5rem; font-size: .88rem; color: var(--fg-2, #555); }
 .club-picker .in { padding: .35rem .5rem; border: 1px solid var(--border, #ddd); border-radius: var(--radius, .5rem); background: transparent; color: var(--fg, #222); font: inherit; }
 .subtabs { display: flex; gap: .3rem; }

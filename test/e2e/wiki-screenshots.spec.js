@@ -1329,7 +1329,7 @@ test("classes: manage / coach / my-classes", async ({ page }) => {
   // classes-manage.png: club admin lands on Manage.
   await signIn(page, world.clubAdmin.username);
   await page.goto("/classes");
-  await expect(page.locator(".panel")).toBeVisible({ timeout: 10_000 });
+  await expect(page.locator(".tab-panel")).toBeVisible({ timeout: 10_000 });
   await settle(page, 900);
   await snap(page, "classes-manage");
 
@@ -1337,7 +1337,7 @@ test("classes: manage / coach / my-classes", async ({ page }) => {
   await signOut(page);
   await signIn(page, world.coach.username);
   await page.goto("/classes");
-  await expect(page.locator(".panel")).toBeVisible({ timeout: 10_000 });
+  await expect(page.locator(".tab-panel")).toBeVisible({ timeout: 10_000 });
   await settle(page, 900);
   await snap(page, "classes-coach");
 
@@ -1347,7 +1347,7 @@ test("classes: manage / coach / my-classes", async ({ page }) => {
   await signOut(page);
   await signIn(page, world.divers[0].username);
   await page.goto("/classes");
-  await expect(page.locator(".panel")).toBeVisible({ timeout: 10_000 });
+  await expect(page.locator(".tab-panel")).toBeVisible({ timeout: 10_000 });
   await settle(page, 900);
   await snap(page, "classes-my-classes");
 });

@@ -183,7 +183,7 @@ onMounted(async () => {
 
     <template v-else>
       <!-- OVERVIEW -->
-      <div v-show="tab === 'overview'" class="panel">
+      <div v-show="tab === 'overview'" class="tab-panel">
         <div class="grid">
           <div class="stat">
             <span class="stat-label">{{ t('payments.admin.stat_balance_owed') }}</span>
@@ -210,7 +210,7 @@ onMounted(async () => {
       </div>
 
       <!-- ACCOUNT DETAILS -->
-      <div v-show="tab === 'account'" class="panel">
+      <div v-show="tab === 'account'" class="tab-panel">
         <div class="card">
           <h2>{{ t('payments.admin.section_payout_setup') }}</h2>
           <p class="muted">{{ t('payments.admin.payout_setup_desc') }}</p>
@@ -225,7 +225,7 @@ onMounted(async () => {
       </div>
 
       <!-- WITHDRAWALS -->
-      <div v-show="tab === 'withdrawals'" class="panel">
+      <div v-show="tab === 'withdrawals'" class="tab-panel">
         <div class="card">
           <h2>{{ t('payments.admin.section_balance_withdrawals') }}</h2>
           <p class="balance-line">{{ t('payments.admin.balance_owed_label') }} <strong>{{ comingSoon ? '—' : balanceLabel }}</strong></p>
@@ -274,7 +274,7 @@ onMounted(async () => {
       </div>
 
       <!-- PAYOUT MONITORING (sysadmin) -->
-      <div v-if="isSysAdmin" v-show="tab === 'queue'" class="panel">
+      <div v-if="isSysAdmin" v-show="tab === 'queue'" class="tab-panel">
         <div class="card">
           <div class="queue-head">
             <h2>{{ t('payments.admin.section_payout_queue') }}</h2>
@@ -306,7 +306,7 @@ onMounted(async () => {
       </div>
 
       <!-- FEES & PRICING -->
-      <div v-show="tab === 'fees'" class="panel">
+      <div v-show="tab === 'fees'" class="tab-panel">
         <div class="card">
           <h2>{{ t('payments.admin.section_membership_fee') }}</h2>
           <p class="muted">{{ t('payments.admin.membership_fee_desc') }}</p>
@@ -340,7 +340,9 @@ onMounted(async () => {
 .tab { appearance: none; border: 0; background: transparent; padding: .55rem .9rem; cursor: pointer; color: var(--fg-2, #555); font: inherit; border-bottom: 2px solid transparent; margin-bottom: -1px; }
 .tab:hover { color: var(--fg, #222); }
 .tab.active { color: var(--accent, #3b6); border-bottom-color: var(--accent, #3b6); font-weight: 600; }
-.panel { display: flex; flex-direction: column; gap: 1.25rem; }
+/* Not .panel: the global dashboard .panel in app.css would add its own
+   side padding and top margin to every tab. */
+.tab-panel { display: flex; flex-direction: column; gap: 1.25rem; }
 .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: .75rem; }
 .stat { border: 1px solid var(--border, #ddd); border-radius: .75rem; padding: .85rem 1rem; display: flex; flex-direction: column; gap: .25rem; background: var(--surface, transparent); }
 .stat-label { font-size: .78rem; color: var(--muted, #777); text-transform: uppercase; letter-spacing: .03em; }
