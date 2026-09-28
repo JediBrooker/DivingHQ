@@ -314,6 +314,23 @@ module.exports = function createUsersRouter({
         await client.query("ROLLBACK");
         return res.status(403).json({ error: "Only your own club members' requests" });
       }
+      // Roles only count in the org someone belongs to. A request they left
+      // behind when they transferred out (a transfer closes them now, older
+      // ones may still be sitting here) would mint a role in an org they've
+      // left, the stale row the transfer is careful to clear. Declining it
+      // is still fine, that's how it leaves the queue.
+      if (decision === "approved") {
+        const who = (await client.query(
+          "SELECT org_id, deleted_at FROM users WHERE id = $1", [rq.user_id],
+        )).rows[0];
+        if (!who || who.deleted_at || who.org_id !== rq.org_id) {
+          await client.query("ROLLBACK");
+          return res.status(409).json({
+            error: "That person isn't a member of this organisation any more",
+            code: "not_a_member",
+          });
+        }
+      }
 
       await client.query(
         "UPDATE role_requests SET status=$1, reviewed_by=$2, reviewed_at=now() WHERE id=$3 AND status='pending'",

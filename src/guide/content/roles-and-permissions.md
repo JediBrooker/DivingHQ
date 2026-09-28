@@ -88,7 +88,7 @@ A diver requests a club change from the "My club" card on their own profile. The
 
 For cross-org transfers the Requests tab shows which of the three approvals have been received (Source / Target / Diver). The transfer only completes when all three are in. Everything is audit-logged.
 
-A completed transfer ends every role the person held in the federation they left, and they join the new one as a diver. Coming back later is a fresh start too: nothing they used to hold switches back on.
+A completed transfer ends every role the person held in the federation they left, and any role request of theirs still waiting there is declined. They join the new one as a diver. Coming back later is a fresh start too: nothing they used to hold switches back on.
 
 ## Club admin
 

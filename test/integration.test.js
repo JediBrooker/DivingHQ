@@ -7915,3 +7915,43 @@ test("the judge picker leaves out judges who have moved to another federation", 
     await teardownFixture(Y);
   }
 });
+
+test("a role request left waiting in the federation someone moved out of can't grant a role there", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const X = await setupFixture({ withEvent: false });
+  const Y = await setupFixture({ withEvent: false });
+  const uname = `int-b3rq-${X.slug}`;
+  try {
+    const sys = await claimKit.login("admin", "admin");
+    const mover = await insertUser({ orgId: X.orgId, role: "diver", username: uname, fullName: "Moving Judge" });
+    const ask = async (role) => (await pool.query(
+      "INSERT INTO role_requests (user_id, org_id, requested_role) VALUES ($1, $2, $3) RETURNING id", [mover, X.orgId, role],
+    )).rows[0].id;
+    const judgeRq = await ask("judge");
+
+    // A finished transfer closes what they left waiting behind.
+    const tok = await b3Login(uname);
+    const made = await fetchJson("POST", "/api/club-change-requests", { token: tok, body: { to_org_id: Y.orgId } });
+    assert.equal(made.status, 201, JSON.stringify(made.body));
+    const moved = await fetchJson("POST", `/api/club-change-requests/${made.body.id}/review`, { token: sys.token, body: { decision: "approved" } });
+    assert.equal(moved.body.status, "approved", JSON.stringify(moved.body));
+    const st = (await pool.query("SELECT status::text FROM role_requests WHERE id = $1", [judgeRq])).rows[0].status;
+    assert.equal(st, "rejected", "closed with the move");
+
+    // One that slipped through (from before this) is refused on approval.
+    const coachRq = await ask("coach");
+    const late = await fetchJson("POST", `/api/role-requests/${coachRq}/review`, { token: X.adminToken, body: { decision: "approved" } });
+    assert.equal(late.status, 409, JSON.stringify(late.body));
+    assert.equal(late.body.code, "not_a_member");
+    const held = (await pool.query("SELECT role::text FROM user_org_roles WHERE user_id = $1 AND org_id = $2", [mover, X.orgId])).rows;
+    assert.deepEqual(held, [], "no role minted in the org they left");
+    // Declining it still works, so it can leave the queue.
+    const no = await fetchJson("POST", `/api/role-requests/${coachRq}/review`, { token: X.adminToken, body: { decision: "rejected" } });
+    assert.equal(no.status, 200, JSON.stringify(no.body));
+  } finally {
+    await pool.query("DELETE FROM users WHERE username = $1", [uname]);
+    await teardownFixture(X);
+    await teardownFixture(Y);
+  }
+});

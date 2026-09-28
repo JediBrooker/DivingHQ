@@ -165,6 +165,7 @@ module.exports = function createClubChangesRouter({ pool, verifyToken, bumpToken
     let revokedLinks = [];
     let seats = { clubs: [], regions: [], events: [] };
     let droppedRoles = [];
+    let closedRoleRequests = 0;
 
     if (r.kind === "org_transfer") {
       await client.query(
@@ -196,6 +197,14 @@ module.exports = function createClubChangesRouter({ pool, verifyToken, bumpToken
           [r.user_id, d.org_id, d.role, req.user.id],
         );
       }
+      // A role request still waiting back in the old org would put one of
+      // those rows straight back the day an admin there approved it. They
+      // go with the move, same as the roles.
+      closedRoleRequests = (await client.query(
+        `UPDATE role_requests SET status = 'rejected', reviewed_by = $2, reviewed_at = now()
+          WHERE user_id = $1 AND status = 'pending' AND org_id <> $3`,
+        [r.user_id, req.user.id, r.to_org_id],
+      )).rowCount;
       // Carry the diver role into the receiving org so they show up
       // on its roster.
       await client.query(
@@ -245,6 +254,7 @@ module.exports = function createClubChangesRouter({ pool, verifyToken, bumpToken
         ...(r.kind === "org_transfer" ? {
           removed: {
             roles: droppedRoles.map((d) => ({ org_id: d.org_id, role: d.role })),
+            role_requests: closedRoleRequests,
             club_admins: seats.clubs.map((c) => c.id),
             region_admins: seats.regions.map((g) => g.id),
             event_managers: seats.events.map((e) => e.id),
