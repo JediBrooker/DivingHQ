@@ -64,7 +64,8 @@ that stopped the whole server.
 | Event | Required role | Payload | Notes |
 |---|---|---|---|
 | `set_active_diver`        | meet_manager / referee / org_admin / sysadmin | Roster row + status | Persists to in-memory `activeDivers[event_id]` so late-joiners see it. |
-| `get_active_diver`        | none (any socket)             | `{ event_id }` | Read-only — returns the current state to the asking socket only. |
+| `subscribe_event`         | none (any socket)             | `{ event_id }` | Joins `event:<event_id>`. The id must be a UUID and one socket can be in at most 50 event rooms; anything past that is ignored. |
+| `get_active_diver`        | none (any socket)             | `{ event_id }` | Read-only — joins the room (same rules as `subscribe_event`) and returns the current state to the asking socket only. |
 | `submit_score`            | judge / referee / sysadmin    | `{ event_id, competitor_id, round_number, score, dive_id?, judge_number? }` | Server-trusted `judge_id = socket.userId`. Rate-limited (60/min/judge). Validates 0–10 in 0.5 steps, confirms event_judges membership. |
 | `announce_score`          | meet_manager / referee / org_admin / sysadmin | Free-form announce payload | Re-broadcast as `final_score_announced`. |
 | `referee_failed_dive`     | referee / meet_manager / org_admin / sysadmin | `{ event_id, competitor_id, round_number }` | Logged to `score_audit_log`. The dive's record books are replayed (`recomputeRecordKeys`), so a record it set goes back to whoever held it before. |
@@ -72,7 +73,7 @@ that stopped the whole server.
 | `referee_redive`          | referee / meet_manager / org_admin / sysadmin | `{ event_id, competitor_id, round_number }` | Logged. Marks the round's score rows `status = 'redive'` until each judge scores again, so records don't count the dive until the whole panel is fresh; any record the old total held is replayed away. |
 | `meet_hold`               | meet_manager / referee / org_admin / sysadmin | `{ event_id, reason? }` | Updates in-memory `meetHolds[event_id]`. |
 | `meet_resume`             | meet_manager / referee / org_admin / sysadmin | `{ event_id }` | Clears the hold. |
-| `get_meet_hold`           | none (any socket)             | `{ event_id }` | Read-only — returns the current hold state to the asking socket. |
+| `get_meet_hold`           | none (any socket)             | `{ event_id }` | Read-only — joins the room (same rules as `subscribe_event`) and returns the current hold state to the asking socket. |
 | `subscribe_venue`         | none (any socket)             | `{ event_id }` | Joins `venue:<event_id>` and immediately emits a fresh `venue.scoreboard_state` snapshot for hardware bridges. |
 | `disconnect`              | (built-in)                    | — | Just logs; no state cleanup needed. |
 

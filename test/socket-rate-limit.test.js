@@ -349,3 +349,25 @@ test("the socket's client IP is the one Express would pick, not a spoofed XFF en
   const d = await direct.connect("x", null, { headers: { "x-forwarded-for": "7.7.7.7" }, address: "203.0.113.9" });
   assert.ok(!c.isDisconnected() && d.isDisconnected());
 });
+
+// subscribe_event / get_active_diver / get_meet_hold joined a room named
+// after whatever string came in, for anyone, with no limit. One
+// anonymous socket looping unique ids added 200 MB of rooms in seconds.
+test("event rooms: only UUIDs, and a cap per socket", async () => {
+  const h = makeHarness();
+  const c = await h.connect("198.51.100.35");
+  for (const bad of ["x".repeat(200), "not-a-uuid", 42, { a: 1 }]) {
+    await c.fire("subscribe_event", { event_id: bad });
+    await c.fire("get_active_diver", { event_id: bad });
+    await c.fire("get_meet_hold", { event_id: bad });
+  }
+  const eventRooms = () => [...c.rooms].filter((r) => r.startsWith("event:"));
+  assert.deepEqual(eventRooms(), [], "junk ids join nothing");
+  for (let i = 0; i < 200; i++) {
+    await c.fire("subscribe_event", { event_id: `00000000-0000-4000-8000-${String(i).padStart(12, "0")}` });
+  }
+  assert.equal(eventRooms().length, 50);
+  // Rejoining one it's already in is fine.
+  await c.fire("get_active_diver", { event_id: "00000000-0000-4000-8000-000000000000" });
+  assert.equal(eventRooms().length, 50);
+});

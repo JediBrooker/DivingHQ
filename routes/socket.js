@@ -284,6 +284,9 @@ module.exports = function attachSocket({
   const EVENT_UUID_RE =
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+  // How many event rooms one socket may sit in (see joinEvent).
+  const MAX_EVENT_ROOMS = 50;
+
   // Per-IP concurrent connection cap. Defence-in-depth so a single
   // client can't open thousands of sockets to exhaust file descriptors
   // / memory. Generous by default because an entire venue of spectators
@@ -408,12 +411,23 @@ module.exports = function attachSocket({
 
     // Helper: clients join `event:${id}` rooms when they
     // subscribe to an event (via get_active_diver, get_meet_hold,
-    // or by explicit `subscribe_event`).
+    // or by explicit `subscribe_event`). Anonymous, so it's fenced: the
+    // id has to look like an event id, and one socket gets
+    // MAX_EVENT_ROOMS of them. Before, any string made a room, and one
+    // socket looping unique ids ate a couple of hundred MB in seconds.
+    // A busy Control Room watches a handful of pools, nowhere near it.
+    // Returns whether the socket is (now) in the room.
+    const joinedEvents = new Set();
     function joinEvent(eventId) {
-      if (!eventId) return;
+      if (typeof eventId !== "string" || !EVENT_UUID_RE.test(eventId)) return false;
+      if (!joinedEvents.has(eventId)) {
+        if (joinedEvents.size >= MAX_EVENT_ROOMS) return false;
+        joinedEvents.add(eventId);
+      }
       socket.join(`event:${eventId}`);
+      return true;
     }
-    on("subscribe_event", (data) => joinEvent(data?.event_id));
+    on("subscribe_event", (data) => { joinEvent(data?.event_id); });
 
     // Per-event control LEASE (advisory). A Control Room claims control of
     // each event it drives. The lease never BLOCKS an action (a crashed
@@ -520,8 +534,7 @@ module.exports = function attachSocket({
     });
 
     on("get_active_diver", (data) => {
-      if (!data?.event_id) return;
-      joinEvent(data.event_id);
+      if (!joinEvent(data?.event_id)) return;
       const state = activeDivers[data.event_id];
       if (state) socket.emit("state_update", state);
     });
@@ -1185,8 +1198,7 @@ module.exports = function attachSocket({
       ackWith(ack, { ok: true });
     });
     on("get_meet_hold", (data) => {
-      if (!data?.event_id) return;
-      joinEvent(data.event_id);
+      if (!joinEvent(data?.event_id)) return;
       const state = meetHolds[data.event_id];
       if (state) socket.emit("meet_held", { event_id: data.event_id, ...state });
     });
