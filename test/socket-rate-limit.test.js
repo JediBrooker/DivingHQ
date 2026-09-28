@@ -127,7 +127,14 @@ function makeHarness(opts = {}) {
   return { connect, emits: () => emitCount, venueCalls, broadcasts };
 }
 
-const token = (id) => jwt.sign({ id, org_id: "org-1", org_roles: ["meet_manager"] }, "test-secret");
+// The handshake only takes a session whose id is a UUID (isSessionClaims
+// in lib/middleware), so a test's user gets a stable one made from its
+// label.
+const uid = (label) => {
+  const h = require("node:crypto").createHash("md5").update(label).digest("hex");
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-4${h.slice(13, 16)}-8${h.slice(17, 20)}-${h.slice(20, 32)}`;
+};
+const token = (label) => jwt.sign({ id: uid(label), org_id: "org-1", org_roles: ["meet_manager"] }, "test-secret");
 
 test("subscribe_venue caps anonymous snapshots per IP", async () => {
   const h = makeHarness();
@@ -256,15 +263,35 @@ test("a malformed session cookie on the handshake connects as anonymous", async 
   assert.ok(c.isWired(), "the socket still gets its handlers");
 });
 
+// The handshake asks lib/middleware's isSessionClaims, the test
+// verifyToken runs, rather than a copy of it. Only a typeless token with
+// a UUID id is a session; the purpose tokens (2FA step-up, reset, verify)
+// share the secret and connect as spectators.
+test("the socket handshake takes the same sessions verifyToken does", async () => {
+  const h = makeHarness();
+  const sign = (p) => jwt.sign(p, "test-secret");
+  const id = uid("handshake");
+  const cases = [
+    [{ id, org_id: "org-1", org_roles: ["judge"] }, id],
+    [{ id, type: "totp_pending", org_id: "org-1" }, undefined],
+    [{ sub: id, type: "password_reset" }, undefined],
+    [{ id: "not-a-uuid", org_id: "org-1" }, undefined],
+  ];
+  for (const [payload, want] of cases) {
+    const c = await h.connect("198.51.100.43", sign(payload));
+    assert.equal(c.socket.userId, want, JSON.stringify(payload));
+  }
+});
+
 test("submit_score acks server_error when the revocation lookup throws", async () => {
   const h = makeHarness({
-    deps: { isTokenVersionCurrent: async (id) => { if (id === "judge-db-down") throw new Error("db down"); return true; } },
+    deps: { isTokenVersionCurrent: async (id) => { if (id === uid("judge-db-down")) throw new Error("db down"); return true; } },
   });
-  const judgeToken = jwt.sign({ id: "judge-db-down", org_id: "org-1", org_roles: ["judge"], tv: 1 }, "test-secret");
+  const judgeToken = jwt.sign({ id: uid("judge-db-down"), org_id: "org-1", org_roles: ["judge"], tv: 1 }, "test-secret");
   // The handshake's own check throws too, so it connects anonymous; set
   // the identity by hand to get to the per-submit re-check.
   const c = await h.connect("198.51.100.32", judgeToken);
-  Object.assign(c.socket, { userId: "judge-db-down", userOrgRoles: ["judge"], userTokenVersion: 1 });
+  Object.assign(c.socket, { userId: uid("judge-db-down"), userOrgRoles: ["judge"], userTokenVersion: 1 });
   const reply = await c.ask("submit_score", { event_id: VALID_ID, competitor_id: VALID_ID, round_number: 1, score: 7 });
   assert.deepEqual(reply, { ok: false, error: "server_error" });
 });
@@ -291,7 +318,7 @@ function scoringPool({ status = "Live" } = {}) {
     connect: async () => ({ query: answer, release() {} }),
   };
 }
-const judgeToken = (id) => jwt.sign({ id, org_id: "org-1", org_roles: ["judge"] }, "test-secret");
+const judgeToken = (label) => jwt.sign({ id: uid(label), org_id: "org-1", org_roles: ["judge"] }, "test-secret");
 
 // hashPayload used to canonicalise the whole client object, recursively,
 // before any try. A 20k-deep array in an extra field blew the stack and,
