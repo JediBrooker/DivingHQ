@@ -216,6 +216,26 @@ export const useAuthStore = defineStore('auth', () => {
     return { 'Content-Type': 'application/json' }
   }
 
+  // A 401 doesn't always mean the session is gone. Change password, the
+  // 2FA confirm/disable pair, delete account, claim past entries and the
+  // referee's credential sign-off all answer 401 for "the password or
+  // code you typed is wrong", and the sign-off one fires on the
+  // OPERATOR's laptop mid-meet (every 2FA referee's first try gets a
+  // 401 needs_totp). So before throwing anyone out we ask /api/auth/me
+  // whether the cookie still works. Concurrent 401s share one probe.
+  // If the probe can't reach the server we keep the session, same call
+  // fetchMe() makes: the next request that gets through settles it.
+  let sessionProbe = null
+  function sessionIsDead() {
+    if (!sessionProbe) {
+      sessionProbe = fetch('/api/auth/me', { credentials: 'same-origin' })
+        .then((r) => r.status === 401 || r.status === 403)
+        .catch(() => false)
+        .finally(() => { sessionProbe = null })
+    }
+    return sessionProbe
+  }
+
   async function apiFetch(url, options = {}) {
     const res = await fetch(url, {
       ...options,
@@ -223,12 +243,14 @@ export const useAuthStore = defineStore('auth', () => {
       credentials: 'same-origin',
       headers: { ...getHeaders(), ...(options.headers ?? {}) },
     })
-    // 401 = cookie expired or revoked. Clear the session so the router
-    // guard sends the user back to /login instead of every page throwing
-    // red errors. Skip the redirect for viewers who weren't signed in to
-    // begin with, a 401 there just means a public endpoint is genuinely
-    // refusing them, not a session-expiry signal.
-    if (res.status === 401 && isLoggedIn.value) {
+    // 401 with a dead cookie (expired or revoked): clear the session so
+    // the router guard sends the user back to /login instead of every
+    // page throwing red errors. Skip it for viewers who weren't signed in
+    // to begin with, a 401 there just means a public endpoint is
+    // genuinely refusing them, not a session-expiry signal. The second
+    // isLoggedIn check is for a sibling request that already cleared it
+    // while we were waiting on the probe.
+    if (res.status === 401 && isLoggedIn.value && await sessionIsDead() && isLoggedIn.value) {
       clearSession()
       if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
         window.location.href = '/login'
@@ -248,12 +270,26 @@ export const useAuthStore = defineStore('auth', () => {
       }
       // status and code ride along so a caller can tell "you may not"
       // (403) from "that didn't work" without matching on English text.
-      const err = new Error(body.error || res.statusText)
+      // So does the rest of the body: the server hangs structured detail
+      // off errors (violations[] from the dive-list validator, needs_totp
+      // from the referee sign-off) and callers branch on it. Only fields
+      // the Error doesn't already have, so a body can't clobber status.
+      const err = new Error(body?.error || res.statusText)
       err.status = res.status
-      if (body.code) err.code = body.code
+      err.body = body
+      if (body && typeof body === 'object' && !Array.isArray(body)) {
+        for (const [k, v] of Object.entries(body)) {
+          if (!(k in err)) err[k] = v
+        }
+      }
       throw err
     }
-    return res.json()
+    // 204 (DELETE /api/dive-directory/:id) and the odd empty 200 have no
+    // body to parse. res.json() threw on those AFTER the write had
+    // landed, so the caller reported a failure and skipped its refresh.
+    if (res.status === 204) return null
+    const text = await res.text()
+    return text ? JSON.parse(text) : null
   }
 
   // Stale-while-revalidate variant of apiFetch. Wraps idbCache's

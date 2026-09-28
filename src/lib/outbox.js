@@ -31,7 +31,11 @@
 //     operator intent.
 //
 //   * 5 attempts with exponential backoff (1s, 2s, 4s, 8s, 16s),
-//     then status='failed'. Manual retry surfaces in the UI.
+//     then status='failed'. drain() reports the wait as retryInMs and
+//     the caller schedules the next pass. Only a real answer from the
+//     server counts as an attempt: a send that never left the device
+//     (err.offline) doesn't, and it stops the drain so FIFO holds.
+//     retryFailed() is the manual retry the banner offers.
 //
 //   * No Vue coupling here. Components subscribe via
 //     outbox.on('change') and re-read counts as needed. A thin
@@ -56,6 +60,12 @@ const MAX_ATTEMPTS = 5
 function backoffMs(attempt) {
   return Math.min(1000 * 2 ** (attempt - 1), 30000)
 }
+
+// An entry is only 'inflight' while some tab's send() is waiting on it,
+// and the senders give up after 10s. One still inflight well past that
+// was abandoned: the tab reloaded, crashed or closed mid-send. 15s leaves
+// headroom for a slow ack on the tab that really does own it.
+const INFLIGHT_STALE_MS = 15 * 1000
 
 // 100KB payload size cap (DEC-OPEN-1 in offline-p1-design.md, OK'd).
 const MAX_PAYLOAD_BYTES = 100 * 1024
@@ -263,9 +273,13 @@ export function createOutbox({
   userFingerprint = 'anon',
   maxAttempts = MAX_ATTEMPTS,
   retentionMs = RETENTION_MS,
+  inflightStaleMs = INFLIGHT_STALE_MS,
 } = {}) {
   const emitter = createEmitter()
   let drainLock = false
+  // Drains in a row that stopped on an offline failure. Only feeds the
+  // retry hint, so a long outage backs off instead of spinning.
+  let offlineStalls = 0
 
   function emitChange() { emitter.emit('change') }
 
@@ -332,12 +346,41 @@ export function createOutbox({
    * @returns {Promise<{ drained: number, conflicts: number, failed: number }>}
    */
   async function drain({ send }) {
-    if (drainLock) return { drained: 0, conflicts: 0, failed: 0 }
+    if (drainLock) return { drained: 0, conflicts: 0, failed: 0, retryInMs: null }
     if (typeof send !== 'function') {
       throw new Error('outbox.drain: send function required')
     }
     drainLock = true
     try {
+      // How long the caller should wait before draining again, or null
+      // when nothing's waiting on a retry. The soonest reason wins.
+      let retryInMs = null
+      const retryIn = (ms) => {
+        if (retryInMs == null || ms < retryInMs) retryInMs = Math.max(0, Math.round(ms))
+      }
+
+      // Reclaim entries some earlier page left inflight. Nothing else
+      // ever looks at them: this loop only takes pending ones, gc() skips
+      // non-terminal ones, so a score whose tab reloaded mid-send sat in
+      // IndexedDB for good with a spinner on it. We hold the drain lock,
+      // so none of these are ours; a young one may still belong to a
+      // live tab, so leave it and say when it'll be fair game. Sending it
+      // twice is safe, the server dedupes on the idempotency key.
+      const now = Date.now()
+      const stuck = await backend.list({
+        status: STATUSES.INFLIGHT,
+        user_fingerprint: userFingerprint,
+      })
+      for (const e of stuck) {
+        const age = now - Date.parse(e.last_attempt_at || e.created_at)
+        if (age < inflightStaleMs) {
+          retryIn(inflightStaleMs - age)
+          continue
+        }
+        e.status = STATUSES.PENDING
+        await backend.put(e)
+      }
+
       const pending = await backend.list({
         status: STATUSES.PENDING,
         user_fingerprint: userFingerprint,
@@ -356,6 +399,7 @@ export function createOutbox({
         await backend.put(entry)
         emitChange()
 
+        let stop = false
         try {
           const result = await send(entry)
           if (result?.ok) {
@@ -365,6 +409,7 @@ export function createOutbox({
             entry.last_error = null
             await backend.put(entry)
             drained += 1
+            offlineStalls = 0
           } else {
             throw new Error('send returned non-ok result')
           }
@@ -374,33 +419,71 @@ export function createOutbox({
             entry.conflict_info = err.conflict || { message: err.message }
             await backend.put(entry)
             conflicts += 1
+          } else if (err && err.offline) {
+            // Never left the device (socket down, fetch network error).
+            // That isn't the server saying no, so it doesn't use up an
+            // attempt. It used to: every tap while the wifi was out
+            // drained the whole queue, and five taps marked the first
+            // action failed before the connection came back. And stop
+            // here, everything behind it would fail the same way, and
+            // carrying on is how a later action overtook an earlier one.
+            entry.attempts -= 1
+            entry.status = STATUSES.PENDING
+            entry.last_error = String(err.message || err)
+            await backend.put(entry)
+            offlineStalls += 1
+            retryIn(backoffMs(offlineStalls))
+            stop = true
           } else if (entry.attempts >= maxAttempts) {
             entry.status = STATUSES.FAILED
             entry.last_error = String(err?.message || err)
             await backend.put(entry)
             failed += 1
           } else {
-            // Schedule a retry with exponential backoff, we just
-            // flip the status back to pending. The next drain()
-            // (on socket reconnect, online event, or the periodic
-            // heartbeat in the calling composable) picks it up.
+            // Back to pending with exponential backoff: we don't sleep
+            // here, retryInMs tells the caller when to drain again (it
+            // also drains on reconnect and on the next queued action).
             entry.status = STATUSES.PENDING
             entry.last_error = String(err?.message || err)
             await backend.put(entry)
-            // Heads up: we don't sleep here. The retry is
-            // scheduled by whatever triggered this drain, the
-            // backoff is just implicit in the wait until the
-            // next drain trigger.
+            retryIn(backoffMs(entry.attempts))
+            // A timeout might still have landed server-side. Letting the
+            // next entry go first could apply them out of order (an older
+            // set_active_diver retried after a newer one succeeded puts
+            // the wrong diver back up), so hold the rest back too.
+            if (err && err.ambiguous) stop = true
           }
           emitChange()
         }
+        if (stop) break
       }
 
       emitChange()
-      return { drained, conflicts, failed }
+      return { drained, conflicts, failed, retryInMs }
     } finally {
       drainLock = false
     }
+  }
+
+  /**
+   * Put every failed entry back in the queue with a fresh set of
+   * attempts. The manual retry the banner offers, and the only way back
+   * for an action that failed before offline errors stopped counting.
+   * Returns how many were requeued.
+   */
+  async function retryFailed() {
+    const failedEntries = await backend.list({
+      status: STATUSES.FAILED,
+      user_fingerprint: userFingerprint,
+    })
+    for (const e of failedEntries) {
+      e.status = STATUSES.PENDING
+      e.attempts = 0
+      e.last_error = null
+      await backend.put(e)
+    }
+    if (failedEntries.length) emitChange()
+    return failedEntries.length
   }
 
   /**
@@ -471,6 +554,7 @@ export function createOutbox({
     list,
     getEntry,
     resolveConflict,
+    retryFailed,
     gc,
     on: emitter.on,
     off: emitter.off,
@@ -478,4 +562,4 @@ export function createOutbox({
   }
 }
 
-export { STATUSES, MAX_PAYLOAD_BYTES, MAX_ATTEMPTS, RETENTION_MS, uuidV4, backoffMs, isTerminal }
+export { STATUSES, MAX_PAYLOAD_BYTES, MAX_ATTEMPTS, RETENTION_MS, INFLIGHT_STALE_MS, uuidV4, backoffMs, isTerminal }

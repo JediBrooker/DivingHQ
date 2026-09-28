@@ -128,7 +128,7 @@ test("drain() with no pending entries returns empty result", async () => {
   const o = newOutbox();
   const received = [];
   const result = await o.drain({ send: okSend(received) });
-  assert.deepEqual(result, { drained: 0, conflicts: 0, failed: 0 });
+  assert.deepEqual(result, { drained: 0, conflicts: 0, failed: 0, retryInMs: null });
   assert.equal(received.length, 0);
 });
 
@@ -177,9 +177,9 @@ test("drain() retries transient failures up to maxAttempts", async () => {
   // flips status back to pending without retrying in the same call.
   const send = flakySend(2);
   const r1 = await o.drain({ send });
-  assert.deepEqual(r1, { drained: 0, conflicts: 0, failed: 0 });
+  assert.deepEqual(r1, { drained: 0, conflicts: 0, failed: 0, retryInMs: 1000 });
   const r2 = await o.drain({ send });
-  assert.deepEqual(r2, { drained: 0, conflicts: 0, failed: 0 });
+  assert.deepEqual(r2, { drained: 0, conflicts: 0, failed: 0, retryInMs: 2000 });
   const r3 = await o.drain({ send });
   assert.equal(r3.drained, 1);
 });
@@ -373,4 +373,134 @@ test("isTerminal recognises every terminal state", () => {
   assert.ok(isTerminal('conflict'));
   assert.ok(!isTerminal('pending'));
   assert.ok(!isTerminal('inflight'));
+});
+
+// ---- Offline gaps and dead tabs (A6-02 / A6-03) ------------------
+
+// What useHttpOutbox's senders throw when the request never left the
+// device: socket disconnected, fetch network error.
+function offlineSend(received = []) {
+  return async (entry) => {
+    received.push(entry.payload);
+    const err = new Error('socket disconnected');
+    err.offline = true;
+    throw err;
+  };
+}
+
+test("offline failures don't use up attempts, however many drains run", async () => {
+  const o = newOutbox();
+  const keys = [];
+  // Five queued actions with a drain after each, like the Control Room
+  // does on every tap while the venue wifi is down.
+  for (let i = 0; i < 5; i++) {
+    keys.push(await o.push('socket:set_active_diver', { i }));
+    await o.drain({ send: offlineSend() });
+  }
+  for (const key of keys) {
+    const e = await o.getEntry(key);
+    assert.equal(e.status, STATUSES.PENDING);
+    assert.equal(e.attempts, 0);
+  }
+});
+
+test("an offline failure stops the drain so later entries can't overtake", async () => {
+  const o = newOutbox();
+  const first = await o.push('socket:set_active_diver', { diver: 'A' });
+  const second = await o.push('socket:set_active_diver', { diver: 'B' });
+  const tried = [];
+  const r = await o.drain({ send: offlineSend(tried) });
+  assert.deepEqual(tried, [{ diver: 'A' }], 'B was never attempted');
+  assert.equal(r.drained, 0);
+  assert.ok(r.retryInMs > 0, 'the caller is told to try again');
+  assert.equal((await o.getEntry(first)).status, STATUSES.PENDING);
+  assert.equal((await o.getEntry(second)).status, STATUSES.PENDING);
+
+  // Back online: both go, in tap order.
+  const sent = [];
+  await o.drain({ send: okSend(sent) });
+  assert.deepEqual(sent.map((e) => e.payload.diver), ['A', 'B']);
+});
+
+test("a timeout counts an attempt but still holds back the entries behind it", async () => {
+  const o = newOutbox();
+  const first = await o.push('socket:set_active_diver', { diver: 'A' });
+  await o.push('socket:set_active_diver', { diver: 'B' });
+  const tried = [];
+  await o.drain({
+    send: async (entry) => {
+      tried.push(entry.payload.diver);
+      const err = new Error('timeout');
+      err.ambiguous = true;
+      throw err;
+    },
+  });
+  assert.deepEqual(tried, ['A']);
+  const e = await o.getEntry(first);
+  assert.equal(e.status, STATUSES.PENDING);
+  assert.equal(e.attempts, 1);
+});
+
+test("a server rejection still counts and doesn't block the queue", async () => {
+  const o = newOutbox();
+  const bad = await o.push('socket:referee_redive', { n: 1 });
+  const good = await o.push('socket:meet_hold', { n: 2 });
+  await o.drain({
+    send: async (entry) => {
+      if (entry.payload.n === 1) throw new Error('not authorised');
+      return { ok: true };
+    },
+  });
+  assert.equal((await o.getEntry(bad)).attempts, 1);
+  assert.equal((await o.getEntry(good)).status, STATUSES.SYNCED);
+});
+
+test("retryFailed() puts failed entries back in the queue with fresh attempts", async () => {
+  const o = newOutbox({ maxAttempts: 1 });
+  const key = await o.push('socket:meet_hold', {});
+  await o.drain({ send: async () => { throw new Error('boom'); } });
+  assert.equal((await o.getEntry(key)).status, STATUSES.FAILED);
+  assert.equal(await o.retryFailed(), 1);
+  const e = await o.getEntry(key);
+  assert.equal(e.status, STATUSES.PENDING);
+  assert.equal(e.attempts, 0);
+  const r = await o.drain({ send: okSend() });
+  assert.equal(r.drained, 1);
+});
+
+test("an entry a dead tab left inflight is sent again by the next outbox", async () => {
+  const backend = createMemoryBackend();
+  const dead = createOutbox({ backend, userFingerprint: 'u1' });
+  const key = await dead.push('submit_score', { score: 8 });
+  // The tab reloads while send() is still waiting on its ack.
+  dead.drain({ send: () => new Promise(() => {}) });
+  await new Promise((r) => setTimeout(r, 5));
+  assert.equal((await backend.get(key)).status, STATUSES.INFLIGHT);
+
+  // Age it past the stale threshold, as if the reload took a while.
+  const e = await backend.get(key);
+  e.last_attempt_at = new Date(Date.now() - 60_000).toISOString();
+  await backend.put(e);
+
+  const fresh = createOutbox({ backend, userFingerprint: 'u1' });
+  const sent = [];
+  const r = await fresh.drain({ send: okSend(sent) });
+  assert.equal(r.drained, 1);
+  assert.equal(sent[0].idempotency_key, key, 'same key, so the server dedupes');
+  assert.equal((await backend.get(key)).status, STATUSES.SYNCED);
+});
+
+test("a recently inflight entry is left for its sender, with a hint when to look again", async () => {
+  const backend = createMemoryBackend();
+  const other = createOutbox({ backend, userFingerprint: 'u1' });
+  const key = await other.push('submit_score', { score: 8 });
+  other.drain({ send: () => new Promise(() => {}) });
+  await new Promise((r) => setTimeout(r, 5));
+
+  const fresh = createOutbox({ backend, userFingerprint: 'u1' });
+  const sent = [];
+  const r = await fresh.drain({ send: okSend(sent) });
+  assert.equal(sent.length, 0);
+  assert.equal((await backend.get(key)).status, STATUSES.INFLIGHT);
+  assert.ok(r.retryInMs > 0 && r.retryInMs <= 15_000, `retryInMs=${r.retryInMs}`);
 });

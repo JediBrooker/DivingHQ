@@ -268,7 +268,12 @@ onMounted(load)
             </div>
           </div>
 
-          <div class="dive-slot" @click="openDivePicker(idx)">
+          <div class="dive-slot"
+               role="button"
+               tabindex="0"
+               @click="openDivePicker(idx)"
+               @keydown.enter.self.prevent="openDivePicker(idx)"
+               @keydown.space.self.prevent="openDivePicker(idx)">
             <template v-if="r.dive">
               <div class="dive-code">
                 {{ r.dive.dive_code }}<span class="dive-pos">{{ r.dive.position }}</span>
@@ -295,7 +300,12 @@ onMounted(load)
       <input class="input" type="text" v-model="diveSearch" placeholder="Search code or description (e.g. 101C)…">
       <div class="dive-modal-body">
         <p v-if="!filteredDives.length" class="empty">No dives match.</p>
-        <div v-for="d in filteredDives" :key="d.id" class="dive-result" @click="pickDive(d)">
+        <div v-for="d in filteredDives" :key="d.id" class="dive-result"
+             role="button"
+             tabindex="0"
+             @click="pickDive(d)"
+             @keydown.enter.self.prevent="pickDive(d)"
+             @keydown.space.self.prevent="pickDive(d)">
           <div>
             <div class="dive-code">{{ d.dive_code }}<span class="dive-pos">{{ d.position }}</span></div>
             <div class="dive-desc">{{ diveDescription(d) }}</div>
@@ -311,6 +321,9 @@ onMounted(load)
 </template>
 
 <style scoped>
+/* The dive slots and picker results act as buttons from the keyboard
+   too, so they need a focus ring. */
+.dive-slot:focus-visible, .dive-result:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
 .page-header {
   display: flex; align-items: flex-start; justify-content: space-between;
   padding: 1.5rem 2rem; border-bottom: 1px solid var(--border);

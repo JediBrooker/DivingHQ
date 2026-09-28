@@ -205,7 +205,9 @@
       "alerts_dives_one": "skok przed aktywnym",
       "alerts_dives_many": "skoków przed aktywnym",
       "alerts_hint": "Przybliżone wyprzedzenie przy 30s zegarze: 1 skok ≈ 30s, 2 skoki ≈ 1 min, 3 skoki ≈ 90s. Powiadomienia są wysyłane dla każdych zawodów na żywo, w których masz zawodnika w drużynie.",
-      "alerts_enable_push": "Włącz powiadomienia na tym urządzeniu"
+      "alerts_enable_push": "Włącz powiadomienia na tym urządzeniu",
+      "alerts_push_blocked": "Powiadomienia są zablokowane dla tej witryny. Zezwól na nie w ustawieniach przeglądarki i spróbuj ponownie.",
+      "alerts_push_failed": "Nie udało się włączyć powiadomień push na tym urządzeniu."
     },
     "dive_lists": {
       "page_label": "Trener → Listy skoków",
@@ -235,7 +237,28 @@
       "withdraw_prompt": "Wycofać {name} z {event}?\n\nOpcjonalnie wpisz powód (widoczny w dzienniku audytu + Pokoju Kontroli):",
       "withdraw_confirm_title": "Wycofać {name}?",
       "withdraw_confirm_body": "To oznaczy każdą rundę tych zawodów jako wycofaną dla {name}. Operator zobaczy to w Pokoju Kontroli, a tablica wyników dla widzów odzwierciedli zmianę. Przywrócenie wymaga menedżera zawodów.",
-      "withdraw_failed": "Wycofanie nie powiodło się"
+      "withdraw_failed": "Wycofanie nie powiodło się",
+      "title": "Listy skoków",
+      "load_failed": "Nie udało się wczytać list skoków",
+      "load_failed_title": "Nie można wczytać list skoków",
+      "synchro": "Synchro",
+      "rounds_count": "Rundy: {n}",
+      "eligibility_aria": "Uprawnienia trenera do edycji",
+      "back_to_coach": "← Trener",
+      "back_to_dashboard": "Powrót do panelu trenera",
+      "submitted_toast": "Lista skoków wysłana",
+      "withdrawn_toast": "{name}: wycofano",
+      "this_event": "te zawody",
+      "badge_host": "Federacja gospodarza",
+      "badge_host_tip": "Twoje powiązanie trenerskie należy do federacji gospodarza zawodów.",
+      "badge_invited": "Federacja zaproszona",
+      "badge_invited_tip": "Twoje powiązanie trenerskie odpowiada zaproszonej federacji zawodnika.",
+      "badge_can_submit": "Może wysłać",
+      "badge_can_submit_tip": "Możesz wysyłać lub edytować listy skoków, dopóki zgłoszenia są otwarte.",
+      "badge_can_withdraw": "Może wycofać",
+      "badge_can_withdraw_tip": "Możesz wycofać zgłoszonych zawodników z tych zawodów.",
+      "badge_read_only": "Tylko odczyt",
+      "badge_read_only_tip": "Możesz przeglądać te zawody, ale edycja jest zamknięta lub niedozwolona w ramach Twojego powiązania trenerskiego."
     }
   },
   "home": {

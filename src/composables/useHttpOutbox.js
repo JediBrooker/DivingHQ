@@ -17,6 +17,7 @@ import { useSocket } from './useSocket'
 import { getOutbox } from './useOutbox'
 
 let drainScheduled = false
+let retryTimer = null
 
 // Sockets that already carry the connect→drain hook.
 const drainHookSockets = new WeakSet()
@@ -42,7 +43,11 @@ async function httpSend(auth, entry) {
       }),
     })
   } catch (err) {
-    throw new Error(`network: ${err.message}`)
+    // fetch() only rejects when the request never got an answer, so
+    // this didn't cost an attempt (see drain()).
+    const offline = new Error(`network: ${err.message}`)
+    offline.offline = true
+    throw offline
   }
 
   let data = null
@@ -81,13 +86,21 @@ function isSocketAction(actionType) {
 function socketSend(entry) {
   const s = _socket
   if (!s || !s.connected) {
-    throw new Error('socket disconnected')
+    const offline = new Error('socket disconnected')
+    offline.offline = true
+    throw offline
   }
   const eventName = entry.action_type.startsWith('socket:')
     ? entry.action_type.slice('socket:'.length)
     : entry.action_type
   return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error('timeout')), 10000)
+    const timer = setTimeout(() => {
+      // No ack in 10s. It may still have landed, so the drain holds the
+      // queue behind it rather than letting later actions go first.
+      const err = new Error('timeout')
+      err.ambiguous = true
+      reject(err)
+    }, 10000)
     s.emit(eventName, {
       ...entry.payload,
       idempotency_key: entry.idempotency_key,
@@ -126,12 +139,35 @@ function scheduleDrain(auth) {
   Promise.resolve().then(async () => {
     drainScheduled = false
     try {
-      await outbox.drain({ send: (e) => unifiedSend(auth, e) })
+      const result = await outbox.drain({ send: (e) => unifiedSend(auth, e) })
+      // The outbox says when a retry is due (backoff after a failure, or
+      // an entry another tab left inflight going stale). Without this a
+      // retry only happened on the next reconnect or the next tap.
+      if (result?.retryInMs != null) {
+        clearTimeout(retryTimer)
+        retryTimer = setTimeout(() => {
+          retryTimer = null
+          scheduleDrain(auth)
+        }, result.retryInMs)
+      }
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error('[outbox] drain failed:', err.message)
     }
   })
+}
+
+// Manual retry for entries that ran out of attempts (the offline
+// banner's Retry button). Requeues them and drains straight away.
+export async function retryFailedActions() {
+  const outbox = getOutbox()
+  if (!outbox) return 0
+  // Nothing past the retention window gets resent: the server has
+  // forgotten its idempotency key by then, so a replay could land twice.
+  await outbox.gc().catch(() => {})
+  const n = await outbox.retryFailed()
+  if (n) scheduleDrain(useAuthStore())
+  return n
 }
 
 // Attach the connect -> drain hook to the socket, once, and kick a drain
@@ -191,6 +227,14 @@ export function waitForOutboxEntry(key, { timeoutMs = 8000 } = {}) {
   })
 }
 
+// Signed out: stop sending through the old user's socket. Entries stay
+// in IndexedDB under their fingerprint for when that person is back.
+export function disarmOutboxDrain() {
+  _socket = null
+  clearTimeout(retryTimer)
+  retryTimer = null
+}
+
 // --- Public composable -------------------------------------------
 
 export function useHttpOutbox() {
@@ -217,4 +261,6 @@ export function useHttpOutbox() {
 
 export function _resetHttpOutboxForTests() {
   drainScheduled = false
+  clearTimeout(retryTimer)
+  retryTimer = null
 }

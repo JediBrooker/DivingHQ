@@ -24,6 +24,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 import { onOpenCommandPalette, replayRoleTour } from '@/composables/useAppChannel'
 import { useDiverSearch } from '@/composables/useDiverSearch'
+import { signOut } from '@/composables/useSignOut'
 
 const router = useRouter()
 const auth   = useAuthStore()
@@ -51,14 +52,14 @@ const STATIC_ENTRIES = [
   { kind:'go', label:'Audit Log',      sub:'Federation activity',       to:'/audit',         roles:['org_admin'],  icon:'📋' },
   { kind:'go', label:'Clubs',          sub:'Federation registry',       to:'/clubs',         roles:['org_admin'],  icon:'🏛' },
   { kind:'go', label:'Teams',          sub:'World Aquatics Team Event entries',   to:'/teams',         roles:['org_admin'],  icon:'🏆' },
-  { kind:'go', label:'Dive Directory', sub:'All diving codes + DD',     to:'/dives',         roles:null,           icon:'📖' },
+  { kind:'go', label:'Dive Directory', sub:'All diving codes + DD',     to:'/dive-directory', roles:null,          icon:'📖' },
   { kind:'go', label:'Assign Judges',  sub:'Match panels to events',    to:'/assign-judges', roles:['org_admin','meet_manager'], icon:'⚖️' },
   { kind:'go', label:'Replay tour',    sub:'See the role-specific intro again', to:null,    roles:null,           icon:'🎬',
     action: () => {
       replayRoleTour()
     } },
   { kind:'go', label:'Sign Out',       sub:'End your session',          to:null,             roles:null,           icon:'🚪',
-    action: () => { auth.clearSession(); router.push('/login') } },
+    action: () => { signOut(auth, router) } },
 ]
 
 // Events cached on first open (see primeCache).
@@ -177,7 +178,11 @@ const results = computed(() => {
     const s = Math.max(score(e.label, q), score(e.sub || '', q))
     if (s > 0) out.push({ ...e, _score: s })
   }
-  // 2. Events
+  // 2. Events. The Control Room and Meet Manager are for the people
+  // running the meet; anyone else (a diver, say) was sent there and
+  // bounced to /dashboard by the router guard. They get the scoreboard.
+  const runsMeets = auth.hasAnyRole(['org_admin', 'meet_manager']) || auth.isClubAdmin || auth.isRegionAdmin
+  const canControl = runsMeets || auth.hasRole('referee')
   for (const ev of events.value) {
     const status = (ev.status || '').toLowerCase()
     const sub = `${ev.height || ''} · ${status}`.trim()
@@ -187,9 +192,9 @@ const results = computed(() => {
       label: ev.name,
       sub,
       icon: status === 'live' ? '🔴' : (status === 'completed' ? '✓' : '📅'),
-      to: status === 'live' ? `/control?event=${ev.id}` :
-          status === 'completed' ? `/scoreboard/${ev.id}` :
-          `/manager?event=${ev.id}`,
+      to: status === 'live' && canControl ? `/control?event=${ev.id}` :
+          status !== 'live' && status !== 'completed' && runsMeets ? `/manager?event=${ev.id}` :
+          `/scoreboard/${ev.id}`,
       _score: s,
     })
   }

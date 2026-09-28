@@ -205,7 +205,9 @@
       "alerts_dives_one": "loncatan sebelum yang aktif",
       "alerts_dives_many": "loncatan sebelum yang aktif",
       "alerts_hint": "Perkiraan peringatan pada penghitung 30 detik: 1 loncatan ≈ 30 detik, 2 loncatan ≈ 1 menit, 3 loncatan ≈ 90 detik. Peringatan dikirim untuk setiap nomor langsung yang Anda miliki anggota skuad di dalamnya.",
-      "alerts_enable_push": "Aktifkan push di perangkat ini"
+      "alerts_enable_push": "Aktifkan push di perangkat ini",
+      "alerts_push_blocked": "Notifikasi diblokir untuk situs ini. Izinkan di pengaturan browser, lalu coba lagi.",
+      "alerts_push_failed": "Tidak dapat mengaktifkan notifikasi push di perangkat ini."
     },
     "dive_lists": {
       "page_label": "Pelatih → Daftar loncatan",
@@ -235,7 +237,28 @@
       "withdraw_prompt": "Tarik {name} dari {event}?\n\nOpsional, masukkan alasan (terlihat di log audit + Ruang Kontrol):",
       "withdraw_confirm_title": "Tarik {name}?",
       "withdraw_confirm_body": "Ini menandai setiap ronde di nomor ini sebagai ditarik untuk {name}. Operator akan melihatnya di Ruang Kontrol dan papan skor penonton akan menampilkan perubahan tersebut. Pemulihan memerlukan pengelola kompetisi.",
-      "withdraw_failed": "Penarikan gagal"
+      "withdraw_failed": "Penarikan gagal",
+      "title": "Daftar loncatan",
+      "load_failed": "Gagal memuat daftar loncatan",
+      "load_failed_title": "Tidak dapat memuat daftar loncatan",
+      "synchro": "Sinkron",
+      "rounds_count": "{n} ronde",
+      "eligibility_aria": "Hak ubah pelatih",
+      "back_to_coach": "← Pelatih",
+      "back_to_dashboard": "Kembali ke dasbor pelatih",
+      "submitted_toast": "Daftar loncatan terkirim",
+      "withdrawn_toast": "{name} ditarik",
+      "this_event": "nomor ini",
+      "badge_host": "Federasi tuan rumah",
+      "badge_host_tip": "Tautan pelatih Anda berada di federasi tuan rumah nomor ini.",
+      "badge_invited": "Federasi undangan",
+      "badge_invited_tip": "Tautan pelatih Anda cocok dengan federasi undangan atlet.",
+      "badge_can_submit": "Dapat mengirim",
+      "badge_can_submit_tip": "Anda dapat mengirim atau mengubah daftar loncatan selama pendaftaran dibuka.",
+      "badge_can_withdraw": "Dapat menarik",
+      "badge_can_withdraw_tip": "Anda dapat menarik atlet terdaftar dari nomor ini.",
+      "badge_read_only": "Hanya baca",
+      "badge_read_only_tip": "Anda dapat melihat nomor ini, tetapi perubahan ditutup atau tidak diizinkan oleh tautan pelatih Anda."
     }
   },
   "home": {

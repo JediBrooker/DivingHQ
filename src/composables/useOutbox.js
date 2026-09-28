@@ -11,7 +11,7 @@
 // out to multiple IDB scans, one 'change' event triggers one refresh
 // and every consumer sees the same value.
 //
-import { ref, computed, watch, effectScope } from 'vue'
+import { ref, computed, watch, effectScope, onScopeDispose } from 'vue'
 import { createOutbox, createIdbBackend, STATUSES } from '@/lib/outbox'
 import { fingerprintFromUser } from '@/lib/userFingerprint'
 import { useSocket } from './useSocket'
@@ -25,6 +25,12 @@ let instance = null
 let instanceFingerprint = null   // whose queue the singleton is scoped to
 let refreshTimer = null
 let offlineScope = null   // detached effectScope owning the socket watch
+let offlineUserId = null  // whose socket that watch is on
+
+// How long a socket that has never connected gets before the banner
+// calls it offline (see the watch in useOutbox). A normal connect on
+// venue wifi lands well inside this.
+const FIRST_CONNECT_GRACE_MS = 4000
 
 const counts = ref({ pending: 0, inflight: 0, synced: 0, conflict: 0, failed: 0 })
 const offlineSince = ref(null)        // Date | null, set on disconnect, cleared on reconnect
@@ -77,8 +83,12 @@ export function getOutbox() {
     instance.on('change', refresh)
 
     // Initial scan, the outbox might have leftover entries from a
-    // prior session that didn't drain before the tab closed.
-    refresh()
+    // prior session that didn't drain before the tab closed. Clear out
+    // finished entries past the 72h retention first. outbox.js always
+    // said that happens at startup but nothing called gc(), so every
+    // synced score sat in IndexedDB for good, and a failed or conflicted
+    // one from last week kept the offline banner up on every visit.
+    instance.gc().catch(() => {}).finally(refresh)
 
     // Periodic refresh as a safety net in case a 'change' event
     // is dropped (e.g., the page was hidden and Visibility-paused).
@@ -93,8 +103,18 @@ export function getOutbox() {
 
 export function useOutbox() {
   const outbox = getOutbox()
+  const uid = useAuthStore().user?.id || null
 
+  // The socket is per identity, and after a sign-out its lease is dropped
+  // and it disconnects for good. A watch left on it would read "offline"
+  // forever for whoever signs in next, so rebuild it for the new user.
+  if (offlineScope && offlineUserId !== uid) {
+    offlineScope.stop()
+    offlineScope = null
+    offlineSince.value = null
+  }
   if (!offlineScope) {
+    offlineUserId = uid
     const socket = useSocket()
     // Track offline duration via the existing socket singleton.
     // We watch isConnected rather than subscribing to connect/
@@ -105,13 +125,31 @@ export function useOutbox() {
     // unmounts while the singleton state lives on, silently killing
     // offline tracking for every later consumer. Learned that one
     // the hard way.
+    //
+    // A socket that hasn't connected YET isn't an outage. On a fresh
+    // page load it's still dialling in, and reading that as offline
+    // put "Offline for 0s" up on every load of the judge, diver and
+    // coach screens once the banner showed again. So the first look
+    // gets a grace period; a real drop (connected, then not) counts
+    // straight away, and a page opened with no network still says so,
+    // dated from when it opened.
     offlineScope = effectScope(true)
     offlineScope.run(() => {
+      let graceTimer = null
+      onScopeDispose(() => clearTimeout(graceTimer))
       watch(socket.isConnected, (connected, was) => {
-        if (!connected && was !== false) {
-          offlineSince.value = new Date()
-        } else if (connected) {
+        clearTimeout(graceTimer)
+        graceTimer = null
+        if (connected) {
           offlineSince.value = null
+        } else if (was === true) {
+          offlineSince.value = new Date()
+        } else if (offlineSince.value === null) {
+          const since = new Date()
+          graceTimer = setTimeout(() => {
+            graceTimer = null
+            if (!socket.isConnected.value) offlineSince.value = since
+          }, FIRST_CONNECT_GRACE_MS)
         }
       }, { immediate: true })
     })
@@ -124,16 +162,21 @@ export function useOutbox() {
     lastSyncedAt,
     isOffline: computed(() => offlineSince.value !== null),
     pendingCount: computed(() => counts.value.pending),
+    // Everything the server hasn't confirmed yet: queued plus mid-send.
+    // An inflight entry is just as unsent as a queued one if the tab
+    // goes away now, so leave-page guards should count both.
+    unsyncedCount: computed(() => counts.value.pending + counts.value.inflight),
     failedCount: computed(() => counts.value.failed),
     conflictCount: computed(() => counts.value.conflict),
     // "hasActivity": a single boolean components use to decide
     // whether to render the offline banner / sync chips at all.
-    // True when offline OR when there are pending / failed /
-    // conflict entries even though we're online (the drain might
-    // still be in flight, or hit a transient retry).
+    // True when offline OR when there are pending / inflight /
+    // failed / conflict entries even though we're online (the drain
+    // might still be in flight, or hit a transient retry).
     hasActivity: computed(() =>
       offlineSince.value !== null
       || counts.value.pending > 0
+      || counts.value.inflight > 0
       || counts.value.failed > 0
       || counts.value.conflict > 0
     ),
@@ -153,6 +196,7 @@ export function _resetOutboxForTests() {
     offlineScope.stop()
     offlineScope = null
   }
+  offlineUserId = null
   instance = null
   instanceFingerprint = null
   counts.value = { pending: 0, inflight: 0, synced: 0, conflict: 0, failed: 0 }

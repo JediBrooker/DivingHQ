@@ -25,6 +25,11 @@
 // that actually changed), and the SchedulerView turns that into a
 // PUT /api/blocks/:id.
 //
+// Gestures start on pointerdown (see SchedulerView). They used to start
+// on mousedown while listening for pointer events, and on touch the
+// emulated mousedown fires AFTER pointerup, so a tap armed a gesture
+// that the next touch then committed.
+//
 // We deliberately didn't pull in a drag library for this. The math
 // above is the whole thing, the rest is just bookkeeping for the
 // shift-key snap and the cancel-on-Escape affordance.
@@ -93,6 +98,7 @@ export function useBlockDrag({
     if (!active) return
     document.removeEventListener('pointermove', active.onMove)
     document.removeEventListener('pointerup', active.onUp)
+    document.removeEventListener('pointercancel', cancel)
     document.removeEventListener('keydown', active.onKey)
     active = null
     dragState.value = null
@@ -197,6 +203,11 @@ export function useBlockDrag({
     active = { onMove, onUp, onKey }
     document.addEventListener('pointermove', onMove)
     document.addEventListener('pointerup', onUp, { once: true })
+    // A touch that turns into a scroll ends in pointercancel, not
+    // pointerup. Without this the gesture stayed armed (Escape was the
+    // only other way out, and a tablet has no keyboard): the next
+    // touch's pointerup committed a move by the scroll distance.
+    document.addEventListener('pointercancel', cancel)
     document.addEventListener('keydown', onKey)
   }
 

@@ -205,7 +205,9 @@
       "alerts_dives_one": "skok prije aktivnog",
       "alerts_dives_many": "skokova prije aktivnog",
       "alerts_hint": "Približna najava uz 30s mjerač: 1 skok ≈ 30s, 2 skoka ≈ 1 min, 3 skoka ≈ 90s. Upozorenja se šalju za svako natjecanje uživo u kojem imate skakača.",
-      "alerts_enable_push": "Uključi push obavijesti na ovom uređaju"
+      "alerts_enable_push": "Uključi push obavijesti na ovom uređaju",
+      "alerts_push_blocked": "Obavijesti su blokirane za ovu stranicu. Dopustite ih u postavkama preglednika, a zatim pokušajte ponovno.",
+      "alerts_push_failed": "Push obavijesti nije bilo moguće uključiti na ovom uređaju."
     },
     "dive_lists": {
       "page_label": "Trener → Liste skokova",
@@ -235,7 +237,28 @@
       "withdraw_prompt": "Povući {name} iz {event}?\n\nMožete navesti razlog (vidljiv u dnevniku revizije + Kontrolnoj sobi):",
       "withdraw_confirm_title": "Povući {name}?",
       "withdraw_confirm_body": "Ovo označava svaku rundu ovog natjecanja kao povučenu za {name}. Operater će to vidjeti u Kontrolnoj sobi i pločica za gledatelje će odražavati promjenu. Vraćanje zahtijeva menadžera natjecanja.",
-      "withdraw_failed": "Povlačenje nije uspjelo"
+      "withdraw_failed": "Povlačenje nije uspjelo",
+      "title": "Liste skokova",
+      "load_failed": "Učitavanje lista skokova nije uspjelo",
+      "load_failed_title": "Liste skokova nije moguće učitati",
+      "synchro": "Sinkro",
+      "rounds_count": "{n} rundi",
+      "eligibility_aria": "Trenerova prava uređivanja",
+      "back_to_coach": "← Trener",
+      "back_to_dashboard": "Natrag na trenerovu ploču",
+      "submitted_toast": "Lista skokova poslana",
+      "withdrawn_toast": "{name} povučen/a",
+      "this_event": "ovo natjecanje",
+      "badge_host": "Savez domaćin",
+      "badge_host_tip": "Vaša trenerska veza pripada savezu domaćinu natjecanja.",
+      "badge_invited": "Pozvani savez",
+      "badge_invited_tip": "Vaša trenerska veza odgovara pozvanom savezu skakača.",
+      "badge_can_submit": "Može poslati",
+      "badge_can_submit_tip": "Dok su prijave otvorene, možete slati ili uređivati liste skokova.",
+      "badge_can_withdraw": "Može povući",
+      "badge_can_withdraw_tip": "Prijavljene skakače možete povući s ovog natjecanja.",
+      "badge_read_only": "Samo čitanje",
+      "badge_read_only_tip": "Ovo natjecanje možete pregledavati, ali izmjene su zatvorene ili ih vaša trenerska veza ne dopušta."
     }
   },
   "home": {

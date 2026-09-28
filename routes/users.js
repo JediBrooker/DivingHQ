@@ -102,11 +102,17 @@ module.exports = function createUsersRouter({
       // arrays of built-in types, so we cast each role to text to
       // get a real string[] back instead of a raw "{judge,...}"
       // string the frontend would silently mishandle.
+      //
+      // date_of_birth goes out as text. As a DATE node-pg makes it a Date
+      // at local midnight, which serialises as the day before on a box
+      // east of UTC, and the User Manager drawer can neither show nor
+      // save that (PUT /profile wants YYYY-MM-DD).
       const isSysAdmin = !!req.user.is_system_admin;
       const r = await pool.query(
         `SELECT u.id, u.username, u.full_name, u.is_system_admin,
                 u.email, u.email_verified_at,
-                u.date_of_birth, u.gender, u.nationality, u.suspended_at,
+                to_char(u.date_of_birth, 'YYYY-MM-DD') AS date_of_birth,
+                u.gender, u.nationality, u.suspended_at,
                 u.org_id,  o.name AS org_name,  o.country_code, o.slug AS org_slug,
                 u.club_id, c.name AS club_name, c.short_code AS club_code,
                 COALESCE(

@@ -17,6 +17,7 @@ import SponsorRotation from '@/components/scoreboard/SponsorRotation.vue'
 import FeePreviewCard from '@/components/payments/FeePreviewCard.vue'
 import MeetBundleCard from '@/components/payments/MeetBundleCard.vue'
 import { useFeaturesStore } from '@/stores/features'
+import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
 const router = useRouter()
@@ -104,6 +105,12 @@ async function load(id) {
       { credentials: 'same-origin' },
       {
         maxAgeMs: MEET_METADATA_TTL_MS,
+        // The response depends on who's asking: org members also get the
+        // meet's private Upcoming events. Without this it was cached under
+        // the shared 'anon' key, and IndexedDB outlives a session that ends
+        // by cookie expiry or closing the browser, so the next anonymous
+        // visitor on that device was served the member's event list.
+        fingerprint: useAuthStore().fingerprint,
         onUpdate: (fresh) => {
           if (!fresh) return
           meet.value = fresh.meet

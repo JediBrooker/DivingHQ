@@ -29,7 +29,9 @@ When operations are queued, a **badge** appears next to the indicator showing th
 
 When the connection comes back, the outbox drains automatically — no button to press, no manual intervention. Operations replay in the exact order they were performed (FIFO), so a sequence like "submit score → advance diver → submit score" applies correctly on the server. You'll see the pending count tick down as each operation confirms.
 
-Each operation retries up to 5 times with exponential backoff (1 second, 2 seconds, 4 seconds, up to 16 seconds between attempts). If an operation still fails after all 5 attempts, it's marked as failed and surfaced in the UI so you can investigate. In practice, transient failures almost always resolve on the first or second retry once the network is back.
+Each operation retries up to 5 times with exponential backoff (1 second, 2 seconds, 4 seconds, up to 16 seconds between attempts). Only a real answer from the server counts as an attempt: time spent offline never uses them up, however long the outage and however many operations you queue. If an operation still fails after all 5 attempts, it's marked as failed and surfaced in the UI so you can investigate. The offline banner on the judge, diver and coach screens has a **Retry** button that puts failed operations back in the queue. In practice, transient failures almost always resolve on the first or second retry once the network is back.
+
+If the page is reloaded or closed while an operation is still sending, the outbox picks it up again next time the page is open and sends it once more. The idempotency key stops it being applied twice.
 
 ## For judges
 
@@ -71,7 +73,7 @@ The most important thing: **a dropped connection during scoring is not an emerge
 | A device runs out of battery or crashes mid-meet | Queued scores in IndexedDB persist across browser restarts. Charge the device, reopen the browser, navigate back to the judging page — the queue resumes draining. |
 | A device is physically destroyed | Use the paper backup. The meet manager can re-enter scores from the paper judging cards using the [score correction modal](/guide/running-a-meet#correcting-a-score) in the Control Room. |
 | The pending count stays high after reconnecting | The outbox is retrying. Give it 30 seconds. If the count doesn't drop, check whether the server is reachable (the issue may be upstream, not local). |
-| A failed badge (red) appears | An operation exhausted its 5 retry attempts. Check the Control Room for details. The most common cause is a server-side conflict (e.g., two operators advancing the same event), which can be resolved from the conflict tray. |
+| A failed badge (red) appears | The server turned an operation down 5 times. Check the Control Room for details. The most common cause is a server-side conflict (e.g., two operators advancing the same event), which can be resolved from the conflict tray. Once the cause is fixed, **Retry** in the offline banner sends it again. |
 
 ## Technical details
 
@@ -79,7 +81,7 @@ For the technically curious:
 
 - The outbox uses **IndexedDB** (`divinghq-outbox` database), not localStorage. IndexedDB is durable, has no practical size limit for this use case, and doesn't block the main thread.
 - Operations are sent via **Socket.IO** with acknowledgment callbacks — the server acks each operation so the outbox knows it was received. If the socket is unavailable, operations fall back to **HTTP POST** with an idempotency key header.
-- Retry uses **exponential backoff** — 1s, 2s, 4s, 8s, 16s between attempts, capped at 5 attempts total.
+- Retry uses **exponential backoff** — 1s, 2s, 4s, 8s, 16s between attempts, capped at 5 attempts total. A send that never reaches the server (socket down, network error) isn't counted, and it pauses the queue so nothing behind it can overtake.
 - **FIFO ordering** guarantees operations apply in the sequence the operator performed them. An advance-then-hold replays as advance-then-hold, never the reverse.
 - Each operation carries a **UUID v4 idempotency key**. The server's idempotency table (72-hour retention) deduplicates replayed operations, so a reconnect race never double-applies a score.
 - The outbox is **scoped per user** — logging out and logging in as a different user on the same device doesn't drain the first user's queue.

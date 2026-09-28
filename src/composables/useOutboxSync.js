@@ -24,22 +24,35 @@
 //     before there IS a user id would open an unauthenticated socket that
 //     just fails and retries.
 
+//   * The lease on the socket follows the identity. This used to call
+//     useSocket() in the watcher, which took a pooled lease nobody ever
+//     released, so after sign-out the previous user's socket stayed
+//     connected and authenticated as them, still in their rooms, and any
+//     Control Room lease they held (freed only on disconnect) kept the
+//     next operator locked out until a full reload.
+
 import { watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
-import { useSocket } from './useSocket'
-import { armOutboxDrain } from './useHttpOutbox'
+import { acquireSocket } from './useSocket'
+import { armOutboxDrain, disarmOutboxDrain } from './useHttpOutbox'
 
 export function useOutboxSync() {
   const auth = useAuthStore()
+  let lease = null
 
   watch(
     () => auth.user?.id,
     (id) => {
-      if (!id) return
-      // useSocket() outside a component setup: it checks getCurrentInstance()
-      // before registering onUnmounted, so this just skips the auto-release.
-      // Which is what we want, the socket should outlive every route.
-      armOutboxDrain(auth, useSocket())
+      if (lease) {
+        lease.release()
+        lease = null
+      }
+      if (!id) {
+        disarmOutboxDrain()
+        return
+      }
+      lease = acquireSocket({ userId: id })
+      armOutboxDrain(auth, lease.socket)
     },
     { immediate: true },
   )

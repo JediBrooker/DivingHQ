@@ -12,21 +12,30 @@
  *
  * Place at the top of any view that initiates writes the outbox
  * tracks (JudgeView, ControlView, CoachView, CompetitorView).
- * Doesn't render anything when the feature flag is off or there's
- * nothing to show.
+ * Doesn't render anything when there's nothing to show. It used to
+ * also wait on an `enabled` flag from useOutbox, which went away when
+ * the outbox became always-on, so the banner silently never showed.
  */
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useOutbox } from '@/composables/useOutbox'
+import { retryFailedActions } from '@/composables/useHttpOutbox'
 
 const {
-  enabled,
   hasActivity,
   isOffline,
   offlineSince,
-  pendingCount,
+  unsyncedCount: pendingCount,
   failedCount,
   conflictCount,
 } = useOutbox()
+
+// Failed entries never retry on their own (the server said no five
+// times), so this is the way to send them again once the cause is fixed.
+const retrying = ref(false)
+async function retryFailed() {
+  retrying.value = true
+  try { await retryFailedActions() } finally { retrying.value = false }
+}
 
 // Human-readable elapsed time since disconnect. Updates every
 // minute via the composable's 30s refresh tick; resolution to the
@@ -44,7 +53,7 @@ const offlineDurationLabel = computed(() => {
 
 <template>
   <Transition name="offline-banner">
-    <div v-if="enabled && hasActivity"
+    <div v-if="hasActivity"
          :class="['offline-banner', {
            'offline-banner--offline': isOffline,
            'offline-banner--conflict': conflictCount > 0,
@@ -74,6 +83,11 @@ const offlineDurationLabel = computed(() => {
                 ? $t('offline_banner.failed_one')
                 : $t('offline_banner.failed_many', { n: failedCount }) }}
             </span>
+            <button type="button"
+                    class="offline-banner-retry"
+                    data-testid="offline-banner-retry"
+                    :disabled="retrying"
+                    @click="retryFailed">{{ $t('common.retry') }}</button>
           </template>
           <template v-if="conflictCount > 0">
             ·
@@ -145,6 +159,18 @@ const offlineDurationLabel = computed(() => {
   font-size: 11.5px;
 }
 .offline-banner-failed { color: #ef4444; font-weight: 600; }
+.offline-banner-retry {
+  margin-inline-start: 0.35rem;
+  padding: 0.1rem 0.5rem;
+  border: 1px solid rgba(239, 68, 68, 0.5);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+.offline-banner-retry:hover:not(:disabled) { border-color: #ef4444; }
+.offline-banner-retry:disabled { opacity: 0.5; cursor: default; }
 .offline-banner-conflict { color: #d946ef; font-weight: 600; }
 
 @keyframes pulse {

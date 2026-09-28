@@ -205,7 +205,9 @@
       "alerts_dives_one": "hyppy ennen aktiivista",
       "alerts_dives_many": "hyppyä ennen aktiivista",
       "alerts_hint": "Likimääräinen ennakkovaroitus 30 s sekuntikellolla: 1 hyppy ≈ 30 s, 2 hyppyä ≈ 1 min, 3 hyppyä ≈ 90 s. Hälytykset lähetetään kaikkiin live-kilpailuihin, joissa sinulla on hyppääjä.",
-      "alerts_enable_push": "Ota push-ilmoitukset käyttöön tällä laitteella"
+      "alerts_enable_push": "Ota push-ilmoitukset käyttöön tällä laitteella",
+      "alerts_push_blocked": "Ilmoitukset on estetty tältä sivustolta. Salli ne selaimen asetuksista ja yritä uudelleen.",
+      "alerts_push_failed": "Push-ilmoituksia ei voitu ottaa käyttöön tällä laitteella."
     },
     "dive_lists": {
       "page_label": "Valmentaja → Hyppylistat",
@@ -235,7 +237,28 @@
       "withdraw_prompt": "Vedetäänkö {name} pois kilpailusta {event}?\n\nVoit halutessasi antaa syyn (näkyy tarkastuslokissa + Ohjaamossa):",
       "withdraw_confirm_title": "Vedetäänkö {name} pois?",
       "withdraw_confirm_body": "Tämä merkitsee jokaisen kierroksen tässä kilpailussa vetäytyneeksi käyttäjälle {name}. Käyttäjä näkee sen Ohjaamossa ja katsojien tulostaulu päivittyy. Palauttaminen vaatii kilpailupäällikön.",
-      "withdraw_failed": "Vetäytyminen epäonnistui"
+      "withdraw_failed": "Vetäytyminen epäonnistui",
+      "title": "Hyppylistat",
+      "load_failed": "Hyppylistojen lataaminen epäonnistui",
+      "load_failed_title": "Hyppylistoja ei voitu ladata",
+      "synchro": "Synkro",
+      "rounds_count": "{n} kierrosta",
+      "eligibility_aria": "Valmentajan muokkausoikeudet",
+      "back_to_coach": "← Valmentaja",
+      "back_to_dashboard": "Takaisin valmentajan paneeliin",
+      "submitted_toast": "Hyppylista lähetetty",
+      "withdrawn_toast": "{name} vedetty pois",
+      "this_event": "tämä kilpailu",
+      "badge_host": "Järjestävä liitto",
+      "badge_host_tip": "Valmentajalinkkisi kuuluu kilpailun järjestävään liittoon.",
+      "badge_invited": "Kutsuttu liitto",
+      "badge_invited_tip": "Valmentajalinkkisi vastaa hyppääjän kutsuttua liittoa.",
+      "badge_can_submit": "Voi lähettää",
+      "badge_can_submit_tip": "Voit lähettää tai muokata hyppylistoja, kun ilmoittautuminen on auki.",
+      "badge_can_withdraw": "Voi vetää pois",
+      "badge_can_withdraw_tip": "Voit vetää ilmoittautuneita hyppääjiä pois tästä kilpailusta.",
+      "badge_read_only": "Vain luku",
+      "badge_read_only_tip": "Voit katsoa tätä kilpailua, mutta muokkaus on suljettu tai valmentajalinkkisi ei salli sitä."
     }
   },
   "home": {

@@ -33,6 +33,7 @@ import { RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useSocket } from '@/composables/useSocket'
+import { useSocketEvent } from '@/composables/useSocketEvent'
 import { usePush } from '@/composables/usePush'
 import { diveDescription } from '@/composables/useDiveLabel'
 import { showSuccess, showError } from '@/composables/useNotify'
@@ -118,6 +119,16 @@ function onFinalScoreAnnounced() { scheduleReload() }
 function onMeetHeld()            { scheduleReload() }
 function onMeetResumed()         { scheduleReload() }
 
+// Rooms don't survive a reconnect (the server has no connection state
+// recovery), and subscribedEvents still listed every id, so load() never
+// joined them again. One wifi blip or a deploy restart and the cards
+// froze until a manual refresh. Forget the joins and reload, which
+// rejoins everything and catches up on whatever happened meanwhile.
+useSocketEvent(socket, 'connect', () => {
+  subscribedEvents.value.clear()
+  scheduleReload()
+})
+
 async function loadAlertPrefs() {
   try {
     const prefs = await auth.apiFetch('/api/coach/alert-preferences')
@@ -146,15 +157,25 @@ async function saveAlertPrefs() {
   }
 }
 
+// The button offering push only makes sense where push can work and
+// isn't already on for this browser.
+const canOfferPush = computed(() =>
+  push.permission.value !== 'granted' && push.permission.value !== 'unsupported')
+
 async function enablePushAndPrefs() {
   // Subscribe to Web Push if we're not already, then toggle prefs on.
-  try {
-    await push.subscribe()
-    alertPrefs.value.enabled = true
-    await saveAlertPrefs()
-  } catch (err) {
-    showError(err.message || 'Push permission denied')
+  // subscribe() never throws, it reports { ok, reason }. This used to
+  // await it and switch alerts on regardless, so a coach who'd blocked
+  // notifications saw a success and then never got a push.
+  const res = await push.subscribe()
+  if (!res?.ok) {
+    showError(t(res?.reason === 'permission-denied'
+      ? 'coach.dashboard.alerts_push_blocked'
+      : 'coach.dashboard.alerts_push_failed'))
+    return
   }
+  alertPrefs.value.enabled = true
+  await saveAlertPrefs()
 }
 
 onMounted(() => {
@@ -291,7 +312,7 @@ const hasMultipleMeets = computed(() => groupedByMeet.value.length > 1)
         </div>
         <p class="alert-hint">{{ $t('coach.dashboard.alerts_hint') }}</p>
         <div class="alert-actions">
-          <button v-if="push.permission?.value !== 'granted'"
+          <button v-if="canOfferPush"
                   class="btn btn-primary btn-sm"
                   @click="enablePushAndPrefs"
                   :disabled="savingPrefs">

@@ -205,7 +205,9 @@
       "alerts_dives_one": "dive ahead of active",
       "alerts_dives_many": "dives ahead of active",
       "alerts_hint": "Approximate warning at a 30s shot-clock: 1 dive ≈ 30s, 2 dives ≈ 1 min, 3 dives ≈ 90s. Alerts fan out across every Live event you have a squad member in.",
-      "alerts_enable_push": "Enable push on this device"
+      "alerts_enable_push": "Enable push on this device",
+      "alerts_push_blocked": "Notifications are blocked for this site. Allow them in your browser settings, then try again.",
+      "alerts_push_failed": "Couldn't turn on push notifications on this device."
     },
     "dive_lists": {
       "page_label": "Coach → Dive Lists",
@@ -235,7 +237,28 @@
       "withdraw_prompt": "Withdraw {name} from {event}?\n\nOptionally enter a reason (visible in the audit log + Control Room):",
       "withdraw_confirm_title": "Withdraw {name}?",
       "withdraw_confirm_body": "This marks every round in this event as withdrawn for {name}. The operator will see it in the Control Room and the spectator scoreboard will reflect the change. Reinstating requires the meet manager.",
-      "withdraw_failed": "Withdraw failed"
+      "withdraw_failed": "Withdraw failed",
+      "title": "Dive Lists",
+      "load_failed": "Failed to load dive lists",
+      "load_failed_title": "Could not load dive lists",
+      "synchro": "Synchro",
+      "rounds_count": "{n} rounds",
+      "eligibility_aria": "Coach write eligibility",
+      "back_to_coach": "← Coach",
+      "back_to_dashboard": "Back to coach dashboard",
+      "submitted_toast": "Dive list submitted",
+      "withdrawn_toast": "{name} withdrawn",
+      "this_event": "this event",
+      "badge_host": "Host federation",
+      "badge_host_tip": "Your coach link is in the event host federation.",
+      "badge_invited": "Invited federation",
+      "badge_invited_tip": "Your coach link matches the diver's invited federation.",
+      "badge_can_submit": "Can submit",
+      "badge_can_submit_tip": "You can submit or edit dive lists while entries are open.",
+      "badge_can_withdraw": "Can withdraw",
+      "badge_can_withdraw_tip": "You can withdraw entered divers from this event.",
+      "badge_read_only": "Read only",
+      "badge_read_only_tip": "You can view this event, but writes are closed or not permitted by your coach link."
     }
   },
   "home": {

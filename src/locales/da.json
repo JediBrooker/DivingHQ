@@ -205,7 +205,9 @@
       "alerts_dives_one": "spring før den aktive",
       "alerts_dives_many": "spring før den aktive",
       "alerts_hint": "Omtrentlig forvarsel ved 30 s-ur: 1 spring ≈ 30 s, 2 spring ≈ 1 min, 3 spring ≈ 90 s. Notifikationerne sendes til alle livestævner, hvor du har en udspringer på holdet.",
-      "alerts_enable_push": "Slå pushbeskeder til på denne enhed"
+      "alerts_enable_push": "Slå pushbeskeder til på denne enhed",
+      "alerts_push_blocked": "Notifikationer er blokeret for dette websted. Tillad dem i browserens indstillinger, og prøv igen.",
+      "alerts_push_failed": "Push-notifikationer kunne ikke slås til på denne enhed."
     },
     "dive_lists": {
       "page_label": "Træner → Springlister",
@@ -235,7 +237,28 @@
       "withdraw_prompt": "Træk {name} ud af {event}?\n\nValgfrit: angiv en grund (synlig i revisionsloggen + Kontrolrummet):",
       "withdraw_confirm_title": "Træk {name} tilbage?",
       "withdraw_confirm_body": "Dette markerer alle runder i dette stævne som tilbagetrukket for {name}. Operatøren ser det i Kontrolrummet, og tilskuernes resultattavle afspejler ændringen. Genindsættelse kræver stævnelederen.",
-      "withdraw_failed": "Tilbagetrækning mislykkedes"
+      "withdraw_failed": "Tilbagetrækning mislykkedes",
+      "title": "Springlister",
+      "load_failed": "Springlisterne kunne ikke indlæses",
+      "load_failed_title": "Kunne ikke indlæse springlister",
+      "synchro": "Synkron",
+      "rounds_count": "{n} runder",
+      "eligibility_aria": "Trænerens redigeringsadgang",
+      "back_to_coach": "← Træner",
+      "back_to_dashboard": "Tilbage til trænerens oversigt",
+      "submitted_toast": "Springliste indsendt",
+      "withdrawn_toast": "{name} trukket",
+      "this_event": "denne konkurrence",
+      "badge_host": "Værtsforbund",
+      "badge_host_tip": "Din trænertilknytning er i konkurrencens værtsforbund.",
+      "badge_invited": "Inviteret forbund",
+      "badge_invited_tip": "Din trænertilknytning matcher udspringerens inviterede forbund.",
+      "badge_can_submit": "Kan indsende",
+      "badge_can_submit_tip": "Du kan indsende eller redigere springlister, mens tilmeldingen er åben.",
+      "badge_can_withdraw": "Kan trække",
+      "badge_can_withdraw_tip": "Du kan trække tilmeldte udspringere fra denne konkurrence.",
+      "badge_read_only": "Kun læsning",
+      "badge_read_only_tip": "Du kan se denne konkurrence, men ændringer er lukket eller ikke tilladt via din trænertilknytning."
     }
   },
   "home": {

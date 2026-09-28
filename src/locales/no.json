@@ -205,7 +205,9 @@
       "alerts_dives_one": "stup før den aktive",
       "alerts_dives_many": "stup før den aktive",
       "alerts_hint": "Omtrentlig forvarsel ved 30 s-klokke: 1 stup ≈ 30 s, 2 stup ≈ 1 min, 3 stup ≈ 90 s. Varslene går ut til alle direktesendte stevner der du har en stuper på laget.",
-      "alerts_enable_push": "Slå på push-varsler på denne enheten"
+      "alerts_enable_push": "Slå på push-varsler på denne enheten",
+      "alerts_push_blocked": "Varsler er blokkert for dette nettstedet. Tillat dem i nettleserinnstillingene, og prøv igjen.",
+      "alerts_push_failed": "Kunne ikke slå på push-varsler på denne enheten."
     },
     "dive_lists": {
       "page_label": "Trener → Stuplister",
@@ -235,7 +237,28 @@
       "withdraw_prompt": "Trekke {name} fra {event}?\n\nValgfritt: oppgi en grunn (synlig i revisjonsloggen + Kontrollrommet):",
       "withdraw_confirm_title": "Trekke {name}?",
       "withdraw_confirm_body": "Dette markerer hver runde i dette stevnet som trukket for {name}. Operatøren vil se det i Kontrollrommet, og tilskuernes resultattavle gjenspeiler endringen. Reinnsetting krever stevneleder.",
-      "withdraw_failed": "Trekking mislyktes"
+      "withdraw_failed": "Trekking mislyktes",
+      "title": "Stuplister",
+      "load_failed": "Kunne ikke laste stuplister",
+      "load_failed_title": "Stuplistene kan ikke lastes",
+      "synchro": "Synkron",
+      "rounds_count": "{n} runder",
+      "eligibility_aria": "Trenerens redigeringstilgang",
+      "back_to_coach": "← Trener",
+      "back_to_dashboard": "Tilbake til trenerens oversikt",
+      "submitted_toast": "Stupliste sendt inn",
+      "withdrawn_toast": "{name} trukket",
+      "this_event": "denne konkurransen",
+      "badge_host": "Vertsforbund",
+      "badge_host_tip": "Trenerkoblingen din er i konkurransens vertsforbund.",
+      "badge_invited": "Invitert forbund",
+      "badge_invited_tip": "Trenerkoblingen din samsvarer med stuperens inviterte forbund.",
+      "badge_can_submit": "Kan sende inn",
+      "badge_can_submit_tip": "Du kan sende inn eller endre stuplister mens påmeldingen er åpen.",
+      "badge_can_withdraw": "Kan trekke",
+      "badge_can_withdraw_tip": "Du kan trekke påmeldte stupere fra denne konkurransen.",
+      "badge_read_only": "Kun lesing",
+      "badge_read_only_tip": "Du kan se denne konkurransen, men endringer er stengt eller ikke tillatt med trenerkoblingen din."
     }
   },
   "home": {

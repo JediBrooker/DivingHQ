@@ -205,7 +205,9 @@
       "alerts_dives_one": "terjunan sebelum yang aktif",
       "alerts_dives_many": "terjunan sebelum yang aktif",
       "alerts_hint": "Amaran anggaran pada pemasa 30s: 1 terjunan ≈ 30s, 2 terjunan ≈ 1 min, 3 terjunan ≈ 90s. Amaran disebarkan ke setiap acara langsung yang anda mempunyai ahli skuad di dalamnya.",
-      "alerts_enable_push": "Aktifkan push di peranti ini"
+      "alerts_enable_push": "Aktifkan push di peranti ini",
+      "alerts_push_blocked": "Pemberitahuan disekat untuk laman ini. Benarkannya dalam tetapan pelayar, kemudian cuba lagi.",
+      "alerts_push_failed": "Tidak dapat menghidupkan pemberitahuan tolak pada peranti ini."
     },
     "dive_lists": {
       "page_label": "Jurulatih → Senarai terjunan",
@@ -235,7 +237,28 @@
       "withdraw_prompt": "Tarik {name} daripada {event}?\n\nPilihan, masukkan sebab (kelihatan dalam log audit + Bilik Kawalan):",
       "withdraw_confirm_title": "Tarik {name}?",
       "withdraw_confirm_body": "Ini menandakan setiap pusingan dalam acara ini sebagai ditarik untuk {name}. Operator akan melihatnya di Bilik Kawalan dan papan markah penonton akan menunjukkan perubahan itu. Mengembalikan memerlukan pengurus pertandingan.",
-      "withdraw_failed": "Penarikan diri gagal"
+      "withdraw_failed": "Penarikan diri gagal",
+      "title": "Senarai terjunan",
+      "load_failed": "Gagal memuatkan senarai terjunan",
+      "load_failed_title": "Tidak dapat memuatkan senarai terjunan",
+      "synchro": "Segerak",
+      "rounds_count": "{n} pusingan",
+      "eligibility_aria": "Kelayakan suntingan jurulatih",
+      "back_to_coach": "← Jurulatih",
+      "back_to_dashboard": "Kembali ke papan pemuka jurulatih",
+      "submitted_toast": "Senarai terjunan dihantar",
+      "withdrawn_toast": "{name} ditarik diri",
+      "this_event": "acara ini",
+      "badge_host": "Persekutuan tuan rumah",
+      "badge_host_tip": "Pautan jurulatih anda berada dalam persekutuan tuan rumah acara.",
+      "badge_invited": "Persekutuan jemputan",
+      "badge_invited_tip": "Pautan jurulatih anda sepadan dengan persekutuan jemputan penerjun.",
+      "badge_can_submit": "Boleh hantar",
+      "badge_can_submit_tip": "Anda boleh menghantar atau menyunting senarai terjunan semasa penyertaan dibuka.",
+      "badge_can_withdraw": "Boleh tarik diri",
+      "badge_can_withdraw_tip": "Anda boleh menarik diri penerjun yang berdaftar daripada acara ini.",
+      "badge_read_only": "Baca sahaja",
+      "badge_read_only_tip": "Anda boleh melihat acara ini, tetapi suntingan telah ditutup atau tidak dibenarkan oleh pautan jurulatih anda."
     }
   },
   "home": {

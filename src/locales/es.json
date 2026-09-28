@@ -205,7 +205,9 @@
       "alerts_dives_one": "salto antes del activo",
       "alerts_dives_many": "saltos antes del activo",
       "alerts_hint": "Aviso aproximado con cronómetro de 30s: 1 salto ≈ 30s, 2 saltos ≈ 1 min, 3 saltos ≈ 90s. Las alertas se envían en todos los eventos en vivo donde tengas un saltador.",
-      "alerts_enable_push": "Activar notificaciones en este dispositivo"
+      "alerts_enable_push": "Activar notificaciones en este dispositivo",
+      "alerts_push_blocked": "Las notificaciones están bloqueadas para este sitio. Permítelas en los ajustes del navegador y vuelve a intentarlo.",
+      "alerts_push_failed": "No se pudieron activar las notificaciones push en este dispositivo."
     },
     "dive_lists": {
       "page_label": "Entrenador → Listas de Saltos",
@@ -235,7 +237,28 @@
       "withdraw_prompt": "¿Retirar a {name} de {event}?\n\nOpcionalmente, indica un motivo (visible en el registro de auditoría + Sala de Control):",
       "withdraw_confirm_title": "¿Retirar a {name}?",
       "withdraw_confirm_body": "Esto marcará todas las rondas de este evento como retiradas para {name}. El operador lo verá en la Sala de Control y el marcador para espectadores reflejará el cambio. La reincorporación requiere al gestor del evento.",
-      "withdraw_failed": "Error al retirar"
+      "withdraw_failed": "Error al retirar",
+      "title": "Listas de saltos",
+      "load_failed": "No se pudieron cargar las listas de saltos",
+      "load_failed_title": "No se pueden cargar las listas de saltos",
+      "synchro": "Sincronizado",
+      "rounds_count": "{n} rondas",
+      "eligibility_aria": "Permisos de edición del entrenador",
+      "back_to_coach": "← Entrenador",
+      "back_to_dashboard": "Volver al panel de entrenador",
+      "submitted_toast": "Lista de saltos enviada",
+      "withdrawn_toast": "{name} retirado/a",
+      "this_event": "esta prueba",
+      "badge_host": "Federación anfitriona",
+      "badge_host_tip": "Tu vínculo de entrenador pertenece a la federación anfitriona de la prueba.",
+      "badge_invited": "Federación invitada",
+      "badge_invited_tip": "Tu vínculo de entrenador coincide con la federación invitada del saltador.",
+      "badge_can_submit": "Puede enviar",
+      "badge_can_submit_tip": "Puedes enviar o editar listas de saltos mientras las inscripciones estén abiertas.",
+      "badge_can_withdraw": "Puede retirar",
+      "badge_can_withdraw_tip": "Puedes retirar a saltadores inscritos de esta prueba.",
+      "badge_read_only": "Solo lectura",
+      "badge_read_only_tip": "Puedes ver esta prueba, pero los cambios están cerrados o tu vínculo de entrenador no los permite."
     }
   },
   "home": {

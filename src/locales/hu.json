@@ -205,7 +205,9 @@
       "alerts_dives_one": "ugrással az aktív előtt",
       "alerts_dives_many": "ugrással az aktív előtt",
       "alerts_hint": "Hozzávetőleges előjelzés 30 másodperces stopperrel: 1 ugrás ≈ 30 mp, 2 ugrás ≈ 1 perc, 3 ugrás ≈ 90 mp. Az értesítések minden élő versenyre kimennek, amelyen csapattag műugrója van.",
-      "alerts_enable_push": "Push-értesítések bekapcsolása ezen az eszközön"
+      "alerts_enable_push": "Push-értesítések bekapcsolása ezen az eszközön",
+      "alerts_push_blocked": "Az értesítések le vannak tiltva ezen a webhelyen. Engedélyezze őket a böngésző beállításaiban, majd próbálja újra.",
+      "alerts_push_failed": "Nem sikerült bekapcsolni a push-értesítéseket ezen az eszközön."
     },
     "dive_lists": {
       "page_label": "Edző → Ugráslisták",
@@ -235,7 +237,28 @@
       "withdraw_prompt": "Visszaléptetni a versenyzőt {name} a következő versenyről: {event}?\n\nOpcionálisan adjon meg indokot (az auditnaplóban és a Vezérlőteremben látható lesz):",
       "withdraw_confirm_title": "Visszaléptetés: {name}?",
       "withdraw_confirm_body": "Ez minden fordulót visszaléptetettnek jelöl a versenyzőhöz {name}. A kezelő látja a Vezérlőteremben, és a nézői eredménytábla is tükrözi a változást. A visszavételhez versenymenedzser szükséges.",
-      "withdraw_failed": "A visszaléptetés sikertelen"
+      "withdraw_failed": "A visszaléptetés sikertelen",
+      "title": "Ugráslisták",
+      "load_failed": "Nem sikerült betölteni az ugráslistákat",
+      "load_failed_title": "Az ugráslisták nem tölthetők be",
+      "synchro": "Szinkron",
+      "rounds_count": "{n} forduló",
+      "eligibility_aria": "Edzői szerkesztési jogosultság",
+      "back_to_coach": "← Edző",
+      "back_to_dashboard": "Vissza az edzői vezérlőpultra",
+      "submitted_toast": "Ugráslista beküldve",
+      "withdrawn_toast": "{name} visszalépett",
+      "this_event": "ez a versenyszám",
+      "badge_host": "Rendező szövetség",
+      "badge_host_tip": "Az edzői kapcsolata a versenyszám rendező szövetségéhez tartozik.",
+      "badge_invited": "Meghívott szövetség",
+      "badge_invited_tip": "Az edzői kapcsolata megegyezik a versenyző meghívott szövetségével.",
+      "badge_can_submit": "Beküldhet",
+      "badge_can_submit_tip": "Amíg a nevezés nyitva van, beküldheti vagy szerkesztheti az ugráslistákat.",
+      "badge_can_withdraw": "Visszaléptethet",
+      "badge_can_withdraw_tip": "A nevezett versenyzőket visszaléptetheti ebből a versenyszámból.",
+      "badge_read_only": "Csak olvasható",
+      "badge_read_only_tip": "Ezt a versenyszámot megtekintheti, de a módosítás lezárult, vagy az edzői kapcsolata nem engedi."
     }
   },
   "home": {

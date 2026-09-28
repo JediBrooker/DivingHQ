@@ -254,18 +254,20 @@ useSocketEvent(socket, 'connect', () => {
   joinEventRoom()
 })
 
-const { isOffline } = outboxState
+const { isOffline, unsyncedCount } = outboxState
 
+// unsyncedCount, not pendingCount: a score mid-send (waiting on its ack)
+// is lost just the same if the judge reloads now.
 function onJudgeBeforeUnload(e) {
-  if (!isOffline.value && pendingCount.value === 0) return
+  if (!isOffline.value && unsyncedCount.value === 0) return
   e.preventDefault()
 }
 
 onBeforeRouteLeave(() => {
-  if (!isOffline.value && pendingCount.value === 0) return true
+  if (!isOffline.value && unsyncedCount.value === 0) return true
   const msg = isOffline.value
     ? 'You are offline — leaving the Judge Terminal will lose queued scores. Stay on this page?'
-    : `${pendingCount.value} score(s) are still syncing. Leave anyway?`
+    : `${unsyncedCount.value} score(s) are still syncing. Leave anyway?`
   return window.confirm(msg) // eslint-disable-line no-alert
 })
 

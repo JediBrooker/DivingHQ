@@ -3,9 +3,8 @@
  *
  * Renders a tiny "history" pill inside a dive row. Clicking it
  * opens a popover with the per-dive audit rows pulled from
- * /api/events/:id/score-audit. Lazy-fetched on first open per
- * event, then cached on window so multiple buttons in the same
- * recap share one round trip.
+ * /api/events/:id/score-audit. Fetched on every open; the last copy
+ * this button saw (per user) shows straight away while it loads.
  *
  * Visibility: org_admin, meet_manager, or referee. Spectators
  * never see this, the audit log isn't a public artefact.
@@ -41,25 +40,28 @@ const loading = ref(false)
 const error   = ref('')
 const rows    = ref([])
 
-// One in-memory cache per page session, keyed by event id.
-function getCache() {
-  if (!window.__scoreAuditCache) window.__scoreAuditCache = new Map()
-  return window.__scoreAuditCache
-}
+// This used to be a window global keyed by event id and never cleared:
+// after a score correction, reopening showed the pre-correction trail
+// for the rest of the page's life, and it survived sign-out, so the next
+// admin in the same tab was shown it without the server being asked. Now
+// every open asks the server (which is what enforces access), and this
+// button's last copy only fills the popover while that's in flight.
+// Keyed by user as well as event so nobody sees someone else's copy.
+const lastSeen = new Map()
 
 async function loadIfNeeded() {
-  const cache = getCache()
-  if (cache.has(props.eventId)) {
-    rows.value = cache.get(props.eventId)
-    return
-  }
-  loading.value = true
+  const key = `${auth.user?.id || 'anon'}:${props.eventId}`
+  const cached = lastSeen.get(key)
+  if (cached) rows.value = cached
+  loading.value = !cached
   error.value = ''
   try {
     const data = await auth.apiFetch(`/api/events/${props.eventId}/score-audit`)
-    cache.set(props.eventId, data)
+    lastSeen.set(key, data)
     rows.value = data
   } catch (err) {
+    lastSeen.delete(key)
+    rows.value = []
     error.value = err.message || 'Failed to load history'
   } finally {
     loading.value = false

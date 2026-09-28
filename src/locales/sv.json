@@ -205,7 +205,9 @@
       "alerts_dives_one": "hopp före den aktiva",
       "alerts_dives_many": "hopp före den aktiva",
       "alerts_hint": "Ungefärlig förvarning vid 30 s-klocka: 1 hopp ≈ 30 s, 2 hopp ≈ 1 min, 3 hopp ≈ 90 s. Aviseringarna går ut för varje direktsänd tävling där du har en hoppare i laget.",
-      "alerts_enable_push": "Aktivera notiser på denna enhet"
+      "alerts_enable_push": "Aktivera notiser på denna enhet",
+      "alerts_push_blocked": "Aviseringar är blockerade för den här webbplatsen. Tillåt dem i webbläsarens inställningar och försök igen.",
+      "alerts_push_failed": "Det gick inte att aktivera push-aviseringar på den här enheten."
     },
     "dive_lists": {
       "page_label": "Tränare → Hopplistor",
@@ -235,7 +237,28 @@
       "withdraw_prompt": "Avanmäla {name} från {event}?\n\nAnge gärna en orsak (syns i revisionsloggen + Kontrollrummet):",
       "withdraw_confirm_title": "Avanmäla {name}?",
       "withdraw_confirm_body": "Detta markerar varje omgång i denna tävling som avanmäld för {name}. Operatören ser det i Kontrollrummet och åskådarnas resultattavla speglar ändringen. Att återanmäla kräver tävlingsledaren.",
-      "withdraw_failed": "Avanmälan misslyckades"
+      "withdraw_failed": "Avanmälan misslyckades",
+      "title": "Hopplistor",
+      "load_failed": "Det gick inte att läsa in hopplistor",
+      "load_failed_title": "Kunde inte läsa in hopplistor",
+      "synchro": "Synkro",
+      "rounds_count": "{n} omgångar",
+      "eligibility_aria": "Tränarens redigeringsbehörighet",
+      "back_to_coach": "← Tränare",
+      "back_to_dashboard": "Tillbaka till tränarens översikt",
+      "submitted_toast": "Hopplista skickad",
+      "withdrawn_toast": "{name} struken",
+      "this_event": "den här tävlingen",
+      "badge_host": "Värdförbund",
+      "badge_host_tip": "Din tränarkoppling hör till tävlingens värdförbund.",
+      "badge_invited": "Inbjudet förbund",
+      "badge_invited_tip": "Din tränarkoppling matchar hopparens inbjudna förbund.",
+      "badge_can_submit": "Kan skicka",
+      "badge_can_submit_tip": "Du kan skicka eller ändra hopplistor medan anmälan är öppen.",
+      "badge_can_withdraw": "Kan stryka",
+      "badge_can_withdraw_tip": "Du kan stryka anmälda hoppare från den här tävlingen.",
+      "badge_read_only": "Endast läsning",
+      "badge_read_only_tip": "Du kan se den här tävlingen, men ändringar är stängda eller inte tillåtna via din tränarkoppling."
     }
   },
   "home": {

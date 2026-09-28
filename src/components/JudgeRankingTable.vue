@@ -24,6 +24,7 @@
  */
 import { ref, onMounted, computed, watch } from 'vue'
 import { ordinal } from '@/lib/format'
+import { synchroSegmentsFor, segmentRows as segmentRowsFor } from '@/lib/judgeRankingSegments'
 
 // Two ways this component can get its data:
 //
@@ -78,45 +79,11 @@ const divers = computed(() => payloadView.value?.divers || [])
 const eventType = computed(() => payloadView.value?.event?.event_type || 'individual')
 const numJudges = computed(() => payloadView.value?.event?.number_of_judges || judges.value.length)
 
-// Synchro role assignment per WA Article 9.1.5.3 / 9.1.5.4. Mirrors
-// src/composables/useScoreCategories.js synchroJudgeGroups so the
-// table groups judges identically to how the scoreboard already
-// renders synchro chip groups.
-function synchroRoleFor(judgeNumber) {
-  const n = numJudges.value
-  if (eventType.value !== 'synchro_pair') return null
-  if (n === 9) {
-    if (judgeNumber <= 2) return 'a'
-    if (judgeNumber <= 4) return 'b'
-    return 'sync'
-  }
-  if (n === 11) {
-    if (judgeNumber <= 3) return 'a'
-    if (judgeNumber <= 6) return 'b'
-    return 'sync'
-  }
-  return null
-}
-
-// Group judges by synchro role for the segregated sub-tables.
-// Each segment renders its OWN matrix so the "what would the
-// standings be if every judge had scored like J" comparison only
-// pits same-role judges against same-role judges (Exec A judges
-// only see Diver A's execution; the cross-role comparison the
-// previous version surfaced was meaningless).
-const synchroSegments = computed(() => {
-  if (eventType.value !== 'synchro_pair') return null
-  const groups = { a: [], b: [], sync: [] }
-  for (const j of judges.value) {
-    const r = synchroRoleFor(j.judge_number)
-    if (r && groups[r]) groups[r].push(j)
-  }
-  return [
-    { role: 'a',    label: 'Exec A — Diver A execution', judges: groups.a },
-    { role: 'b',    label: 'Exec B — Diver B execution', judges: groups.b },
-    { role: 'sync', label: 'Synchronisation',            judges: groups.sync },
-  ].filter((g) => g.judges.length > 0)
-})
+// Synchro sub-tables: one per pool WA trims on its own (Art 9.1.5.3 for
+// 11 judges, 9.1.5.4 for 9). The rules live in the lib so they can be
+// tested; see src/lib/judgeRankingSegments.js.
+const synchroSegments = computed(() =>
+  synchroSegmentsFor(judges.value, numJudges.value, eventType.value))
 
 // Raw per-judge per-round WA dive-points (= score × DD × 3/5; the
 // server bakes in DD and the 0.6 synchro factor). Keyed
@@ -128,72 +95,12 @@ function divePointsOf(judgeId, competitorId, round) {
   const e = perDiveRanks.value[`${judgeId}:${competitorId}:${round}`]
   return e && e.judge_dive_points != null ? Number(e.judge_dive_points) : null
 }
-// WA per-role cancellation: drop one highest + one lowest, sum the
-// rest (heads up: ≤2 values means there's nothing to cancel).
-// Trimming the dive-points is equivalent to trimming the raw awards
-// since DD is constant within a (pair, round).
-function trimmedSum(vals) {
-  if (vals.length <= 2) return vals.reduce((a, b) => a + b, 0)
-  const sorted = [...vals].sort((a, b) => a - b)
-  return sorted.slice(1, -1).reduce((a, b) => a + b, 0)
-}
-// Awards KEPT in a role after the WA hi/lo cancellation: 3 of the 5
-// synchronisation judges; 1 of each execution sub-panel.
-function roleKeptCount(role) {
-  return role === 'sync' ? 3 : 1
-}
-// RANK() semantics with ties: sort rows by val() DESC (official
-// order as the tie-break), then write the rank back via set().
-function rankInto(rows, val, set) {
-  const sorted = [...rows].sort((a, b) =>
-    val(b) - val(a) || (a.diver.actual_rank - b.diver.actual_rank))
-  let prev = null, prevRank = 0
-  sorted.forEach((r, idx) => {
-    if (prev != null && Math.abs(val(r) - prev) < 1e-9) set(r, prevRank)
-    else { set(r, idx + 1); prevRank = idx + 1 }
-    prev = val(r)
-  })
-}
-// Per-segment rows, computed straight from the per-dive WA points.
-//   • segment_actual_total = the role's WA contribution to the pair
-//     total: Σ over rounds of (the role's awards, hi/lo cancelled,
-//     summed). Exec A + Exec B + Sync therefore add up to the real
-//     pair total.
-//   • cells[judge_id] = "if every judge in THIS role scored like J":
-//     kept-count × that judge's own dive-points total. Ranked within
-//     the segment so each sub-table is self-contained.
 function segmentRows(segment) {
-  const rounds = totalRounds.value
-  const kept = roleKeptCount(segment.role)
-  const rows = divers.value.map((d) => {
-    let actual = 0
-    const cells = {}
-    for (let rnd = 1; rnd <= rounds; rnd++) {
-      const pts = segment.judges
-        .map((j) => divePointsOf(j.judge_id, d.competitor_id, rnd))
-        .filter((v) => v != null)
-      if (pts.length) actual += trimmedSum(pts)
-    }
-    for (const j of segment.judges) {
-      let sum = 0, any = false
-      for (let rnd = 1; rnd <= rounds; rnd++) {
-        const p = divePointsOf(j.judge_id, d.competitor_id, rnd)
-        if (p != null) { sum += p; any = true }
-      }
-      cells[j.judge_id] = { total: any ? kept * sum : null, rank: null }
-    }
-    return { diver: d, segment_actual_total: actual, cells }
+  return segmentRowsFor(segment, {
+    divers: divers.value,
+    totalRounds: totalRounds.value,
+    divePointsOf,
   })
-  rankInto(rows, (r) => r.segment_actual_total,
-    (r, rank) => { r.segment_actual_rank = rank })
-  for (const j of segment.judges) {
-    rankInto(
-      rows.filter((r) => r.cells[j.judge_id].total != null),
-      (r) => r.cells[j.judge_id].total,
-      (r, rank) => { r.cells[j.judge_id].rank = rank },
-    )
-  }
-  return rows
 }
 // Tooltip for a synchro segment cell (role-scoped hypothetical).
 function segCellTip(diver, judge, cell, segment) {
@@ -659,7 +566,8 @@ const pdfHref = computed(() => `/api/events/${props.eventId}/judge-ranking-analy
   background: rgba(6, 182, 212, 0.08);
   color: var(--text-1, #f1f5f9);
 }
-.jra-segment-a .jra-segment-head    { border-color: var(--role-admin-fg);   background: var(--role-admin-bg);   color: var(--role-admin-fg); }
+.jra-segment-a .jra-segment-head,
+.jra-segment-exec .jra-segment-head { border-color: var(--role-admin-fg);   background: var(--role-admin-bg);   color: var(--role-admin-fg); }
 .jra-segment-b .jra-segment-head    { border-color: var(--role-manager-fg); background: var(--role-manager-bg); color: var(--role-manager-fg); }
 .jra-segment-sync .jra-segment-head { border-color: var(--role-diver-fg);   background: var(--role-diver-bg);   color: var(--role-diver-fg); }
 .jra-row:hover .jra-td { background: rgba(148, 163, 184, 0.05); }

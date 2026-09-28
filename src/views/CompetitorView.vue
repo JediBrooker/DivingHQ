@@ -39,6 +39,7 @@ const activeSlot = ref(-1)
 const searchInput = ref('')
 const activeHeightFilter = ref(null)
 const submitErr = ref('')
+const submitViolations = ref([])
 const loading = ref(false)
 const eventLoading = ref(false)
 const eventLoadError = ref('')
@@ -144,13 +145,17 @@ async function loadMyListStatus() {
     myListStatus.value = { entered: false, is_reserve: false, reserve_position: null, confirmed_at: null, dive_list_locks_at: null }
     return
   }
+  const eventId = currentEvent.value.id
+  let status
   try {
-    myListStatus.value = await auth.apiFetch(
-      `/api/competitor/list-status?event_id=${currentEvent.value.id}`,
-    )
+    status = await auth.apiFetch(`/api/competitor/list-status?event_id=${eventId}`)
   } catch {
-    myListStatus.value = { entered: false, is_reserve: false, reserve_position: null, confirmed_at: null, dive_list_locks_at: null }
+    status = { entered: false, is_reserve: false, reserve_position: null, confirmed_at: null, dive_list_locks_at: null }
   }
+  // A slower answer for an event the diver has since moved off mustn't
+  // land on the one they're looking at now.
+  if (currentEvent.value?.id !== eventId) return
+  myListStatus.value = status
 }
 
 async function confirmInheritedList() {
@@ -453,7 +458,15 @@ const searchResults = useDiveSearch(diveDirectory, {
   limit: 15,
 })
 
+// Each pick bumps this, and every await in onEventChange checks it
+// afterwards. Without that, on slow wifi a pick of A then B could finish
+// A last: the picker showed A's rounds and prescribed dives under B's
+// name in the dropdown, and submitList posted them under event B.
+let eventChangeSeq = 0
+
 async function onEventChange() {
+  const seq = ++eventChangeSeq
+  const stale = () => seq !== eventChangeSeq
   partnerId.value = ''
   partnerSearch.value = ''
   partnerOpen.value = false
@@ -470,8 +483,11 @@ async function onEventChange() {
   // guarantees the diver sees the operator's latest conditions
   // without forcing a page reload.
   try {
-    events.value = await auth.apiFetch('/api/events')
+    const fresh = await auth.apiFetch('/api/events')
+    if (stale()) return
+    events.value = fresh
   } catch { /* fall back to the cached list */ }
+  if (stale()) return
   currentEvent.value = events.value.find(e => e.id == selectedEventId.value) || null
   if (!currentEvent.value) return
   selectedDives.value = Array(currentEvent.value.total_rounds || 6).fill(null)
@@ -481,6 +497,7 @@ async function onEventChange() {
   // locked so openModal() refuses to re-open it.
   try {
     const rows = await auth.apiFetch(`/api/events/${currentEvent.value.id}/round-dives`)
+    if (stale()) return
     if (Array.isArray(rows) && rows.length) {
       // Resize selectedDives to match the prescribed-row count
       // (the operator may have added/removed slots since last
@@ -521,7 +538,9 @@ async function onEventChange() {
   // existing dive list so we can pre-fill the form (e.g. when
   // they advanced from a prior stage and the inherited list
   // should show in the picker rows).
+  if (stale()) return
   await loadMyListStatus()
+  if (stale()) return
   if (Array.isArray(myListStatus.value.dives) && myListStatus.value.dives.length) {
     // Resize selectedDives if needed, the diver-list endpoint
     // is the authoritative source when the operator hasn't
@@ -590,6 +609,7 @@ function setHeightFilter(h) {
 
 async function submitList() {
   submitErr.value = ''
+  submitViolations.value = []
   const eventId = selectedEventId.value
   const filled = selectedDives.value.filter(Boolean)
   if (!eventId || filled.length < selectedDives.value.length) {
@@ -622,6 +642,9 @@ async function submitList() {
     router.push('/dashboard')
   } catch (err) {
     submitErr.value = err.message || 'Submission failed. You may have already submitted for this event.'
+    // The validator says which round or limit it tripped on. Without
+    // this the diver only ever saw the one-line summary.
+    submitViolations.value = Array.isArray(err.violations) ? err.violations : []
   } finally {
     loading.value = false
   }
@@ -1229,7 +1252,11 @@ watch(currentEvent, async (ev) => {
             v-for="(dive, idx) in selectedDives"
             :key="idx"
             :class="['dive-row', dive ? 'filled' : '', isPrescribedRound(idx) ? 'locked' : '']"
+            role="button"
+            tabindex="0"
             @click="openModal(idx)"
+            @keydown.enter.self.prevent="openModal(idx)"
+            @keydown.space.self.prevent="openModal(idx)"
           >
             <div :class="['row-num', dive ? 'filled-num' : '']">{{ idx + 1 }}</div>
             <div class="row-info" v-if="dive">
@@ -1265,7 +1292,12 @@ watch(currentEvent, async (ev) => {
           </ul>
         </div>
 
-        <div v-if="submitErr" class="msg msg-error" style="margin-top:1rem">{{ submitErr }}</div>
+        <div v-if="submitErr" class="msg msg-error" style="margin-top:1rem">
+          {{ submitErr }}
+          <ul v-if="submitViolations.length" class="submit-violations">
+            <li v-for="v in submitViolations" :key="v">{{ v }}</li>
+          </ul>
+        </div>
         <button class="btn btn-primary-lg" style="margin-top:1.5rem"
                 @click="submitList"
                 :disabled="loading || !isCurrentEventOpen
@@ -1317,7 +1349,11 @@ watch(currentEvent, async (ev) => {
           v-for="d in searchResults"
           :key="d.id"
           class="result-item"
+          role="button"
+          tabindex="0"
           @click="selectDive(d)"
+          @keydown.enter.self.prevent="selectDive(d)"
+          @keydown.space.self.prevent="selectDive(d)"
         >
           <div>
             <div class="result-code">{{ d.dive_code }}<span class="result-pos">{{ d.position }}</span></div>
@@ -1334,6 +1370,10 @@ watch(currentEvent, async (ev) => {
 </template>
 
 <style scoped>
+/* Dive rows and search results are divs acting as buttons (keyboard
+   reachable via role/tabindex), so give them a visible focus ring. */
+.dive-row:focus-visible,.result-item:focus-visible{outline:2px solid var(--cyan);outline-offset:2px;}
+.submit-violations{margin:0.4rem 0 0;padding-inline-start:1.2rem;}
 .page-header{display:flex;align-items:center;justify-content:space-between;padding:1.5rem 2rem;border-bottom:1px solid var(--border);max-width:900px;margin:0 auto;}
 /* Back-to-dashboard is redundant inside the app shell sidebar. */
 .page-header .btn{display:none;}
