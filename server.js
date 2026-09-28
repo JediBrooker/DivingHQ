@@ -389,9 +389,15 @@ for (const [file, type] of [["robots.txt", "text/plain"], ["sitemap.xml", "appli
 // name, so a URL there never changes what it points at. Browsers and the
 // Cloudflare edge can keep those for a year without asking again. The
 // rest of dist/ (index.html, sw.js, the manifest, icons) isn't hashed and
-// keeps the default max-age=0 revalidation. A name that isn't on disk
-// falls through to the next mount and then the SPA fallback, as before.
-app.use("/assets", express.static(path.join(__dirname, "dist", "assets"), { immutable: true, maxAge: "1y" }));
+// keeps the default max-age=0 revalidation.
+//
+// A name that isn't on disk is a 404 right here (fallthrough: false hands
+// it to the error handler at the bottom). It used to fall through to the
+// SPA fallback and come back as index.html with a 200: a tab still on the
+// previous build lazy-loading its old ManagerView-<hash>.js got a MIME
+// error instead of a clean failure, and the service worker cached the
+// HTML under the .js URL for good.
+app.use("/assets", express.static(path.join(__dirname, "dist", "assets"), { immutable: true, maxAge: "1y", fallthrough: false }));
 app.use(express.static(path.join(__dirname, 'dist')))
 
 // [SECTION: DB POOL & JWT_SECRET]
@@ -1475,6 +1481,8 @@ app.use((req, res, next) => {
   if (req.method !== 'GET') return next();
   if (req.path.startsWith('/api/')) return next();
   if (req.path.startsWith('/socket.io/')) return next();
+  // Build output never gets the shell; see the /assets mount above.
+  if (req.path.startsWith('/assets/')) return next();
   sendSpaShell(req, res, next);
 });
 

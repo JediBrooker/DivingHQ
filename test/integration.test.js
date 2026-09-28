@@ -7740,3 +7740,16 @@ test("a malformed or oversized JSON body gets a JSON error, not Express's HTML p
   assert.equal(big.body.code, "body_too_large");
   assert.doesNotMatch(big.text, /<html|at \w+ \(/i, "no HTML page, no stack trace");
 });
+
+// A hashed chunk that isn't on disk (an old build's, after a deploy) has
+// to be a 404. The SPA fallback used to answer it with index.html and a
+// 200, which the service worker then cached under the .js URL for good.
+test("a missing /assets file is a 404, never the SPA shell", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  for (const p of ["/assets/ManagerView-OLDHASH.js", "/assets/app-OLD.css", "/assets/nested/x.js"]) {
+    const r = await b1Kit.request("GET", p);
+    assert.equal(r.status, 404, p);
+    assert.doesNotMatch(r.headers["content-type"] || "", /text\/html/, p);
+  }
+});

@@ -42,7 +42,12 @@
 // invalidating every previously-cached asset hash. Bumping the
 // cache forces returning PWA users to re-fetch the shell on
 // next visit instead of getting a blank page from stale hashes.
-const CACHE = "divinghq-shell-v7";
+// v7 → v8: a missing /assets/* file used to come back from the server as
+// the SPA shell with a 200, and the asset branch below cached that HTML
+// under the chunk's URL. The server 404s those now and nothing here
+// caches HTML for a non-navigation request; the bump clears entries
+// that were already poisoned.
+const CACHE = "divinghq-shell-v8";
 // No "/" here: the offline navigation fallback only ever reads
 // /index.html, so a cached "/" was a wasted request on install.
 const SHELL = [
@@ -52,6 +57,12 @@ const SHELL = [
   "/icon-512.png",
   "/manifest.webmanifest",
 ];
+
+// An HTML answer to a request that isn't a page load is the SPA shell
+// standing in for a file that doesn't exist. Hand it back, never keep it.
+function isShellStandIn(res) {
+  return (res.headers.get("content-type") || "").includes("text/html");
+}
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -110,7 +121,7 @@ self.addEventListener("fetch", (event) => {
       caches.match(request).then((cached) => {
         if (cached) return cached;
         return fetch(request).then((res) => {
-          if (res.status === 200) {
+          if (res.status === 200 && !isShellStandIn(res)) {
             const clone = res.clone();
             caches.open(CACHE).then((c) => c.put(request, clone)).catch(() => {});
           }
@@ -130,7 +141,7 @@ self.addEventListener("fetch", (event) => {
   event.respondWith(
     fetch(request)
       .then((res) => {
-        if (res.status === 200) {
+        if (res.status === 200 && !isShellStandIn(res)) {
           const clone = res.clone();
           caches.open(CACHE).then((c) => c.put(request, clone)).catch(() => {});
         }
