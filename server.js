@@ -1415,18 +1415,20 @@ app.use(limitRoutes(createExportLimiter({ limit: 120 }), require("./routes/archi
 app.use(limitRoutes(createSearchLimiter(), require("./routes/dr-archive")({ pool, readPool, requireSystemAdmin })));
 
 // Optional scheduled DiveRecorder incremental sync. Off by default;
-// set DR_IMPORT_SYNC_HOURS=24 (or any positive number) to pull newly
-// published meets on that cadence. onlyNew mode keeps each run cheap.
-// Uses the same single-flight runner as the sysadmin "import now"
-// button, so a manual run and the schedule never overlap.
+// set DR_IMPORT_SYNC_HOURS=24 (or any positive number, a month is fine)
+// to pull newly published meets on that cadence. onlyNew mode keeps each
+// run cheap. Uses the same single-flight runner as the sysadmin "import
+// now" button, so a manual run and the schedule never overlap.
+// repeatEvery rather than setInterval, which turns anything over ~596
+// hours into a 1 ms loop.
 {
   const syncHours = Number(process.env.DR_IMPORT_SYNC_HOURS || 0);
   if (syncHours > 0) {
-    const { startImport } = require("./lib/diverecorder-import-runner");
+    const { startImport, repeatEvery } = require("./lib/diverecorder-import-runner");
     logger.info({ syncHours }, "DiveRecorder scheduled sync enabled");
-    setInterval(() => {
+    repeatEvery(syncHours * 60 * 60 * 1000, () => {
       startImport(pool, { onlyNew: true, trigger: "schedule" });
-    }, syncHours * 60 * 60 * 1000).unref();
+    });
   }
 }
 
