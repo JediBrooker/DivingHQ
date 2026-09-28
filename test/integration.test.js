@@ -7214,3 +7214,50 @@ test("a guardian link approved and rejected at once keeps the first decision", a
     await teardownFixture(st);
   }
 });
+
+test("transferring away drops the old org's roles, so coming back doesn't restore org_admin", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const X = await setupFixture({ withEvent: false });
+  const Y = await setupFixture({ withEvent: false });
+  try {
+    const sys = await claimKit.login("admin", "admin");
+    const uname = `int-b3tr-${X.slug}`;
+    const mover = await insertUser({ orgId: X.orgId, role: "org_admin", username: uname, fullName: "Travelling Admin" });
+    await pool.query("INSERT INTO user_org_roles (user_id, org_id, role) VALUES ($1, $2, 'meet_manager')", [mover, X.orgId]);
+    const move = async (toOrg) => {
+      const tok = await b3Login(uname);
+      const made = await fetchJson("POST", "/api/club-change-requests", { token: tok, body: { to_org_id: toOrg } });
+      assert.equal(made.status, 201, JSON.stringify(made.body));
+      const ok = await fetchJson("POST", `/api/club-change-requests/${made.body.id}/review`, { token: sys.token, body: { decision: "approved" } });
+      assert.equal(ok.body.status, "approved", JSON.stringify(ok.body));
+    };
+    const rolesNow = async () => (await fetchJson("GET", "/api/auth/me", { token: await b3Login(uname) })).body.user.org_roles.slice().sort();
+
+    await move(Y.orgId);
+    assert.deepEqual(await rolesNow(), ["diver"]);
+    const left = (await pool.query(
+      "SELECT role::text FROM user_org_roles WHERE user_id = $1 AND org_id = $2", [mover, X.orgId],
+    )).rows;
+    assert.deepEqual(left, [], "nothing left behind in the old org");
+    const revoked = (await pool.query(
+      "SELECT role::text FROM role_audit_log WHERE user_id = $1 AND org_id = $2 AND action = 'revoked' ORDER BY role::text",
+      [mover, X.orgId],
+    )).rows.map((r) => r.role);
+    assert.deepEqual(revoked, ["meet_manager", "org_admin"]);
+
+    // Coming home is joining as a diver, nothing more.
+    await move(X.orgId);
+    assert.deepEqual(await rolesNow(), ["diver"]);
+
+    // Rows a transfer from before this fix left behind don't come back
+    // to life either.
+    await pool.query("INSERT INTO user_org_roles (user_id, org_id, role) VALUES ($1, $2, 'org_admin')", [mover, Y.orgId]);
+    await move(Y.orgId);
+    assert.deepEqual(await rolesNow(), ["diver"]);
+  } finally {
+    await pool.query("DELETE FROM users WHERE username = $1", [`int-b3tr-${X.slug}`]);
+    await teardownFixture(X);
+    await teardownFixture(Y);
+  }
+});

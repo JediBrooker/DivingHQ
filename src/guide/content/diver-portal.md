@@ -215,6 +215,8 @@ If you are transferring to a club in a different federation, the request becomes
 
 Every step is audit-logged. The transfer is only applied once all three confirmations are recorded.
 
+You arrive in the new federation as a diver. Any roles you held in the old one (judge, meet manager, admin and so on) end with the move, along with any club or region you ran there, so ask the new federation for the roles you need.
+
 If you admin a club or region in your old federation, or manage any of its events, those seats end with the move: they belong to the federation that gave them. The club's other admins are told, or its federation if nobody else runs it. You'll be asked to sign in again.
 
 ## Cross-org browse

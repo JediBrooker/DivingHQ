@@ -162,6 +162,7 @@ module.exports = function createClubChangesRouter({ pool, verifyToken, bumpToken
 
     let revokedLinks = [];
     let seats = { clubs: [], regions: [], events: [] };
+    let droppedRoles = [];
 
     if (r.kind === "org_transfer") {
       await client.query(
@@ -172,9 +173,29 @@ module.exports = function createClubChangesRouter({ pool, verifyToken, bumpToken
       // Their token still carries the old org and its roles until it
       // expires, so make them sign in again.
       if (typeof bumpTokenVersion === "function") await bumpTokenVersion(client, r.user_id);
+      // Roles are kept per org and the token reads the ones in
+      // users.org_id, so rows left in the old org weren't history, they
+      // were grants waiting to switch back on. A former org_admin who
+      // later moved home came back an admin without anyone granting it.
+      // So everything held outside the new org goes. Anything beyond
+      // diver/spectator they already hold in the new org is left over
+      // from an earlier stay there (nobody can grant roles to a
+      // non-member), so that goes too. Every one is audited as revoked.
+      droppedRoles = (await client.query(
+        `DELETE FROM user_org_roles
+          WHERE user_id = $1 AND (org_id <> $2 OR role NOT IN ('diver', 'spectator'))
+          RETURNING org_id, role::text AS role`,
+        [r.user_id, r.to_org_id],
+      )).rows;
+      for (const d of droppedRoles) {
+        await client.query(
+          `INSERT INTO role_audit_log (user_id, org_id, role, action, actor_id, note)
+           VALUES ($1, $2, $3, 'revoked', $4, 'transferred to another federation')`,
+          [r.user_id, d.org_id, d.role, req.user.id],
+        );
+      }
       // Carry the diver role into the receiving org so they show up
-      // on its roster; leave any historical roles behind in the old
-      // org.
+      // on its roster.
       await client.query(
         `INSERT INTO user_org_roles (user_id, org_id, role, granted_by)
          VALUES ($1, $2, 'diver', $3) ON CONFLICT DO NOTHING`,
@@ -221,6 +242,7 @@ module.exports = function createClubChangesRouter({ pool, verifyToken, bumpToken
         revoked_guardian_links: revokedLinks.length,
         ...(r.kind === "org_transfer" ? {
           removed: {
+            roles: droppedRoles.map((d) => ({ org_id: d.org_id, role: d.role })),
             club_admins: seats.clubs.map((c) => c.id),
             region_admins: seats.regions.map((g) => g.id),
             event_managers: seats.events.map((e) => e.id),
