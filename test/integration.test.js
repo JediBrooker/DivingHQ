@@ -7726,3 +7726,51 @@ test("score correction: the new score and its audit row land together", async (t
     await compKit.cleanup(orgId);
   }
 });
+
+test("sockets: a judge's sync that loses to a manual entry is acked once", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const orgId = await compKit.org("manual");
+  const socks = [];
+  try {
+    const manager = await compKit.user(orgId, "Manual Manager", ["meet_manager"]);
+    const judge = await compKit.user(orgId, "Manual Judge", ["judge"]);
+    const diver = await compKit.user(orgId, "Manual Diver", ["diver"]);
+    const eventId = await compKit.event(orgId, { status: "Live", number_of_judges: 3 });
+    await compKit.enter(eventId, diver.id, await compKit.dives(3), { display_order: 1 });
+    await compKit.panel(eventId, [judge]);
+    // Typed in by the operator during an outage.
+    const me = await fetchJson("POST", "/api/scores/manual-entry", {
+      token: manager.token,
+      body: { event_id: eventId, competitor_id: diver.id, round_number: 1, judge_id: judge.id, score: 7, reason: "outage" },
+    });
+    assert.ok([200, 201].includes(me.status), JSON.stringify(me.body));
+
+    const js = await compKit.socket(judge.token);
+    socks.push(js);
+    // The judge's outbox catches up with a different award.
+    const entry = {
+      event_id: eventId, competitor_id: diver.id, round_number: 1, score: 8,
+      idempotency_key: crypto.randomUUID(), actor_local_time: new Date().toISOString(),
+    };
+    const first = await compKit.ask(js, "submit_score", entry);
+    assert.notEqual(first, "timeout", "the outbox hears back instead of retrying");
+    assert.equal(first.ok, true);
+    assert.equal(first.superseded_by, "manual_entry");
+    assert.equal(first.response.score, 7, "the operator's value stands");
+    // A retry replays that answer rather than logging the clash again.
+    // (The cache write is fire-and-forget; a real outbox retry comes
+    // well after it.)
+    await new Promise((r) => setTimeout(r, 300));
+    const again = await compKit.ask(js, "submit_score", entry);
+    assert.equal(again.ok, true);
+    const rejected = (await pool.query(
+      "SELECT COUNT(*)::int AS n FROM score_audit_log WHERE event_id = $1 AND action = 'rejected_duplicate'",
+      [eventId])).rows[0].n;
+    assert.equal(rejected, 1);
+    assert.equal((await pool.query("SELECT score::float AS s FROM scores WHERE event_id = $1", [eventId])).rows[0].s, 7);
+  } finally {
+    socks.forEach((s) => s.close());
+    await compKit.cleanup(orgId);
+  }
+});

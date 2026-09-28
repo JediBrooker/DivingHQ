@@ -840,10 +840,14 @@ module.exports = function attachSocket({
               resolution_required_by: "operator",
               created_at: new Date().toISOString(),
             });
-            // Tell the judge their sync landed but was superseded.
-            // The outbox will mark this entry as synced (no retry
-            // needed); the operator decides via the review tray.
-            socket.emit("score_received", {
+            // Tell the judge their sync landed but was superseded, and
+            // ack it: the outbox only marks an entry synced on an ack,
+            // so without one it timed out and retried up to five times,
+            // each retry logging another rejected_duplicate and another
+            // conflict_pending. The idempotency cache makes a retry
+            // replay this answer instead. The operator decides via the
+            // review tray.
+            const supersededBody = {
               event_id: data.event_id,
               competitor_id: data.competitor_id,
               round_number: round,
@@ -852,7 +856,15 @@ module.exports = function attachSocket({
               judge_number: judgeNumber,
               score: oldScore,            // canonical = operator value
               superseded_by: "manual_entry",
-            });
+            };
+            socket.emit("score_received", supersededBody);
+            safeAck({ ok: true, response: supersededBody, superseded_by: "manual_entry" });
+            if (idempotencyKey && payloadHash) {
+              idem.socketStore(
+                idempotencyKey, judgeId, "submit_score",
+                payloadHash, 200, supersededBody,
+              );
+            }
             metrics?.scoresSubmitted.inc();
             return;
           }
