@@ -12126,3 +12126,162 @@ test("custom dives: a dive list won't take one whose DD is outside the official 
     await compKit.cleanup(orgId);
   }
 });
+
+// Review follow-ups on the score rule. The matrix above never had an
+// event manager from one of the region's clubs at the region's meet, or a
+// meet hosted by a club that's still waiting on approval, so dropping
+// either branch of the rule went unnoticed.
+test("score authority: a region club's event manager counts at the region's meet; a pending host club's meet is only the sysadmin's", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  let w;
+  try {
+    w = await hostKit.world();
+    const U = w.users;
+    const correct = (scoreId, who, score) => fetchJson("PUT", `/api/scores/${scoreId}`, {
+      token: U[who].token, body: { score, reason: `${who} review` },
+    });
+
+    // A referee from King Edward Point (in the region) added to run the
+    // region's event: in. Without the event_managers row: out.
+    U.c2Ref = await compKit.user(w.orgId, "SGS KEP Ref", ["referee"], { clubId: w.clubs.c2 });
+    let r = await correct(w.events.region.scoreId, "c2Ref", 6.5);
+    assert.equal(r.status, 403, JSON.stringify(r.body));
+    await pool.query("INSERT INTO event_managers (event_id, user_id) VALUES ($1, $2)", [w.events.region.id, U.c2Ref.id]);
+    r = await correct(w.events.region.scoreId, "c2Ref", 7);
+    assert.equal(r.status, 200, JSON.stringify(r.body));
+
+    // Leith Harbour hasn't been approved, so its meet is nobody's to
+    // rescore: not its own admin or meet manager, not the federation.
+    const pendingMeet = (await pool.query(
+      "INSERT INTO meets (org_id, name, host_club_id) VALUES ($1, 'Leith night', $2) RETURNING id",
+      [w.orgId, w.clubs.pending])).rows[0].id;
+    const ev = await compKit.event(w.orgId, { name: "SGS pending", status: "Live", number_of_judges: 3, meet_id: pendingMeet });
+    await compKit.enter(ev, w.diver.id, await compKit.dives(3), { display_order: 1 });
+    await compKit.panel(ev, [w.judge]);
+    await compKit.score(ev, w.diver.id, 1, w.judge, 6);
+    const scoreId = (await pool.query("SELECT id FROM scores WHERE event_id = $1", [ev])).rows[0].id;
+    U.pendingAdmin = await compKit.user(w.orgId, "SGS Leith Admin", ["diver"], { clubId: w.clubs.pending });
+    await pool.query("INSERT INTO club_admins (club_id, user_id, org_id) VALUES ($1, $2, $3)",
+      [w.clubs.pending, U.pendingAdmin.id, w.orgId]);
+    for (const who of ["pendingAdmin", "pendingMM", "orgAdmin", "fedMM"]) {
+      const no = await correct(scoreId, who, 7);
+      assert.equal(no.status, 403, `${who}: ${JSON.stringify(no.body)}`);
+      assert.equal(no.body.code, "score_authority");
+    }
+    assert.equal((await correct(scoreId, "sysadmin", 7.5)).status, 200);
+  } finally {
+    await hostKit.cleanup(w);
+  }
+});
+
+// A dive-off's resolved_at is part of its result: when a pair dives off
+// more than once, the latest resolved run is the one that counts
+// (loadResolvedDiveOffs). So someone who runs the event but can't change
+// its scores mustn't be able to move it, directly or by re-sending a
+// winner that's already stored (which used to re-stamp it).
+test("score authority: a dive-off's resolved_at is the host's too, and re-sending the stored winner doesn't move it", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  let w;
+  try {
+    w = await hostKit.world();
+    const U = w.users;
+    const h2h = await compKit.event(w.orgId, {
+      name: "SGS H2H rerun", status: "Live", number_of_judges: 3, meet_id: w.meets.club, event_format: "super_final_h2h",
+    });
+    const a = await compKit.user(w.orgId, "SGS Rerun A", ["diver"], { clubId: w.clubs.c1 });
+    const b = await compKit.user(w.orgId, "SGS Rerun B", ["diver"], { clubId: w.clubs.c1 });
+    const dive = (await compKit.dives(1))[0];
+    for (const [who, order] of [[a, 1], [b, 2]]) {
+      await pool.query(
+        `INSERT INTO competitor_dive_lists (event_id, competitor_id, round_number, dive_id, display_order, group_number)
+         VALUES ($1, $2, 1, $3, $4, 1)`,
+        [h2h, who.id, dive, order]);
+    }
+    // The club records two runs of the same pair: A won the first, B the
+    // re-run, which is the one that stands.
+    const create = async (winner, sa, sb) => {
+      const r = await fetchJson("POST", `/api/events/${h2h}/dive-offs`, {
+        token: U.c1Admin.token,
+        body: { competitor_a_id: a.id, competitor_b_id: b.id, score_a: sa, score_b: sb, winner_id: winner.id },
+      });
+      assert.equal(r.status, 201, JSON.stringify(r.body));
+      return r.body.dive_off;
+    };
+    const first = await create(a, 8, 7);
+    await pool.query("UPDATE tiebreak_dive_offs SET resolved_at = now() - interval '1 hour' WHERE id = $1", [first.id]);
+    await create(b, 7, 8.5);
+    const { loadResolvedDiveOffs, diveOffPairKey } = require("../lib/super-final-helpers");
+    const standing = async () => (await loadResolvedDiveOffs(pool, h2h)).get(diveOffPairKey(a.id, b.id));
+    assert.equal(await standing(), b.id);
+    const firstStamp = async () => (await pool.query(
+      "SELECT resolved_at FROM tiebreak_dive_offs WHERE id = $1", [first.id])).rows[0].resolved_at.getTime();
+    const before = await firstStamp();
+
+    const patch = (who, body) => fetchJson("PATCH", `/api/events/${h2h}/dive-offs/${first.id}`, { token: U[who].token, body });
+    // The federation runs the event (org admin), but it's the club's meet.
+    const moved = await patch("orgAdmin", { resolved_at: new Date(Date.now() + 3600e3).toISOString() });
+    assert.equal(moved.status, 403, JSON.stringify(moved.body));
+    assert.equal(moved.body.code, "score_authority");
+    // Notes plus the winner the form already had: fine, and nothing moves.
+    const resent = await patch("orgAdmin", { winner_id: a.id, score_a: 8, score_b: 7, notes: "checked" });
+    assert.equal(resent.status, 200, JSON.stringify(resent.body));
+    assert.equal(await firstStamp(), before, "resolved_at left alone");
+    assert.equal(await standing(), b.id, "the re-run still counts");
+    // Sending back exactly what's stored and nothing else is a no-op.
+    assert.equal((await patch("orgAdmin", { winner_id: a.id })).status, 200);
+    assert.equal(await firstStamp(), before);
+
+    // The club can reorder the runs if it has to.
+    const club = await patch("c1Admin", { resolved_at: new Date(Date.now() + 3600e3).toISOString() });
+    assert.equal(club.status, 200, JSON.stringify(club.body));
+    assert.equal(await standing(), a.id);
+  } finally {
+    await hostKit.cleanup(w);
+  }
+});
+
+// The team bulk submit is one of the dive-list paths the DD range check
+// went into, and nothing covered it.
+test("custom dives: a team's dive list won't take one whose DD is outside the official range", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const orgId = await hostKit.org("ddteam");
+  try {
+    const manager = await compKit.user(orgId, "SGS DD Team Manager", ["meet_manager"]);
+    const m1 = await compKit.user(orgId, "SGS DD Team One", ["diver"]);
+    const m2 = await compKit.user(orgId, "SGS DD Team Two", ["diver"]);
+    const three = await ddKit.range(3);
+    const custom = async (dd) => (await pool.query(
+      `INSERT INTO dive_directory (dive_code, height, position, dd, is_custom, created_org_id)
+       VALUES ($1, 3, 'B', $2, TRUE, $3) RETURNING id`,
+      [ddKit.code(), dd, orgId])).rows[0].id;
+    const legacy = await custom(9.5);
+    const fine = await custom(three.lo);
+    const [core] = await compKit.dives(1);
+    const eventId = await compKit.event(orgId, { name: "SGS DD team event", event_type: "team", total_rounds: 2 });
+    const team = (await pool.query("INSERT INTO teams (org_id, name) VALUES ($1, 'SGS DD Team') RETURNING id", [orgId])).rows[0].id;
+    await pool.query("INSERT INTO team_members (team_id, user_id) VALUES ($1, $2), ($1, $3)", [team, m1.id, m2.id]);
+    const post = (m1Dives) => fetchJson("POST", `/api/teams/${team}/dive-lists`, {
+      token: manager.token,
+      body: {
+        event_id: eventId,
+        dives: [
+          ...m1Dives.map((dive_id, i) => ({ competitor_id: m1.id, dive_id, round_number: i + 1 })),
+          ...[core, fine].map((dive_id, i) => ({ competitor_id: m2.id, dive_id, round_number: i + 1 })),
+        ],
+      },
+    });
+    const no = await post([core, legacy]);
+    assert.equal(no.status, 400, JSON.stringify(no.body));
+    assert.match(no.body.error, /DD 9\.5 for custom dive 9\d+B at 3m has to be between/);
+    assert.equal((await pool.query("SELECT 1 FROM competitor_dive_lists WHERE event_id = $1", [eventId])).rows.length, 0);
+    const ok = await post([core, fine]);
+    assert.ok(ok.status < 300, JSON.stringify(ok.body));
+  } finally {
+    await pool.query("DELETE FROM events WHERE org_id = $1", [orgId]).catch(() => {});
+    await pool.query("DELETE FROM teams WHERE org_id = $1", [orgId]).catch(() => {});
+    await compKit.cleanup(orgId);
+  }
+});

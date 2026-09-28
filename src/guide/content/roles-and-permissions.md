@@ -178,7 +178,7 @@ The licensed official on deck. Doesn't score dives themselves — supervises the
 **Can:**
 - View the live scoreboard for any event they're assigned to
 - Read the per-event score audit log to see who entered or changed each score
-- Authorise a score correction. The host's meet manager makes it (see [Who can change a score](#who-can-change-a-score)); a referee who is also a manager of the event can make it themselves, and the audit row records whoever did
+- Authorise a score correction. The host's meet manager makes it (see [Who can change a score](#who-can-change-a-score)); a referee who is also a manager of the event can make it themselves, as long as they belong to the host (a member of the host club, or of a club in the host region), and the audit row records whoever did
 - Confirm synchro panels have valid Exec A / Exec B / Sync subgroups (7, 9, or 11 judges)
 - Edit the [Session Scheduler](/guide/session-scheduler) — same write access as a meet manager
 

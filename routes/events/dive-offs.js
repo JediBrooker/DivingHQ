@@ -28,22 +28,40 @@ const { scoreAuthorityRefusal } = require("../../lib/middleware");
 // so they follow the host-org rule every other hand-entered score does
 // (scoreAuthority in lib/middleware.js). Setting one up, picking the dives
 // and the notes stay with the event's managers (requireEventManager).
-const RESULT_FIELDS = ["score_a", "score_b", "winner_id"];
+//
+// resolved_at belongs with them. When a pair dives off more than once the
+// latest resolved run is the one that counts (loadResolvedDiveOffs in
+// lib/super-final-helpers.js), so moving it can swap the winner as surely
+// as editing winner_id. Only PATCH takes it; create stamps its own.
+const RESULT_FIELDS = ["score_a", "score_b", "winner_id", "resolved_at"];
+const CREATE_RESULT_FIELDS = ["score_a", "score_b", "winner_id"];
 
-// Does this write set or change the result? On create any value counts; on
-// an update only a value that differs from what's stored, so a manager
-// fixing the notes on a settled dive-off isn't refused for re-sending the
-// scores the form already had.
-function touchesResult(body, existing = null) {
-  return RESULT_FIELDS.some((k) => {
-    if (!(k in (body || {}))) return false;
-    const next = body[k] === "" ? null : body[k];
-    if (!existing) return next != null;
-    const prev = existing[k];
-    if (k === "winner_id") return (next || null) !== (prev || null);
-    if (next == null || prev == null) return (next == null) !== (prev == null);
-    return Number(next) !== Number(prev);
-  });
+// Is `next` (off the wire) the value already stored in `prev`? Scores come
+// back from pg as numeric strings and resolved_at as a Date, so compare on
+// what they mean, not their spelling.
+function sameResultValue(k, next, prev) {
+  const n = next === "" ? null : next;
+  if (n == null || prev == null) return (n == null) === (prev == null);
+  if (k === "winner_id") return n === prev;
+  if (k === "resolved_at") return new Date(n).getTime() === new Date(prev).getTime();
+  return Number(n) === Number(prev);
+}
+
+// Does a create carry a result? Any value counts there.
+function createTouchesResult(body) {
+  return CREATE_RESULT_FIELDS.some((k) => k in (body || {}) && body[k] !== "" && body[k] != null);
+}
+
+// On an update, drops the result fields that just repeat what's stored and
+// says whether any are left. Dropping them rather than writing them back
+// matters twice over: the form re-sends the scores and winner on every
+// save, and a winner_id in the update re-stamps resolved_at (see above),
+// so someone fixing the notes would otherwise move which run counts.
+function stripUnchangedResult(updates, existing) {
+  for (const k of RESULT_FIELDS) {
+    if (k in updates && sameResultValue(k, updates[k], existing[k])) delete updates[k];
+  }
+  return RESULT_FIELDS.some((k) => k in updates);
 }
 
 // AUDIT FIX (Strong-6): Appendix 3 §6 says each diver picks one of their
@@ -191,7 +209,7 @@ module.exports = function createDiveOffsRoutes({ pool, requireEventManager, scor
             error: "Dive-offs are only valid for super_final_h2h or super_final_semi events (Appendix 3 §6 — no dive-off after the Final)",
           });
         }
-        if (touchesResult(req.body) && await refuseResultWrite(client, res, eventId, req.user)) return;
+        if (createTouchesResult(req.body) && await refuseResultWrite(client, res, eventId, req.user)) return;
 
         // Verify both competitors are on the event roster, AND
         // (for H2H) in the same pair / (for SF) the same group.
@@ -340,7 +358,9 @@ module.exports = function createDiveOffsRoutes({ pool, requireEventManager, scor
   // PATCH /api/events/:id/dive-offs/:diveOffId: update or resolve.
   // Setting winner_id (non-null) auto-stamps resolved_at if it's
   // not already provided. Audits 'event.dive_off_resolved'. Changing
-  // a score or the winner needs the host-org score rule as well.
+  // a score, the winner or resolved_at needs the host-org score rule
+  // as well; result fields sent back unchanged are dropped first, so
+  // re-sending the stored winner doesn't re-stamp resolved_at.
   router.patch(
     "/api/events/:id/dive-offs/:diveOffId",
     requireEventManager(),
@@ -358,8 +378,12 @@ module.exports = function createDiveOffsRoutes({ pool, requireEventManager, scor
       try {
         await client.query("BEGIN");
 
+        // Locked, so what we compare the body against is still what's
+        // stored when the UPDATE lands. Without it a stale re-send of the
+        // old result could pass as "unchanged" and then overwrite a
+        // result the host recorded in between.
         const exRes = await client.query(
-          "SELECT * FROM tiebreak_dive_offs WHERE id = $1 AND event_id = $2",
+          "SELECT * FROM tiebreak_dive_offs WHERE id = $1 AND event_id = $2 FOR UPDATE",
           [diveOffId, eventId],
         );
         if (!exRes.rows.length) {
@@ -367,7 +391,13 @@ module.exports = function createDiveOffsRoutes({ pool, requireEventManager, scor
           return res.status(404).json({ error: "Dive-off not found" });
         }
         const existing = exRes.rows[0];
-        if (touchesResult(updates, existing) && await refuseResultWrite(client, res, eventId, req.user)) return;
+        if (stripUnchangedResult(updates, existing)
+            && await refuseResultWrite(client, res, eventId, req.user)) return;
+        // Everything sent was already stored: nothing to write or audit.
+        if (!Object.keys(updates).length) {
+          await client.query("ROLLBACK");
+          return res.json({ dive_off: existing });
+        }
 
         if (updates.winner_id != null
             && updates.winner_id !== existing.competitor_a_id
@@ -396,8 +426,10 @@ module.exports = function createDiveOffsRoutes({ pool, requireEventManager, scor
         }
 
         // Auto-stamp resolved_at when winner_id is being set and
-        // the caller didn't pass an explicit resolved_at.
-        if (updates.winner_id && !("resolved_at" in updates)) {
+        // the caller didn't pass an explicit resolved_at. Asks the body,
+        // not updates: an explicit value equal to the stored one was
+        // dropped above, and it should still win over "now".
+        if (updates.winner_id && !("resolved_at" in (req.body || {}))) {
           updates.resolved_at = new Date().toISOString();
         }
 
