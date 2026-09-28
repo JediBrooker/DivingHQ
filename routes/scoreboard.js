@@ -78,6 +78,14 @@ module.exports = function createScoreboardRouter({
   // The main scoreboard payload. Only takes the event id, never req:
   // one build can end up answering several requests at once.
   async function buildScoreboard(eventId) {
+    // Standings roster filter, shared by both per_dive branches below.
+    const onRoster = `s.competitor_id IN (
+               SELECT competitor_id FROM competitor_dive_lists
+                WHERE event_id = $1
+                  AND withdrawn_at IS NULL
+                  AND is_reserve = FALSE
+             )`;
+    const standingsCols = ["s.competitor_id", "cdl.team_id", "s.event_id", "s.round_number"];
     const [st, hi, up, panel, records] = await Promise.all([
       // Standings: per-dive points (trimmed × DD × scaling) summed
       // across all of a competitor's dives in the event.
@@ -91,18 +99,25 @@ module.exports = function createScoreboardRouter({
       // to competitors on the CURRENT event's roster so the H2H
       // losers (who aren't on the SF roster) don't pollute the
       // SF standings.
+      //
+      // The two stages are two branches of a UNION, not one
+      // `event_id = $1 OR event_id = carry_from` filter. With the OR
+      // the planner can't push the event id down into the cdl and
+      // event_judges joins, so it hashed both tables whole and this
+      // query got slower as the archive grew, whatever the event's
+      // size. Plain UNION rather than ALL: each branch's rows are
+      // already unique, so the only thing it can merge is a
+      // carry_from pointing at the event itself, which the OR
+      // counted once as well.
       pool.query(
-        `WITH ${perDivePointsCte({
-           select: ["s.competitor_id", "cdl.team_id", "s.event_id", "s.round_number"],
-           where: `(s.event_id = $1
-                  OR s.event_id = (SELECT score_carry_from FROM events WHERE id = $1))
-             AND s.competitor_id IN (
-               SELECT competitor_id FROM competitor_dive_lists
-                WHERE event_id = $1
-                  AND withdrawn_at IS NULL
-                  AND is_reserve = FALSE
-             )`,
-         })},
+        `WITH per_dive AS (
+${perDiveSelect({ select: standingsCols, where: `s.event_id = $1\n  AND ${onRoster}` })}
+UNION
+${perDiveSelect({
+  select: standingsCols,
+  where: `s.event_id = (SELECT score_carry_from FROM events WHERE id = $1)\n  AND ${onRoster}`,
+})}
+         ),
          /* Team-event branch: aggregate by team. public_id is
             computed in Node from team_id below, we expose team_id
             here so the router can hash it. The spectator-facing

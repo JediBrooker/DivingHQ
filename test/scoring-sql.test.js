@@ -170,23 +170,47 @@ const CALL_SITES = [
     expect: (sql) =>
       assert.ok(sql.includes("GROUP BY e.number_of_judges, e.event_type")),
   },
+  // The scoreboard standings per_dive is a UNION of these two branches
+  // (own stage, then the super-final carry-forward stage). One OR'd
+  // event filter kept the planner from pushing the event id into the
+  // cdl/event_judges joins.
   {
-    site: "routes/scoreboard.js standings (super-final carry-forward)",
-    sql: () => perDivePointsCte({
+    site: "routes/scoreboard.js standings, own-stage branch",
+    sql: () => perDiveSelect({
       select: ["s.competitor_id", "cdl.team_id", "s.event_id", "s.round_number"],
-      where: `(s.event_id = $1
-                    OR s.event_id = (SELECT score_carry_from FROM events WHERE id = $1))
-               AND s.competitor_id IN (
-                 SELECT competitor_id FROM competitor_dive_lists
-                  WHERE event_id = $1
-                    AND withdrawn_at IS NULL
-                    AND is_reserve = FALSE
-               )`,
+      where: `s.event_id = $1
+  AND s.competitor_id IN (
+               SELECT competitor_id FROM competitor_dive_lists
+                WHERE event_id = $1
+                  AND withdrawn_at IS NULL
+                  AND is_reserve = FALSE
+             )`,
     }),
     pointsAlias: "dive_points",
-    where: "score_carry_from",
+    where: "s.event_id = $1\n  AND s.competitor_id IN (",
     expect: (sql) => assert.ok(sql.includes(
       "GROUP BY s.competitor_id, cdl.team_id, s.event_id, s.round_number, e.number_of_judges, e.event_type")),
+  },
+  {
+    site: "routes/scoreboard.js standings, carry-forward branch",
+    sql: () => perDiveSelect({
+      select: ["s.competitor_id", "cdl.team_id", "s.event_id", "s.round_number"],
+      where: `s.event_id = (SELECT score_carry_from FROM events WHERE id = $1)
+  AND s.competitor_id IN (
+               SELECT competitor_id FROM competitor_dive_lists
+                WHERE event_id = $1
+                  AND withdrawn_at IS NULL
+                  AND is_reserve = FALSE
+             )`,
+    }),
+    pointsAlias: "dive_points",
+    where: "s.event_id = (SELECT score_carry_from FROM events WHERE id = $1)",
+    expect: (sql) => {
+      // No OR left in the filter, each branch pins one event id.
+      assert.ok(!/\bOR\b/.test(sql.slice(sql.indexOf("WHERE"))));
+      assert.ok(sql.includes(
+        "GROUP BY s.competitor_id, cdl.team_id, s.event_id, s.round_number, e.number_of_judges, e.event_type"));
+    },
   },
   {
     site: "routes/scoreboard.js carry_rounds (synthetic round 0)",
