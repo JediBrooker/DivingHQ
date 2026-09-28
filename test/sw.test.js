@@ -187,6 +187,24 @@ test("Approve on the sign-off notification records the answer, then acks", async
   assert.deepEqual(sw.opened, [], "nothing to open once it's answered");
 });
 
+// The same request is sitting in an open tab's banner (it arrived over the
+// socket too). Once the notification's own button has answered it, that
+// tab has to hear about it or it keeps offering Approve/Deny.
+test("an answered sign-off tells open tabs to drop it, without taking them anywhere", async () => {
+  const sw = loadSw({
+    routes: {
+      "/api/events/e-1/dive-order/sign-off/respond": () => new Response('{"ok":true}', { status: 200 }),
+      "/api/notifications/n-1/acknowledge": () => new Response('{"ok":true}'),
+    },
+    windows: [{ url: ORIGIN + "/dashboard", focused: true }],
+  });
+  await sw.dispatch("notificationclick", tap(SIGNOFF, "deny"));
+  const [tab] = sw.clients;
+  assert.deepEqual(JSON.parse(JSON.stringify(tab.messages)), [{ type: "notification-answered", id: "n-1" }]);
+  assert.ok(!tab.didFocus, "nothing to look at, so don't pull the tab forward");
+  assert.deepEqual(sw.opened, []);
+});
+
 test("Deny that can't be recorded opens the request instead and leaves it unacked", async () => {
   const sw = loadSw({
     routes: {

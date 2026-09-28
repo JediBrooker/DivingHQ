@@ -25,8 +25,11 @@ const { notifications, ack, showSignoff } = usePush()
 // card, the inbox row and an unanswerable notification tap all send the
 // referee. Nothing on that screen reads it, so surface the request here
 // as its Approve/Deny banner, wherever in the app the link lands.
+// Two sources rather than one getter that builds an array: a fresh array
+// counts as a change every time, so any navigation (or a /me refresh)
+// would pull an already answered request back up while the query stays.
 watch(
-  () => [route.query.signoff_request, auth.user?.id],
+  [() => route.query.signoff_request, () => auth.user?.id],
   ([requestId, userId]) => {
     if (typeof requestId === 'string' && requestId && userId) showSignoff(requestId)
   },

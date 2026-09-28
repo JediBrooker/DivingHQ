@@ -311,6 +311,12 @@ self.addEventListener("notificationclick", (event) => {
     if (category === "referee_signoff" && (action === "approve" || action === "deny")) {
       if (await answerSignoff(data, action)) {
         await ack(id);
+        // An open tab got this request over the socket as well and still
+        // shows it with live Approve/Deny buttons. Tell every tab it's
+        // settled, or the referee taps it again and gets "already
+        // approved". No focus and no routing, there's nothing left to do.
+        const tabs = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+        for (const c of tabs) c.postMessage({ type: "notification-answered", id });
         return;
       }
     } else if (category !== "referee_signoff") {

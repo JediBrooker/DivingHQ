@@ -52,6 +52,32 @@ test("a sign-off link brings back Approve/Deny even after the notification was r
   )).rows[0]?.status, { timeout: 5_000 }).toBe("approved");
 });
 
+// Approve pressed on the OS notification: the worker has answered it, and
+// the copy of that request in the open tab's banner has to go, not sit
+// there offering buttons that now only earn an "already approved" error.
+test("a sign-off answered from the notification leaves the open tab's banner", async ({ page, request }) => {
+  const event = await setup.createEvent(request, { adminToken: world.adminToken, name: "E2E Push Answered 1m" });
+  const res = await request.post(`/api/events/${event.id}/dive-order/sign-off/request`, {
+    headers: { Authorization: `Bearer ${world.adminToken}` },
+    data: { referee_id: world.referee.userId },
+  });
+  expect(res.status()).toBe(201);
+  const { request_id: requestId } = await res.json();
+  const notifId = (await setup.pool.query(
+    "SELECT notification_id FROM referee_signoff_requests WHERE id = $1", [requestId],
+  )).rows[0].notification_id;
+
+  await signIn(page, world.referee.username);
+  await page.goto(`/control?signoff_request=${requestId}`);
+  const banner = page.locator(".notif-referee_signoff");
+  await expect(banner).toBeVisible({ timeout: 10_000 });
+  // What sw.js posts to every tab after answerSignoff succeeds.
+  await page.evaluate((id) => {
+    navigator.serviceWorker.dispatchEvent(new MessageEvent("message", { data: { type: "notification-answered", id } }));
+  }, notifId);
+  await expect(banner).toBeHidden();
+});
+
 test("tapping a system notification with the app open routes that tab", async ({ page }) => {
   await signIn(page, world.referee.username);
   await page.goto("/dashboard");

@@ -103,6 +103,12 @@ export function usePush({ socket: sock } = {}) {
     initialised = true
     navigator.serviceWorker.addEventListener('message', (ev) => {
       const m = ev.data
+      // Approve/Deny pressed on the OS notification itself. The worker has
+      // already answered and acked it, so just drop the banner copy.
+      if (m?.type === 'notification-answered') {
+        if (m.id) notifications.value = notifications.value.filter(n => n.id !== m.id)
+        return
+      }
       if (m?.type !== 'notification-click') return
       if (m.id) {
         // Mark read locally; the SW already POSTed the ack. Not for a
