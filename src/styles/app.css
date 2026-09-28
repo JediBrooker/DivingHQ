@@ -367,7 +367,10 @@ h1, h2, h3, h4 {
 /* ── Form elements ────────────────────────────────────────── */
 .field { display: flex; flex-direction: column; gap: 0.5rem; }
 
-.input {
+/* .textarea shares the .input look; docs/design-system.md lists it as a
+   primitive, and ClaimsView's objection box was using it before it
+   existed. */
+.input, .textarea {
   font-family: var(--font-sans);
   font-size: 14px;
   background: var(--surface);
@@ -379,8 +382,9 @@ h1, h2, h3, h4 {
   transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
   width: 100%;
 }
-.input:focus { border-color: var(--border-focus); box-shadow: var(--shadow-focus); }
-.input::placeholder { color: var(--fg-3); }
+.input:focus, .textarea:focus { border-color: var(--border-focus); box-shadow: var(--shadow-focus); }
+.input::placeholder, .textarea::placeholder { color: var(--fg-3); }
+.textarea { display: block; resize: vertical; min-height: 4.5rem; line-height: 1.45; }
 
 /* Number-input spinner arrows. Browser defaults render almost
    black-on-black in our dark theme, so recolour the chrome so the
