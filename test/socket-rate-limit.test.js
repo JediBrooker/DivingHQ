@@ -240,3 +240,33 @@ test("a malformed session cookie on the handshake connects as anonymous", async 
   assert.equal(c.socket.userId, undefined);
   assert.ok(c.isWired(), "the socket still gets its handlers");
 });
+
+// Every socket handler is async and socket.io never awaits it. A throw
+// from a DB call (a bad id, a dropped connection) used to become an
+// unhandled rejection that killed the process. The handlers answer with
+// server_error instead.
+test("a Control Room gate that throws acks server_error instead of rejecting", async () => {
+  const h = makeHarness({
+    deps: { socketCanManageEvent: async () => { throw new Error("boom: invalid input syntax for type uuid"); } },
+  });
+  const c = await h.connect("198.51.100.31", token("user-throws"));
+  for (const ev of ["set_active_diver", "meet_hold", "meet_resume", "announce_score",
+    "referee_failed_dive", "referee_cap_scores", "referee_redive"]) {
+    assert.deepEqual(await c.ask(ev, { event_id: "not-a-uuid" }), { ok: false, error: "server_error" }, ev);
+  }
+  // claim_event_control has no ack; it just mustn't reject.
+  await c.fire("claim_event_control", { event_id: "not-a-uuid" });
+});
+
+test("submit_score acks server_error when the revocation lookup throws", async () => {
+  const h = makeHarness({
+    deps: { isTokenVersionCurrent: async (id) => { if (id === "judge-db-down") throw new Error("db down"); return true; } },
+  });
+  const judgeToken = jwt.sign({ id: "judge-db-down", org_id: "org-1", org_roles: ["judge"], tv: 1 }, "test-secret");
+  // The handshake's own check throws too, so it connects anonymous; set
+  // the identity by hand to get to the per-submit re-check.
+  const c = await h.connect("198.51.100.32", judgeToken);
+  Object.assign(c.socket, { userId: "judge-db-down", userOrgRoles: ["judge"], userTokenVersion: 1 });
+  const reply = await c.ask("submit_score", { event_id: VALID_ID, competitor_id: VALID_ID, round_number: 1, score: 7 });
+  assert.deepEqual(reply, { ok: false, error: "server_error" });
+});

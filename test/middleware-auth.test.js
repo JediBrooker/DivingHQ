@@ -304,3 +304,23 @@ test("club guards: no club id is a 400", async () => {
   });
   assert.equal(out.statusCode, 400);
 });
+
+// A non-UUID event id on a Control Room socket event used to go straight
+// into `WHERE id = $1`, pg threw 22P02, and nothing up the (un-awaited)
+// socket handler chain caught it. Any signed-in account could crash the
+// server that way.
+test("socketCanManageEvent: a non-UUID event id is refused without touching the DB", async () => {
+  const pool = {
+    async query(sql) {
+      if (/FROM events/.test(sql)) throw Object.assign(new Error("invalid input syntax for type uuid"), { code: "22P02" });
+      return { rows: [] };
+    },
+  };
+  const { socketCanManageEvent } = createMiddleware({ pool, JWT_SECRET });
+  for (const bad of ["not-a-uuid", 42, { $gt: "" }, ["a"], `${USER_ID}x`]) {
+    const socket = fakeSocket();
+    socket.userOrgId = "org-1";
+    assert.equal(await socketCanManageEvent(socket, bad, ["judge"]), false, String(bad));
+    assert.equal(socket.emits.at(-1).payload.reason, "event_not_found");
+  }
+});

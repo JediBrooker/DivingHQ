@@ -28,7 +28,7 @@ that's intentional, but every privileged event must call
 | `meet_held`               | `{ event_id, reason \| null, since: <ms epoch> }` | Operator holds the meet, or a new client joins while a hold is active. |
 | `meet_resumed`            | `{ event_id }` | Operator resumes the meet. |
 | `venue.scoreboard_state`  | Canonical venue payload from `lib/venue-state.js` | Emitted to `venue:<event_id>` subscribers after subscribe, active-diver changes, score changes, score announce, hold, and resume. Used by hardware bridges. |
-| `unauthorized`            | `{ reason: 'not_authenticated' \| 'insufficient_role' }` | A privileged event was attempted by an anonymous or under-roled socket. |
+| `unauthorized`            | `{ reason: 'not_authenticated' \| 'insufficient_role' \| 'missing_event_id' \| 'event_not_found' \| 'wrong_org' \| 'token_revoked' }` | A privileged event was attempted by an anonymous or under-roled socket, or for an event the socket can't drive. |
 | `schedule:conflict_dismissed` | `{ meet_id, action: 'dismiss' \| 'undismiss' }` | A scheduler conflict was dismissed or un-dismissed via the editor-only API. Drawer clients refetch `/api/meets/:id/conflicts` on receipt. The broadcast is intentionally minimal and does not include personnel labels. |
 | `schedule:block_updated`      | `{ meet_id, session_id, block_id?, created?, session_updated? }` | A Phase 3 manual edit landed (`PUT /api/blocks/:id`, `POST /api/sessions/:sessionId/blocks`, or `PUT /api/sessions/:id`). Other timeline tabs refetch `/sessions` and update inline. The broadcast is intentionally minimal; conflict details stay behind `/api/meets/:id/conflicts`. |
 | `schedule:block_deleted`      | `{ meet_id, session_id, block_id }` | A schedule block was deleted via `DELETE /api/blocks/:id`. Other tabs refetch the schedule. |
@@ -45,7 +45,15 @@ The meet-control events below go through `socketCanManageEvent`
 socket needs one of the listed roles **or** has to be a delegate for that
 event: an `event_managers` row, or admin of the club hosting the event's
 meet (`meets.host_club_id`, migration 087). That second path is how a club
-in a country with no federation on DivingHQ runs its own meets.
+in a country with no federation on DivingHQ runs its own meets. An
+`event_id` that isn't a UUID is refused up front (`unauthorized`,
+`event_not_found`) and never reaches the database.
+
+Every handler runs inside a guard (`guarded()` in `routes/socket.js`):
+if it throws, the error is logged and a client that passed an ack
+callback gets `{ ok: false, error: 'server_error' }`. socket.io doesn't
+await handlers, so without that an exception was an unhandled rejection
+that stopped the whole server.
 
 | Event | Required role | Payload | Notes |
 |---|---|---|---|
