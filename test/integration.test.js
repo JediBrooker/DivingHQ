@@ -7710,3 +7710,17 @@ test("analytics date ranges and years follow when the event happened, not when i
     await teardownFixture(st);
   }
 });
+
+test("an impossible from_date is a 400 on the diver profile and analytics", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    for (const p of ["profile", "analytics"]) {
+      const r = await fetchJson("GET", `/api/divers/${st.adminId}/${p}?from_date=2026-02-31`, { token: st.adminToken });
+      assert.equal(r.status, 400, `${p}: ${JSON.stringify(r.body)}`);
+    }
+  } finally {
+    await teardownFixture(st);
+  }
+});

@@ -381,3 +381,16 @@ test("verifyToken: email-verify, password-reset and 2FA-step tokens aren't sessi
   // And an id has to look like one.
   assert.equal((await runVerify(verifyToken, sign({ id: "not-a-uuid", tv: 1 }))).statusCode, 401);
 });
+
+// Date.parse rolls impossible days over (2026-02-31 is 3 March) instead
+// of failing, so they used to reach Postgres: a 500 on /profile and
+// silently empty widgets on /analytics.
+test("parseDateRange: impossible calendar dates are a 400, real ones pass", () => {
+  const { parseDateRange } = build();
+  for (const bad of ["2026-02-31", "2026-02-29", "2025-04-31", "2026-13-01", "2026-00-10", "2026-01-32"]) {
+    assert.throws(() => parseDateRange({ from_date: bad }), (e) => e.status === 400, bad);
+    assert.throws(() => parseDateRange({ to_date: bad }), (e) => e.status === 400, bad);
+  }
+  assert.deepEqual(parseDateRange({ from_date: "2024-02-29", to_date: "2026-12-31" }), { from: "2024-02-29", to: "2026-12-31" });
+  assert.deepEqual(parseDateRange({}), { from: null, to: null });
+});
