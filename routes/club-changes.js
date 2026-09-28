@@ -195,7 +195,7 @@ module.exports = function createClubChangesRouter({ pool, verifyToken, bumpToken
     await client.query(
       `UPDATE club_change_requests
          SET status='approved', reviewed_by=$1, reviewed_at=now()
-       WHERE id=$2`,
+       WHERE id=$2 AND status='pending'`,
       [req.user.id, r.id],
     );
 
@@ -410,12 +410,22 @@ module.exports = function createClubChangesRouter({ pool, verifyToken, bumpToken
     }
   });
 
-  async function loadPending(client, id) {
-    const r = await client.query(
-      "SELECT * FROM club_change_requests WHERE id = $1 AND status = 'pending'",
+  // Lock the request for the rest of the transaction. Two admins (or an
+  // admin and the diver cancelling) used to both read it as pending and
+  // both win, so a move could be applied while the row ended up
+  // 'rejected' and the diver heard both outcomes. The second one now
+  // waits on this lock, then finds it decided. Answers the 404 or 409
+  // itself and returns null when the caller should stop.
+  async function lockPending(client, id, res) {
+    const r = (await client.query(
+      "SELECT * FROM club_change_requests WHERE id = $1 FOR UPDATE",
       [id],
-    );
-    return r.rows[0] || null;
+    )).rows[0];
+    if (r && r.status === "pending") return r;
+    await client.query("ROLLBACK");
+    if (!r) res.status(404).json({ error: "Request not found" });
+    else res.status(409).json({ error: "This request has already been decided", code: "already_decided" });
+    return null;
   }
 
   // --- REVIEW (org admin approves / rejects) ------------------
@@ -426,8 +436,8 @@ module.exports = function createClubChangesRouter({ pool, verifyToken, bumpToken
     const client = await pool.connect();
     try {
       await client.query("BEGIN");
-      const r = await loadPending(client, req.params.id);
-      if (!r) { await client.query("ROLLBACK"); return res.status(404).json({ error: "Request not found" }); }
+      const r = await lockPending(client, req.params.id, res);
+      if (!r) return;
 
       // A club (or region) admin approving someone into their club counts
       // as the one approval a club_change needs.
@@ -448,7 +458,7 @@ module.exports = function createClubChangesRouter({ pool, verifyToken, bumpToken
 
       if (decision === "rejected") {
         await client.query(
-          "UPDATE club_change_requests SET status='rejected', reviewed_by=$1, reviewed_at=now() WHERE id=$2",
+          "UPDATE club_change_requests SET status='rejected', reviewed_by=$1, reviewed_at=now() WHERE id=$2 AND status='pending'",
           [req.user.id, r.id],
         );
         await notify(client, [r.user_id], {
@@ -495,8 +505,8 @@ module.exports = function createClubChangesRouter({ pool, verifyToken, bumpToken
     const client = await pool.connect();
     try {
       await client.query("BEGIN");
-      const r = await loadPending(client, req.params.id);
-      if (!r) { await client.query("ROLLBACK"); return res.status(404).json({ error: "Request not found" }); }
+      const r = await lockPending(client, req.params.id, res);
+      if (!r) return;
       if (r.user_id !== req.user.id) {
         await client.query("ROLLBACK");
         return res.status(403).json({ error: "Only the diver can confirm their own transfer" });
@@ -519,14 +529,20 @@ module.exports = function createClubChangesRouter({ pool, verifyToken, bumpToken
   router.post("/api/club-change-requests/:id/cancel", verifyToken, async (req, res) => {
     try {
       const r = (await pool.query(
-        "SELECT * FROM club_change_requests WHERE id=$1 AND status='pending'",
+        "SELECT * FROM club_change_requests WHERE id=$1",
         [req.params.id])).rows[0];
       if (!r) return res.status(404).json({ error: "Request not found" });
       const allowed = r.user_id === req.user.id || isOrgAdminOf(req.user, r.from_org_id) || isOrgAdminOf(req.user, r.to_org_id);
       if (!allowed) return res.status(403).json({ error: "Not allowed to cancel this request" });
-      await pool.query(
-        "UPDATE club_change_requests SET status='rejected', reviewed_by=$1, reviewed_at=now(), note=COALESCE(note,'') WHERE id=$2",
+      // Guarded on status, so a cancel that lands while an approval holds
+      // the row waits for it and then touches nothing, rather than marking
+      // a move that already happened as rejected.
+      const done = await pool.query(
+        "UPDATE club_change_requests SET status='rejected', reviewed_by=$1, reviewed_at=now(), note=COALESCE(note,'') WHERE id=$2 AND status='pending'",
         [req.user.id, r.id]);
+      if (!done.rowCount) {
+        return res.status(409).json({ error: "This request has already been decided", code: "already_decided" });
+      }
       res.json({ status: "cancelled" });
     } catch (err) {
       console.error("[club-change cancel]", err.message);

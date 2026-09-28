@@ -280,8 +280,14 @@ module.exports = function createUsersRouter({
       // request once we know which org it belongs to. Granting the
       // role uses rq.org_id, not the caller's org_id, so system
       // admins approving cross-org requests work too.
+      //
+      // FOR UPDATE, because two admins (or one double click) deciding
+      // the same request both used to read it as pending and both win:
+      // the role got granted while the row ended up 'rejected', and the
+      // requester got both emails. Now the second one waits here, then
+      // sees the first decision and gets a 409.
       const rqRes = await client.query(
-        "SELECT * FROM role_requests WHERE id = $1 AND status = 'pending'",
+        "SELECT * FROM role_requests WHERE id = $1 FOR UPDATE",
         [req.params.id],
       );
       if (!rqRes.rows.length) {
@@ -289,6 +295,10 @@ module.exports = function createUsersRouter({
         return res.status(404).json({ error: "Request not found" });
       }
       const rq = rqRes.rows[0];
+      if (rq.status !== "pending") {
+        await client.query("ROLLBACK");
+        return res.status(409).json({ error: "This request has already been decided", code: "already_decided" });
+      }
 
       if (!req.user.is_system_admin && rq.org_id !== req.user.org_id) {
         await client.query("ROLLBACK");
@@ -302,8 +312,8 @@ module.exports = function createUsersRouter({
       }
 
       await client.query(
-        "UPDATE role_requests SET status=$1, reviewed_by=$2, reviewed_at=now() WHERE id=$3",
-        [decision, req.user.id, req.params.id],
+        "UPDATE role_requests SET status=$1, reviewed_by=$2, reviewed_at=now() WHERE id=$3 AND status='pending'",
+        [decision, req.user.id, rq.id],
       );
 
       if (decision === "approved") {
@@ -1388,17 +1398,23 @@ module.exports = function createUsersRouter({
     }
     try {
       const g = (await pool.query(
-        "SELECT * FROM guardians WHERE id = $1 AND status = 'pending'",
+        "SELECT * FROM guardians WHERE id = $1",
         [req.params.id],
       )).rows[0];
       if (!g) return res.status(404).json({ error: "Request not found" });
       if (!req.user.is_system_admin && g.org_id !== req.user.org_id) {
         return res.status(403).json({ error: "Cannot review requests in other organisations" });
       }
-      await pool.query(
-        "UPDATE guardians SET status = $1, reviewed_by = $2, reviewed_at = now() WHERE id = $3",
-        [decision, req.user.id, req.params.id],
+      // Only a link that's still pending changes, so an approve racing a
+      // reject (or a revoke) can't overwrite a decision already made.
+      const done = await pool.query(
+        `UPDATE guardians SET status = $1, reviewed_by = $2, reviewed_at = now()
+          WHERE id = $3 AND status = 'pending' RETURNING id`,
+        [decision, req.user.id, g.id],
       );
+      if (!done.rowCount) {
+        return res.status(409).json({ error: "This request has already been decided", code: "already_decided" });
+      }
       res.json({ message: `Guardian request ${decision}` });
     } catch (err) {
       console.error("[Guardians]", err.message);

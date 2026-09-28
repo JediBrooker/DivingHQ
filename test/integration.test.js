@@ -7103,3 +7103,114 @@ test("sitemap.xml lists the payments and classes guides only while they're switc
     await features.set("classes", saved.classes);
   }
 });
+
+// ---------------------------------------------------------------------
+// Accounts and orgs bug sweep (area 3). Each test below failed before
+// its fix landed.
+// ---------------------------------------------------------------------
+
+// A second org admin (or any fixture user) signs in with the password
+// insertUser gives everyone.
+async function b3Login(username) {
+  const r = await fetchJson("POST", "/api/auth/login", { body: { username, password: "not-used-here" } });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  return r.body.token;
+}
+
+test("two admins deciding one role request at once: one wins, the other gets a 409", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    await insertUser({ orgId: st.orgId, role: "org_admin", username: `int-b3a2-${st.slug}`, fullName: "Second Admin" });
+    const other = await b3Login(`int-b3a2-${st.slug}`);
+    for (let i = 0; i < 6; i++) {
+      const asker = await insertUser({ orgId: st.orgId, role: "spectator", username: `int-b3rr${i}-${st.slug}`, fullName: `Asker ${i}` });
+      const rq = (await pool.query(
+        "INSERT INTO role_requests (user_id, org_id, requested_role) VALUES ($1, $2, 'judge') RETURNING id", [asker, st.orgId],
+      )).rows[0].id;
+      const second = i % 2 ? "approved" : "rejected";
+      const [x, y] = await Promise.all([
+        fetchJson("POST", `/api/role-requests/${rq}/review`, { token: st.adminToken, body: { decision: "approved" } }),
+        fetchJson("POST", `/api/role-requests/${rq}/review`, { token: other, body: { decision: second } }),
+      ]);
+      assert.deepEqual([x.status, y.status].sort(), [200, 409], `round ${i}: ${JSON.stringify([x.body, y.body])}`);
+      const status = (await pool.query("SELECT status::text FROM role_requests WHERE id = $1", [rq])).rows[0].status;
+      const held = (await pool.query("SELECT 1 FROM user_org_roles WHERE user_id = $1 AND role = 'judge'", [asker])).rows.length > 0;
+      const grants = (await pool.query(
+        "SELECT count(*)::int AS n FROM role_audit_log WHERE user_id = $1 AND role = 'judge' AND action = 'granted'", [asker],
+      )).rows[0].n;
+      assert.equal(held, status === "approved", `round ${i}: role ${held} but request ${status}`);
+      assert.equal(grants, held ? 1 : 0);
+    }
+  } finally {
+    await teardownFixture(st);
+  }
+});
+
+test("a club change decided twice at once is applied once and reads the way it went", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    await insertUser({ orgId: st.orgId, role: "org_admin", username: `int-b3c2-${st.slug}`, fullName: "Second Admin" });
+    const other = await b3Login(`int-b3c2-${st.slug}`);
+    const club = async (name) => (await pool.query(
+      "INSERT INTO clubs (org_id, name) VALUES ($1, $2) RETURNING id", [st.orgId, name],
+    )).rows[0].id;
+    for (let i = 0; i < 6; i++) {
+      const from = await club(`From ${i}`);
+      const to = await club(`To ${i}`);
+      const uname = `int-b3cc${i}-${st.slug}`;
+      const diver = await insertUser({ orgId: st.orgId, role: "diver", username: uname, fullName: `Mover ${i}` });
+      await pool.query("UPDATE users SET club_id = $1 WHERE id = $2", [from, diver]);
+      const dt = await b3Login(uname);
+      const made = await fetchJson("POST", "/api/club-change-requests", { token: dt, body: { to_club_id: to } });
+      assert.equal(made.status, 201, JSON.stringify(made.body));
+      const [x, y] = await Promise.all([
+        fetchJson("POST", `/api/club-change-requests/${made.body.id}/review`, { token: st.adminToken, body: { decision: "approved" } }),
+        i % 2
+          ? fetchJson("POST", `/api/club-change-requests/${made.body.id}/review`, { token: other, body: { decision: "rejected" } })
+          : fetchJson("POST", `/api/club-change-requests/${made.body.id}/cancel`, { token: dt }),
+      ]);
+      assert.deepEqual([x.status, y.status].sort(), [200, 409], `round ${i}: ${JSON.stringify([x.body, y.body])}`);
+      const status = (await pool.query("SELECT status::text FROM club_change_requests WHERE id = $1", [made.body.id])).rows[0].status;
+      const now = (await pool.query("SELECT club_id FROM users WHERE id = $1", [diver])).rows[0].club_id;
+      assert.equal(now === to, status === "approved", `round ${i}: in ${now === to ? "new" : "old"} club, request ${status}`);
+      const told = (await pool.query(
+        "SELECT count(*)::int AS n FROM notifications WHERE user_id = $1 AND category = 'club_change'", [diver],
+      )).rows[0].n;
+      assert.ok(told <= 1, `round ${i}: the diver heard ${told} outcomes`);
+    }
+  } finally {
+    await pool.query("DELETE FROM clubs WHERE org_id = $1", [st.orgId]);
+    await teardownFixture(st);
+  }
+});
+
+test("a guardian link approved and rejected at once keeps the first decision", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    await insertUser({ orgId: st.orgId, role: "org_admin", username: `int-b3g2-${st.slug}`, fullName: "Second Admin" });
+    const other = await b3Login(`int-b3g2-${st.slug}`);
+    const parent = await insertUser({ orgId: st.orgId, role: "spectator", username: `int-b3gp-${st.slug}`, fullName: "Parent" });
+    for (let i = 0; i < 6; i++) {
+      const kid = await insertUser({ orgId: st.orgId, role: "diver", username: `int-b3gk${i}-${st.slug}`, fullName: `Kid ${i}` });
+      const link = (await pool.query(
+        "INSERT INTO guardians (org_id, guardian_user_id, dependent_user_id) VALUES ($1, $2, $3) RETURNING id",
+        [st.orgId, parent, kid],
+      )).rows[0].id;
+      const [x, y] = await Promise.all([
+        fetchJson("POST", `/api/guardian-requests/${link}/review`, { token: st.adminToken, body: { decision: "approved" } }),
+        fetchJson("POST", `/api/guardian-requests/${link}/review`, { token: other, body: { decision: "rejected" } }),
+      ]);
+      assert.deepEqual([x.status, y.status].sort(), [200, 409], `round ${i}: ${JSON.stringify([x.body, y.body])}`);
+      const status = (await pool.query("SELECT status FROM guardians WHERE id = $1", [link])).rows[0].status;
+      assert.equal(status, x.status === 200 ? "approved" : "rejected");
+    }
+  } finally {
+    await teardownFixture(st);
+  }
+});
