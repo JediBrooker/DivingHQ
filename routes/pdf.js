@@ -77,8 +77,7 @@ module.exports = function createPdfRouter({ pool }) {
   //   • timing       : estimated event duration. Pairs with
   //                    seconds_per_dive (30 / 45 / 60 default 45).
   //                    Computed as competitor_count * total_rounds *
-  //                    seconds_per_dive (synchro doubles the per-row
-  //                    pair into a single dive).
+  //                    seconds_per_dive (a synchro pair counts once).
   //
   // Unknown tokens are silently dropped, same posture as the rest
   // of the public read endpoints. The default (no include= param)
@@ -238,19 +237,16 @@ module.exports = function createPdfRouter({ pool }) {
   // performing one dive; for synchro a pair performs one combined
   // dive; for team events each team-member's per-round dive is
   // counted (their roster shape is one row per member per round).
+  // competitor_count already counts a synchro pair once (see
+  // loadProgram), so there's no halving here any more: most rosters
+  // store one row per pair, and halving those made a 20-dive event
+  // read as 10.
   // The result is { minutes, seconds, totalDives, label } so the
   // renderer can pick whichever format fits its line budget.
   function estimateEventDuration(event, secondsPerDive) {
     const competitors = event.competitor_count || 0;
     const rounds      = event.total_rounds || 0;
-    let totalDives = competitors * rounds;
-    if (event.event_type === "synchro_pair") {
-      // Synchro: each pair is 2 rows on the roster but performs
-      // one dive together. Halve the count to avoid double-billing
-      // the panel/diver time. round to nearest integer in case
-      // an odd row count slipped in (would mean an unpaired diver).
-      totalDives = Math.round(totalDives / 2);
-    }
+    const totalDives = competitors * rounds;
     const totalSeconds = totalDives * secondsPerDive;
     const minutes = Math.floor(totalSeconds / 60);
     const seconds = totalSeconds % 60;
@@ -288,10 +284,21 @@ module.exports = function createPdfRouter({ pool }) {
                 e.dd_limit_rounds, e.dd_limit_value, e.status,
                 COALESCE(stat.competitor_count, 0)::int AS competitor_count
          FROM events e
+         /* Who's diving: reserves and withdrawn rows aren't. A synchro
+            pair counts once whether the roster holds one row for it
+            (import, manual add: the lead with partner_id set) or one
+            each way round (the consent flow's mirror rows), keyed on
+            the pair's two ids in a fixed order. */
          LEFT JOIN LATERAL (
-           SELECT COUNT(DISTINCT cdl.competitor_id) AS competitor_count
+           SELECT COUNT(DISTINCT CASE
+                    WHEN e.event_type = 'synchro_pair' AND cdl.partner_id IS NOT NULL
+                      THEN LEAST(cdl.competitor_id::text, cdl.partner_id::text) || '+' ||
+                           GREATEST(cdl.competitor_id::text, cdl.partner_id::text)
+                    ELSE cdl.competitor_id::text
+                  END) AS competitor_count
            FROM competitor_dive_lists cdl
            WHERE cdl.event_id = e.id AND cdl.withdrawn_at IS NULL
+             AND cdl.is_reserve = FALSE
          ) stat ON true
          WHERE e.meet_id = $1
          ORDER BY
@@ -426,7 +433,11 @@ module.exports = function createPdfRouter({ pool }) {
         const meta = [];
         meta.push(time);
         if (ev.competitor_count) {
-          meta.push(`${ev.competitor_count} ${ev.competitor_count === 1 ? "diver" : "divers"}`);
+          // A synchro event's count is pairs (see loadProgram).
+          const unit = ev.event_type === "synchro_pair"
+            ? (ev.competitor_count === 1 ? "pair" : "pairs")
+            : (ev.competitor_count === 1 ? "diver" : "divers");
+          meta.push(`${ev.competitor_count} ${unit}`);
         }
         meta.push(ev.status);
         // Timing estimate sits in the meta line so it reads next to

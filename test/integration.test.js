@@ -7517,3 +7517,49 @@ test("judge ranking and the coach's event views print the meet's representation 
     await teardownFixture(st);
   }
 });
+
+// Program timing: a synchro roster stored one row per pair already counts
+// pairs, so halving it made a 20-dive event look like 10. Pairs entered
+// both ways round (mirror rows) must still count once, and reserves and
+// withdrawn divers don't dive at all.
+test("program timing counts synchro pairs once, however the roster stores them", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const meet = (await pool.query("INSERT INTO meets (org_id, name) VALUES ($1, 'Timing Meet') RETURNING id", [st.orgId])).rows[0].id;
+    const dive = await recordKit.threeMetreDive();
+    const mkEvent = async (name) => (await pool.query(
+      `INSERT INTO events (org_id, meet_id, name, gender, height, number_of_judges, total_rounds, event_type)
+       VALUES ($1, $2, $3, 'Mixed', '3m', 9, 5, 'synchro_pair') RETURNING id`,
+      [st.orgId, meet, name],
+    )).rows[0].id;
+    const people = [];
+    for (let i = 0; i < 10; i++) people.push(await recordKit.diver(st.orgId, null, "female", `Timing Diver ${i}`));
+    const row = (ev, a, b, extra = {}) => pool.query(
+      `INSERT INTO competitor_dive_lists (event_id, competitor_id, partner_id, dive_id, round_number, is_reserve, withdrawn_at)
+       VALUES ($1, $2, $3, $4, 1, $5, $6)`,
+      [ev, a, b, dive, !!extra.reserve, extra.withdrawn ? new Date() : null],
+    );
+    const single = await mkEvent("Single rows");
+    for (let p = 0; p < 4; p++) await row(single, people[2 * p], people[2 * p + 1]);
+    await row(single, people[8], people[9], { reserve: true });
+    const mirrored = await mkEvent("Mirrored rows");
+    for (let p = 0; p < 3; p++) {
+      await row(mirrored, people[2 * p], people[2 * p + 1]);
+      await row(mirrored, people[2 * p + 1], people[2 * p]);
+    }
+    await row(mirrored, people[6], people[7], { withdrawn: true });
+    await row(mirrored, people[7], people[6], { withdrawn: true });
+
+    const csv = await (await fetch(`${baseUrl}/api/meets/${meet}/program.csv?include=timing&seconds_per_dive=60`)).text();
+    const events = Object.fromEntries(csv.trim().split(/\r?\n/).slice(1).map((l) => l.split(","))
+      .filter((c) => c[0] === "event").map((c) => [c[1], [c[10], c[12]]]));
+    assert.deepEqual(events["Single rows"], ["4", String(4 * 5 * 60)]);
+    assert.deepEqual(events["Mirrored rows"], ["3", String(3 * 5 * 60)]);
+  } finally {
+    await pool.query("DELETE FROM events WHERE org_id = $1", [st.orgId]);
+    await pool.query("DELETE FROM meets WHERE org_id = $1", [st.orgId]);
+    await teardownFixture(st);
+  }
+});
