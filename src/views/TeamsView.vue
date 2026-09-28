@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 import { RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
@@ -291,6 +291,9 @@ onMounted(async () => {
   window.addEventListener('keydown', onKeyDown)
   await loadTeams()
 })
+// Every visit used to add another window listener and none were ever
+// removed, so each one kept calling closeMembers on a dead instance.
+onUnmounted(() => window.removeEventListener('keydown', onKeyDown))
 </script>
 
 <template>
