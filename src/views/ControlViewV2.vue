@@ -34,7 +34,7 @@ const DrawerPanel = defineAsyncComponent(loadDrawer)
 import EmptyState from '@/components/EmptyState.vue'
 import { useSocket } from '@/composables/useSocket'
 import { useSocketEvent } from '@/composables/useSocketEvent'
-import { useLivePools, selectDiver, rosterIndexForActive, competingQueue, rebaseQueue } from '@/composables/useLivePools'
+import { useLivePools, selectDiver, rosterIndexForActive, competingQueue, rebaseQueue, applyRedive } from '@/composables/useLivePools'
 import { annotateJudgeRows } from '@/composables/useScoreTrim'
 import { synchroJudgeGroups } from '@/composables/useScoreCategories'
 import { controlKeyIntent, hotkeyBlocked } from '@/composables/useControlKeymap'
@@ -81,6 +81,14 @@ useSocketEvent(socket, 'score_received', (data) => {
 })
 useSocketEvent(socket, 'judge_signal', (data) => {
   routeSignal(data)
+})
+// A re-dive (from any operator) starts the dive over: the server marks
+// its scores 'redive' until the judges score again. Reset that pool's
+// tiles and disarm Next so it can't be advanced past the dive on the old
+// scores; the card sees rediveSeq move and restarts its clock.
+useSocketEvent(socket, 'referee_action_redive', (data) => {
+  const pool = data?.event_id != null ? pools[data.event_id] : null
+  if (pool) applyRedive(pool, data, numberOfJudgesFor(data.event_id))
 })
 
 // Authoritative active-diver restore. The server replays state_update on

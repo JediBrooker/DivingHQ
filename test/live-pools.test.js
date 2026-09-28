@@ -232,3 +232,29 @@ test('rebaseQueue: nobody live yet just swaps the queue', async () => {
   assert.equal(pool.roster.length, 1)
   assert.equal(pool.currentIndex, -1)
 })
+
+// A re-dive puts the dive back to square one: the server marks its score
+// rows 'redive' until each judge scores again, so the pool's tiles, its
+// armed Next and its count all have to reset too.
+test('applyRedive resets the live dive it names, and only that one', async () => {
+  const { applyRedive } = await import('../src/composables/useLivePools.js')
+  const pool = makePoolState()
+  pool.currentActive = { event_id: 'A', competitor_id: 'd', round_number: 2 }
+  pool.judgeTiles = initJudgeTiles(3)
+  for (let j = 1; j <= 3; j++) {
+    applyScore(pool, { event_id: 'A', competitor_id: 'd', round_number: 2, judge_id: `j${j}`, judge_number: j, score: 7 }, 3)
+  }
+  assert.equal(pool.advanceArmed, true)
+  const before = pool.rediveSeq || 0
+
+  // a different dive: nothing happens
+  assert.equal(applyRedive(pool, { event_id: 'A', competitor_id: 'd', round_number: 1 }, 3), false)
+  assert.equal(pool.advanceArmed, true)
+
+  assert.equal(applyRedive(pool, { event_id: 'A', competitor_id: 'd', round_number: '2' }, 3), true)
+  assert.equal(pool.advanceArmed, false)
+  assert.deepEqual(pool.scoresThisRound, {})
+  assert.equal(pool.judgeTiles.length, 3)
+  assert.ok(pool.judgeTiles.every((t) => !t.scored))
+  assert.equal(pool.rediveSeq, before + 1)
+})

@@ -134,6 +134,18 @@ watch(signaling, (now, prev) => {
   else if (prev && !nextBtnDisabled.value && !nextBtnComplete.value) startAutoAdvance(fireAdvance)
 })
 
+// A re-dive keeps the same diver up, so activeKey doesn't move: the pool
+// bumps rediveSeq instead. Kill any countdown left over from the old
+// panel and give the diver a fresh clock.
+watch(
+  () => props.pool?.rediveSeq,
+  (seq, prev) => {
+    if (seq === prev) return
+    cancelAutoAdvance()
+    armClockForActive()
+  },
+)
+
 // Hold pauses the clock; resume restarts it for the live dive.
 watch(isHeld, (held) => {
   if (held) { resetShotClock(); cancelAutoAdvance() } else armClockForActive()

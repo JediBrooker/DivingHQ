@@ -26,6 +26,7 @@ export function makePoolState() {
     scoresThisRound: {}, // judge_id -> numeric score
     judgeTiles: [], // [{ judgeIndex, judgeId, score, scored, signaled }]
     advanceArmed: false, // set when the active dive's last score lands
+    rediveSeq: 0, // bumped on a re-dive so the card restarts its clock
   }
 }
 
@@ -171,6 +172,24 @@ export function applyScore(pool, data, numberOfJudges) {
   const allScoresIn = totalJudges > 0 && scoresIn >= totalJudges
   if (allScoresIn) pool.advanceArmed = true
   return { matched: true, allScoresIn }
+}
+
+// Apply a referee re-dive to ONE pool. The server marks the round's score
+// rows 'redive' until each judge scores again, so the live dive starts
+// over: empty tiles, no count, Next disarmed. rediveSeq lets the card
+// notice and restart its clock (the active diver didn't change, so its
+// usual "new diver" watch won't fire). Returns true when it matched.
+export function applyRedive(pool, data, numberOfJudges) {
+  const a = pool && pool.currentActive
+  if (!a || !data) return false
+  if (String(data.event_id) !== String(a.event_id)) return false
+  if (String(data.competitor_id) !== String(a.competitor_id)) return false
+  if (Number(data.round_number) !== Number(a.round_number)) return false
+  pool.scoresThisRound = {}
+  pool.judgeTiles = initJudgeTiles(numberOfJudges)
+  pool.advanceArmed = false
+  pool.rediveSeq = (pool.rediveSeq || 0) + 1
+  return true
 }
 
 // Apply a judge_signal (a judge flagging the referee) to ONE pool's tile.

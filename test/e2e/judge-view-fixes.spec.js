@@ -2,7 +2,7 @@
 // the keypad, and the synchro role line.
 const { test, expect } = require("@playwright/test");
 const setup = require("./_setup");
-const { signIn, liveEvent, emitAck } = require("./_meetday");
+const { signIn, liveEvent, emitAck, roomWatcher } = require("./_meetday");
 
 test.describe.configure({ mode: "serial" });
 
@@ -60,4 +60,53 @@ test("a judge only ever sees their own event's diver", async ({ browser, request
   await ctx.close();
   await setup.deleteOrg(other.orgId);
   await setup.deleteOrg(mine.orgId);
+});
+
+// referee_redive marks the round's scores 'redive' until each judge scores
+// again, but nothing listened for referee_action_redive: judges kept a
+// locked keypad and the operator kept five filled tiles and an armed Next.
+test("a re-dive reopens the judges' keypads and resets the operator's tiles", async ({ browser, request, baseURL }) => {
+  test.setTimeout(120_000);
+  const { orgId, username, adminToken } = await setup.createOrgAndAdmin(request, { countryCode: "AUS", orgName: "Judge Redive" });
+  const { event, divers, diveId, judges } = await liveEvent(request, {
+    orgId, adminToken, name: "Redive Event", diverNames: ["AAA Redive", "BBB Redive"],
+  });
+  const room = await roomWatcher(baseURL, event.id);
+
+  const cctx = await browser.newContext();
+  const cpage = await cctx.newPage();
+  await signIn(cpage, username);
+  await cpage.goto(`/control?event=${event.id}`);
+  const card = cpage.locator(`.cv2-pool[data-event-id="${event.id}"]`);
+  await expect(card.locator(".cv2-live-diver")).toContainText("AAA Redive", { timeout: 10_000 });
+  await expect.poll(() => room.seen.state.length, { timeout: 8_000 }).toBeGreaterThan(0);
+
+  // J1 scores from the judge screen, so their keypad locks
+  const jctx = await browser.newContext();
+  const jpage = await jctx.newPage();
+  await signIn(jpage, judges[0].username);
+  await jpage.goto(`/judge?event=${event.id}`);
+  await expect(jpage.locator(".diver-name")).toContainText("AAA Redive", { timeout: 8_000 });
+  await jpage.locator(".keypad .key", { hasText: /^8$/ }).click();
+  await jpage.locator(".submit-btn").click();
+  await expect(jpage.locator(".keypad .key", { hasText: /^8$/ })).toBeDisabled({ timeout: 6_000 });
+
+  await setup.submitPanelScores({
+    baseURL, judges: judges.slice(1), eventId: event.id,
+    competitorId: divers[0].userId, roundNumber: 1, diveId,
+  });
+  await expect(card.locator(".cv2-tile.scored")).toHaveCount(5, { timeout: 8_000 });
+  await expect(card.locator(".cv2-primary")).toBeEnabled();
+
+  await card.locator(".cv2-ref-btn", { hasText: "Re-dive" }).click();
+  await expect.poll(() => room.seen.redive.length, { timeout: 6_000 }).toBeGreaterThan(0);
+
+  await expect(card.locator(".cv2-tile.scored")).toHaveCount(0, { timeout: 6_000 });
+  await expect(card.locator(".cv2-primary")).toBeDisabled();
+  await expect(jpage.locator(".keypad .key", { hasText: /^8$/ })).toBeEnabled();
+  await expect(jpage.locator(".submit-btn")).toBeEnabled();
+
+  room.close();
+  await cctx.close(); await jctx.close();
+  await setup.deleteOrg(orgId);
 });

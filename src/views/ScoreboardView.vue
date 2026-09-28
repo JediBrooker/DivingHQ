@@ -857,6 +857,18 @@ useSocketEvent(socket, 'score_received', data => {
   if (liveJudgeScores.value.length >= panelSize.value) scheduleRefresh()
 })
 
+// A re-dive throws the panel's scores out until the judges score again, so
+// the pills (and any dive total they'd added up to) go too.
+useSocketEvent(socket, 'referee_action_redive', (data) => {
+  if (!currentEventId.value || data?.event_id !== currentEventId.value) return
+  const a = activeDiver.value
+  if (a && String(data.competitor_id) === String(a.competitor_id)
+      && Number(data.round_number) === Number(a.round_number)) {
+    liveJudgeScores.value = []
+  }
+  scheduleRefresh()
+})
+
 // Live -> Completed (or back) flips this page between the live board and
 // the recap. The server tells every socket, and the /api/archive list this
 // page took its statuses from was loaded once, so patch the row: the

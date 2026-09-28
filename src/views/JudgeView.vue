@@ -339,6 +339,22 @@ useSocketEvent(socket, 'state_update', async (data) => {
   }
 })
 
+// The referee ordered a re-dive of the dive on screen. The server marks
+// its scores 'redive' until each judge scores again, so open the keypad
+// back up and clear the panel. The keypad used to stay locked, and a
+// judge only got it back by stumbling on the Signal Referee trick.
+useSocketEvent(socket, 'referee_action_redive', (data) => {
+  const a = activeDiver.value
+  if (!a || !data) return
+  if (String(data.event_id) !== String(a.event_id)) return
+  if (String(data.competitor_id) !== String(a.competitor_id)) return
+  if (Number(data.round_number) !== Number(a.round_number)) return
+  resetScore()
+  panelScores.value = {}
+  panelSignals.value = {}
+  signaled.value = false
+})
+
 // judge_signal broadcasts from other panel members. Mirror the
 // state into panelSignals so the panel tile turns red and a
 // banner surfaces telling THIS judge that someone else needs
