@@ -204,7 +204,9 @@
       "alerts_dives_one": "plongeon avant l'actif",
       "alerts_dives_many": "plongeons avant l'actif",
       "alerts_hint": "Avertissement approximatif avec chronomètre de 30s : 1 plongeon ≈ 30s, 2 plongeons ≈ 1 min, 3 plongeons ≈ 90s. Les alertes sont envoyées pour tous les événements en direct où vous avez un plongeur.",
-      "alerts_enable_push": "Activer les notifications sur cet appareil"
+      "alerts_enable_push": "Activer les notifications sur cet appareil",
+      "alerts_push_blocked": "Les notifications sont bloquées pour ce site. Autorisez-les dans les réglages du navigateur, puis réessayez.",
+      "alerts_push_failed": "Impossible d'activer les notifications push sur cet appareil."
     },
     "dive_lists": {
       "page_label": "Entraîneur → Listes de plongeons",

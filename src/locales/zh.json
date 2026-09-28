@@ -204,7 +204,9 @@
       "alerts_dives_one": "跳前于当前运动员",
       "alerts_dives_many": "跳前于当前运动员",
       "alerts_hint": "按 30 秒计时大致估算：1 跳 ≈ 30 秒，2 跳 ≈ 1 分钟，3 跳 ≈ 90 秒。提醒会覆盖所有您有队员参加的实况赛事。",
-      "alerts_enable_push": "在此设备启用推送通知"
+      "alerts_enable_push": "在此设备启用推送通知",
+      "alerts_push_blocked": "此网站的通知已被屏蔽。请在浏览器设置中允许通知，然后重试。",
+      "alerts_push_failed": "无法在此设备上开启推送通知。"
     },
     "dive_lists": {
       "page_label": "教练 → 跳水动作单",

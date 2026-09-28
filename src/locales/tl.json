@@ -204,7 +204,9 @@
       "alerts_dives_one": "sisid bago ang aktibo",
       "alerts_dives_many": "sisid bago ang aktibo",
       "alerts_hint": "Tinatayang babala sa 30s shot-clock: 1 sisid ≈ 30s, 2 sisid ≈ 1 min, 3 sisid ≈ 90s. Ang mga alert ay ipinapadala sa bawat Live event kung saan may miyembro ka ng squad.",
-      "alerts_enable_push": "I-enable ang push sa device na ito"
+      "alerts_enable_push": "I-enable ang push sa device na ito",
+      "alerts_push_blocked": "Naka-block ang mga notification para sa site na ito. Payagan ang mga ito sa settings ng browser, saka subukang muli.",
+      "alerts_push_failed": "Hindi ma-on ang mga push notification sa device na ito."
     },
     "dive_lists": {
       "page_label": "Coach → Mga listahan ng dive",

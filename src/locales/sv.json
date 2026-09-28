@@ -204,7 +204,9 @@
       "alerts_dives_one": "hopp före den aktiva",
       "alerts_dives_many": "hopp före den aktiva",
       "alerts_hint": "Ungefärlig förvarning vid 30 s-klocka: 1 hopp ≈ 30 s, 2 hopp ≈ 1 min, 3 hopp ≈ 90 s. Aviseringarna går ut för varje direktsänd tävling där du har en hoppare i laget.",
-      "alerts_enable_push": "Aktivera notiser på denna enhet"
+      "alerts_enable_push": "Aktivera notiser på denna enhet",
+      "alerts_push_blocked": "Aviseringar är blockerade för den här webbplatsen. Tillåt dem i webbläsarens inställningar och försök igen.",
+      "alerts_push_failed": "Det gick inte att aktivera push-aviseringar på den här enheten."
     },
     "dive_lists": {
       "page_label": "Tränare → Hopplistor",

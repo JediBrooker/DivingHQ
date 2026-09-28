@@ -10,8 +10,8 @@
 //     its push subscription rather than chase the browser API.
 //
 // Public API:
-//   const { ready, notifications, subscribe, unsubscribe,
-//           ack, recent } = usePush()
+//   const { ready, notifications, permission, subscribe,
+//           unsubscribe, ack, recent } = usePush()
 //   ready          - true once SW is registered + push status
 //                    settled (or push isn't available)
 //   notifications  - reactive array, newest-first, capped at 50.
@@ -30,6 +30,11 @@ import { useAuthStore } from '@/stores/auth'
 // Module-level shared state, survives across component mounts
 const notifications = ref([])
 const ready = ref(false)
+// 'granted' | 'denied' | 'default', or 'unsupported' where web push
+// can't work at all (no PushManager, plain http). Set on first use and
+// after every subscribe() so a button that offers push can hide once
+// it's on, or when there's no way to turn it on.
+const permission = ref('default')
 let initialised = false
 let socket = null         // socket.io-client passed in by the caller
 // Which signed-in user the login watcher already subscribed for. Every
@@ -63,6 +68,11 @@ function pushApiAvailable() {
     && 'serviceWorker' in navigator
     && 'PushManager' in window
     && (location.protocol === 'https:' || location.hostname === 'localhost')
+}
+
+function readPermission() {
+  if (!pushApiAvailable() || typeof Notification === 'undefined') return 'unsupported'
+  return Notification.permission || 'default'
 }
 
 // Convert a base64url VAPID public key (what the server hands out)
@@ -127,6 +137,7 @@ function pushIntoList(n) {
 export function usePush({ socket: sock } = {}) {
   const auth = useAuthStore()
   if (sock) bindPushSocket(sock)
+  permission.value = readPermission()
 
   // Service worker postMessage, fired when the user taps a
   // system notification while the SPA tab is open.
@@ -158,8 +169,9 @@ export function usePush({ socket: sock } = {}) {
         ready.value = true
         return { ok: false, reason: 'server-disabled' }
       }
-      const permission = await Notification.requestPermission()
-      if (permission !== 'granted') {
+      const answer = await Notification.requestPermission()
+      permission.value = answer
+      if (answer !== 'granted') {
         ready.value = true
         return { ok: false, reason: 'permission-denied' }
       }
@@ -223,7 +235,7 @@ export function usePush({ socket: sock } = {}) {
     recent().catch(() => {})
   }, { immediate: true })
 
-  return { ready, notifications, subscribe, unsubscribe, ack, recent }
+  return { ready, notifications, permission, subscribe, unsubscribe, ack, recent }
 }
 
 // Test-only: feed a row into the shared list the way the socket does.

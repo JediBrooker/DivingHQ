@@ -204,7 +204,9 @@
       "alerts_dives_one": "loncatan sebelum yang aktif",
       "alerts_dives_many": "loncatan sebelum yang aktif",
       "alerts_hint": "Perkiraan peringatan pada penghitung 30 detik: 1 loncatan ≈ 30 detik, 2 loncatan ≈ 1 menit, 3 loncatan ≈ 90 detik. Peringatan dikirim untuk setiap nomor langsung yang Anda miliki anggota skuad di dalamnya.",
-      "alerts_enable_push": "Aktifkan push di perangkat ini"
+      "alerts_enable_push": "Aktifkan push di perangkat ini",
+      "alerts_push_blocked": "Notifikasi diblokir untuk situs ini. Izinkan di pengaturan browser, lalu coba lagi.",
+      "alerts_push_failed": "Tidak dapat mengaktifkan notifikasi push di perangkat ini."
     },
     "dive_lists": {
       "page_label": "Pelatih → Daftar loncatan",

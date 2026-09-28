@@ -204,7 +204,9 @@
       "alerts_dives_one": "ugrással az aktív előtt",
       "alerts_dives_many": "ugrással az aktív előtt",
       "alerts_hint": "Hozzávetőleges előjelzés 30 másodperces stopperrel: 1 ugrás ≈ 30 mp, 2 ugrás ≈ 1 perc, 3 ugrás ≈ 90 mp. Az értesítések minden élő versenyre kimennek, amelyen csapattag műugrója van.",
-      "alerts_enable_push": "Push-értesítések bekapcsolása ezen az eszközön"
+      "alerts_enable_push": "Push-értesítések bekapcsolása ezen az eszközön",
+      "alerts_push_blocked": "Az értesítések le vannak tiltva ezen a webhelyen. Engedélyezze őket a böngésző beállításaiban, majd próbálja újra.",
+      "alerts_push_failed": "Nem sikerült bekapcsolni a push-értesítéseket ezen az eszközön."
     },
     "dive_lists": {
       "page_label": "Edző → Ugráslisták",

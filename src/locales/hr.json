@@ -204,7 +204,9 @@
       "alerts_dives_one": "skok prije aktivnog",
       "alerts_dives_many": "skokova prije aktivnog",
       "alerts_hint": "Približna najava uz 30s mjerač: 1 skok ≈ 30s, 2 skoka ≈ 1 min, 3 skoka ≈ 90s. Upozorenja se šalju za svako natjecanje uživo u kojem imate skakača.",
-      "alerts_enable_push": "Uključi push obavijesti na ovom uređaju"
+      "alerts_enable_push": "Uključi push obavijesti na ovom uređaju",
+      "alerts_push_blocked": "Obavijesti su blokirane za ovu stranicu. Dopustite ih u postavkama preglednika, a zatim pokušajte ponovno.",
+      "alerts_push_failed": "Push obavijesti nije bilo moguće uključiti na ovom uređaju."
     },
     "dive_lists": {
       "page_label": "Trener → Liste skokova",

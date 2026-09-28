@@ -204,7 +204,9 @@
       "alerts_dives_one": "atlama önce",
       "alerts_dives_many": "atlama önce",
       "alerts_hint": "30 sn'lik sayaçta yaklaşık uyarı: 1 atlama ≈ 30 sn, 2 atlama ≈ 1 dk, 3 atlama ≈ 90 sn. Uyarılar, içinde sporcunuz olan her canlı etkinliğe yayılır.",
-      "alerts_enable_push": "Bu cihazda anlık bildirimleri etkinleştir"
+      "alerts_enable_push": "Bu cihazda anlık bildirimleri etkinleştir",
+      "alerts_push_blocked": "Bu site için bildirimler engellendi. Tarayıcı ayarlarından izin verip tekrar deneyin.",
+      "alerts_push_failed": "Bu cihazda anlık bildirimler açılamadı."
     },
     "dive_lists": {
       "page_label": "Antrenör → Atlama Listeleri",

@@ -204,7 +204,9 @@
       "alerts_dives_one": "terjunan sebelum yang aktif",
       "alerts_dives_many": "terjunan sebelum yang aktif",
       "alerts_hint": "Amaran anggaran pada pemasa 30s: 1 terjunan ≈ 30s, 2 terjunan ≈ 1 min, 3 terjunan ≈ 90s. Amaran disebarkan ke setiap acara langsung yang anda mempunyai ahli skuad di dalamnya.",
-      "alerts_enable_push": "Aktifkan push di peranti ini"
+      "alerts_enable_push": "Aktifkan push di peranti ini",
+      "alerts_push_blocked": "Pemberitahuan disekat untuk laman ini. Benarkannya dalam tetapan pelayar, kemudian cuba lagi.",
+      "alerts_push_failed": "Tidak dapat menghidupkan pemberitahuan tolak pada peranti ini."
     },
     "dive_lists": {
       "page_label": "Jurulatih → Senarai terjunan",

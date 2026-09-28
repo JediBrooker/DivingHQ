@@ -204,7 +204,9 @@
       "alerts_dives_one": "Sprung vor dem aktiven",
       "alerts_dives_many": "Sprünge vor dem aktiven",
       "alerts_hint": "Etwa Vorwarnzeit bei 30s-Wettkampfuhr: 1 Sprung ≈ 30s, 2 Sprünge ≈ 1 min, 3 Sprünge ≈ 90s. Benachrichtigungen werden für jedes Live-Event gesendet, in dem Sie einen Springer haben.",
-      "alerts_enable_push": "Push auf diesem Gerät aktivieren"
+      "alerts_enable_push": "Push auf diesem Gerät aktivieren",
+      "alerts_push_blocked": "Benachrichtigungen sind für diese Website blockiert. Erlauben Sie sie in den Browsereinstellungen und versuchen Sie es dann erneut.",
+      "alerts_push_failed": "Push-Benachrichtigungen konnten auf diesem Gerät nicht aktiviert werden."
     },
     "dive_lists": {
       "page_label": "Trainer → Sprungkarten",

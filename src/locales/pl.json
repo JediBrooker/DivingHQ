@@ -204,7 +204,9 @@
       "alerts_dives_one": "skok przed aktywnym",
       "alerts_dives_many": "skoków przed aktywnym",
       "alerts_hint": "Przybliżone wyprzedzenie przy 30s zegarze: 1 skok ≈ 30s, 2 skoki ≈ 1 min, 3 skoki ≈ 90s. Powiadomienia są wysyłane dla każdych zawodów na żywo, w których masz zawodnika w drużynie.",
-      "alerts_enable_push": "Włącz powiadomienia na tym urządzeniu"
+      "alerts_enable_push": "Włącz powiadomienia na tym urządzeniu",
+      "alerts_push_blocked": "Powiadomienia są zablokowane dla tej witryny. Zezwól na nie w ustawieniach przeglądarki i spróbuj ponownie.",
+      "alerts_push_failed": "Nie udało się włączyć powiadomień push na tym urządzeniu."
     },
     "dive_lists": {
       "page_label": "Trener → Listy skoków",

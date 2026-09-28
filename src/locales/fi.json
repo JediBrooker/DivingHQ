@@ -204,7 +204,9 @@
       "alerts_dives_one": "hyppy ennen aktiivista",
       "alerts_dives_many": "hyppyä ennen aktiivista",
       "alerts_hint": "Likimääräinen ennakkovaroitus 30 s sekuntikellolla: 1 hyppy ≈ 30 s, 2 hyppyä ≈ 1 min, 3 hyppyä ≈ 90 s. Hälytykset lähetetään kaikkiin live-kilpailuihin, joissa sinulla on hyppääjä.",
-      "alerts_enable_push": "Ota push-ilmoitukset käyttöön tällä laitteella"
+      "alerts_enable_push": "Ota push-ilmoitukset käyttöön tällä laitteella",
+      "alerts_push_blocked": "Ilmoitukset on estetty tältä sivustolta. Salli ne selaimen asetuksista ja yritä uudelleen.",
+      "alerts_push_failed": "Push-ilmoituksia ei voitu ottaa käyttöön tällä laitteella."
     },
     "dive_lists": {
       "page_label": "Valmentaja → Hyppylistat",

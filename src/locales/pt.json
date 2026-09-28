@@ -204,7 +204,9 @@
       "alerts_dives_one": "salto antes do ativo",
       "alerts_dives_many": "saltos antes do ativo",
       "alerts_hint": "Aviso aproximado com cronómetro de 30s: 1 salto ≈ 30s, 2 saltos ≈ 1 min, 3 saltos ≈ 90s. Os alertas são enviados para cada prova em direto onde tiver um saltador da equipa.",
-      "alerts_enable_push": "Ativar notificações neste dispositivo"
+      "alerts_enable_push": "Ativar notificações neste dispositivo",
+      "alerts_push_blocked": "As notificações estão bloqueadas para este site. Permita-as nas definições do navegador e tente novamente.",
+      "alerts_push_failed": "Não foi possível ativar as notificações push neste dispositivo."
     },
     "dive_lists": {
       "page_label": "Treinador → Listas de Saltos",

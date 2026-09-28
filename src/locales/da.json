@@ -204,7 +204,9 @@
       "alerts_dives_one": "spring før den aktive",
       "alerts_dives_many": "spring før den aktive",
       "alerts_hint": "Omtrentlig forvarsel ved 30 s-ur: 1 spring ≈ 30 s, 2 spring ≈ 1 min, 3 spring ≈ 90 s. Notifikationerne sendes til alle livestævner, hvor du har en udspringer på holdet.",
-      "alerts_enable_push": "Slå pushbeskeder til på denne enhed"
+      "alerts_enable_push": "Slå pushbeskeder til på denne enhed",
+      "alerts_push_blocked": "Notifikationer er blokeret for dette websted. Tillad dem i browserens indstillinger, og prøv igen.",
+      "alerts_push_failed": "Push-notifikationer kunne ikke slås til på denne enhed."
     },
     "dive_lists": {
       "page_label": "Træner → Springlister",

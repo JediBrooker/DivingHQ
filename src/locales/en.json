@@ -204,7 +204,9 @@
       "alerts_dives_one": "dive ahead of active",
       "alerts_dives_many": "dives ahead of active",
       "alerts_hint": "Approximate warning at a 30s shot-clock: 1 dive ≈ 30s, 2 dives ≈ 1 min, 3 dives ≈ 90s. Alerts fan out across every Live event you have a squad member in.",
-      "alerts_enable_push": "Enable push on this device"
+      "alerts_enable_push": "Enable push on this device",
+      "alerts_push_blocked": "Notifications are blocked for this site. Allow them in your browser settings, then try again.",
+      "alerts_push_failed": "Couldn't turn on push notifications on this device."
     },
     "dive_lists": {
       "page_label": "Coach → Dive Lists",

@@ -204,7 +204,9 @@
       "alerts_dives_one": "skok před aktivním",
       "alerts_dives_many": "skoků před aktivním",
       "alerts_hint": "Přibližné varování při 30s limitu: 1 skok ≈ 30 s, 2 skoky ≈ 1 min, 3 skoky ≈ 90 s. Upozornění se rozešlou napříč všemi živými disciplínami, ve kterých máte člena týmu.",
-      "alerts_enable_push": "Povolit push na tomto zařízení"
+      "alerts_enable_push": "Povolit push na tomto zařízení",
+      "alerts_push_blocked": "Oznámení jsou pro tento web zablokovaná. Povolte je v nastavení prohlížeče a zkuste to znovu.",
+      "alerts_push_failed": "Push oznámení se na tomto zařízení nepodařilo zapnout."
     },
     "dive_lists": {
       "page_label": "Trenér → Seznamy skoků",

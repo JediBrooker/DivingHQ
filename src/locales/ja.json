@@ -204,7 +204,9 @@
       "alerts_dives_one": "本前に通知",
       "alerts_dives_many": "本前に通知",
       "alerts_hint": "30 秒のショットクロックでの目安：1 本 ≈ 30 秒、2 本 ≈ 1 分、3 本 ≈ 90 秒。担当選手がいるすべてのライブ種目に通知が送られます。",
-      "alerts_enable_push": "この端末でプッシュ通知を有効にする"
+      "alerts_enable_push": "この端末でプッシュ通知を有効にする",
+      "alerts_push_blocked": "このサイトの通知はブロックされています。ブラウザの設定で許可してから、もう一度お試しください。",
+      "alerts_push_failed": "このデバイスでプッシュ通知をオンにできませんでした。"
     },
     "dive_lists": {
       "page_label": "コーチ → 演技リスト",

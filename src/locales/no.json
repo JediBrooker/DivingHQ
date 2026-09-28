@@ -204,7 +204,9 @@
       "alerts_dives_one": "stup før den aktive",
       "alerts_dives_many": "stup før den aktive",
       "alerts_hint": "Omtrentlig forvarsel ved 30 s-klokke: 1 stup ≈ 30 s, 2 stup ≈ 1 min, 3 stup ≈ 90 s. Varslene går ut til alle direktesendte stevner der du har en stuper på laget.",
-      "alerts_enable_push": "Slå på push-varsler på denne enheten"
+      "alerts_enable_push": "Slå på push-varsler på denne enheten",
+      "alerts_push_blocked": "Varsler er blokkert for dette nettstedet. Tillat dem i nettleserinnstillingene, og prøv igjen.",
+      "alerts_push_failed": "Kunne ikke slå på push-varsler på denne enheten."
     },
     "dive_lists": {
       "page_label": "Trener → Stuplister",

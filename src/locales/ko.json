@@ -204,7 +204,9 @@
       "alerts_dives_one": "회 전에 알림",
       "alerts_dives_many": "회 전에 알림",
       "alerts_hint": "30초 샷 클락 기준 대략적인 예고: 1회 ≈ 30초, 2회 ≈ 1분, 3회 ≈ 90초. 내 선수가 출전한 모든 라이브 종목에 알림이 전송됩니다.",
-      "alerts_enable_push": "이 기기에서 푸시 알림 활성화"
+      "alerts_enable_push": "이 기기에서 푸시 알림 활성화",
+      "alerts_push_blocked": "이 사이트의 알림이 차단되어 있습니다. 브라우저 설정에서 허용한 후 다시 시도하세요.",
+      "alerts_push_failed": "이 기기에서 푸시 알림을 켤 수 없습니다."
     },
     "dive_lists": {
       "page_label": "코치 → 다이빙 목록",

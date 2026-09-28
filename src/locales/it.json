@@ -204,7 +204,9 @@
       "alerts_dives_one": "tuffo di anticipo sull'attivo",
       "alerts_dives_many": "tuffi di anticipo sull'attivo",
       "alerts_hint": "Preavviso approssimativo con cronometro da 30s: 1 tuffo ≈ 30s, 2 tuffi ≈ 1 min, 3 tuffi ≈ 90s. Gli avvisi vengono inviati per ogni gara dal vivo in cui hai un tuffatore della squadra.",
-      "alerts_enable_push": "Attiva le notifiche su questo dispositivo"
+      "alerts_enable_push": "Attiva le notifiche su questo dispositivo",
+      "alerts_push_blocked": "Le notifiche sono bloccate per questo sito. Consentile nelle impostazioni del browser, poi riprova.",
+      "alerts_push_failed": "Impossibile attivare le notifiche push su questo dispositivo."
     },
     "dive_lists": {
       "page_label": "Allenatore → Liste Tuffi",
