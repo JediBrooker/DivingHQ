@@ -178,3 +178,45 @@ test('applyScore tile-matches by judge_number, then judge_id, then first unscore
   assert.equal(pool.judgeTiles[0].scored, true)
   assert.equal(pool.judgeTiles[0].judgeId, 'x')
 })
+
+// A coach can withdraw a diver while their event is Live; the Control Room
+// reloads the roster (roster_changed) and must neither lose its place nor
+// advance onto the withdrawn diver, or onto a reserve.
+test('nextQueueIndex skips withdrawn rows and reserves', async () => {
+  const { nextQueueIndex } = await import('../src/composables/useLivePools.js')
+  const roster = [
+    { competitor_id: 'a', round_number: 1 },
+    { competitor_id: 'b', round_number: 1, withdrawn_at: '2026-09-28T10:00:00Z' },
+    { competitor_id: 'r', round_number: 1, is_reserve: true },
+    { competitor_id: 'c', round_number: 1 },
+  ]
+  assert.equal(nextQueueIndex(roster, -1), 0)
+  assert.equal(nextQueueIndex(roster, 0), 3)
+  assert.equal(nextQueueIndex(roster, 3), -1)
+  assert.equal(nextQueueIndex(null, 0), -1)
+})
+
+test('replaceRoster keeps the stage on the same diver in the fresh rows', async () => {
+  const { replaceRoster, nextQueueIndex } = await import('../src/composables/useLivePools.js')
+  const pool = makePoolState()
+  pool.roster = [
+    { competitor_id: 'a', round_number: 2 },
+    { competitor_id: 'b', round_number: 2 },
+    { competitor_id: 'c', round_number: 2 },
+  ]
+  selectDiver(pool, 1, 5)
+  replaceRoster(pool, [
+    { competitor_id: 'a', round_number: 2 },
+    { competitor_id: 'b', round_number: 2, withdrawn_at: 'now' },
+    { competitor_id: 'c', round_number: 2 },
+  ])
+  assert.equal(pool.currentIndex, 1)
+  assert.equal(pool.currentActive.competitor_id, 'b', 'the dive in progress stays up')
+  assert.equal(pool.currentActive.withdrawn_at, 'now')
+  assert.equal(nextQueueIndex(pool.roster, pool.currentIndex), 2)
+
+  const idle = makePoolState()
+  replaceRoster(idle, [{ competitor_id: 'a', round_number: 1 }])
+  assert.equal(idle.currentIndex, -1)
+  assert.equal(idle.roster.length, 1)
+})

@@ -34,6 +34,8 @@ module.exports = function createCoachRouter({
   bulkWriteLimiter,
   loadEventForEntries,
   push,
+  io = null,
+  scoreboardCache = null,
 }) {
   if (!pool) throw new Error("createCoachRouter requires { pool, … }");
   const router = express.Router();
@@ -955,9 +957,11 @@ module.exports = function createCoachRouter({
   //
   // Audit-logged as `coach.withdraw_dive_list` so the operator can
   // see at a glance "Tom was withdrawn by his coach @ 14:32, reason:
-  // shoulder injury". On the live Control Room the operator gets a
-  // meet_held-style banner so they're not blindsided when the diver
-  // disappears from the queue.
+  // shoulder injury". The event's room hears `roster_changed`, so a live
+  // Control Room reloads its queue and tells the operator rather than
+  // leaving them to call a diver who has gone (it used to load the roster
+  // once and never hear about this). Only ids go on the wire: spectators
+  // sit in that room too, and the reason can be medical.
   // -------------------------------------------------------------
   router.post(
     "/api/coach/dive-lists/:event_id/:diver_id/withdraw",
@@ -1063,6 +1067,12 @@ module.exports = function createCoachRouter({
         });
 
         await client.query("COMMIT");
+        // Withdrawn divers keep the dives they already did, but the cached
+        // scoreboard payload still has them queued up next.
+        scoreboardCache?.invalidate(event_id);
+        io?.to(`event:${event_id}`).emit("roster_changed", {
+          event_id, competitor_id: diver_id, change: "withdrawn",
+        });
         if (push && typeof push.sendNotification === "function") {
           try {
             await push.sendNotification([diver_id], {

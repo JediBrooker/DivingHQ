@@ -34,7 +34,9 @@ const DrawerPanel = defineAsyncComponent(loadDrawer)
 import EmptyState from '@/components/EmptyState.vue'
 import { useSocket } from '@/composables/useSocket'
 import { useSocketEvent } from '@/composables/useSocketEvent'
-import { useLivePools, selectDiver, rosterIndexForActive } from '@/composables/useLivePools'
+import {
+  useLivePools, selectDiver, rosterIndexForActive, nextQueueIndex, replaceRoster,
+} from '@/composables/useLivePools'
 import { annotateJudgeRows } from '@/composables/useScoreTrim'
 import { synchroJudgeGroups } from '@/composables/useScoreCategories'
 import { controlKeyIntent, isTypingTarget } from '@/composables/useControlKeymap'
@@ -45,7 +47,7 @@ import { useHttpOutbox } from '@/composables/useHttpOutbox'
 import { useOutbox } from '@/composables/useOutbox'
 import { confirmAction } from '@/composables/useConfirm'
 import { showUndo } from '@/composables/useUndo'
-import { showError, showSuccess } from '@/composables/useNotify'
+import { showError, showSuccess, showWarning } from '@/composables/useNotify'
 
 const route = useRoute()
 const auth = useAuthStore()
@@ -75,6 +77,26 @@ useSocketEvent(socket, 'score_received', (data) => {
 })
 useSocketEvent(socket, 'judge_signal', (data) => {
   routeSignal(data)
+})
+
+// A coach withdrew a diver from an event that's live here (routes/coach.js
+// emits roster_changed). The pool used to keep the roster it loaded at
+// setup, so the operator could call a diver who had already gone. Reload
+// it without moving the stage, and say who left (the payload is ids only,
+// the name comes from the roster).
+useSocketEvent(socket, 'roster_changed', async (data) => {
+  const pool = data?.event_id && pools[data.event_id]
+  if (!pool) return
+  try {
+    replaceRoster(pool, await auth.apiFetch(`/api/events/${data.event_id}/roster`))
+  } catch {
+    return
+  }
+  if (data.change === 'withdrawn') {
+    const row = pool.roster.find((r) => String(r.competitor_id) === String(data.competitor_id))
+    const ev = events.value.find((e) => String(e.id) === String(data.event_id))
+    showWarning(`${row?.full_name || 'A diver'} was withdrawn by their coach${ev ? ` from "${ev.name}"` : ''}.`)
+  }
 })
 
 // Authoritative active-diver restore. The server replays state_update on
@@ -300,7 +322,10 @@ async function advancePool(ev) {
   if (!p) return
   const totalJudges = numberOfJudgesFor(ev.id) || 0
   const scoresIn = Object.keys(p.scoresThisRound || {}).length
-  const isLast = p.currentIndex >= (p.roster?.length || 0) - 1
+  // Withdrawn rows and reserves stay in the roster payload but aren't
+  // dived, so the queue steps over them.
+  const nextIndex = nextQueueIndex(p.roster, p.currentIndex)
+  const isLast = nextIndex < 0
   const isComplete = !!p.advanceArmed && isLast
   const partial = totalJudges > 0 && scoresIn > 0 && scoresIn < totalJudges
   if (!isComplete && partial) {
@@ -321,7 +346,7 @@ async function advancePool(ev) {
   }
   if (isComplete) {
     await finalisePool(ev)
-  } else if (selectDiver(p, p.currentIndex + 1, totalJudges, diveDescription)) {
+  } else if (selectDiver(p, nextIndex, totalJudges, diveDescription)) {
     // The pool's currentActive changed -> its card re-arms the shot clock.
     // Goes out through the outbox, see emitActiveDiver.
     emitActiveDiver(ev)
@@ -457,7 +482,8 @@ async function setupLivePool(ev) {
     // again whenever this pool completes a dive).
     loadPoolPanels(ev.id)
     if (!pool.roster.length) return
-    selectDiver(pool, 0, ev.number_of_judges, diveDescription)
+    // First row anyone actually dives (not a reserve or withdrawn).
+    selectDiver(pool, Math.max(0, nextQueueIndex(pool.roster, -1)), ev.number_of_judges, diveDescription)
     pendingSeed.add(ev.id)
     // Pull the authoritative active diver. The echo (or a connect replay
     // that landed before the roster finished loading) snaps us to it.

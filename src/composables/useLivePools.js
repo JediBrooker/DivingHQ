@@ -76,6 +76,39 @@ export function selectDiver(pool, idx, numberOfJudges, diveDescription) {
   return true
 }
 
+// The next roster row to put on the stage after index `from` (-1 for the
+// first). The roster payload keeps withdrawn rows and reserves so the
+// Control Room can show them, but nobody dives them, and advancing onto
+// one had the operator calling a diver who wasn't there. -1 when the
+// queue has nothing left.
+export function nextQueueIndex(roster, from) {
+  if (!Array.isArray(roster)) return -1
+  for (let i = Math.max(-1, from) + 1; i < roster.length; i++) {
+    const r = roster[i]
+    if (r && !r.withdrawn_at && !r.is_reserve) return i
+  }
+  return -1
+}
+
+// Swap a freshly fetched roster into a live pool (a diver was withdrawn
+// mid-event, see roster_changed) without moving the stage: the cursor is
+// re-pointed at the same competitor and round in the new rows. If the
+// live diver is the one withdrawn they stay up, so a dive in progress can
+// finish, and nextQueueIndex steps past them on the next advance.
+export function replaceRoster(pool, roster) {
+  if (!pool) return
+  pool.roster = Array.isArray(roster) ? roster : []
+  if (!pool.currentActive) {
+    pool.currentIndex = -1
+    return
+  }
+  const idx = rosterIndexForActive(pool.roster, pool.currentActive)
+  if (idx >= 0) {
+    pool.currentIndex = idx
+    pool.currentActive = pool.roster[idx]
+  }
+}
+
 export function initJudgeTiles(n) {
   const tiles = []
   for (let i = 1; i <= (parseInt(n) || 0); i++) {

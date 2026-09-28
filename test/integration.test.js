@@ -7714,3 +7714,51 @@ test("malformed ids get a 404 or 400, never a 500", async (t) => {
     await teardownFixture(st);
   }
 });
+
+// A coach can scratch a diver from a Live event (routes/coach.js), and
+// the route promised the operator a banner. Nothing was sent: the Control
+// Room loads a Live pool's roster once, so the withdrawn diver stayed in
+// the queue until someone reloaded. The route now tells the event's room,
+// with no names or reasons on the wire (spectators sit in that room too),
+// and drops the cached scoreboard.
+test("a coach withdrawing a diver mid-event tells the event room", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const { io: ioClient } = require("socket.io-client");
+  const st = await setupFixture({ withEvent: false });
+  let sock;
+  try {
+    const dive = await recordKit.threeMetreDive();
+    const diver = await recordKit.diver(st.orgId, null, "female", "Scratch Sadie");
+    const ev = await recordKit.event(st.orgId, { gender: "Female" }); // Live
+    await recordKit.dive(ev, diver, 1, dive, 7);
+    await pool.query(
+      "INSERT INTO competitor_dive_lists (event_id, competitor_id, dive_id, round_number) VALUES ($1, $2, $3, 2)",
+      [ev.id, diver, dive],
+    );
+    const coachName = `int-cw-${crypto.randomBytes(3).toString("hex")}`;
+    const coach = await insertUser({ orgId: st.orgId, role: "coach", username: coachName, fullName: "Scratch Coach" });
+    await pool.query("INSERT INTO coach_diver_links (coach_id, diver_id, org_id) VALUES ($1, $2, $3)", [coach, diver, st.orgId]);
+    const token = (await fetchJson("POST", "/api/auth/login", { body: { username: coachName, password: "not-used-here" } })).body.token;
+
+    sock = ioClient(baseUrl, { transports: ["websocket"], forceNew: true });
+    await new Promise((resolve, reject) => { sock.on("connect", resolve); sock.on("connect_error", reject); });
+    sock.emit("subscribe_event", { event_id: ev.id });
+    await new Promise((r) => setTimeout(r, 200));
+    const heard = new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error("no roster_changed")), 3000);
+      sock.on("roster_changed", (msg) => { clearTimeout(timer); resolve(msg); });
+    });
+    const res = await fetchJson("POST", `/api/coach/dive-lists/${ev.id}/${diver}/withdraw`, {
+      token, body: { reason: "sore shoulder" },
+    });
+    assert.equal(res.status, 200, JSON.stringify(res.body));
+    const msg = await heard;
+    assert.deepEqual(msg, { event_id: ev.id, competitor_id: diver, change: "withdrawn" });
+  } finally {
+    sock?.close();
+    await pool.query("DELETE FROM coach_diver_links WHERE org_id = $1", [st.orgId]);
+    await recordKit.cleanup(st.orgId);
+    await teardownFixture(st);
+  }
+});

@@ -200,6 +200,8 @@ Open the diver's row actions in the dive order → **Withdraw**. The diver is hi
 
 Use **Scratch** for a diver who never started — they're removed from the standings entirely.
 
+A coach can also withdraw one of their divers from the coach console while the event is Live. The Control Room hears about it straight away: the queue reloads (the diver on stage stays up, so a dive in progress can finish), a warning names the diver, and **Next Diver** steps over them. Their dives so far stay in the standings, live and on the recap.
+
 ## Undoing a misclick
 
 The bottom-of-screen Undo snackbar catches the most common operator-day misclicks so you don't need to call an admin to recover. Currently wired to:

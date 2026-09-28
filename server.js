@@ -871,6 +871,10 @@ app.use(require("./routes/coach")({
   bulkWriteLimiter,
   loadEventForEntries,
   push,
+  // A mid-event withdrawal tells the Control Room (roster_changed) and
+  // drops the cached scoreboard.
+  io,
+  scoreboardCache,
 }));
 
 // =============================================================
