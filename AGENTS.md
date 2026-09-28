@@ -339,6 +339,10 @@ until the operator has switched maintenance mode on and passed
 | Confirm event ID belongs to caller's org (read paths) | `ensureEventOrgGate(req, res, paramName)` | `lib/middleware.js` |
 | Confirm a target user/team belongs to the event's org | `isInSameOrg(db, eventOrgId, id, kind)` | `lib/middleware.js` |
 | Auth gate for socket events | `socketRequireRole(socket, [...])` | `lib/middleware.js` |
+| Is this socket locked out by maintenance mode? | `socketMaintenanceBlocked(socket)` | `lib/middleware.js` |
+| Read TRUST_PROXY (Express value, socket hop count) | `expressTrustProxy()` / `trustProxyHops()` | `lib/trust-proxy.js` |
+| Audit snapshot + purge (daily, high-water mark) | `createAuditSnapshot({ pool, logger })` | `lib/audit-snapshot.js` |
+| When an event took place, for analytics dates | `EVENT_DATE` / `EVENT_DATE_FILTER` | `db/queries.js` |
 | Validate a score from the wire (0–10, half-points) | `isValidScore(s)` | `lib/middleware.js` |
 | Parse `?from_date=&to_date=` query params | `parseDateRange(query)` | `lib/middleware.js` |
 | Rate-limit one router's routes (never `app.use(limiter, router)`, that counts every later request too) | `limitRoutes(limiter, router)` | `lib/scoped-limiter.js` |

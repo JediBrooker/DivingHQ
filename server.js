@@ -1691,6 +1691,8 @@ if (require.main === module) {
   // Nothing listens until the flags and live state are in memory, see
   // bootChecks(). A fatal check exits from inside it.
   bootChecks().then(() => {
+    // A SIGTERM that landed mid-boot is already tearing things down.
+    if (shuttingDown) return;
     server.listen(PORT, () => {
       logger.info({ port: PORT }, "diving app started");
       startBackgroundJobs();
