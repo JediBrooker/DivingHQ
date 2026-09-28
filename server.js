@@ -1297,6 +1297,7 @@ require("./routes/socket")({
   scoreboardCache,
   metrics,
   push,
+  trustProxy: app.get("trust proxy fn"),
 });
 
 // =============================================================

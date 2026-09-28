@@ -329,3 +329,23 @@ test("maintenance mode stops judges scoring and signalling over the socket", asy
   assert.equal(h.broadcasts.length, 0, "nothing reaches the room");
   assert.ok(!pool.writes.some((sql) => /INSERT INTO scores/.test(sql)));
 });
+
+// Behind one proxy (Cloudflare) the client can put anything in
+// X-Forwarded-For and the edge appends the real address last. clientIp
+// took the entry one further left than Express does, i.e. the client's
+// own, so audit rows recorded a made-up IP and rotating the header
+// dodged the per-IP connection cap.
+test("the socket's client IP is the one Express would pick, not a spoofed XFF entry", async () => {
+  const h = makeHarness({ maxPerIp: 1 });
+  const a = await h.connect("x", null, { headers: { "x-forwarded-for": "6.6.6.6, 10.0.0.9" }, address: "127.0.0.1" });
+  const b = await h.connect("x", null, { headers: { "x-forwarded-for": "7.7.7.7, 10.0.0.9" }, address: "127.0.0.1" });
+  assert.ok(!a.isDisconnected());
+  assert.ok(b.isDisconnected(), "same real client (10.0.0.9), so the cap of 1 applies");
+
+  // With the app's own trust setting handed in (server.js passes
+  // app.get("trust proxy fn")), no proxy trusted means the peer address.
+  const direct = makeHarness({ maxPerIp: 1, deps: { trustProxy: () => false } });
+  const c = await direct.connect("x", null, { headers: { "x-forwarded-for": "6.6.6.6" }, address: "203.0.113.9" });
+  const d = await direct.connect("x", null, { headers: { "x-forwarded-for": "7.7.7.7" }, address: "203.0.113.9" });
+  assert.ok(!c.isDisconnected() && d.isDisconnected());
+});

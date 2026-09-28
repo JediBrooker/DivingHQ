@@ -121,6 +121,9 @@ module.exports = function attachSocket({
   // increment the connection gauge + score counters; when null
   // (tests) the calls are no-ops.
   metrics,
+  // From server.js: app.get("trust proxy fn"), so clientIp resolves
+  // the same address req.ip does. Optional; see clientIp.
+  trustProxy,
   // From lib/push: optional. When supplied the connection
   // handler joins per-user rooms (`user:<id>`) so the engine can
   // io.to()` an in-app banner, and adopts a `notification:ack`
@@ -185,26 +188,37 @@ module.exports = function attachSocket({
   });
 
   // -----------------------------------------------------------
-  // XFF / IP: mirror the Express side's TRUST_PROXY chain
-  // length so audit-log IPs aren't trivially forgeable.
+  // XFF / IP: the same answer Express gives for req.ip, so audit-log
+  // IPs and the per-IP limits can't be forged from the header.
   // -----------------------------------------------------------
-  const TRUST_PROXY_HOPS = (() => {
-    const raw = process.env.TRUST_PROXY;
-    if (raw === undefined || raw === "" || raw === "true") return 1;
-    if (raw === "false" || raw === "0") return 0;
-    const n = parseInt(raw, 10);
-    return Number.isFinite(n) && n >= 0 ? n : 1;
-  })();
+  // server.js hands in app.get("trust proxy fn"), the exact predicate
+  // Express compiled from TRUST_PROXY. Without it (unit tests) the same
+  // default server.js uses: trust one hop.
+  const isTrustedProxy = typeof trustProxy === "function"
+    ? trustProxy
+    : (() => {
+        const raw = process.env.TRUST_PROXY ?? "1";
+        if (raw === "false") return () => false;
+        if (raw === "true") return () => true;
+        const hops = /^\d+$/.test(raw) ? Number(raw) : 1;
+        return (_addr, i) => i < hops;
+      })();
 
+  // proxy-addr's walk, which is what Express runs: start at the socket
+  // peer, step left through X-Forwarded-For while the address we're on
+  // is a trusted proxy, and stop at the first one that isn't. The old
+  // version took one entry further left than Express, which behind
+  // Cloudflare is whatever the client typed into the header.
   function clientIp(socket) {
     const fwd = socket.handshake.headers["x-forwarded-for"];
-    if (fwd && TRUST_PROXY_HOPS > 0) {
-      const parts = fwd.split(",").map((s) => s.trim()).filter(Boolean);
-      const idx = Math.max(0, parts.length - 1 - TRUST_PROXY_HOPS);
-      if (parts[idx]) return parts[idx];
-      if (parts[0]) return parts[0];
+    const hops = typeof fwd === "string"
+      ? fwd.split(",").map((s) => s.trim()).filter(Boolean).reverse()
+      : [];
+    const addrs = [socket.handshake.address || null, ...hops];
+    for (let i = 0; i < addrs.length - 1; i++) {
+      if (!isTrustedProxy(addrs[i], i)) return addrs[i];
     }
-    return socket.handshake.address || null;
+    return addrs[addrs.length - 1];
   }
 
   // -----------------------------------------------------------
