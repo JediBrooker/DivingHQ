@@ -168,6 +168,10 @@ test("numbers inside a right-to-left stretch stay left to right", () => {
   // Arabic-Indic digits come from the Arabic font, which fontkit would
   // flip as a run, so they go one at a time.
   assert.deepEqual(plan("بطولة ١٢", p), ["arabic!:١", "arabic!:٢", "sans: ", "arabic<:بطولة"]);
+  // Same with no Arabic letter before them. Handed over as one run, "١٢"
+  // would be flipped by fontkit and read 21.
+  assert.deepEqual(plan("Round ١٢", p), ["sans:Round ", "arabic!:١", "arabic!:٢"]);
+  assert.deepEqual(plan("۱۲ محمد", p), ["arabic!:۱", "arabic!:۲", "sans: ", "arabic<:محمد"], "Persian digits too");
 });
 
 test("brackets inside a right-to-left stretch swap sides", () => {
