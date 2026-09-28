@@ -138,7 +138,10 @@ module.exports = function createSuperFinalSeedingRoutes({
        )
        SELECT r.competitor_id, r.total, r.rnk,
               u.org_id, u.full_name, u.username,
-              o.country_code,
+              /* Shown in the bracket preview, so the meet's
+                 representation code (migration 090). The per-org cap
+                 still keys on org_id. */
+              event_rep_code($1, r.competitor_id, o.country_code) AS country_code,
               MIN(cdl.display_order) AS parent_display_order,
               array_agg(json_build_object(
                 'round_number', cdl.round_number,

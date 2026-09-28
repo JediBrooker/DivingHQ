@@ -7815,3 +7815,57 @@ test("venue board: the diver on the board carries the meet's representation code
     await compKit.cleanup(orgId);
   }
 });
+
+test("Super Final rankings: representation codes, and no pending club names in public", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const orgId = await compKit.org("sfrank");
+  try {
+    const { club, code, meet } = await compKit.clubMeet(orgId, "SfRank");
+    const pending = (await pool.query(
+      "INSERT INTO clubs (org_id, name, short_code, status) VALUES ($1, 'Unvetted Club', $2, 'pending') RETURNING id",
+      [orgId, `P${crypto.randomBytes(2).toString("hex")}`.toUpperCase()],
+    )).rows[0].id;
+    const judges = [];
+    for (let i = 0; i < 3; i++) judges.push(await compKit.user(orgId, `SfRank Judge ${i}`, ["judge"]));
+    const d = [];
+    for (let i = 0; i < 12; i++) {
+      // d0 in the approved club; d2 and d1 (an H2H loser) in the pending one.
+      const clubId = i === 0 ? club : (i === 1 || i === 2) ? pending : null;
+      d.push(await compKit.user(orgId, `SfRank Diver ${String(i).padStart(2, "0")}`, ["diver"], { clubId }));
+    }
+    const [dive] = await compKit.dives(1);
+    const mk = (format, parent, carry) => compKit.event(orgId, {
+      name: `SfRank ${format}`, event_format: format, number_of_judges: 3, total_rounds: 1,
+      status: "Completed", meet_id: meet, parent_event_id: parent, score_carry_from: carry,
+    });
+    const stageRows = async (eventId, entries) => {
+      await compKit.panel(eventId, judges);
+      for (const [i, group, order, pts] of entries) {
+        await pool.query(
+          `INSERT INTO competitor_dive_lists (event_id, competitor_id, round_number, dive_id, display_order, group_number)
+           VALUES ($1, $2, 1, $3, $4, $5)`, [eventId, d[i].id, dive, order, group]);
+        for (const j of judges) await compKit.score(eventId, d[i].id, 1, j, pts);
+      }
+    };
+    const h2h = await mk("super_final_h2h", null, null);
+    // Pairs (0,1) (2,3) (4,5) in group 1 and (6,7) (8,9) (10,11) in group 2; evens win.
+    await stageRows(h2h, d.map((_, i) => [i, i < 6 ? 1 : 2, (i % 6) + 1, i % 2 === 0 ? 8 : 5]));
+    const sf = await mk("super_final_semi", h2h, h2h);
+    await stageRows(sf, [[0, 1, 1, 9], [2, 1, 2, 8], [4, 1, 3, 7], [6, 2, 1, 9], [8, 2, 2, 8], [10, 2, 3, 7]]);
+    const fin = await mk("super_final_final", sf, null);
+    await stageRows(fin, [[0, null, 1, 9], [2, null, 2, 8], [6, null, 3, 7], [8, null, 4, 6]]);
+
+    const r = await fetchJson("GET", `/api/events/${fin}/super-final/rankings`);
+    assert.equal(r.status, 200, JSON.stringify(r.body));
+    const by = Object.fromEntries(r.body.rankings.map((row) => [row.competitor_id, row]));
+    assert.equal(r.body.rankings.length, 12);
+    assert.equal(by[d[0].id].country_code, code, "a club meet shows the club code");
+    assert.equal(by[d[0].id].club_name, "SfRank Club");
+    assert.equal(by[d[2].id].club_name, null, "a club still waiting on its federation isn't published");
+    assert.equal(by[d[1].id].club_name, null, "nor for an H2H loser");
+    assert.equal(by[d[4].id].country_code, "BRN", "no club, the country it is");
+  } finally {
+    await compKit.cleanup(orgId);
+  }
+});

@@ -33,6 +33,9 @@ const {
 } = require("../../lib/super-final-helpers");
 const { perDivePointsCte } = require("../../lib/scoring-sql");
 const { insertDiveListRows } = require("./stage-helpers");
+// This endpoint is public (no auth): a club still waiting on its
+// federation stays off it, the same as the scoreboard and recap.
+const { PUBLIC_CLUB_JOIN } = require("../../lib/club-approvals");
 
 // World Aquatics Art 4.1.5 / Diving World Cup §3.1.2: within a Super-
 // Final tier (finalists at positions 1-4, SF non-finalists 5-6, H2H
@@ -559,12 +562,14 @@ module.exports = function createSuperFinalBridgeRoutes({ pool, requireEventManag
                FROM per_dive
               GROUP BY competitor_id
            )
-           SELECT cdl.competitor_id, u.full_name, o.country_code, cl.name AS club_name,
+           SELECT cdl.competitor_id, u.full_name,
+                  event_rep_code($1, cdl.competitor_id, o.country_code) AS country_code,
+                  cl.name AS club_name,
                   COALESCE(MAX(pc.total), 0) AS total
              FROM competitor_dive_lists cdl
              JOIN users u ON u.id = cdl.competitor_id
              JOIN organisations o ON o.id = u.org_id
-             LEFT JOIN clubs cl ON cl.id = u.club_id
+             ${PUBLIC_CLUB_JOIN}
              LEFT JOIN per_competitor pc ON pc.competitor_id = cdl.competitor_id
             WHERE cdl.event_id = $1
               AND cdl.withdrawn_at IS NULL
@@ -621,12 +626,13 @@ module.exports = function createSuperFinalBridgeRoutes({ pool, requireEventManag
         let loserMeta = new Map();
         if (loserIds.length) {
           const metaRes = await client.query(
-            `SELECT u.id, o.country_code, cl.name AS club_name
+            `SELECT u.id, event_rep_code($2, u.id, o.country_code) AS country_code,
+                    cl.name AS club_name
                FROM users u
                JOIN organisations o ON o.id = u.org_id
-               LEFT JOIN clubs cl ON cl.id = u.club_id
+               ${PUBLIC_CLUB_JOIN}
               WHERE u.id = ANY($1::uuid[])`,
-            [loserIds],
+            [loserIds, h2hId],
           );
           loserMeta = new Map(metaRes.rows.map((r) => [r.id, r]));
         }
