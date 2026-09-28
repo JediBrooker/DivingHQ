@@ -15,16 +15,18 @@
 //
 // Each handler streams the bytes straight back via doc.pipe(res)
 // (or res.write for CSV) so a 500-row meet doesn't buffer in
-// memory before sending. PDFKit comes with the standard
-// Helvetica family bundled, so there's no font-installation
-// dependency on the host.
+// memory before sending. Documents come from lib/pdf-document:
+// PDFKit's bundled Helvetica by default, with names folded to
+// what it can print, or Unicode fonts when PDF_FONT_REGULAR
+// points at one.
 //
 // Mounted via:
 //   app.use(require('./routes/pdf')({ pool }))
 
 const express = require("express");
-const PDFDocument = require("pdfkit");
-const { t: serverTranslate } = require("../lib/server-i18n");
+// createPdfDocument prints names in any script it can (see the module
+// header); pdfTranslate falls back to English headers when it can't.
+const { createPdfDocument, pdfTranslate } = require("../lib/pdf-document");
 const {
   perDiveSelect, perDivePointsCte, teamStandingsCte, compStandingsCte, standingsScoreScope,
 } = require("../lib/scoring-sql");
@@ -327,7 +329,7 @@ module.exports = function createPdfRouter({ pool }) {
       const enrichments = await loadProgramEnrichments(events, include);
 
       const slug = slugify(meet.name, "meet");
-      const doc = new PDFDocument({ margin: 50, size: "A4" });
+      const doc = createPdfDocument({ margin: 50, size: "A4" });
       res.setHeader("Content-Type", "application/pdf");
       res.setHeader("Content-Disposition", `attachment; filename="${slug}_program.pdf"`);
       doc.pipe(res);
@@ -378,7 +380,7 @@ module.exports = function createPdfRouter({ pool }) {
       // ---------- Schedule list ----------
       doc.font("Helvetica-Bold").fontSize(11)
         .fillColor("#06b6d4")
-        .text(serverTranslate(req, "pdf.program.header_event_schedule").toUpperCase(), { characterSpacing: 3 });
+        .text(pdfTranslate(req, "pdf.program.header_event_schedule").toUpperCase(), { characterSpacing: 3 });
       doc.moveDown(0.4);
       doc.lineWidth(0.5).strokeColor("#cbd5e1")
         .moveTo(50, doc.y).lineTo(545, doc.y).stroke();
@@ -446,7 +448,7 @@ module.exports = function createPdfRouter({ pool }) {
         if (include.has("judges") && ext.judges && ext.judges.length) {
           doc.moveDown(0.5);
           doc.font("Helvetica-Bold").fontSize(9).fillColor("#06b6d4")
-            .text(serverTranslate(req, "pdf.program.header_judge_panel").toUpperCase(), { characterSpacing: 2 });
+            .text(pdfTranslate(req, "pdf.program.header_judge_panel").toUpperCase(), { characterSpacing: 2 });
           doc.font("Helvetica").fontSize(9).fillColor("#334155");
           for (const j of ext.judges) {
             if (doc.y > 760) doc.addPage();
@@ -463,14 +465,14 @@ module.exports = function createPdfRouter({ pool }) {
         if (include.has("dive_lists") && ext.diveLists && ext.diveLists.length) {
           doc.moveDown(0.5);
           doc.font("Helvetica-Bold").fontSize(9).fillColor("#06b6d4")
-            .text(serverTranslate(req, "pdf.program.header_dive_lists").toUpperCase(), { characterSpacing: 2 });
+            .text(pdfTranslate(req, "pdf.program.header_dive_lists").toUpperCase(), { characterSpacing: 2 });
           let inReserves = false;
           for (const diver of ext.diveLists) {
             if (doc.y > 740) doc.addPage();
             if (diver.is_reserve && !inReserves) {
               doc.moveDown(0.3);
               doc.font("Helvetica-Bold").fontSize(8).fillColor("#94a3b8")
-                .text(serverTranslate(req, "pdf.program.header_reserves").toUpperCase(), { characterSpacing: 2 });
+                .text(pdfTranslate(req, "pdf.program.header_reserves").toUpperCase(), { characterSpacing: 2 });
               inReserves = true;
             }
             doc.font("Helvetica-Bold").fontSize(10).fillColor("#0f172a");
@@ -740,7 +742,7 @@ module.exports = function createPdfRouter({ pool }) {
       const divers = [...byDiver.values()];
 
       const slug = slugify(event.name, "event");
-      const doc = new PDFDocument({ margin: 40, size: "A4", layout: "landscape" });
+      const doc = createPdfDocument({ margin: 40, size: "A4", layout: "landscape" });
       res.setHeader("Content-Type", "application/pdf");
       res.setHeader("Content-Disposition", `attachment; filename="${slug}_start_list.pdf"`);
       doc.pipe(res);
@@ -1000,7 +1002,7 @@ module.exports = function createPdfRouter({ pool }) {
       }
 
       const slug = slugify(diver.full_name, "diver");
-      const doc = new PDFDocument({ margin: 50, size: "A4" });
+      const doc = createPdfDocument({ margin: 50, size: "A4" });
       res.setHeader("Content-Type", "application/pdf");
       res.setHeader("Content-Disposition", `attachment; filename="${slug}_score_sheet.pdf"`);
       doc.pipe(res);
@@ -1279,7 +1281,7 @@ module.exports = function createPdfRouter({ pool }) {
       const event = ev.rows[0];
       const slug = event.name.replace(/[^a-z0-9]+/gi, "_").toLowerCase();
 
-      const doc = new PDFDocument({ margin: 50, size: "A4" });
+      const doc = createPdfDocument({ margin: 50, size: "A4" });
       res.setHeader("Content-Type", "application/pdf");
       res.setHeader("Content-Disposition", `attachment; filename="${slug}_results.pdf"`);
       doc.pipe(res);

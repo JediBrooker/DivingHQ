@@ -60,8 +60,9 @@
 //     CSV export uses.
 
 const express = require("express");
-const PDFDocument = require("pdfkit");
 const { perDivePointsCte } = require("../lib/scoring-sql");
+// Unicode names print readably, see lib/pdf-document.
+const { createPdfDocument } = require("../lib/pdf-document");
 // CSV escaping + formula-injection guard, and the filename slug the
 // PDF/CSV exports share.
 const { csvRow, slugify } = require("../lib/csv");
@@ -454,7 +455,7 @@ module.exports = function createJudgeRankingRouter({ pool }) {
       const { event, judges, divers } = result;
       const slug = slugify(event.name);
 
-      const doc = new PDFDocument({ margin: 40, size: "A4", layout: "landscape" });
+      const doc = createPdfDocument({ margin: 40, size: "A4", layout: "landscape" });
       res.setHeader("Content-Type", "application/pdf");
       res.setHeader(
         "Content-Disposition",

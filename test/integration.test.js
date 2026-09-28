@@ -7350,3 +7350,39 @@ test("a synchro partner's profile, analytics, public card and score sheet show t
     await teardownFixture(st);
   }
 });
+
+// PDFKit's Helvetica only prints WinAnsi. A Russian program.pdf printed
+// its section headers, and any Cyrillic or Polish name, as mojibake. With
+// no Unicode font configured the headers fall back to English and names
+// are transliterated (lib/pdf-document).
+test("program.pdf in Russian prints readable headers and names", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  if (process.env.PDF_FONT_REGULAR) return t.skip("Unicode PDF font configured, text isn't folded");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const meet = (await pool.query(
+      "INSERT INTO meets (org_id, name) VALUES ($1, 'Кубок Łodzi') RETURNING id", [st.orgId],
+    )).rows[0].id;
+    const ev = (await pool.query(
+      `INSERT INTO events (org_id, meet_id, name, gender, height, number_of_judges, total_rounds)
+       VALUES ($1, $2, 'Вышка 10м', 'Female', '10m', 5, 5) RETURNING id`,
+      [st.orgId, meet],
+    )).rows[0].id;
+    const judge = await insertUser({ orgId: st.orgId, role: "judge", username: `int-ru-${st.slug}`, fullName: "Łukasz Иванов" });
+    await pool.query("INSERT INTO event_judges (event_id, judge_id, judge_number) VALUES ($1, $2, 1)", [ev, judge]);
+    const res = await fetch(`${baseUrl}/api/meets/${meet}/program.pdf?include=judges`, {
+      headers: { "accept-language": "ru" },
+    });
+    assert.equal(res.status, 200);
+    const text = pdfText(Buffer.from(await res.arrayBuffer())).join("\n");
+    assert.match(text, /EVENT SCHEDULE/);
+    assert.match(text, /JUDGE PANEL/);
+    assert.match(text, /Lukasz Ivanov/);
+    assert.match(text, /Kubok Lodzi/);
+    assert.match(text, /Vyshka 10m/);
+  } finally {
+    await pool.query("DELETE FROM meets WHERE org_id = $1", [st.orgId]);
+    await teardownFixture(st);
+  }
+});
