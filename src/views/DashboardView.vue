@@ -878,6 +878,12 @@ onMounted(async () => {
   // One-shot bundle endpoint that returns every role-scoped
   // slice in a single round trip.
   const bundled = await loadDashboardBundle()
+  // Someone who clicks away before the first bundle is back has already
+  // unmounted us. Carrying on from here would bounce them to /setup from
+  // whatever page they went to, and start a poll, socket handlers and a
+  // visibility listener that onUnmounted has already run past (so nothing
+  // would ever remove them).
+  if (unmounted) return
 
   // First-run wizard auto-redirect (preserved). Runs BEFORE we
   // touch tab logic, so a fresh org admin doesn't briefly see the
@@ -900,6 +906,7 @@ onMounted(async () => {
         // dashboard is where their chip is, the wizard would hide it.
         clubCount = (clubs || []).length
       } catch { /* leave 0 */ }
+      if (unmounted) return
       if (clubCount === 0) {
         router.replace('/setup')
         return
