@@ -42,7 +42,19 @@
 // invalidating every previously-cached asset hash. Bumping the
 // cache forces returning PWA users to re-fetch the shell on
 // next visit instead of getting a blank page from stale hashes.
-const CACHE = "divinghq-shell-v7";
+// v7 → v8: the server used to answer a missing /assets chunk with the
+// SPA shell (200, text/html) and we cached that under the .js URL,
+// which left the screen blank on that device for good. Both ends are
+// fixed now; the bump throws away any entry that was poisoned before.
+const CACHE = "divinghq-shell-v8";
+
+// Only HTML is allowed to become the offline shell, and HTML is never
+// allowed into the /assets cache. A 200 isn't enough to go on: /metrics
+// and /sitemap.xml are navigable too, and an old server build still
+// hands out the shell for a chunk it doesn't have.
+function isHtml(res) {
+  return (res.headers.get("content-type") || "").includes("text/html");
+}
 // No "/" here: the offline navigation fallback only ever reads
 // /index.html, so a cached "/" was a wasted request on install.
 const SHELL = [
@@ -92,7 +104,7 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(
       fetch(request)
         .then((res) => {
-          if (res.ok) {
+          if (res.ok && isHtml(res)) {
             const clone = res.clone();
             caches.open(CACHE).then((c) => c.put("/index.html", clone)).catch(() => {});
           }
@@ -110,7 +122,7 @@ self.addEventListener("fetch", (event) => {
       caches.match(request).then((cached) => {
         if (cached) return cached;
         return fetch(request).then((res) => {
-          if (res.status === 200) {
+          if (res.status === 200 && !isHtml(res)) {
             const clone = res.clone();
             caches.open(CACHE).then((c) => c.put(request, clone)).catch(() => {});
           }

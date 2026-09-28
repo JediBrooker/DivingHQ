@@ -7,6 +7,7 @@ import { tipDirective } from './directives/tip'
 import { useUiStore } from './stores/ui'
 import { useAuthStore } from './stores/auth'
 import { useFeaturesStore } from './stores/features'
+import { installStaleChunkRecovery } from './lib/staleChunk'
 // Global styles. Imported here (not via <link> in index.html) so Vite
 // content-hashes the output filename. Any edit to app.css produces a
 // new hashed URL, so browser + service-worker caches stay transparent
@@ -21,6 +22,9 @@ app.use(createPinia())
 // this just instantiates the store so later toggles stay in sync.
 useUiStore().applyTheme()
 app.use(router)
+// A tab left open over a deploy asks for chunks that are gone. Reload it
+// once onto the new build rather than let the click silently do nothing.
+installStaleChunkRecovery(router)
 app.use(i18n)
 // v-tip: instant tooltip replacement for `title=`. See
 // src/directives/tip.js for the rationale (native title has a
