@@ -1244,10 +1244,16 @@ module.exports = function createCoachRouter({
             .json({ error: "Both users must belong to the target organisation" });
         }
       }
+      // One link per (coach, diver), whichever federation made it. Both
+      // users are in this org (checked above), so a link still pointing
+      // at a federation they've left moves here. Updating only the note
+      // left it there: this org got a 201 for a link it couldn't list,
+      // delete or use (requireCoachLink matches link.org_id).
       const r = await pool.query(
         `INSERT INTO coach_diver_links (coach_id, diver_id, org_id, note)
          VALUES ($1, $2, $3, $4)
-         ON CONFLICT (coach_id, diver_id) DO UPDATE SET note = EXCLUDED.note
+         ON CONFLICT (coach_id, diver_id) DO UPDATE
+           SET note = EXCLUDED.note, org_id = EXCLUDED.org_id
          RETURNING id, coach_id, diver_id, note, created_at`,
         [coach_id, diver_id, req.params.id, note || null],
       );

@@ -7762,3 +7762,34 @@ test("a coach withdrawing a diver mid-event tells the event room", async (t) => 
     await teardownFixture(st);
   }
 });
+
+// coach_diver_links is unique on (coach, diver). Re-linking a pair whose
+// old link belongs to a federation they've both left only updated the
+// note, so the new federation got a 201 for a link it couldn't list,
+// delete or use.
+test("re-linking a coach and diver who changed federation moves the link", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const X = await setupFixture({ withEvent: false });
+  const Y = await setupFixture({ withEvent: false });
+  try {
+    const coach = await insertUser({ orgId: X.orgId, role: "coach", username: `int-cl-c-${X.slug}`, fullName: "Moving Coach" });
+    const diver = await insertUser({ orgId: X.orgId, role: "diver", username: `int-cl-d-${X.slug}`, fullName: "Moving Diver" });
+    const first = await fetchJson("POST", `/api/orgs/${X.orgId}/coach-links`, { token: X.adminToken, body: { coach_id: coach, diver_id: diver } });
+    assert.equal(first.status, 201, JSON.stringify(first.body));
+    // Both transfer to Y.
+    await pool.query("UPDATE users SET org_id = $1 WHERE id = ANY($2::uuid[])", [Y.orgId, [coach, diver]]);
+    await pool.query("UPDATE user_org_roles SET org_id = $1 WHERE user_id = ANY($2::uuid[])", [Y.orgId, [coach, diver]]);
+    const again = await fetchJson("POST", `/api/orgs/${Y.orgId}/coach-links`, { token: Y.adminToken, body: { coach_id: coach, diver_id: diver, note: "new squad" } });
+    assert.equal(again.status, 201, JSON.stringify(again.body));
+    const list = await fetchJson("GET", `/api/orgs/${Y.orgId}/coach-links`, { token: Y.adminToken });
+    assert.deepEqual(list.body.map((l) => [l.coach_id, l.diver_id, l.note]), [[coach, diver, "new squad"]]);
+    assert.deepEqual((await fetchJson("GET", `/api/orgs/${X.orgId}/coach-links`, { token: X.adminToken })).body, []);
+    const del = await fetchJson("DELETE", `/api/coach-links/${list.body[0].id}`, { token: Y.adminToken });
+    assert.equal(del.status, 200);
+  } finally {
+    await pool.query("DELETE FROM coach_diver_links WHERE org_id = ANY($1::uuid[])", [[X.orgId, Y.orgId]]);
+    await teardownFixture(Y);
+    await teardownFixture(X);
+  }
+});
