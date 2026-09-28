@@ -75,6 +75,10 @@ test("a dialog opens centred and stays put while it fades in", async ({ page }) 
 test("RTL: a dialog is centred on a phone, not pushed off the left edge", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await useLocale(page, "ar");
+  // Signed in, the account's language wins over the device's (the auth
+  // store's adoptAccountLocale), and the test above left this diver's
+  // account on English. Make the account Arabic too.
+  await setup.pool.query("UPDATE users SET locale = 'ar' WHERE id = $1", [world.diver.userId]);
   await signIn(page, world.diver.username);
   const { frames, vw } = await sampleRoleDialog(page);
   expect(await page.evaluate(() => document.documentElement.dir)).toBe("rtl");

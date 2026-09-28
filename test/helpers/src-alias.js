@@ -14,7 +14,8 @@ const path = require("node:path");
 const { pathToFileURL, fileURLToPath } = require("node:url");
 const nodeModule = require("node:module");
 
-const SRC = path.join(__dirname, "..", "..", "src");
+const REPO = path.join(__dirname, "..", "..");
+const SRC = path.join(REPO, "src");
 let registered = false;
 
 function firstFile(base) {
@@ -31,6 +32,21 @@ function registerSrcAlias() {
   if (typeof nodeModule.registerHooks !== "function") return false;
   nodeModule.registerHooks({
     resolve(specifier, context, next) {
+      const out = resolveSrc(specifier, context, next);
+      // Vite imports JSON (src/locales/*.json, lib/countries.json) with no
+      // `with { type: 'json' }`; Node insists on it. Supply it for JSON
+      // under the repo so a store that pulls in src/i18n still loads.
+      if (out.url && out.url.endsWith(".json") && out.url.startsWith(pathToFileURL(REPO).href)) {
+        return { ...out, importAttributes: { ...(out.importAttributes || {}), type: "json" } };
+      }
+      return out;
+    },
+  });
+  registered = true;
+  return true;
+}
+
+function resolveSrc(specifier, context, next) {
       if (specifier.startsWith("@/")) {
         const hit = firstFile(path.join(SRC, specifier.slice(2)));
         if (hit) return next(pathToFileURL(hit).href, context);
@@ -49,10 +65,6 @@ function registerSrcAlias() {
         }
       }
       return next(specifier, context);
-    },
-  });
-  registered = true;
-  return true;
 }
 
 module.exports = { registerSrcAlias };
