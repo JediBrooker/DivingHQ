@@ -303,9 +303,15 @@ async function confirmTfaDisable() {
         code:     tfaCode.value,
       }),
     })
-    tfaToast.value = '2FA disabled.'
+    // Disable bumps token_version too, same as confirm, so this tab's
+    // session is already dead. Asking for the status again just 401'd
+    // and bounced the user to /login before the toast could be read,
+    // which looked like the disable had failed. Say what happened, then
+    // sign out on our own terms.
+    tfaToast.value = '2FA disabled. Sign in again to continue.'
     tfaStage.value = 'idle'
-    await refreshTfaStatus()
+    tfaStatus.value = { enabled: false, recovery_codes_remaining: null }
+    setTimeout(() => { auth.clearSession(); window.location.assign('/login') }, 2000)
   } catch (err) {
     tfaError.value = err.message || 'Could not disable 2FA'
   } finally {
