@@ -7215,3 +7215,47 @@ test("claiming a past account needs the same name, not just the same org", async
     await teardownFixture(st);
   }
 });
+
+// Custom dive-directory rows are an org's own drills, any DD from 0.1 to
+// 9.9, and any staff member anywhere can add one. Competition dive lists
+// took them from every org, so another federation's "101B at DD 9.9"
+// could go on a real entry and multiply every judge's score.
+test("a dive list can't use another org's custom dive, and the picker doesn't offer it", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const home = await setupFixture({ withEvent: false });
+  const away = await setupFixture({ withEvent: false });
+  try {
+    const coach = await sweepKit.member(away.orgId, "coach");
+    const made = await fetchJson("POST", "/api/dive-directory", {
+      // A DD no other run is using, since the directory is shared.
+      token: coach.token, body: { dive_code: "101", height: "3m", position: "B", dd: 5 + crypto.randomInt(49) / 10 },
+    });
+    assert.equal(made.status, 201, JSON.stringify(made.body));
+    const diver = await sweepKit.member(home.orgId, "diver");
+    const ev = (await pool.query(
+      `INSERT INTO events (org_id, name, gender, height, number_of_judges, total_rounds, event_type, status)
+       VALUES ($1, 'Sweep custom DD', 'Mixed', '3m', 5, 1, 'individual', 'Upcoming') RETURNING id`,
+      [home.orgId],
+    )).rows[0].id;
+    const submit = (diveId) => fetchJson("POST", "/api/competitor/submit-list", {
+      token: diver.token, body: { event_id: ev, dives: [{ round_number: 1, dive_id: diveId }] },
+    });
+    const foreign = await submit(made.body.id);
+    assert.equal(foreign.status, 400, JSON.stringify(foreign.body));
+    const core = (await pool.query(
+      "SELECT id FROM dive_directory WHERE dive_code = '101' AND position = 'B' AND height = 3 AND NOT is_custom",
+    )).rows[0].id;
+    assert.equal((await submit(core)).status, 200);
+
+    const listed = await fetchJson("GET", "/api/dive-directory", { token: diver.token });
+    assert.ok(!listed.body.some((d) => d.id === made.body.id), "the other org's drill isn't in this org's picker");
+    const theirs = await fetchJson("GET", "/api/dive-directory", { token: coach.token });
+    assert.ok(theirs.body.some((d) => d.id === made.body.id), "its own org still sees it");
+  } finally {
+    // Home's events (and any dive list that used the drill) go first.
+    await teardownFixture(home);
+    await pool.query("DELETE FROM dive_directory WHERE created_org_id = $1", [away.orgId]);
+    await teardownFixture(away);
+  }
+});

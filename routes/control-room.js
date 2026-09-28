@@ -288,11 +288,17 @@ module.exports = function createControlRoomRouter({
             });
             continue;
           }
+          // Core row first. A custom row can share the code, position
+          // and height with a DD of its own, and only the event's org's
+          // own custom rows are in play at all.
           const d = await client.query(
             `SELECT id FROM dive_directory
              WHERE dive_code = $1 AND position = $2::dive_position
-               AND ($3::numeric IS NULL OR height = $3::numeric)`,
-            [code, pos, heightNumeric],
+               AND ($3::numeric IS NULL OR height = $3::numeric)
+               AND (NOT is_custom OR created_org_id = $4)
+             ORDER BY is_custom, created_at
+             LIMIT 1`,
+            [code, pos, heightNumeric, event.org_id],
           );
           if (!d.rows.length) {
             stats.errors.push({

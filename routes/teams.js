@@ -102,11 +102,14 @@ module.exports = function createTeamsRouter({
 
     const ids = [...new Set(rows.map((d) => d.dive_id))];
     const heightVal = event.height ? parseFloat(event.height) : null;
+    // Custom rows only for the event's own org, same as the individual
+    // submit (lib/dive-list-submit.js).
     const validIds = await client.query(
       `SELECT id, dive_code, dd, height FROM dive_directory
        WHERE id = ANY($1::uuid[])
-         AND ($2::numeric IS NULL OR height = $2)`,
-      [ids, heightVal],
+         AND ($2::numeric IS NULL OR height = $2)
+         AND (NOT is_custom OR created_org_id = $3)`,
+      [ids, heightVal, event.org_id],
     );
     const okMap = new Map(validIds.rows.map((row) => [row.id, row]));
     for (const d of rows) {
