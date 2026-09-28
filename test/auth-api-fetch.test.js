@@ -100,3 +100,57 @@ test("anonymous 401s never probe or redirect", { skip: !hooked }, async () => {
   assert.deepEqual(calls, ["GET /api/judges"]);
   assert.equal(window.location.href, "/profile");
 });
+
+// The server hangs structured detail off error bodies: dive-list
+// violations (lib/dive-list-submit.js), needs_totp on the credential
+// sign-off. Callers branch on those, so they have to survive the throw.
+test("error body fields ride along on the thrown error", { skip: !hooked }, async () => {
+  stubFetch({
+    "POST /api/coach/dive-lists/e1/d1": () => jsonResponse(400, {
+      error: "Dive list violates the event's prescribed dives",
+      violations: ["Round 2 must be 105B", "Round 4 must be 3m"],
+    }),
+  });
+  const auth = signedInStore();
+  await assert.rejects(
+    auth.apiFetch("/api/coach/dive-lists/e1/d1", { method: "POST" }),
+    (err) => {
+      assert.equal(err.status, 400);
+      assert.deepEqual(err.violations, ["Round 2 must be 105B", "Round 4 must be 3m"]);
+      assert.deepEqual(err.body.violations, err.violations);
+      return true;
+    },
+  );
+});
+
+test("a 401 needs_totp from the sign-off keeps the flag and the session", { skip: !hooked }, async () => {
+  stubFetch({
+    "POST /api/events/e1/dive-order/sign-off/credential": () => jsonResponse(401, { error: "TOTP code required", needs_totp: true }),
+    "GET /api/auth/me": () => jsonResponse(200, { user: SIGNED_IN }),
+  });
+  const auth = signedInStore();
+  await assert.rejects(
+    auth.apiFetch("/api/events/e1/dive-order/sign-off/credential", { method: "POST" }),
+    (err) => err.needs_totp === true,
+  );
+  assert.ok(auth.isLoggedIn);
+});
+
+// DELETE /api/dive-directory/:id answers 204 with no body. Parsing that
+// as JSON threw "Unexpected end of JSON input" after the delete had
+// already happened, so the page reported a failure and kept the row.
+test("a 204 resolves to null instead of throwing", { skip: !hooked }, async () => {
+  stubFetch({
+    "DELETE /api/dive-directory/abc": () => new Response(null, { status: 204 }),
+  });
+  const auth = signedInStore();
+  assert.equal(await auth.apiFetch("/api/dive-directory/abc", { method: "DELETE" }), null);
+});
+
+test("an empty 200 body resolves to null too", { skip: !hooked }, async () => {
+  stubFetch({
+    "POST /api/thing": () => new Response("", { status: 200 }),
+  });
+  const auth = signedInStore();
+  assert.equal(await auth.apiFetch("/api/thing", { method: "POST" }), null);
+});

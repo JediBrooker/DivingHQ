@@ -39,6 +39,7 @@ const activeSlot = ref(-1)
 const searchInput = ref('')
 const activeHeightFilter = ref(null)
 const submitErr = ref('')
+const submitViolations = ref([])
 const loading = ref(false)
 const eventLoading = ref(false)
 const eventLoadError = ref('')
@@ -590,6 +591,7 @@ function setHeightFilter(h) {
 
 async function submitList() {
   submitErr.value = ''
+  submitViolations.value = []
   const eventId = selectedEventId.value
   const filled = selectedDives.value.filter(Boolean)
   if (!eventId || filled.length < selectedDives.value.length) {
@@ -622,6 +624,9 @@ async function submitList() {
     router.push('/dashboard')
   } catch (err) {
     submitErr.value = err.message || 'Submission failed. You may have already submitted for this event.'
+    // The validator says which round or limit it tripped on. Without
+    // this the diver only ever saw the one-line summary.
+    submitViolations.value = Array.isArray(err.violations) ? err.violations : []
   } finally {
     loading.value = false
   }
@@ -1264,7 +1269,12 @@ watch(currentEvent, async (ev) => {
           </ul>
         </div>
 
-        <div v-if="submitErr" class="msg msg-error" style="margin-top:1rem">{{ submitErr }}</div>
+        <div v-if="submitErr" class="msg msg-error" style="margin-top:1rem">
+          {{ submitErr }}
+          <ul v-if="submitViolations.length" class="submit-violations">
+            <li v-for="v in submitViolations" :key="v">{{ v }}</li>
+          </ul>
+        </div>
         <button class="btn btn-primary-lg" style="margin-top:1.5rem"
                 @click="submitList"
                 :disabled="loading || !isCurrentEventOpen
@@ -1333,6 +1343,7 @@ watch(currentEvent, async (ev) => {
 </template>
 
 <style scoped>
+.submit-violations{margin:0.4rem 0 0;padding-inline-start:1.2rem;}
 .page-header{display:flex;align-items:center;justify-content:space-between;padding:1.5rem 2rem;border-bottom:1px solid var(--border);max-width:900px;margin:0 auto;}
 /* Back-to-dashboard is redundant inside the app shell sidebar. */
 .page-header .btn{display:none;}

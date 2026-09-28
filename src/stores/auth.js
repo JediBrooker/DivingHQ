@@ -229,9 +229,18 @@ export const useAuthStore = defineStore('auth', () => {
       }
       // status and code ride along so a caller can tell "you may not"
       // (403) from "that didn't work" without matching on English text.
-      const err = new Error(body.error || res.statusText)
+      // So does the rest of the body: the server hangs structured detail
+      // off errors (violations[] from the dive-list validator, needs_totp
+      // from the referee sign-off) and callers branch on it. Only fields
+      // the Error doesn't already have, so a body can't clobber status.
+      const err = new Error(body?.error || res.statusText)
       err.status = res.status
-      if (body.code) err.code = body.code
+      err.body = body
+      if (body && typeof body === 'object' && !Array.isArray(body)) {
+        for (const [k, v] of Object.entries(body)) {
+          if (!(k in err)) err[k] = v
+        }
+      }
       throw err
     }
     return res.json()
