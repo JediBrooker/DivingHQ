@@ -450,15 +450,19 @@
 
 /**
  * @typedef {Object} EventTemplate
- * A saved create-form configuration, org-scoped (GET / POST upsert by
- * name / DELETE /api/event-templates). config is the form state as the
- * Meet Manager saved it: gender, height, number_of_judges, total_rounds,
- * event_type, age_group, event_format, advance_count, dd_limit_*,
- * round_rules, optionally round_dives.
+ * A saved create-form configuration (GET / POST upsert by name / DELETE
+ * /api/event-templates). Each belongs to one owner and only that owner's
+ * admins see it (migration 104): no query param is the caller's org,
+ * ?club_id= a club they admin, ?region_id= a region they admin. config is
+ * the form state as the Meet Manager saved it: gender, height,
+ * number_of_judges, total_rounds, event_type, age_group, event_format,
+ * advance_count, dd_limit_*, round_rules, optionally round_dives.
  *
  * @property {string} id
  * @property {string} name
  * @property {Object} config
+ * @property {string|null} club_id    set for a club's template, else null
+ * @property {string|null} region_id  set for a region's template, else null
  * @property {string} created_at
  * @property {string} updated_at
  */

@@ -1223,9 +1223,10 @@ app.use(require("./routes/audit")({
 // extracted into routes/templates.js.
 // =============================================================
 app.use(require("./routes/templates")({ pool, verifyToken }));
-// Meet Manager's saved event templates (org-scoped). See the file header
-// for why these came back.
-app.use(require("./routes/event-templates")({ pool, requireMeetEditor }));
+// Meet Manager's saved event templates. Each belongs to one org, club or
+// region and only its own admins use it; the router works out which scope
+// a request is in and checks the seat itself (see the file header).
+app.use(require("./routes/event-templates")({ pool, verifyToken, requireTotpForPrivilegedRoles }));
 
 // =============================================================
 // CONFLICT RESOLUTION
