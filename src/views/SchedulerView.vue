@@ -715,12 +715,12 @@ function blockStyleWithPreview(block, session) {
 // click → open the inline insert form pre-filled with the
 // half-hour slot under the cursor and the board column the click
 // landed in. We ignore clicks that land inside an existing block
-// (the block stops propagation in its mousedown handler) and the
+// (the block stops propagation in its pointerdown handler) and the
 // no-boards case (operator has no columns to fill in yet).
 function onGridClick(e, session) {
   if (!editMode.value || !canEditSchedule.value) return
   if (!boards.value.length) return
-  // The block's mousedown handler stops propagation, so a click
+  // The block's pointerdown handler stops propagation, so a click
   // that bubbles to the grid body is definitively on empty space.
   const body = e.currentTarget
   const rect = body.getBoundingClientRect()
@@ -1024,7 +1024,7 @@ async function confirmDuplicate() {
               ]"
               :style="blockStyleWithPreview(block, session)"
               v-tip="block.notes || ''"
-              @mousedown="editMode && canEditSchedule ? dragger.startMove($event, block) : null"
+              @pointerdown="editMode && canEditSchedule ? dragger.startMove($event, block) : null"
             >
               <!-- Resize handles (top + bottom) are only mounted in
                    edit mode so they don't capture pointer events
@@ -1032,12 +1032,12 @@ async function confirmDuplicate() {
               <div
                 v-if="editMode && canEditSchedule"
                 class="scheduler-block-handle handle-top"
-                @mousedown.stop="dragger.startResizeTop($event, block)"
+                @pointerdown.stop="dragger.startResizeTop($event, block)"
               ></div>
               <div
                 v-if="editMode && canEditSchedule"
                 class="scheduler-block-handle handle-bottom"
-                @mousedown.stop="dragger.startResizeBottom($event, block)"
+                @pointerdown.stop="dragger.startResizeBottom($event, block)"
               ></div>
 
               <div class="scheduler-block-time">
@@ -1067,13 +1067,13 @@ async function confirmDuplicate() {
                   class="scheduler-block-delete"
                   :aria-label="$t('scheduler.edit.delete_block')"
                   @click.stop="requestDelete(block.id, $event)"
-                  @mousedown.stop
+                  @pointerdown.stop
                 >✕</button>
                 <div
                   v-else
                   class="scheduler-block-delete-confirm"
                   @click.stop
-                  @mousedown.stop
+                  @pointerdown.stop
                 >
                   <span>{{ $t('scheduler.edit.delete_confirm') }}</span>
                   <button

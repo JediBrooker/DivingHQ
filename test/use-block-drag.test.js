@@ -147,3 +147,27 @@ test('Escape cancels the preview and nothing commits', async () => {
   await new Promise((r) => setImmediate(r))
   assert.equal(commits.length, 0)
 })
+
+// A6-30. On a tablet the browser takes a touch that turns into a scroll
+// and fires pointercancel instead of pointerup. The gesture has to die
+// there, or the next touch's pointerup commits a move by however far
+// the finger travelled in between, and `if (active) return` blocks every
+// other drag while it hangs around.
+test('pointercancel (a touch turned scroll) cancels and nothing commits', async () => {
+  const d = makeDrag()
+  d.startMove(downEvent(), BLOCK)
+  move({ y: 10 })
+  document.dispatchEvent(pointer('pointercancel'))
+  assert.equal(d.dragState.value, null)
+  // The next touch somewhere else, dragged and released.
+  move({ y: 300 })
+  up()
+  await new Promise((r) => setImmediate(r))
+  assert.equal(commits.length, 0)
+  // And a fresh drag works again (the stale gesture isn't holding the lock).
+  d.startMove(downEvent(), BLOCK)
+  move({ y: 48 })
+  up()
+  await new Promise((r) => setImmediate(r))
+  assert.equal(commits.length, 1)
+})
