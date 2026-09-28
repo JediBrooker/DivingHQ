@@ -3191,9 +3191,11 @@ test("club region moves: self-serve between unclaimed regions, both sides agree 
     assert.equal((await move(R.token, B.clubId, on)).status, 200);
     assert.equal(await regionOf(B.clubId), on);
     assert.equal(await askedFor(B.clubId), null);
+    // Gatineau has two region_decision notices by now (the decline above,
+    // then this one), and nothing orders them, so look for the right one.
     const heard = await pool.query(
       "SELECT title FROM notifications WHERE user_id = $1 AND category = 'region_decision'", [B.id]);
-    assert.match(heard.rows[0]?.title || "", /now in Diving Ontario/);
+    assert.ok(heard.rows.some((r) => /now in Diving Ontario/.test(r.title)), JSON.stringify(heard.rows));
 
     // Ontario lets clubs go, but can't pick where they land.
     assert.equal((await move(R.token, B.clubId, qc)).status, 403);
