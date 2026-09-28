@@ -990,21 +990,16 @@ module.exports = function createEventsRouter({
           if (status === "Live")      notifyEventLive(event).catch(() => {});
         }
 
-        // Real-time push for the dashboard pulse strip. Emit
-        // globally so any connected dashboard tab can refetch
-        // its pulse data and update the LIVE / UPCOMING /
-        // COMPLETED counts immediately. Cheap broadcast (no
-        // sensitive data); recipients filter by what they're
-        // authorised to see via their existing API gates.
-        if (io && typeof io.emit === "function") {
-          try {
-            io.emit("event_status_changed", {
-              event_id: event.id,
-              org_id:   event.org_id,
-              from:     previousStatus,
-              to:       status,
-            });
-          } catch (_e) { /* ignore, best-effort */ }
+        // Real-time push for the dashboard pulse strip, so a
+        // dashboard tab refetches its LIVE / UPCOMING / COMPLETED
+        // counts straight away. It goes to the people whose pulse
+        // lists this event (the host org, federations on its
+        // participating list, sysadmins) and anyone watching the
+        // event itself. It used to be io.emit to every socket on the
+        // box, anonymous ones too, private and rehearsal events
+        // included. Best-effort, never blocks the response.
+        if (io && typeof io.to === "function") {
+          notifyStatusFlip(event, previousStatus, status).catch(() => {});
         }
 
         // Audit the status flip. Specific actions for the
@@ -1096,6 +1091,23 @@ module.exports = function createEventsRouter({
       res.status(500).json({ error: "Internal server error" });
     }
   });
+
+  async function notifyStatusFlip(event, from, to) {
+    const guests = await pool.query(
+      "SELECT org_id FROM event_participating_orgs WHERE event_id = $1",
+      [event.id],
+    );
+    const rooms = [
+      `event:${event.id}`, "sysadmins", `org:${event.org_id}`,
+      ...guests.rows.map((g) => `org:${g.org_id}`),
+    ];
+    io.to(rooms).emit("event_status_changed", {
+      event_id: event.id,
+      org_id:   event.org_id,
+      from,
+      to,
+    });
+  }
 
   // -------------------------------------------------------------
   // GET /api/events/:id/round-dives: operator-prescribed round

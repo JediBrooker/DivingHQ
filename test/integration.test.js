@@ -7631,3 +7631,64 @@ test("sockets: the live diver goes out without payment or pending-club details",
     await compKit.cleanup(orgId);
   }
 });
+
+test("sockets: a new connection only hears its own events' live state", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const orgId = await compKit.org("scope");
+  const otherOrg = await compKit.org("scopex");
+  const socks = [];
+  const open = async (token) => { const s = await compKit.socket(token); socks.push(s); return s; };
+  // Listening from before the handshake, so a replay sent straight on
+  // connect is caught.
+  const connectAndHear = (token, name) => new Promise((resolve) => {
+    const s = compKit.ioClient(baseUrl, {
+      auth: { token: token || "spectator" }, transports: ["websocket"], reconnection: false, forceNew: true,
+    });
+    socks.push(s);
+    const got = [];
+    s.on(name, (p) => got.push(p));
+    s.once("connect", () => setTimeout(() => resolve(got), 500));
+  });
+  try {
+    const manager = await compKit.user(orgId, "Scope Manager", ["meet_manager"]);
+    const judge = await compKit.user(orgId, "Scope Judge", ["judge"]);
+    const clubDiver = await compKit.user(orgId, "Scope Fan", ["diver"]);
+    const stranger = await compKit.user(otherOrg, "Scope Stranger", ["meet_manager"]);
+    const diver = await compKit.user(orgId, "Scope Diver", ["diver"]);
+    const eventId = await compKit.event(orgId, { status: "Live" });
+    await compKit.enter(eventId, diver.id, await compKit.dives(3), { display_order: 1 });
+    await compKit.panel(eventId, [judge]);
+    const ms = await open(manager.token);
+    const row = (await fetchJson("GET", `/api/events/${eventId}/roster`, { token: manager.token })).body[0];
+    assert.deepEqual(await compKit.ask(ms, "set_active_diver", { ...row, status: "ready" }), { ok: true });
+
+    const mine = (got) => got.filter((p) => p.event_id === eventId);
+    assert.equal(mine(await connectAndHear(null, "state_update")).length, 0, "an anonymous socket hears nothing unasked");
+    assert.equal(mine(await connectAndHear(stranger.token, "state_update")).length, 0, "nor does another federation");
+    assert.equal(mine(await connectAndHear(clubDiver.token, "state_update")).length, 0, "nor a diver who isn't running it");
+    assert.equal(mine(await connectAndHear(judge.token, "state_update")).length, 1, "the panel judge gets it back on reconnect");
+    assert.equal(mine(await connectAndHear(manager.token, "state_update")).length, 1, "so does the Control Room");
+    // Anyone can still ask for one event by id, the scoreboard does.
+    const asker = await open(null);
+    const asked = compKit.listen(asker, "state_update");
+    asker.emit("get_active_diver", { event_id: eventId });
+    assert.equal(mine(await asked).length, 1);
+
+    // Status flips go to the host's people, not to every socket.
+    const flipId = await compKit.event(orgId, { name: "Scope flip" });
+    const [anon, other, same] = await Promise.all([open(null), open(stranger.token), open(clubDiver.token)]);
+    const heard = [anon, other, same].map((s) => compKit.listen(s, "event_status_changed", 600));
+    const flip = await fetchJson("PUT", `/api/events/${flipId}/status`, {
+      token: (await compKit.user(orgId, "Scope Admin", ["org_admin"])).token, body: { status: "Live" },
+    });
+    assert.equal(flip.status, 200, JSON.stringify(flip.body));
+    const [a, o, s] = await Promise.all(heard);
+    assert.equal(a.filter((p) => p.event_id === flipId).length, 0, "not to anonymous sockets");
+    assert.equal(o.filter((p) => p.event_id === flipId).length, 0, "not to another federation");
+    assert.equal(s.filter((p) => p.event_id === flipId).length, 1, "the host org's dashboards hear it");
+  } finally {
+    socks.forEach((s) => s.close());
+    await compKit.cleanup(orgId, otherOrg);
+  }
+});

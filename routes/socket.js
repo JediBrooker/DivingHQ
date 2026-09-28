@@ -7,8 +7,9 @@
 //   * io.use(handshake)          : soft JWT verify, stash userId,
 //                                   org_id, roles, sysadmin flag,
 //                                   honour token_version (Migration 021)
-//   * connection                 : broadcast current activeDivers,
-//                                   join event rooms, register events
+//   * connection                 : replay the live diver of events
+//                                   this user judges or drives, join
+//                                   user/org rooms, register events
 //   * subscribe_event            : explicit room join
 //   * set_active_diver           : driven by Control Room
 //   * get_active_diver           : on-demand pull for late joiners
@@ -419,6 +420,10 @@ module.exports = function attachSocket({
     // user broadcast (judge calls, dive-on-deck nudges, etc.).
     if (socket.userId) {
       socket.join(`user:${socket.userId}`);
+      // Org-wide notices (event_status_changed for the dashboard pulse)
+      // go to the org's room rather than to every socket on the box.
+      if (socket.userOrgId) socket.join(`org:${socket.userOrgId}`);
+      if (socket.userIsSystemAdmin) socket.join("sysadmins");
     }
 
     // SPA banner click → mark the notifications row 'acknowledged'
@@ -503,12 +508,33 @@ module.exports = function attachSocket({
       await emitVenue(eventId, "subscribe_venue");
     });
 
-    // Bring late-arriving clients up to speed with whatever's
-    // currently live.
-    if (Object.keys(activeDivers).length > 0) {
-      Object.values(activeDivers).forEach((state) => {
-        socket.emit("state_update", state);
-      });
+    // Bring a reconnecting Control Room or judge back up to speed with
+    // the events they're running. This used to replay every event's
+    // live diver to every socket, anonymous ones included: all orgs,
+    // rehearsals too, and a judge's keypad flipped through other meets'
+    // divers on every reconnect. Now it's the events this user judges
+    // on, or drives (a control role in the host org), or everything for
+    // a sysadmin. Anyone else asks per event with get_active_diver,
+    // which the scoreboard and the other views already do.
+    replayOwnActiveDivers().catch((err) =>
+      console.error("[connection] active-diver replay failed", err.message));
+    async function replayOwnActiveDivers() {
+      if (!socket.userId) return;
+      const ids = Object.keys(activeDivers).filter((id) => EVENT_UUID_RE.test(id));
+      if (!ids.length) return;
+      const drives = CONTROL_ROLES.some((r) => (socket.userOrgRoles || []).includes(r));
+      const r = await pool.query(
+        `SELECT e.id FROM events e
+          WHERE e.id = ANY($1::uuid[])
+            AND ($2::boolean
+                 OR ($3::boolean AND e.org_id = $4)
+                 OR EXISTS (SELECT 1 FROM event_judges ej
+                             WHERE ej.event_id = e.id AND ej.judge_id = $5))`,
+        [ids, !!socket.userIsSystemAdmin, drives, socket.userOrgId || null, socket.userId],
+      );
+      for (const row of r.rows) {
+        if (activeDivers[row.id]) socket.emit("state_update", activeDivers[row.id]);
+      }
     }
 
     on("set_active_diver", async (data, ack) => {
