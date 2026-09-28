@@ -155,6 +155,61 @@ export function livePanel(scores, numJudges, eventType, dd) {
   return { slots, total }
 }
 
+/**
+ * The score-correction dialog's before/after preview for changing one
+ * judge's mark on a completed dive. Same trim as everywhere else
+ * (annotateJudgeRows, keyed by the real judge numbers, grouped for
+ * synchro) and the 0.6 synchro factor. The dialog used to run a flat trim
+ * over all the scores, which for a 7/9/11-judge synchro panel kept the
+ * wrong marks, so its trim sum, points, delta and "drop changed" note
+ * could all be wrong.
+ *
+ * Returns null when there's nothing sensible to preview (bad score or
+ * index).
+ */
+export function correctionPreview({ scores, judgeNumbers, idx, newVal, numJudges, eventType, dd }) {
+  if (!Array.isArray(scores) || !scores.length) return null
+  const v = Number(newVal)
+  if (Number.isNaN(v) || v < 0 || v > 10 || ((v * 2) % 1) !== 0) return null
+  if (!Number.isInteger(idx) || idx < 0 || idx >= scores.length) return null
+  const nums = scores.map((_, i) => Number(Array.isArray(judgeNumbers) && judgeNumbers[i] != null ? judgeNumbers[i] : i + 1))
+  const oldScores = scores.map(Number)
+  const newScores = oldScores.slice()
+  newScores[idx] = v
+  const n = parseInt(numJudges) || oldScores.length
+  const factor = eventType === 'synchro_pair' ? 0.6 : 1
+  const d = parseFloat(dd) || 0
+
+  const trim = (vals) => {
+    const rows = annotateJudgeRows(vals.map((score, i) => ({ judge_number: nums[i], score })), n, eventType)
+    return {
+      sum: rows.filter(r => !r.dropped).reduce((a, r) => a + r.score, 0),
+      dropped: new Set(rows.filter(r => r.dropped).map(r => r.judge_number)),
+    }
+  }
+  const before = trim(oldScores)
+  const after = trim(newScores)
+  let dropChanged = before.dropped.size !== after.dropped.size
+  for (const jn of before.dropped) if (!after.dropped.has(jn)) dropChanged = true
+
+  const oldPoints = before.sum * d * factor
+  const newPoints = after.sum * d * factor
+  return {
+    judgeIdx: idx,
+    judgeNumber: nums[idx],
+    oldScore: oldScores[idx],
+    newScore: v,
+    oldTrim: before.sum,
+    newTrim: after.sum,
+    oldPoints,
+    newPoints,
+    delta: newPoints - oldPoints,
+    dropChanged,
+    dd: d,
+    unchanged: oldScores[idx] === v,
+  }
+}
+
 // Re-export the bucket helper so callers that already imported the
 // composable don't need a second import.
 export { scoreCategory } from './useScoreCategories.js'

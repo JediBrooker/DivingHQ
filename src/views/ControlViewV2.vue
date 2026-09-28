@@ -314,6 +314,7 @@ function openCorrection(row) {
     position: row.position,
     dd: row.dd,
     scores: (row.judge_scores || []).map((s) => parseFloat(s)),
+    judge_numbers: row.judge_numbers || [],
     score_ids: row.score_ids,
     competitor_id: row.competitor_id,
     event_id: row.event_id,

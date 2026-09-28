@@ -17,7 +17,7 @@
  */
 import { ref, computed } from 'vue'
 import { useHttpOutbox } from '@/composables/useHttpOutbox'
-import { trimCount } from '@/composables/useScoreCategories'
+import { correctionPreview } from '@/composables/useScoreTrim'
 import BaseModal from '@/components/BaseModal.vue'
 import ModalHeader from '@/components/control/ModalHeader.vue'
 
@@ -37,80 +37,32 @@ const correctErr = ref('')
 
 // Live preview for the correction modal. Recomputes the trim
 // sum + dive points the moment the operator types a new score
-// so they see the impact before clicking Save.
-//
-// The trim follows the same rule the live scoring uses
-// (trimCount(numJudges)), and synchro pairs multiply by the WA
-// 0.6 factor. Returns null when the input is invalid so the
-// preview block hides cleanly until there's a usable score.
+// so they see the impact before clicking Save. correctionPreview
+// (useScoreTrim.js) runs the same WA trim the scoring uses, grouped for
+// synchro and keyed by the real judge numbers, and applies the 0.6
+// synchro factor. Returns null when the input is invalid so the preview
+// block hides cleanly until there's a usable score.
 const correctPreview = computed(() => {
   const card = props.card
   if (!card || !Array.isArray(card.scores) || !card.scores.length) return null
-  const newVal = parseFloat(correctNewScore.value)
-  if (Number.isNaN(newVal) || newVal < 0 || newVal > 10 || ((newVal * 2) % 1) !== 0) {
-    return null
-  }
-  const idx = correctJudgeIdx.value
-  const oldScores = card.scores.map(s => parseFloat(s))
-  if (idx < 0 || idx >= oldScores.length) return null
-  const newScores = oldScores.slice()
-  newScores[idx] = newVal
-
-  const ev = props.event
-  const numJudges = parseInt(ev?.number_of_judges) || oldScores.length
-  const k = trimCount(numJudges)
-  const factor = ev?.event_type === 'synchro_pair' ? 0.6 : 1
-  const dd = parseFloat(card.dd) || 0
-
-  function trimSum(scores) {
-    const sorted = [...scores].sort((a, b) => a - b)
-    const kept = k > 0 && sorted.length > k * 2
-      ? sorted.slice(k, sorted.length - k)
-      : sorted
-    return kept.reduce((a, b) => a + b, 0)
-  }
-
-  const oldTrim   = trimSum(oldScores)
-  const newTrim   = trimSum(newScores)
-  const oldPoints = oldTrim * dd * factor
-  const newPoints = newTrim * dd * factor
-  const delta     = newPoints - oldPoints
-
-  // Flag when the edit changes which judge gets dropped, e.g.
-  // pulling a 9.0 down to 5.0 means a different score is now
-  // trimmed at the top end. Helps the operator understand why
-  // the trim sum moved more than they'd expect.
-  const dropChanged = (() => {
-    if (k <= 0) return false
-    const oldSorted = [...oldScores].map((s, i) => ({ s, i }))
-      .sort((a, b) => a.s - b.s || a.i - b.i)
-    const newSorted = [...newScores].map((s, i) => ({ s, i }))
-      .sort((a, b) => a.s - b.s || a.i - b.i)
-    const oldDropped = new Set([
-      ...oldSorted.slice(0, k).map(r => r.i),
-      ...oldSorted.slice(-k).map(r => r.i),
-    ])
-    const newDropped = new Set([
-      ...newSorted.slice(0, k).map(r => r.i),
-      ...newSorted.slice(-k).map(r => r.i),
-    ])
-    if (oldDropped.size !== newDropped.size) return true
-    for (const i of oldDropped) if (!newDropped.has(i)) return true
-    return false
-  })()
-
-  return {
-    judgeIdx: idx,
-    oldScore: oldScores[idx],
-    newScore: newVal,
-    oldTrim, newTrim,
-    oldPoints, newPoints,
-    delta,
-    dropChanged,
-    dd,
-    unchanged: oldScores[idx] === newVal,
-  }
+  return correctionPreview({
+    scores: card.scores,
+    judgeNumbers: card.judge_numbers,
+    idx: Number(correctJudgeIdx.value),
+    newVal: parseFloat(correctNewScore.value),
+    numJudges: props.event?.number_of_judges,
+    eventType: props.event?.event_type,
+    dd: card.dd,
+  })
 })
+
+// The panel seat a score belongs to. /history sends judge_numbers
+// alongside the scores; a panel with a gap (a judge swapped out) isn't
+// 1..n, so J{i+1} named the wrong judge.
+function judgeLabel(i) {
+  const n = props.card?.judge_numbers?.[i]
+  return `J${n != null ? n : i + 1}`
+}
 
 async function submitCorrection() {
   correctErr.value = ''
@@ -157,7 +109,7 @@ async function submitCorrection() {
         <label class="label">Judge</label>
         <select class="select" v-model="correctJudgeIdx">
           <option v-for="(s, i) in card.scores" :key="i" :value="i">
-            J{{ i + 1 }} — currently {{ s.toFixed(1) }}
+            {{ judgeLabel(i) }} — currently {{ s.toFixed(1) }}
           </option>
         </select>
       </div>
@@ -174,7 +126,7 @@ async function submitCorrection() {
       <div v-if="correctPreview" class="correct-preview"
            :class="{ 'correct-preview-noop': correctPreview.unchanged }">
         <div class="correct-preview-row">
-          <span class="correct-preview-label">Judge {{ correctPreview.judgeIdx + 1 }}</span>
+          <span class="correct-preview-label">Judge {{ correctPreview.judgeNumber }}</span>
           <span class="correct-preview-old">{{ correctPreview.oldScore.toFixed(1) }}</span>
           <span class="correct-preview-arrow">→</span>
           <span class="correct-preview-new">{{ correctPreview.newScore.toFixed(1) }}</span>
