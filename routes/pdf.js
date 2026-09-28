@@ -37,6 +37,29 @@ module.exports = function createPdfRouter({ pool }) {
   if (!pool) throw new Error("createPdfRouter requires { pool }");
   const router = express.Router();
 
+  // Final standings by what the event ranks: the team in a team event,
+  // otherwise the diver (a synchro pair sits under its lead). One row per
+  // unit: unit_id, total, rank (WA Art 4.1.5 shared places), field_size.
+  // Same scores as the scoreboard (standingsScoreScope). $1 = the event.
+  // results.csv and the score sheet read it; both used to rank team
+  // members against each other rather than rank the teams.
+  const UNIT_STANDINGS_SQL = `WITH ${perDivePointsCte({
+      select: ["s.competitor_id", "cdl.team_id", "s.event_id", "s.round_number"],
+      where:  standingsScoreScope(),
+    })},
+    units AS (
+      SELECT CASE WHEN ev.event_type = 'team' THEN pd.team_id ELSE pd.competitor_id END AS unit_id,
+             SUM(pd.dive_points) AS total
+        FROM per_dive pd
+        JOIN events ev ON ev.id = $1
+       WHERE ev.event_type <> 'team' OR pd.team_id IS NOT NULL
+       GROUP BY 1
+    )
+    SELECT unit_id, total::numeric(8,2) AS total,
+           RANK() OVER (ORDER BY total DESC)::int AS rank,
+           COUNT(*) OVER ()::int AS field_size
+      FROM units`;
+
   // ===============================================================
   // Meet program export options: parses the ?include= + ?seconds_per_dive
   // query params and pre-fetches the enrichment payloads each event needs.
@@ -893,24 +916,17 @@ module.exports = function createPdfRouter({ pool }) {
            ORDER BY s.round_number ASC`,
           [eventId, diverId],
         ),
-        // Final placing: full-field rank query identical to the
-        // analytics rollup, kept inline since its a one-off here.
+        // Final placing, from the same standings as the scoreboard: a
+        // team member's headline is their team's total and place.
         pool.query(
-          `WITH ${perDivePointsCte({
-             select:      ["s.competitor_id"],
-             pointsAlias: "pts",
-             groupBy:     ["s.competitor_id", "s.round_number"],
-           })},
-           totals AS (
-             SELECT competitor_id, SUM(pts) AS total
-             FROM per_dive GROUP BY competitor_id
-           ),
-           ranked AS (
-             SELECT *, RANK() OVER (ORDER BY total DESC) AS rnk,
-                    COUNT(*) OVER ()::int AS field_size
-             FROM totals
-           )
-           SELECT total, rnk, field_size FROM ranked WHERE competitor_id = $2`,
+          `SELECT st.total, st.rank AS rnk, st.field_size
+             FROM (${UNIT_STANDINGS_SQL}) st
+            WHERE st.unit_id = COALESCE(
+                    (SELECT l.team_id FROM competitor_dive_lists l
+                      JOIN events ev ON ev.id = l.event_id AND ev.event_type = 'team'
+                     WHERE l.event_id = $1 AND l.competitor_id = $2 AND l.team_id IS NOT NULL
+                     LIMIT 1),
+                    $2)`,
           [eventId, diverId],
         ),
       ]);
@@ -1070,7 +1086,7 @@ module.exports = function createPdfRouter({ pool }) {
               "u.id AS competitor_id", "u.full_name AS diver_name",
               "event_rep_code($1, u.id, o.country_code) AS country_code",
               "cl.name AS club_name", "cl.short_code AS club_code",
-              "pu.full_name AS partner_name", "tm.name AS team_name",
+              "pu.full_name AS partner_name", "cdl.team_id", "tm.name AS team_name",
               "s.round_number", "d.dive_code", "d.position", "d.dd",
             ],
             dd:          "d.dd",
@@ -1088,7 +1104,7 @@ module.exports = function createPdfRouter({ pool }) {
             where: "s.event_id = $1",
             groupBy: [
               "u.id", "u.full_name", "o.country_code", "cl.name", "cl.short_code",
-              "pu.full_name", "tm.name",
+              "pu.full_name", "cdl.team_id", "tm.name",
               "s.round_number", "d.dive_code", "d.position", "d.dd",
             ],
           })}
@@ -1096,30 +1112,10 @@ module.exports = function createPdfRouter({ pool }) {
           [req.params.id],
         ),
         // Final placings, fetched alongside so the CSV's per-dive rows
-        // can carry both the dive total and the diver's final rank.
-        // Keyed by competitor_id (not full_name) so two same-named
-        // divers don't collide. World Aquatics Art 4.1.5: equal totals
-        // share a place, so RANK() over total alone gives the placing.
-        // Totals use the scoreboard's scope (standingsScoreScope), so a
-        // Super Final stage's carried scores are in final_total.
-        pool.query(
-          `WITH ${perDivePointsCte({
-             select:      ["s.competitor_id"],
-             pointsAlias: "pts",
-             groupBy:     ["s.competitor_id", "s.event_id", "s.round_number"],
-             where:       standingsScoreScope(),
-           })},
-           totals AS (
-             SELECT competitor_id, SUM(pts)::numeric(8,2) AS total
-             FROM per_dive GROUP BY competitor_id
-           )
-           SELECT u.id AS competitor_id, u.full_name AS diver_name,
-                  t.total,
-                  RANK() OVER (ORDER BY t.total DESC) AS final_rank
-           FROM totals t
-           JOIN users u ON u.id = t.competitor_id`,
-          [req.params.id],
-        ),
+        // can carry both the dive total and the final rank. Keyed by id
+        // (not name) so two same-named divers don't collide. A team
+        // member's rows carry their team's total and place.
+        pool.query(UNIT_STANDINGS_SQL, [req.params.id]),
       ]);
       if (!evRes.rows.length) return res.status(404).json({ error: "Event not found" });
       const event = evRes.rows[0];
@@ -1129,8 +1125,9 @@ module.exports = function createPdfRouter({ pool }) {
       res.setHeader("Content-Disposition", `attachment; filename="${slug}_results.csv"`);
 
       const placingById = new Map(
-        totalsRes.rows.map((r) => [r.competitor_id, { total: r.total, rank: r.final_rank }]),
+        totalsRes.rows.map((r) => [r.unit_id, { total: r.total, rank: r.rank }]),
       );
+      const isTeam = event.event_type === "team";
 
       res.write(csvRow([
         "diver_name", "country", "club_name", "club_code",
@@ -1140,7 +1137,7 @@ module.exports = function createPdfRouter({ pool }) {
         "final_total", "final_rank",
       ]));
       for (const r of divesRes.rows) {
-        const placing = placingById.get(r.competitor_id) || {};
+        const placing = placingById.get(isTeam ? r.team_id : r.competitor_id) || {};
         res.write(csvRow([
           r.diver_name, r.country_code,
           r.club_name, r.club_code,

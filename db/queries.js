@@ -53,19 +53,27 @@ const PER_DIVE = perDiveSelect({
 // =====================================================================
 // FULL_FIELD_RANKING: for queries that need the diver's RANK against
 // every competitor in their events (recent_form, placings, streak,
-// year_over_year). Returns a chain of CTEs you splice into a parent
-// WITH clause:
+// year_over_year, the profile trend, the public profile). Returns a
+// chain of CTEs you splice into a parent WITH clause:
 //
 //   WITH ${FULL_FIELD_RANKING}
-//   SELECT … FROM my_events WHERE …
+//   SELECT … FROM ranked r WHERE r.competitor_id = $1
 //
 // CTE chain:
-//   diver_events  : { event_id }   the events the diver competed in
+//   diver_events  : { event_id, scored_as } the events the diver has a
+//                   result in, and whose rows carry it (the diver's own)
 //   all_per_dive  : every dive in those events, by every competitor
-//   event_totals  : per-(event, competitor) sum of dive points
-//   ranked        : event_totals + RANK() over total, plus an
-//                   `is_tied_on_total` flag for UI hints when two
-//                   divers share a place.
+//   unit_totals   : per-(event, unit) sum of dive points. The unit is
+//                   what the event ranks: the team in a team event,
+//                   the diver otherwise.
+//   unit_ranked   : unit_totals + RANK() over total, `is_tied_on_total`
+//                   and `field_size`
+//   ranked        : the diver's row per event: competitor_id = $1 and
+//                   their unit's total, rank, tie flag and field size
+//
+// Team events: standings rank teams (teamStandingsCte), so a member gets
+// their team's total and place, out of the number of teams. Ranking the
+// members against each other printed a team's gold as a member's bronze.
 //
 // Required params:
 //   $1 = competitor_id (uuid), the diver of interest
@@ -80,7 +88,7 @@ const PER_DIVE = perDiveSelect({
 // =====================================================================
 const FULL_FIELD_RANKING = `
   diver_events AS (
-    SELECT DISTINCT s.event_id
+    SELECT DISTINCT s.event_id, s.competitor_id AS scored_as
     FROM scores s
     JOIN events e ON e.id = s.event_id
     WHERE s.competitor_id = $1
@@ -90,25 +98,29 @@ const FULL_FIELD_RANKING = `
   ),
   ${perDivePointsCte({
     name:   "all_per_dive",
-    select: ["s.event_id", "s.competitor_id", "s.round_number"],
+    select: ["s.event_id", "s.competitor_id", "cdl.team_id", "s.round_number"],
     where:  "s.event_id IN (SELECT event_id FROM diver_events)",
   })},
-  event_totals AS (
-    SELECT event_id, competitor_id,
-           SUM(dive_points) AS total
-    FROM all_per_dive
-    GROUP BY event_id, competitor_id
+  unit_totals AS (
+    SELECT apd.event_id,
+           CASE WHEN e.event_type = 'team' THEN apd.team_id ELSE apd.competitor_id END AS unit_id,
+           SUM(apd.dive_points) AS total
+    FROM all_per_dive apd
+    JOIN events e ON e.id = apd.event_id
+    /* A team-event dive with no team isn't on the standings either. */
+    WHERE e.event_type <> 'team' OR apd.team_id IS NOT NULL
+    GROUP BY 1, 2
   ),
-  ranked AS (
-    SELECT et.*,
+  unit_ranked AS (
+    SELECT ut.*,
            RANK() OVER (
-             PARTITION BY et.event_id
-             ORDER BY et.total DESC
+             PARTITION BY ut.event_id
+             ORDER BY ut.total DESC
            ) AS rank,
            /* True when 2+ rows in this event share the SAME total,
               so the UI can mark the shared place with an "=". */
            COUNT(*) OVER (
-             PARTITION BY et.event_id, et.total
+             PARTITION BY ut.event_id, ut.total
            ) > 1 AS is_tied_on_total,
            /* field_size precomputed here (not in the outer SELECT)
               because outer queries filter to the diver via
@@ -116,8 +128,22 @@ const FULL_FIELD_RANKING = `
               WHERE so a window in the outer query would see only
               the one row and return 1. Computing it inside the
               CTE lets recent_form and friends just select it. */
-           COUNT(*) OVER (PARTITION BY et.event_id)::int AS field_size
-    FROM event_totals et
+           COUNT(*) OVER (PARTITION BY ut.event_id)::int AS field_size
+    FROM unit_totals ut
+  ),
+  ranked AS (
+    SELECT de.event_id, $1::uuid AS competitor_id, de.scored_as,
+           ur.unit_id, ur.total, ur.rank, ur.is_tied_on_total, ur.field_size
+    FROM diver_events de
+    JOIN events e ON e.id = de.event_id
+    JOIN unit_ranked ur
+      ON ur.event_id = de.event_id
+     AND ur.unit_id = CASE WHEN e.event_type = 'team'
+           THEN (SELECT apd.team_id FROM all_per_dive apd
+                  WHERE apd.event_id = de.event_id AND apd.competitor_id = de.scored_as
+                    AND apd.team_id IS NOT NULL
+                  LIMIT 1)
+           ELSE de.scored_as END
   )
 `;
 

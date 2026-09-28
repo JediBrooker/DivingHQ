@@ -1633,7 +1633,7 @@ onMounted(async () => {
                 <span class="round-caret">{{ expandedRound === round.round_number ? '▾' : '▸' }}</span>
               </button>
               <div v-if="expandedRound === round.round_number" class="round-body">
-                <div v-for="r in round.rankings" :key="r.competitor_id" class="lb-row">
+                <div v-for="r in round.rankings" :key="r.public_id || r.competitor_id" class="lb-row">
                   <div :class="['lb-rank', rankClass(r.rank - 1)]">{{ r.rank }}</div>
                   <div :class="['lb-mv', movementClass(r.movement)]">
                     {{ movementSymbol(r.movement) }}
@@ -1964,7 +1964,7 @@ onMounted(async () => {
                   <span class="round-caret">{{ expandedRound === round.round_number ? '▾' : '▸' }}</span>
                 </button>
                 <div v-if="expandedRound === round.round_number" class="round-body">
-                  <div v-for="r in round.rankings" :key="r.competitor_id" class="lb-row">
+                  <div v-for="r in round.rankings" :key="r.public_id || r.competitor_id" class="lb-row">
                     <div :class="['lb-rank', rankClass(r.rank - 1)]">{{ r.rank }}</div>
                     <div :class="['lb-mv', movementClass(r.movement)]">
                       {{ movementSymbol(r.movement) }}

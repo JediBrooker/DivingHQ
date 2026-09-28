@@ -7202,3 +7202,91 @@ test("diver analytics treat a tie on total as a shared place", async (t) => {
     await teardownFixture(st);
   }
 });
+
+// A team event ranks teams (teamStandingsCte). Everything that printed a
+// "place" for a team member used to rank the members against each other
+// instead: the By-Round leaderboard, results.csv, the score sheet, the
+// profile trend, the analytics widgets, the public profile and the coach
+// dashboard. They all give a member their team's total and place now.
+test("team events rank teams everywhere a member's place is shown", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const dive = await recordKit.threeMetreDive();
+    const dd = Number((await pool.query("SELECT dd FROM dive_directory WHERE id = $1", [dive])).rows[0].dd);
+    const a1 = await recordKit.diver(st.orgId, null, "female", "Team Alpha One");
+    const a2 = await recordKit.diver(st.orgId, null, "female", "Team Alpha Two");
+    const b1 = await recordKit.diver(st.orgId, null, "female", "Team Bravo One");
+    const b2 = await recordKit.diver(st.orgId, null, "female", "Team Bravo Two");
+    const ev = await recordKit.event(st.orgId, { gender: "Female", eventType: "team" });
+    const team = async (name, short) => {
+      const id = (await pool.query(
+        "INSERT INTO teams (org_id, name, short_code) VALUES ($1, $2, $3) RETURNING id", [st.orgId, name, short],
+      )).rows[0].id;
+      await pool.query("INSERT INTO event_teams (event_id, team_id) VALUES ($1, $2)", [ev.id, id]);
+      return id;
+    };
+    const alpha = await team("Alpha", "ALP");
+    const bravo = await team("Bravo", "BRV");
+    // Bravo One is the best diver in the pool, Alpha the better team.
+    await recordKit.dive(ev, a1, 1, dive, 8);
+    await recordKit.dive(ev, a2, 2, dive, 8);
+    await recordKit.dive(ev, b1, 1, dive, 9);
+    await recordKit.dive(ev, b2, 2, dive, 5);
+    await pool.query("UPDATE competitor_dive_lists SET team_id = $1 WHERE event_id = $2 AND competitor_id = ANY($3::uuid[])", [alpha, ev.id, [a1, a2]]);
+    await pool.query("UPDATE competitor_dive_lists SET team_id = $1 WHERE event_id = $2 AND competitor_id = ANY($3::uuid[])", [bravo, ev.id, [b1, b2]]);
+    // Bravo One still has a dive to come, so the coach dashboard has a card.
+    await pool.query(
+      "INSERT INTO competitor_dive_lists (event_id, competitor_id, team_id, dive_id, round_number) VALUES ($1, $2, $3, $4, 3)",
+      [ev.id, b1, bravo, dive],
+    );
+    const bravoTotal = (3 * 14 * dd).toFixed(2);
+
+    const lb = await fetchJson("GET", `/api/scoreboard/${ev.id}/leaderboard?cache=skip`);
+    assert.equal(lb.status, 200, JSON.stringify(lb.body));
+    const round = (n) => lb.body.rounds.find((r) => r.round_number === n).rankings
+      .map((r) => [r.full_name, r.rank, r.competitor_id ?? null]);
+    assert.deepEqual(round(1), [["Bravo", 1, null], ["Alpha", 2, null]]);
+    assert.deepEqual(round(2), [["Alpha", 1, null], ["Bravo", 2, null]]);
+
+    const csv = await (await fetch(`${baseUrl}/api/events/${ev.id}/results.csv`)).text();
+    const rows = csv.trim().split(/\r?\n/).slice(1).map((l) => l.split(","));
+    const place = Object.fromEntries(rows.map((r) => [r[0], [Number(r[12]).toFixed(2), r[13]]]));
+    assert.deepEqual(place["Team Bravo One"], [bravoTotal, "2"]);
+    assert.deepEqual(place["Team Alpha Two"], [(3 * 16 * dd).toFixed(2), "1"]);
+
+    const sheet = await fetch(`${baseUrl}/api/events/${ev.id}/divers/${b1}/score-sheet.pdf`);
+    assert.match(pdfText(Buffer.from(await sheet.arrayBuffer())).join("\n"), /2nd of 2/);
+
+    const profile = await fetchJson("GET", `/api/divers/${b1}/profile`);
+    const trend = profile.body.score_trend.find((r) => r.event_id === ev.id);
+    assert.equal(trend.final_rank, 2);
+    assert.equal(Number(trend.total_score).toFixed(2), bravoTotal);
+    assert.equal(trend.team_name, "Bravo");
+
+    const analytics = await fetchJson("GET", `/api/divers/${b1}/analytics`);
+    assert.equal(Number(analytics.body.recent_form[0].rank), 2);
+    assert.equal(analytics.body.recent_form[0].field_size, 2, "two teams, not four divers");
+    assert.equal(analytics.body.placings.silver, 1);
+
+    const slug = crypto.randomBytes(16).toString("hex");
+    await pool.query("UPDATE users SET public_slug = $1 WHERE id = $2", [slug, b1]);
+    const pub = await fetchJson("GET", `/api/public/divers/${slug}`);
+    assert.equal(pub.status, 200, JSON.stringify(pub.body));
+    assert.deepEqual([pub.body.recent_meets[0].rank, pub.body.recent_meets[0].field_size], [2, 2]);
+
+    const coachName = `int-tc-${crypto.randomBytes(3).toString("hex")}`;
+    const coach = await insertUser({ orgId: st.orgId, role: "coach", username: coachName, fullName: "Team Coach" });
+    await pool.query("INSERT INTO coach_diver_links (coach_id, diver_id, org_id) VALUES ($1, $2, $3)", [coach, b1, st.orgId]);
+    const login = await fetchJson("POST", "/api/auth/login", { body: { username: coachName, password: "not-used-here" } });
+    const dash = await fetchJson("GET", "/api/coach/dashboard", { token: login.body.token });
+    assert.equal(dash.status, 200, JSON.stringify(dash.body));
+    const card = dash.body.find((r) => r.diver_id === b1);
+    assert.deepEqual([card.current_rank, card.field_size, Number(card.current_total).toFixed(2)], [2, 2, bravoTotal]);
+  } finally {
+    await pool.query("DELETE FROM coach_diver_links WHERE org_id = $1", [st.orgId]);
+    await recordKit.cleanup(st.orgId);
+    await teardownFixture(st);
+  }
+});

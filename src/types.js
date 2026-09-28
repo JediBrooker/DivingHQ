@@ -296,8 +296,9 @@
  * @property {string}        status        'pending' | 'live' | 'completed'
  * @property {string}        created_at    ISO
  * @property {string}        event_type    'individual' | 'synchro_pair' | 'team'
- * @property {number}        total_score
- * @property {number}        final_rank
+ * @property {number}        total_score   In a team event, the team's total.
+ * @property {number}        final_rank    Place in the standings: the team's place in a
+ *                                         team event (equal totals share it).
  * @property {string}        [partner_name]
  * @property {string}        [team_name]
  */

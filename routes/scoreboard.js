@@ -298,6 +298,8 @@ module.exports = function createScoreboardRouter({
   // correction) call invalidate(eventId), which clears derived
   // keys too, no new hook needed.
   async function buildLeaderboard(eventId) {
+    const ev = await pool.query("SELECT event_type FROM events WHERE id = $1", [eventId]);
+    if (ev.rows[0]?.event_type === "team") return buildTeamLeaderboard(eventId);
     const r = await pool.query(
       `WITH ${perDivePointsCte({
          name:        "dive_totals",
@@ -384,12 +386,72 @@ module.exports = function createScoreboardRouter({
       [eventId],
     );
 
+    return { rounds: roundsFrom(eventId, r.rows) };
+  }
+
+  // Team events rank teams, like the standings beside the By-Round tab.
+  // This tab used to rank every member against the rest, so a team's
+  // divers turned up as a dozen individual places. Round totals are the
+  // sum of the team's dives in that round; no Super Final carry here,
+  // the H2H stages are individual.
+  async function buildTeamLeaderboard(eventId) {
+    const r = await pool.query(
+      `WITH ${perDivePointsCte({
+         select:  ["cdl.team_id", "s.competitor_id", "s.round_number"],
+         where:   ownStageScores(),
+       })},
+       round_totals AS (
+         SELECT team_id, round_number, SUM(dive_points) AS round_total
+         FROM per_dive
+         WHERE team_id IS NOT NULL
+         GROUP BY team_id, round_number
+       ),
+       cumulative AS (
+         SELECT team_id, round_number, round_total,
+                SUM(round_total) OVER (
+                  PARTITION BY team_id
+                  ORDER BY round_number
+                  ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+                ) AS cumulative_total
+         FROM round_totals
+       ),
+       ranked AS (
+         /* WA Art 4.1.5 shared places, same as the individual branch. */
+         SELECT *, RANK() OVER (PARTITION BY round_number ORDER BY cumulative_total DESC) AS rnk
+         FROM cumulative
+       ),
+       with_prev AS (
+         SELECT r.*, LAG(r.rnk) OVER (PARTITION BY r.team_id ORDER BY r.round_number) AS prev_rnk
+         FROM ranked r
+       )
+       SELECT wp.team_id, t.name AS full_name,
+              event_team_rep_code($1, t.id) AS country_code,
+              t.short_code AS club_name,
+              wp.round_number, wp.round_total, wp.cumulative_total,
+              wp.rnk AS rank, wp.prev_rnk AS prev_rank,
+              CASE WHEN wp.prev_rnk IS NULL THEN NULL
+                   ELSE (wp.prev_rnk - wp.rnk) END AS movement
+       FROM with_prev wp
+       JOIN teams t ON t.id = wp.team_id
+       ORDER BY wp.round_number ASC, wp.rnk ASC, t.name ASC`,
+      [eventId],
+    );
+    return { rounds: roundsFrom(eventId, r.rows) };
+  }
+
+  // Shape leaderboard rows into rounds. A team row has no competitor_id
+  // (nothing to link to), so every row carries a public_id the SPA keys
+  // its list on, the same hash the standings use.
+  function roundsFrom(eventId, rows) {
     const byRound = {};
-    for (const row of r.rows) {
+    for (const row of rows) {
       const rn = row.round_number;
       if (!byRound[rn]) byRound[rn] = [];
       byRound[rn].push({
-        competitor_id: row.competitor_id,
+        competitor_id: row.competitor_id || null,
+        public_id: row.competitor_id
+          ? publicId("comp", eventId, row.competitor_id)
+          : publicId("team", eventId, row.team_id),
         full_name: row.full_name,
         country_code: row.country_code,
         club_name: row.club_name,
@@ -400,11 +462,10 @@ module.exports = function createScoreboardRouter({
         movement: row.movement == null ? null : Number(row.movement),
       });
     }
-    const rounds = Object.keys(byRound)
+    return Object.keys(byRound)
       .map(Number)
       .sort((a, b) => a - b)
       .map((n) => ({ round_number: n, rankings: byRound[n] }));
-    return { rounds };
   }
 
   router.get("/api/scoreboard/:eventId", maybeAuth, async (req, res) => {

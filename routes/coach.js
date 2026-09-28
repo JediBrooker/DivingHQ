@@ -219,15 +219,22 @@ module.exports = function createCoachRouter({
          /* Standings per event so we can attach a current rank.
             We carry round_number through so we can also surface
             the per-round dive total for the "last completed dive"
-            display below. */
+            display below. A team event ranks teams, like its
+            standings, so a member's card shows the team's total and
+            place (unit_id is the team there, the diver otherwise). */
          ${perDivePointsCte({
-           select:      ["s.event_id", "s.competitor_id", "s.round_number"],
+           select:      ["s.event_id", "s.competitor_id", "cdl.team_id", "s.round_number"],
            pointsAlias: "pts",
            where:       "s.event_id IN (SELECT event_id FROM upcoming_raw)",
          })},
          totals AS (
-           SELECT event_id, competitor_id, SUM(pts)::numeric(8,2) AS total
-           FROM per_dive GROUP BY event_id, competitor_id
+           SELECT pd.event_id,
+                  CASE WHEN e.event_type = 'team' THEN pd.team_id ELSE pd.competitor_id END AS unit_id,
+                  SUM(pd.pts)::numeric(8,2) AS total
+           FROM per_dive pd
+           JOIN events e ON e.id = pd.event_id
+           WHERE e.event_type <> 'team' OR pd.team_id IS NOT NULL
+           GROUP BY 1, 2
          ),
          ranked AS (
            SELECT *, RANK() OVER (PARTITION BY event_id ORDER BY total DESC) AS rnk,
@@ -258,7 +265,13 @@ module.exports = function createCoachRouter({
          FROM my_divers md
          LEFT JOIN next_dive nd ON nd.competitor_id = md.id
          LEFT JOIN ranked r
-           ON r.event_id = nd.event_id AND r.competitor_id = md.id
+           ON r.event_id = nd.event_id
+          AND r.unit_id = CASE WHEN nd.event_type = 'team'
+                THEN (SELECT l.team_id FROM competitor_dive_lists l
+                       WHERE l.event_id = nd.event_id AND l.competitor_id = md.id
+                         AND l.team_id IS NOT NULL
+                       LIMIT 1)
+                ELSE md.id END
          LEFT JOIN last_completed_round lcr
            ON lcr.event_id = nd.event_id AND lcr.competitor_id = md.id
          LEFT JOIN per_dive lpd

@@ -25,6 +25,7 @@
 const express = require("express");
 const sharp = require("sharp");
 const { perDivePointsCte } = require("../lib/scoring-sql");
+const { FULL_FIELD_RANKING } = require("../db/queries");
 const { PUBLIC_CLUB_JOIN } = require("../lib/club-approvals");
 
 // In-memory cache of rendered OG cards. Each crawler hits the
@@ -152,42 +153,22 @@ module.exports = function createPublicProfileRouter({ pool, readPool }) {
         [diver.id],
       ),
 
-      // Last 5 meets ranked against the full field. Same FULL_FIELD
-      // ranking shape as the analytics dashboard's recent_form,
-      // simplified for public consumption.
+      // Last 5 meets ranked against the full field, the same ranking as
+      // the analytics dashboard's recent_form (FULL_FIELD_RANKING, so a
+      // team event reads as the team's place). No date filter here, the
+      // public page is all time.
       reads.query(
-        `WITH ${perDivePointsCte({
-           select:      ["s.event_id", "s.competitor_id", "s.round_number"],
-           pointsAlias: "pts",
-           where: `s.event_id IN (
-             SELECT DISTINCT s0.event_id
-             FROM scores s0
-             JOIN events e0 ON e0.id = s0.event_id
-             WHERE s0.competitor_id = $1
-               AND COALESCE(e0.is_rehearsal, FALSE) = FALSE
-           )`,
-         })},
-         totals AS (
-           SELECT event_id, competitor_id, SUM(pts) AS total
-           FROM per_dive GROUP BY event_id, competitor_id
-         ),
-         ranked AS (
-           SELECT *, RANK() OVER (PARTITION BY event_id ORDER BY total DESC) AS rnk,
-                  COUNT(*) OVER (PARTITION BY event_id)::int AS field_size
-           FROM totals
-         )
+        `WITH ${FULL_FIELD_RANKING}
          SELECT e.id AS event_id, e.name AS event_name, e.created_at,
                 e.event_type::text AS event_type, e.height,
                 ranked.total::numeric(8,2) AS total,
-                ranked.rnk::int AS rank,
+                ranked.rank::int AS rank,
                 ranked.field_size
          FROM ranked
          JOIN events e ON e.id = ranked.event_id
-         WHERE ranked.competitor_id = $1
-           AND COALESCE(e.is_rehearsal, FALSE) = FALSE
          ORDER BY e.created_at DESC
          LIMIT 5`,
-        [diver.id],
+        [diver.id, null, null],
       )]);
 
       res.json({
