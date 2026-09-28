@@ -55,6 +55,50 @@ const CACHE = "divinghq-shell-v8";
 function isHtml(res) {
   return (res.headers.get("content-type") || "").includes("text/html");
 }
+
+// Hashed /assets names as Vite writes them, <name>-<8 char hash>.<ext>.
+// A reference can look like "/assets/x", "assets/x" or "./x" depending on
+// what's importing it, so match the file name and rebuild the path.
+const ASSET_REF = /[\w.-]+-[\w-]{8}\.(?:js|css|woff2?|ttf|otf|svg|png|jpe?g|webp|avif|gif|ico)\b/g;
+function assetRefs(text) {
+  return [...new Set(text.match(ASSET_REF) || [])].map((f) => "/assets/" + f);
+}
+
+// Hashed assets never change, so nothing ever replaced them and every
+// deploy's chunks piled up in the one cache (0.4-0.6 MB a deploy for a
+// phone that uses the app a lot). When a fresh shell comes in, walk what
+// it reaches (the shell names the entry and CSS, the entry names the lazy
+// chunks, those name theirs) through what's cached, and drop the rest.
+// That's everything from builds nobody is running any more. An open tab
+// still on an old build that loses a chunk this way gets a 404 and
+// reloads onto the new one (src/lib/staleChunk.js).
+async function pruneAssets(html) {
+  const cache = await caches.open(CACHE);
+  const cached = new Map();
+  for (const req of await cache.keys()) {
+    const p = new URL(req.url).pathname;
+    if (p.startsWith("/assets/")) cached.set(p, req);
+  }
+  const roots = assetRefs(html);
+  // On the first load after a deploy the page is still fetching the new
+  // entry, and without it we can't see which lazy chunks are still live.
+  // Leave everything and let the next load do it.
+  if (!roots.length || roots.some((p) => p.endsWith(".js") && !cached.has(p))) return;
+  const keep = new Set();
+  const queue = [...roots];
+  while (queue.length) {
+    const p = queue.pop();
+    if (keep.has(p)) continue;
+    keep.add(p);
+    const req = cached.get(p);
+    if (!req || !/\.(?:js|css)$/.test(p)) continue;
+    const res = await cache.match(req);
+    if (res) queue.push(...assetRefs(await res.text()));
+  }
+  await Promise.all(
+    [...cached].filter(([p]) => !keep.has(p)).map(([, req]) => cache.delete(req)),
+  );
+}
 // No "/" here: the offline navigation fallback only ever reads
 // /index.html, so a cached "/" was a wasted request on install.
 const SHELL = [
@@ -105,8 +149,15 @@ self.addEventListener("fetch", (event) => {
       fetch(request)
         .then((res) => {
           if (res.ok && isHtml(res)) {
-            const clone = res.clone();
-            caches.open(CACHE).then((c) => c.put("/index.html", clone)).catch(() => {});
+            const forCache = res.clone();
+            const forPrune = res.clone();
+            event.waitUntil(
+              caches.open(CACHE)
+                .then((c) => c.put("/index.html", forCache))
+                .then(() => forPrune.text())
+                .then(pruneAssets)
+                .catch(() => {}),
+            );
           }
           return res;
         })

@@ -97,8 +97,14 @@ function loadSw({ routes = {}, windows = [] } = {}) {
       waitUntil(p) { pending.push(Promise.resolve(p)); },
     };
     listeners[type](ev);
-    await Promise.allSettled(pending);
-    for (let i = 0; i < 5; i++) await new Promise((r) => setImmediate(r));
+    // waitUntil can be called again from inside the work it extends (the
+    // shell prune does), so drain until nothing new turns up.
+    for (let round = 0; round < 20; round++) {
+      const batch = pending.splice(0);
+      await Promise.allSettled(batch);
+      for (let i = 0; i < 5; i++) await new Promise((r) => setImmediate(r));
+      if (!pending.length) break;
+    }
     return response ? await response : undefined;
   }
   const req = (p, mode = "no-cors") => ({ url: ORIGIN + p, method: "GET", mode });
@@ -216,4 +222,55 @@ test("with only a broadcast overlay open, a tap opens a new window", async () =>
   await sw.dispatch("notificationclick", tap({ id: "n-3", category: "judge_call", action_url: "/judge?event=e-9" }));
   assert.equal(sw.clients[0].messages.length, 0);
   assert.deepEqual(sw.opened, ["/judge?event=e-9"]);
+});
+
+// ---------------------------------------------------------------------
+// Pruning superseded builds
+// ---------------------------------------------------------------------
+
+const CUR = "divinghq-shell-v8";
+function seed(sw, entries) {
+  if (!sw.store.has(CUR)) sw.store.set(CUR, new Map());
+  const m = sw.store.get(CUR);
+  for (const [p, body] of Object.entries(entries)) m.set(ORIGIN + p, js(body));
+}
+const shell = (entry) => `<!doctype html><script type="module" src="/assets/${entry}"></script>` +
+  `<link rel="modulepreload" href="/assets/vendor-vue-AAAAAAAA.js"><link rel="stylesheet" href="/assets/index-CSSCSS11.css">`;
+
+test("a fresh shell drops chunks from older builds and keeps everything the new one reaches", async () => {
+  const sw = loadSw({ routes: { "/dashboard": () => html(shell("index-NEWNEW11.js")) } });
+  seed(sw, {
+    // new build: entry -> lazy view -> a chunk only that view imports
+    "/assets/index-NEWNEW11.js": 'import("./GuideView-GUIDE111.js");const d=["assets/GuideView-GUIDE111.css"]',
+    "/assets/GuideView-GUIDE111.js": 'import("./ModalBits-MODAL111.js")',
+    "/assets/GuideView-GUIDE111.css": ".a{}",
+    "/assets/ModalBits-MODAL111.js": "x",
+    "/assets/vendor-vue-AAAAAAAA.js": "x",
+    "/assets/index-CSSCSS11.css": ".b{background:url(/assets/font-FONT1111.woff2)}",
+    "/assets/font-FONT1111.woff2": "x",
+    // two deploys ago
+    "/assets/index-OLDOLD11.js": 'import("./GuideView-OLDGUIDE.js")',
+    "/assets/GuideView-OLDGUIDE.js": "x",
+  });
+  await sw.dispatch("fetch", { request: sw.req("/dashboard", "navigate") });
+  const left = [...sw.store.get(CUR).keys()].map((u) => new URL(u).pathname).filter((p) => p.startsWith("/assets/")).sort();
+  assert.deepEqual(left, [
+    "/assets/GuideView-GUIDE111.css",
+    "/assets/GuideView-GUIDE111.js",
+    "/assets/ModalBits-MODAL111.js",
+    "/assets/font-FONT1111.woff2",
+    "/assets/index-CSSCSS11.css",
+    "/assets/index-NEWNEW11.js",
+    "/assets/vendor-vue-AAAAAAAA.js",
+  ]);
+});
+
+test("nothing is pruned until the new build's own scripts are cached", async () => {
+  const sw = loadSw({ routes: { "/dashboard": () => html(shell("index-NEWNEW11.js")) } });
+  // First load after a deploy: the page hasn't fetched the new entry yet,
+  // so we can't tell which lazy chunks it still needs.
+  seed(sw, { "/assets/index-OLDOLD11.js": "x", "/assets/GuideView-SHARED11.js": "x" });
+  await sw.dispatch("fetch", { request: sw.req("/dashboard", "navigate") });
+  assert.ok(await sw.cached("/assets/index-OLDOLD11.js"));
+  assert.ok(await sw.cached("/assets/GuideView-SHARED11.js"));
 });
