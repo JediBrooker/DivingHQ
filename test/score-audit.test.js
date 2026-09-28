@@ -12,6 +12,19 @@ test("isValidScore: 0 to 10 in half points", () => {
   }
 });
 
+test("isValidScore: only a number or a numeric string, never something Number() turns into 0", () => {
+  // Number(null), Number(''), Number(false) and Number([]) are all 0,
+  // Number(true) is 1. A {score: null} used to zero a judge's award.
+  for (const bad of [null, "", "  ", false, true, [], [7], {}, "7.5abc", "0x10", "1e1"]) {
+    assert.equal(isValidScore(bad), false, JSON.stringify(bad));
+  }
+  assert.equal(scoreBodyError(null, "Score"), "Score must be between 0 and 10");
+  assert.equal(scoreBodyError("", "score"), "score must be between 0 and 10");
+  assert.equal(scoreBodyError(false, "proposed_score"), "proposed_score must be between 0 and 10");
+  assert.equal(scoreBodyError(true, "Score"), "Score must be between 0 and 10");
+  assert.equal(scoreBodyError(" 7.5 ", "Score"), null, "a padded numeric string is still a score");
+});
+
 test("isValidScore agrees with lib/middleware's copy", () => {
   // The socket path still validates through lib/middleware. Until that
   // one becomes a re-export, pin that the two can't drift apart.
@@ -19,7 +32,7 @@ test("isValidScore agrees with lib/middleware's copy", () => {
     pool: { query: async () => ({ rows: [] }) },
     JWT_SECRET: "x".repeat(40),
   });
-  const samples = [-1, -0.5, 0, 0.25, 0.5, 1, 2.5, 6.75, 9.5, 10, 10.5, 11, NaN, Infinity, "7", "7.5", "x", null, ""];
+  const samples = [-1, -0.5, 0, 0.25, 0.5, 1, 2.5, 6.75, 9.5, 10, 10.5, 11, NaN, Infinity, "7", "7.5", "x", null, "", false, true, []];
   for (const s of samples) assert.equal(isValidScore(s), mw.isValidScore(s), String(s));
 });
 

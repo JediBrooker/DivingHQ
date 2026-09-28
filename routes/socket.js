@@ -31,7 +31,7 @@ const jwt = require("jsonwebtoken");
 const createIdempotency = require("../lib/idempotency");
 const { readSessionCookie } = require("../lib/session-cookie");
 const { announceRecords } = require("../lib/records");
-const { insertScoreAudit } = require("../lib/score-audit");
+const { insertScoreAudit, isValidScore } = require("../lib/score-audit");
 // Held as the module object and called through it, never destructured:
 // test/socket-rate-limit.test.js swaps emitVenueState on this cached
 // module to keep the DB out of the unit tests.
@@ -74,7 +74,9 @@ module.exports = function attachSocket({
   // submit_score's own panel check.
   socketRequireRole,
   socketCanManageEvent,
-  isValidScore,
+  // isValidScore is still handed in by server.js and ignored: the rule
+  // comes from lib/score-audit (required above), the one the HTTP
+  // routes use, so the two paths can't disagree.
   isTokenVersionCurrent,
   // From lib/records:
   checkAndApplyRecords,
