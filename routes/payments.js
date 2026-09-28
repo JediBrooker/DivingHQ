@@ -235,6 +235,26 @@ module.exports = function createPaymentsRouter({
     return subjectUserId;
   }
 
+  // Buyer-facing reads take ?subject_user_id= so a guardian's card shows
+  // the dependent's price and status. Returns who the read is about: the
+  // dependent when the caller is their approved guardian, otherwise the
+  // caller (null for an anonymous read). A subject needs a signed-in
+  // guardian, anyone else gets validateGuardian's 403, so the param can't
+  // be used to look up whether a stranger has paid or is a member.
+  async function readBeneficiary(req) {
+    const raw = req.query.subject_user_id;
+    if (raw !== undefined && raw !== "") {
+      if (!req.user) {
+        const err = new Error("You are not an approved guardian of this user.");
+        err.status = 403;
+        throw err;
+      }
+      const subject = await validateGuardian(req, raw);
+      if (subject) return subject;
+    }
+    return req.user ? req.user.id : null;
+  }
+
   // "Can the caller act on something that belongs to ownerUserId?"
   // Yes if it's their own, yes if they're that person's approved
   // guardian, 403 otherwise. Returns true when the caller is acting on
@@ -1818,12 +1838,16 @@ module.exports = function createPaymentsRouter({
       const prices = (await pool.query("SELECT * FROM fee_prices WHERE fee_definition_id = $1", [def.id])).rows;
       const chosen = resolvePrice(prices, { isMember: false });
       const org = await loadOrg(orgId);
-      const alreadyMember = req.user
+      // MembershipView's "Paying for" picker sends the dependent here. The
+      // card used to answer for the guardian regardless, so a guardian who
+      // was a member saw "Member" and no Pay button on their child's card.
+      const beneficiary = await readBeneficiary(req);
+      const alreadyMember = beneficiary
         ? (await pool.query(
             `SELECT 1 FROM memberships
               WHERE org_id = $1 AND user_id = $2 AND status = 'active' AND period_end > now()
                 AND tier IS NOT DISTINCT FROM $3 LIMIT 1`,
-            [orgId, req.user.id, tier],
+            [orgId, beneficiary, tier],
           )).rows.length > 0
         : false;
       return res.json({
@@ -1837,6 +1861,7 @@ module.exports = function createPaymentsRouter({
         payments_enabled: payments.enabled,
       });
     } catch (err) {
+      if (err.status) return res.status(err.status).json({ error: err.message });
       logger.error({ err: err.message }, "[payments] read membership (diver) failed");
       return res.status(500).json({ error: "Failed to read membership." });
     }

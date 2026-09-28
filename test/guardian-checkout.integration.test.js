@@ -286,3 +286,33 @@ test("a late surcharge only retires the stale checkout of the same dependent", a
   const a = (await pool.query("SELECT status FROM payments WHERE id = $1", [forA.body.payment_id])).rows[0];
   assert.equal(a.status, "pending", "the sibling's checkout is none of B's business");
 });
+
+// B4-02: the membership card reads for whoever "Paying for" names.
+test("the membership card answers for the dependent a guardian picked", async (t) => {
+  if (!ready) return t.skip();
+  acting = admin;
+  const put = await api("PUT", `/api/orgs/${orgId}/membership-fee`, {
+    prices: [{ amount_cents: 4000 }], currency: "GBP", tier: "card",
+  });
+  assert.equal(put.status, 200, JSON.stringify(put.body));
+  await pool.query(
+    `INSERT INTO memberships (org_id, user_id, tier, period_start, period_end, status)
+     VALUES ($1, $2, 'card', CURRENT_DATE, CURRENT_DATE + 300, 'active')`,
+    [orgId, G],
+  );
+  acting = as(G);
+  const forB = await api("GET", `/api/orgs/${orgId}/membership?tier=card&subject_user_id=${B}`);
+  assert.equal(forB.status, 200, JSON.stringify(forB.body));
+  assert.equal(forB.body.fee.already_member, false, "B isn't a member, whatever the guardian is");
+  const own = await api("GET", `/api/orgs/${orgId}/membership?tier=card`);
+  assert.equal(own.body.fee.already_member, true);
+
+  acting = as(S);
+  const probe = await api("GET", `/api/orgs/${orgId}/membership?tier=card&subject_user_id=${G}`);
+  assert.equal(probe.status, 403, "not a way to look up somebody else's membership");
+  acting = null;
+  const anon = await api("GET", `/api/orgs/${orgId}/membership?tier=card&subject_user_id=${G}`);
+  assert.equal(anon.status, 403);
+  const junk = await api("GET", `/api/orgs/${orgId}/membership?tier=card&subject_user_id=nope`);
+  assert.equal(junk.status, 403);
+});
