@@ -6,7 +6,7 @@
     "vendor-i18n": 48948,
     "vendor-socket": 41576,
     "locale-en": 160099,
-    "control": 63952
+    "control": 53744
   },
   "ceilings": {
     "entry": 112640,
@@ -14,6 +14,6 @@
     "vendor-i18n": 56320,
     "vendor-socket": 48128,
     "locale-en": 184320,
-    "control": 73728
+    "control": 62464
   }
 }

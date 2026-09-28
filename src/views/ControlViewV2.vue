@@ -21,11 +21,16 @@ import ScoreCorrectionModal from '@/components/control/ScoreCorrectionModal.vue'
 // The Tools drawer (broadcast chooser, overlay picker, sponsors, reserves,
 // audit) only mounts on a click and needs the network to do anything, so
 // it's split into its own chunk rather than riding along on every live
-// board load. It's about half of this view's JS and CSS. The meet-day
-// modals (score correction, check-in, draw, sign-off) stay static on
-// purpose: a Control Room tab lives for hours, and a chunk that went
-// missing after a deploy would make those buttons silently do nothing.
-const DrawerPanel = defineAsyncComponent(() => import('@/components/control/DrawerPanel.vue'))
+// board load. It's about half of this view's JS and CSS.
+// A Control Room tab stays open for hours though, and after a deploy the
+// old chunk hashes are gone (the SPA fallback answers them with HTML), so
+// a drawer first opened mid-meet wouldn't show up at all. That's why
+// onMounted warms loadDrawer once the board is up: from then on import()
+// answers out of the module map and a deploy or a wifi drop can't break it.
+// Score correction, check-in and the draw stay static, they queue through
+// the outbox and have to keep working through a network blip.
+const loadDrawer = () => import('@/components/control/DrawerPanel.vue')
+const DrawerPanel = defineAsyncComponent(loadDrawer)
 import EmptyState from '@/components/EmptyState.vue'
 import { useSocket } from '@/composables/useSocket'
 import { useSocketEvent } from '@/composables/useSocketEvent'
@@ -537,6 +542,10 @@ onMounted(async () => {
   if (await loadEvents()) bringUpPools()
   // Per-pool operator hotkeys (focused pool only).
   window.addEventListener('keydown', onKeydown)
+  // Fetch the drawer chunk while the board sits idle so it's already here
+  // when someone hits Tools later on. Older Safari has no
+  // requestIdleCallback, the timeout covers it.
+  ;(window.requestIdleCallback || ((f) => setTimeout(f, 2000)))(() => loadDrawer().catch(() => {}))
 })
 
 // Clear any in-flight seed-fallback timers so a pool can't get announced

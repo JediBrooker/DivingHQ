@@ -5,15 +5,26 @@
 // live (check-in -> randomise -> sign-off -> start), reusing the
 // P2-migrated modals. Mutates the shared event object's workflow stamps
 // so the V2 stage derivation (orderWorkflowState) advances in place.
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted, defineAsyncComponent } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { orderWorkflowStateFor } from '@/composables/useControlStage'
 import CheckInModal from '@/components/control/CheckInModal.vue'
 import RandomiseDrawModal from '@/components/control/RandomiseDrawModal.vue'
-import SignoffModal from '@/components/control/SignoffModal.vue'
+
+// Sign-off is the one step here that talks straight to the API (no outbox),
+// so it can't work offline anyway, and it's the biggest of the three
+// modals. It gets its own chunk, warmed on idle once this stage mounts:
+// sign-off comes after check-in and the draw, so the chunk is loaded long
+// before anyone clicks, and a deploy in between can't leave the button dead.
+const loadSignoff = () => import('@/components/control/SignoffModal.vue')
+const SignoffModal = defineAsyncComponent(loadSignoff)
 
 const props = defineProps({ event: { type: Object, required: true } })
 const auth = useAuthStore()
+
+onMounted(() => {
+  ;(window.requestIdleCallback || ((f) => setTimeout(f, 2000)))(() => loadSignoff().catch(() => {}))
+})
 
 const readiness = ref(null)
 const loading = ref(false)
