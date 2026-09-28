@@ -438,7 +438,10 @@ module.exports = function createControlRoomRouter({
                    scoring queue, so it must never multiply rows. */
                 EXISTS (
                   SELECT 1 FROM payments p
-                   WHERE p.payer_user_id = cdl.competitor_id
+                   /* Whose entry it is: subject_user_id when a guardian
+                      paid for a dependent (the parent is the payer),
+                      otherwise the diver who paid for themselves. */
+                   WHERE COALESCE(p.subject_user_id, p.payer_user_id) = cdl.competitor_id
                      AND p.subject_type = 'event_entry'
                      AND p.status = 'paid'
                      /* per-event entry OR a meet-level registration

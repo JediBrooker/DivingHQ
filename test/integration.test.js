@@ -7869,3 +7869,31 @@ test("Super Final rankings: representation codes, and no pending club names in p
     await compKit.cleanup(orgId);
   }
 });
+
+test("roster: an entry a guardian paid for counts as paid", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const orgId = await compKit.org("paid");
+  try {
+    const manager = await compKit.user(orgId, "Paid Manager", ["meet_manager"]);
+    const parent = await compKit.user(orgId, "Paid Parent", ["spectator"]);
+    const junior = await compKit.user(orgId, "Paid Junior", ["diver"]);
+    const self = await compKit.user(orgId, "Paid Senior", ["diver"]);
+    const unpaid = await compKit.user(orgId, "Paid Not", ["diver"]);
+    const eventId = await compKit.event(orgId);
+    const dives = await compKit.dives(3);
+    for (const [i, u] of [junior, self, unpaid].entries()) await compKit.enter(eventId, u.id, dives, { display_order: i + 1 });
+    const pay = (payer, subject) => pool.query(
+      `INSERT INTO payments (org_id, subject_type, amount_cents, currency, status, payer_user_id, subject_user_id, event_id)
+       VALUES ($1, 'event_entry', 2500, 'AUD', 'paid', $2, $3, $4)`, [orgId, payer.id, subject?.id ?? null, eventId]);
+    await pay(parent, junior);   // guardian checkout: payer is the parent
+    await pay(self, null);       // a diver paying their own way
+
+    const roster = await fetchJson("GET", `/api/events/${eventId}/roster`, { token: manager.token });
+    const paid = Object.fromEntries(roster.body.map((r) => [r.competitor_id, r.paid_entry]));
+    assert.deepEqual([paid[junior.id], paid[self.id], paid[unpaid.id]], [true, true, false]);
+  } finally {
+    await pool.query("DELETE FROM payments WHERE org_id = $1", [orgId]);
+    await compKit.cleanup(orgId);
+  }
+});
