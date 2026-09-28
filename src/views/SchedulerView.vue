@@ -52,6 +52,7 @@
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import { dateOnly, addDays, dateOnlyToLocalDate } from '@/lib/dateInputs'
 import { useAuthStore } from '@/stores/auth'
 import { useSocket } from '@/composables/useSocket'
 import { useBlockDrag } from '@/composables/useBlockDrag'
@@ -406,9 +407,12 @@ function formatTime(d) {
   const date = new Date(d)
   return Number.isNaN(date.getTime()) ? String(date) : TIME_FMT.format(date)
 }
+// session_date is a DATE: shown as that calendar day wherever the
+// browser is (new Date() on the API's value was a day out for anyone
+// west of the server). See src/lib/dateInputs.js.
 function formatDate(d) {
-  const date = new Date(d)
-  return Number.isNaN(date.getTime()) ? String(date) : DATE_FMT.format(date)
+  const date = dateOnlyToLocalDate(dateOnly(d))
+  return date ? DATE_FMT.format(date) : String(d ?? '')
 }
 function formatRelative(d) {
   if (!d) return ''
@@ -818,11 +822,14 @@ function openDuplicate(session) {
   // Pre-fill the date picker with session_date + 1 day so the
   // common-case "shift everything forward 24h for tomorrow"
   // flow is a single click.
-  const baseDay = session.session_date
-    ? new Date(session.session_date)
-    : new Date()
-  baseDay.setUTCDate(baseDay.getUTCDate() + 1)
-  duplicateDate.value = baseDay.toISOString().slice(0, 10)
+  // Calendar arithmetic on the session's own date. Adding a UTC day to
+  // the API's value (the server's midnight, in UTC) proposed the same
+  // day again on a server east of UTC.
+  const today = new Date()
+  const pad = (n) => String(n).padStart(2, '0')
+  const base = dateOnly(session.session_date)
+    || `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`
+  duplicateDate.value = addDays(base, 1)
   duplicateError.value = ''
   duplicateOpen.value = session
 }

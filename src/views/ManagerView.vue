@@ -4,7 +4,7 @@ import { RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useClubScope } from '@/composables/useClubScope'
-import { localInputToIso, isoToLocalInput } from '@/lib/dateInputs'
+import { localInputToIso, isoToLocalInput, dateOnly, dateOnlyToLocalDate } from '@/lib/dateInputs'
 import { idbInvalidate } from '@/lib/idbCache'
 import { DIVE_DIRECTORY_TTL_MS } from '@/lib/cache-policy'
 import { confirmAction } from '@/composables/useConfirm'
@@ -736,24 +736,15 @@ function openCreateEvent(meetId = '') {
 }
 
 // Human-readable meet date range for the detail header subline.
-// Dates arrive as ISO-ish strings (YYYY-MM-DD or full ISO); slice
-// to the date portion and format via toLocaleDateString. Returns
-// '' when neither bound is present.
+// start_date / end_date are DATE columns, which the API sends as the
+// server's midnight in UTC; dateOnly gets the calendar date back
+// (src/lib/dateInputs.js) and it's shown as that day in any browser
+// zone. Returns '' when neither bound is present.
 function formatMeetDates(meet) {
   if (!meet) return ''
   const fmt = (d) => {
-    if (!d) return ''
-    const str = String(d)
-    // Watch out: a bare YYYY-MM-DD is pinned to local noon so it
-    // doesn't roll back a day in negative-offset zones. A full
-    // timestamp (what the API returns) is parsed as-is and converted
-    // to the local date by toLocaleDateString, slicing its date
-    // portion would show the UTC day, off by one from the local date
-    // the user entered.
-    const parsed = /^\d{4}-\d{2}-\d{2}$/.test(str)
-      ? new Date(`${str}T12:00:00`)
-      : new Date(str)
-    if (Number.isNaN(parsed.getTime())) return ''
+    const parsed = dateOnlyToLocalDate(dateOnly(d))
+    if (!parsed) return ''
     return parsed.toLocaleDateString(undefined, {
       year: 'numeric', month: 'short', day: 'numeric',
     })
@@ -959,8 +950,11 @@ async function openEditMeet(meet) {
       form: {
         name:             m.name || '',
         venue:            m.venue || '',
-        start_date:       m.start_date ? String(m.start_date).slice(0, 10) : '',
-        end_date:         m.end_date   ? String(m.end_date).slice(0, 10)   : '',
+        // DATE columns come over as the server's midnight in UTC, so the
+        // first ten characters are the day before on a server east of
+        // UTC, and saving the form moved the meet back a day each time.
+        start_date:       dateOnly(m.start_date),
+        end_date:         dateOnly(m.end_date),
         description:      m.description || '',
         sponsor_name:     m.sponsor_name || '',
         sponsor_link_url: m.sponsor_link_url || '',

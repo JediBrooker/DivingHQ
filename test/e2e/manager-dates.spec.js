@@ -40,3 +40,39 @@ test("a no-op edit leaves entries_close_at exactly where it was", async ({ brows
   await ctx.close();
   await setup.deleteOrg(orgId);
 });
+
+// DATE columns come over as the server's midnight in UTC, so on a server
+// east of UTC (this box, and production) Edit Meet sliced out the day
+// before and a Save moved the meet back a day, every time.
+test("Edit Meet shows the meet's own dates, and a no-op save keeps them", async ({ browser, request }) => {
+  test.setTimeout(90_000);
+  const { orgId, username } = await setup.createOrgAndAdmin(request, { countryCode: "AUS", orgName: "Manager Dates" });
+  const meet = (await setup.pool.query(
+    `INSERT INTO meets (org_id, name, start_date, end_date)
+     VALUES ($1, 'TZ Date Meet', '2023-05-29', '2023-05-31') RETURNING id`,
+    [orgId],
+  )).rows[0];
+
+  const ctx = await browser.newContext({ timezoneId: await otherZone() });
+  const page = await ctx.newPage();
+  await signIn(page, username);
+  await page.goto("/manager");
+  await page.locator(".mgr-acc-header", { hasText: "TZ Date Meet" }).click();
+  await page.locator(".mgr-detail-actions button", { hasText: /^Edit$/ }).click();
+  const modal = page.locator(".modal-edit-meet");
+  await expect(modal).toBeVisible();
+  const dates = modal.locator('input[type="date"]');
+  await expect(dates.nth(0)).toHaveValue("2023-05-29");
+  await expect(dates.nth(1)).toHaveValue("2023-05-31");
+
+  const saved = page.waitForResponse((r) => r.url().endsWith(`/api/meets/${meet.id}`) && r.request().method() === "PUT");
+  await modal.locator("button.btn-primary[type=submit]", { hasText: /Save/i }).last().click();
+  expect((await saved).status()).toBe(200);
+  const r = await setup.pool.query(
+    "SELECT to_char(start_date, 'YYYY-MM-DD') AS s, to_char(end_date, 'YYYY-MM-DD') AS e FROM meets WHERE id = $1",
+    [meet.id],
+  );
+  expect(r.rows[0]).toEqual({ s: "2023-05-29", e: "2023-05-31" });
+  await ctx.close();
+  await setup.deleteOrg(orgId);
+});
