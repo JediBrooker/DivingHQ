@@ -3,11 +3,14 @@
 # Deploy script. Run from the box hosting the live service.
 #
 # Order is intentional:
-#   pull → install → test → build → migrate → restart → health-check
+#   pull → install → build → migrate → test → restart → health-check
+#   (then the background i18n auto-translate, step 8)
 #
-#   * Tests + build run BEFORE migrate so a code-side failure
-#     (broken syntax, TDZ, missing import, build error) surfaces
-#     before we touch the DB.
+#   * Build runs BEFORE migrate so a code-side failure (broken
+#     syntax, TDZ, missing import, build error) surfaces before we
+#     touch the DB.
+#   * Tests run AFTER migrate, because new code usually queries the
+#     columns its own migration adds (step 4 has the details).
 #   * Migrate runs BEFORE restart so the new code starts against
 #     the new schema. Most migrations are additive (ADD COLUMN,
 #     CREATE INDEX, etc.) so the OLD code keeps working against the
@@ -167,9 +170,9 @@ if [[ $NOOP -eq 0 ]]; then
 
   # ---- 4. Apply pending migrations ----------------------------
   # --dry first so the deploy log shows exactly what's about to
-  # run before the writes happen. The runner is idempotent
-  # (schema_meta.version + IF NOT EXISTS guards) so an accidental
-  # re-run is a no-op.
+  # run before the writes happen. The runner records every file it
+  # applies in public.applied_migrations and skips those, so an
+  # accidental re-run is a no-op.
   #
   # Migrate runs BEFORE tests because new code commonly adds
   # columns its own logic queries; running the test suite against
@@ -212,15 +215,16 @@ if [[ $NOOP -eq 0 ]]; then
   run npm run migrate
 
   # ---- 5. Tests -----------------------------------------------
-  # `test:safe` deliberately excludes test/integration.test.js
-  # because that test creates real orgs / users / events and
-  # would pollute the production DB on every deploy. The remaining
-  # tests are read-only:
+  # `test:safe` runs every test/*.test.js except the integration
+  # ones (integration.test.js and *.integration.test.js, see
+  # scripts/run-tests.js), because those create real orgs / users /
+  # events and would pollute the production DB on every deploy.
+  # What's left is unit tests plus a few read-only DB checks, e.g.
   #   * syntax.test.js       boot test + parse + schema_version pin
   #   * calc.test.js         World Aquatics scoring vs Postgres UDF
   #   * score-trim.test.js   trim-rule parity
-  # All three are valuable smoke tests, they catch the kind of
-  # regression a deploy would otherwise ship blind.
+  # They catch the kind of regression a deploy would otherwise ship
+  # blind.
   #
   # For full integration coverage, run `npm test` against a
   # DEDICATED test database (createdb divinghq_test, point
