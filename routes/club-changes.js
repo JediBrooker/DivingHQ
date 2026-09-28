@@ -22,15 +22,12 @@
 // =============================================================
 const express = require("express");
 const { recordAudit, auditFromReq } = require("../lib/audit");
+const notices = require("../lib/notices");
+const { isOrgAdminOf, liveAdminIds, liveOrgAdminIds } = require("../lib/admin-rows");
 
 module.exports = function createClubChangesRouter({ pool, verifyToken, bumpTokenVersion }) {
   if (!pool) throw new Error("createClubChangesRouter requires { pool }");
   const router = express.Router();
-
-  const isOrgAdminOf = (req, orgId) =>
-    !!req.user.is_system_admin ||
-    ((req.user.org_roles || []).includes("org_admin") &&
-      req.user.org_id === orgId);
 
   // Can this club (or region) admin decide this request? Only a within-org
   // move into a club they run, in an org with no federation to ask, and
@@ -52,12 +49,8 @@ module.exports = function createClubChangesRouter({ pool, verifyToken, bumpToken
   // Who to tell about a new join request where there's no federation:
   // the club's live admins, or its region's if the club has none.
   async function joinReviewerIds(db, clubId) {
-    const club = await db.query(
-      `SELECT ca.user_id FROM club_admins ca JOIN users u ON u.id = ca.user_id
-        WHERE ca.club_id = $1 AND u.deleted_at IS NULL AND u.suspended_at IS NULL`,
-      [clubId],
-    );
-    if (club.rows.length) return club.rows.map((r) => r.user_id);
+    const clubAdmins = await liveAdminIds(db, "club", clubId);
+    if (clubAdmins.length) return clubAdmins;
     const region = await db.query(
       `SELECT ra.user_id FROM clubs c
          JOIN region_admins ra ON ra.region_id = c.region_id
@@ -72,14 +65,22 @@ module.exports = function createClubChangesRouter({ pool, verifyToken, bumpToken
   // 'club_change' is the outcome (approved, declined, a link closed) and
   // files under Operations in the inbox; 'club_join_request' is someone
   // waiting on the reader to decide, and lands under Action required.
-  async function notify(db, userId, { title, body, action_url, data, category = "club_change" }) {
+  //
+  // Most calls run on the request's transaction client, and there a
+  // try/catch alone isn't enough: one failed INSERT aborts the whole
+  // transaction, and the COMMIT after it quietly rolls back instead. A
+  // transfer used to report "approved" while nothing had moved. Hence the
+  // savepoint. insertInApp cuts the title to fit notifications.title as
+  // well, since a club's name on its own can be longer than that.
+  async function notify(db, userIds, { category = "club_change", ...note }) {
+    if (!userIds.length) return;
+    const inTx = db !== pool;
     try {
-      await db.query(
-        `INSERT INTO notifications (user_id, category, title, body, data, action_url, status)
-         VALUES ($1, $6, $2, $3, $4::jsonb, $5, 'sent')`,
-        [userId, title, body || null, data ? JSON.stringify(data) : "{}", action_url || null, category],
-      );
+      if (inTx) await db.query("SAVEPOINT club_change_notify");
+      await notices.insertInApp(db, userIds, { category, ...note });
+      if (inTx) await db.query("RELEASE SAVEPOINT club_change_notify");
     } catch (err) {
+      if (inTx) await db.query("ROLLBACK TO SAVEPOINT club_change_notify");
       console.error("[club-change] notify failed:", err.message);
     }
   }
@@ -142,19 +143,9 @@ module.exports = function createClubChangesRouter({ pool, verifyToken, bumpToken
   // nobody is, its federation's admins, or DivingHQ where there isn't one,
   // so a club with no admin doesn't just sit there unnoticed.
   async function whoIsLeft(client, scope, row) {
-    const table = scope === "club" ? "club_admins" : "region_admins";
-    const col = scope === "club" ? "club_id" : "region_id";
-    const left = (await client.query(
-      `SELECT a.user_id FROM ${table} a JOIN users u ON u.id = a.user_id
-        WHERE a.${col} = $1 AND u.deleted_at IS NULL AND u.suspended_at IS NULL`,
-      [row.id],
-    )).rows.map((x) => x.user_id);
+    const left = await liveAdminIds(client, scope, row.id);
     if (left.length) return { ids: left, orphaned: false };
-    const orgAdmins = (await client.query(
-      `SELECT r.user_id FROM user_org_roles r JOIN users u ON u.id = r.user_id
-        WHERE r.org_id = $1 AND r.role = 'org_admin' AND u.deleted_at IS NULL AND u.suspended_at IS NULL`,
-      [row.org_id],
-    )).rows.map((x) => x.user_id);
+    const orgAdmins = await liveOrgAdminIds(client, row.org_id);
     if (orgAdmins.length) return { ids: orgAdmins, orphaned: true };
     const sys = (await client.query(
       "SELECT id FROM users WHERE is_system_admin AND deleted_at IS NULL AND suspended_at IS NULL",
@@ -239,7 +230,7 @@ module.exports = function createClubChangesRouter({ pool, verifyToken, bumpToken
       note: r.note || null,
     });
 
-    await notify(client, r.user_id, {
+    await notify(client, [r.user_id], {
       title: r.kind === "org_transfer" ? "Your transfer was approved" : "Your club change was approved",
       body: "The change has been applied to your profile.",
       action_url: "/profile",
@@ -249,16 +240,14 @@ module.exports = function createClubChangesRouter({ pool, verifyToken, bumpToken
     for (const [scope, list] of [["club", seats.clubs], ["region", seats.regions]]) {
       for (const row of list) {
         const { ids, orphaned } = await whoIsLeft(client, scope, row);
-        for (const id of ids) {
-          if (id === r.user_id) continue;
-          await notify(client, id, {
-            title: orphaned ? `${row.name} has no admin now` : `${row.name} has one admin fewer`,
-            body: `${fullName || "One of its admins"} transferred to another federation, so they no longer run ${row.name}.`
-              + (orphaned ? " Appoint a new admin so someone can run its meets." : ""),
-            action_url: orphaned ? "/clubs" : (scope === "club" ? "/club" : "/region"),
-            data: { request_id: r.id, kind: r.kind, [`${scope}_id`]: row.id },
-          });
-        }
+        // The mover can still hold org_admin in the org they left.
+        await notify(client, ids.filter((id) => id !== r.user_id), {
+          title: orphaned ? `${row.name} has no admin now` : `${row.name} has one admin fewer`,
+          body: `${fullName || "One of its admins"} transferred to another federation, so they no longer run ${row.name}.`
+            + (orphaned ? " Appoint a new admin so someone can run its meets." : ""),
+          action_url: orphaned ? "/clubs" : (scope === "club" ? "/club" : "/region"),
+          data: { request_id: r.id, kind: r.kind, [`${scope}_id`]: row.id },
+        });
       }
     }
 
@@ -269,7 +258,7 @@ module.exports = function createClubChangesRouter({ pool, verifyToken, bumpToken
         ? link.dependent_user_id
         : link.guardian_user_id;
       if (other === r.user_id) continue;
-      await notify(client, other, {
+      await notify(client, [other], {
         title: "A guardian link was ended",
         body: `${fullName || "Someone you were linked to"} transferred to another federation, so the link between you was closed. You can request it again in the new federation.`,
         action_url: "/guardians",
@@ -301,7 +290,7 @@ module.exports = function createClubChangesRouter({ pool, verifyToken, bumpToken
       // Permission: the diver themselves, or an org_admin of the
       // diver's CURRENT org (the side that releases them).
       const isSelf = req.user.id === targetId;
-      if (!isSelf && !isOrgAdminOf(req, u.org_id)) {
+      if (!isSelf && !isOrgAdminOf(req.user, u.org_id)) {
         await client.query("ROLLBACK");
         return res.status(403).json({ error: "Not allowed to request a change for this diver" });
       }
@@ -327,7 +316,7 @@ module.exports = function createClubChangesRouter({ pool, verifyToken, bumpToken
 
       // Seed handshake stamps based on who initiated.
       const diverConfirmed = isSelf ? "now()" : "NULL";
-      const sourceApproved = !isSelf && isOrgAdminOf(req, u.org_id) ? "now()" : "NULL";
+      const sourceApproved = !isSelf && isOrgAdminOf(req.user, u.org_id) ? "now()" : "NULL";
       const sourceApprovedBy = sourceApproved === "now()" ? req.user.id : null;
 
       let insRes;
@@ -369,15 +358,13 @@ module.exports = function createClubChangesRouter({ pool, verifyToken, bumpToken
         }
       }
       await client.query("COMMIT");
-      for (const id of tellIds) {
-        await notify(pool, id, {
-          category: "club_join_request",
-          title: `${u.full_name} wants to join your club`,
-          body: "Approve or decline it on your club page.",
-          action_url: "/club",
-          data: { request_id: r.id, kind: r.kind },
-        });
-      }
+      await notify(pool, tellIds, {
+        category: "club_join_request",
+        title: `${u.full_name} wants to join your club`,
+        body: "Approve or decline it on your club page.",
+        action_url: "/club",
+        data: { request_id: r.id, kind: r.kind },
+      });
       res.status(201).json({ ...r, finalised });
     } catch (err) {
       await client.query("ROLLBACK").catch(() => {});
@@ -444,9 +431,9 @@ module.exports = function createClubChangesRouter({ pool, verifyToken, bumpToken
 
       // A club (or region) admin approving someone into their club counts
       // as the one approval a club_change needs.
-      const canSource = isOrgAdminOf(req, r.from_org_id)
+      const canSource = isOrgAdminOf(req.user, r.from_org_id)
         || await isJoinReviewer(client, req.user.id, r);
-      const canTarget = isOrgAdminOf(req, r.to_org_id);
+      const canTarget = isOrgAdminOf(req.user, r.to_org_id);
       if (!canSource && !canTarget) {
         await client.query("ROLLBACK");
         return res.status(403).json({ error: "Not an admin of either organisation in this request" });
@@ -464,7 +451,7 @@ module.exports = function createClubChangesRouter({ pool, verifyToken, bumpToken
           "UPDATE club_change_requests SET status='rejected', reviewed_by=$1, reviewed_at=now() WHERE id=$2",
           [req.user.id, r.id],
         );
-        await notify(client, r.user_id, {
+        await notify(client, [r.user_id], {
           title: "Your club change was declined",
           body: "An administrator declined the request.",
           action_url: "/profile",
@@ -535,7 +522,7 @@ module.exports = function createClubChangesRouter({ pool, verifyToken, bumpToken
         "SELECT * FROM club_change_requests WHERE id=$1 AND status='pending'",
         [req.params.id])).rows[0];
       if (!r) return res.status(404).json({ error: "Request not found" });
-      const allowed = r.user_id === req.user.id || isOrgAdminOf(req, r.from_org_id) || isOrgAdminOf(req, r.to_org_id);
+      const allowed = r.user_id === req.user.id || isOrgAdminOf(req.user, r.from_org_id) || isOrgAdminOf(req.user, r.to_org_id);
       if (!allowed) return res.status(403).json({ error: "Not allowed to cancel this request" });
       await pool.query(
         "UPDATE club_change_requests SET status='rejected', reviewed_by=$1, reviewed_at=now(), note=COALESCE(note,'') WHERE id=$2",

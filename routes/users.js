@@ -12,6 +12,23 @@
 //   GET  /api/users/:id/role-audit   per-user audit history
 //   GET  /api/judges                 list judges in caller's org
 //
+//   Account lifecycle (migrations 053, 058):
+//   POST /api/users/me/delete        self-delete (password re-auth)
+//   POST /api/users/me/claim-candidates  deleted accounts that could be mine
+//   POST /api/users/me/claim         re-link them to this account
+//   PUT  /api/users/:id/profile      org admin edits name, DOB, etc.
+//   POST /api/users/:id/suspend      ...and suspends
+//   POST /api/users/:id/reactivate   ...and lifts it
+//   POST /api/users/:id/resend-verification  re-send the verify link
+//   POST /api/users/:id/reset-password       send a reset link
+//
+//   Guardians (migration 083):
+//   GET  /api/guardians/my-dependents
+//   POST /api/guardians/request
+//   GET  /api/guardian-requests      org admin's queue
+//   POST /api/guardian-requests/:id/review
+//   POST /api/guardians/:id/revoke
+//
 // Both writes that change a user's privilege set call
 // bumpTokenVersion inside the same transaction, so a rollback rolls
 // back the bump too: the freshly-revoked role takes effect on the
@@ -25,10 +42,11 @@ const express = require("express");
 const roleRequests = require("../lib/role-requests");
 const claimsLib = require("../lib/claims");
 const bcrypt  = require("bcrypt");
-const jwt     = require("jsonwebtoken");
+const createAuthLinks = require("../lib/auth-links");
 const { recordAudit, auditFromReq } = require("../lib/audit");
 const { supportContact } = require("../lib/support");
 const { ADMIN_ORG_ID } = require("../lib/admin-org");
+const { isOrgAdminOf } = require("../lib/admin-rows");
 
 // Enum values from init.sql's CREATE TYPE org_role. system_admin is
 // intentionally NOT in this set, it's a column on users, not a role
@@ -65,6 +83,9 @@ module.exports = function createUsersRouter({
 }) {
   if (!pool) throw new Error("createUsersRouter requires { pool, … }");
   const router = express.Router();
+  // Same links the self-service flows in routes/auth.js send. The routes
+  // below 503 before minting when JWT_SECRET isn't wired in.
+  const { mintVerifyToken, mintResetToken } = createAuthLinks(JWT_SECRET);
   const writeLimiter = bulkWriteLimiter || NOOP;
 
   router.get("/api/users", requireOrgAdmin, async (req, res) => {
@@ -169,26 +190,23 @@ module.exports = function createUsersRouter({
         );
       }
 
-      // Best-effort audit writes, same pattern as the score audit
-      // log: don't let an audit failure roll back the legitimate
-      // role change (e.g. before the migration ran).
-      try {
-        for (const role of granted) {
-          await client.query(
-            `INSERT INTO role_audit_log (user_id, org_id, role, action, actor_id)
-             VALUES ($1, $2, $3, 'granted', $4)`,
-            [req.params.id, targetOrgId, role, req.user.id],
-          );
-        }
-        for (const role of revoked) {
-          await client.query(
-            `INSERT INTO role_audit_log (user_id, org_id, role, action, actor_id)
-             VALUES ($1, $2, $3, 'revoked', $4)`,
-            [req.params.id, targetOrgId, role, req.user.id],
-          );
-        }
-      } catch (auditErr) {
-        console.error("[Role Audit Skipped]", auditErr.message);
+      // In the same transaction as the change. A failed insert aborts
+      // it either way (Postgres won't run another statement after one
+      // fails), so the change and its audit rows land together or not at
+      // all.
+      for (const role of granted) {
+        await client.query(
+          `INSERT INTO role_audit_log (user_id, org_id, role, action, actor_id)
+           VALUES ($1, $2, $3, 'granted', $4)`,
+          [req.params.id, targetOrgId, role, req.user.id],
+        );
+      }
+      for (const role of revoked) {
+        await client.query(
+          `INSERT INTO role_audit_log (user_id, org_id, role, action, actor_id)
+           VALUES ($1, $2, $3, 'revoked', $4)`,
+          [req.params.id, targetOrgId, role, req.user.id],
+        );
       }
 
       // Invalidate the target user's existing JWTs (Migration 021).
@@ -293,21 +311,17 @@ module.exports = function createUsersRouter({
           "INSERT INTO user_org_roles (user_id, org_id, role, granted_by) VALUES ($1,$2,$3,$4) ON CONFLICT DO NOTHING",
           [rq.user_id, rq.org_id, rq.requested_role, req.user.id],
         );
-        try {
-          await client.query(
-            `INSERT INTO role_audit_log (user_id, org_id, role, action, actor_id, note)
-             VALUES ($1, $2, $3, 'granted', $4, $5)`,
-            [
-              rq.user_id,
-              rq.org_id,
-              rq.requested_role,
-              req.user.id,
-              "approved from role request",
-            ],
-          );
-        } catch (auditErr) {
-          console.error("[Role Audit Skipped]", auditErr.message);
-        }
+        await client.query(
+          `INSERT INTO role_audit_log (user_id, org_id, role, action, actor_id, note)
+           VALUES ($1, $2, $3, 'granted', $4, $5)`,
+          [
+            rq.user_id,
+            rq.org_id,
+            rq.requested_role,
+            req.user.id,
+            "approved from role request",
+          ],
+        );
         // Bump token_version so the freshly-granted role takes
         // effect on the user's next request without waiting for
         // their current JWT to expire.
@@ -459,10 +473,7 @@ module.exports = function createUsersRouter({
       const targetOrgId = target.rows[0].org_id;
 
       const isSelf = req.user.id === targetId;
-      const orgRoles = req.user.org_roles || [];
-      const isAdmin =
-        req.user.is_system_admin ||
-        (orgRoles.includes("org_admin") && targetOrgId === req.user.org_id);
+      const isAdmin = isOrgAdminOf(req.user, targetOrgId);
 
       if (!isSelf && !isAdmin) {
         return res
@@ -622,27 +633,6 @@ module.exports = function createUsersRouter({
 
       await client.query("BEGIN");
 
-      // Count the side-effect deletes BEFORE we run them so the
-      // audit-log metadata has accurate numbers. Cheap enough,
-      // these are tiny per-user tables.
-      const subCount = await client.query(
-        "SELECT COUNT(*)::int AS n FROM push_subscriptions WHERE user_id = $1",
-        [req.user.id],
-      );
-      const coachCount = await client.query(
-        `SELECT COUNT(*)::int AS n FROM coach_diver_links
-         WHERE coach_id = $1 OR diver_id = $1`,
-        [req.user.id],
-      );
-      const roleReqCount = await client.query(
-        "SELECT COUNT(*)::int AS n FROM role_requests WHERE user_id = $1",
-        [req.user.id],
-      );
-      const grantCount = await client.query(
-        "SELECT COUNT(*)::int AS n FROM user_org_roles WHERE user_id = $1",
-        [req.user.id],
-      );
-
       // The big-redact UPDATE. Keep full_name, org_id, club_id
       // intact, they anchor the historical sporting record and the
       // claim-on-return flow. Rewrite username so a future sign-up
@@ -684,21 +674,22 @@ module.exports = function createUsersRouter({
       // Cut every link to other people. push_subscriptions also
       // FK-cascades on user delete, but we don't hard-delete the
       // user row here, so wipe these manually. Same story for
-      // coach links, role requests, and held grants.
-      await client.query(
+      // coach links, role requests, and held grants. Their rowCounts
+      // are what the audit row below reports.
+      const subRows = await client.query(
         "DELETE FROM push_subscriptions WHERE user_id = $1",
         [req.user.id],
       );
-      await client.query(
+      const coachRows = await client.query(
         `DELETE FROM coach_diver_links
          WHERE coach_id = $1 OR diver_id = $1`,
         [req.user.id],
       );
-      await client.query(
+      const roleReqRows = await client.query(
         "DELETE FROM role_requests WHERE user_id = $1",
         [req.user.id],
       );
-      await client.query(
+      const grantRows = await client.query(
         "DELETE FROM user_org_roles WHERE user_id = $1",
         [req.user.id],
       );
@@ -735,10 +726,10 @@ module.exports = function createUsersRouter({
         entity_name: null,
         action: "user.self_delete",
         metadata: {
-          push_subscriptions_removed: subCount.rows[0].n,
-          coach_links_removed:        coachCount.rows[0].n,
-          role_requests_removed:      roleReqCount.rows[0].n,
-          role_grants_removed:        grantCount.rows[0].n,
+          push_subscriptions_removed: subRows.rowCount,
+          coach_links_removed:        coachRows.rowCount,
+          role_requests_removed:      roleReqRows.rowCount,
+          role_grants_removed:        grantRows.rowCount,
           club_admin_rows_removed:    clubAdminRows.rowCount,
           region_admin_rows_removed:  regionAdminRows.rowCount,
           claims_withdrawn:           claimsWithdrawn,
@@ -968,8 +959,7 @@ module.exports = function createUsersRouter({
            SELECT (SELECT count(*) FROM dives)::int AS dives, (SELECT count(*) FROM comp)::int AS scores`,
           [oldId, me.id],
         )).rows[0];
-        const moveDives = { rowCount: moved.dives };
-        counts.dives += moveDives.rowCount || 0;
+        counts.dives += moved.dives;
 
         // Changing partner_id normally re-snapshots the partner's club
         // and region (cdl_snapshot_rep, migration 095), since it usually
@@ -984,13 +974,11 @@ module.exports = function createUsersRouter({
           [oldId, me.id],
         );
 
-        const moveScoresComp = { rowCount: moved.scores };
         const moveScoresJudge = await client.query(
           `UPDATE scores SET judge_id = $2 WHERE judge_id = $1`,
           [oldId, me.id],
         );
-        counts.scores += (moveScoresComp.rowCount || 0) +
-                         (moveScoresJudge.rowCount || 0);
+        counts.scores += moved.scores + (moveScoresJudge.rowCount || 0);
 
         const movePanels = await client.query(
           `UPDATE event_judges SET judge_id = $2 WHERE judge_id = $1`,
@@ -1074,8 +1062,8 @@ module.exports = function createUsersRouter({
         );
         let recordsMoved = moveRecords.rowCount || 0;
         for (const tbl of ["records_club", "records_region", "records_federation", "records_continental"]) {
-          const moved = await client.query(`UPDATE ${tbl} SET holder_id = $2 WHERE holder_id = $1`, [oldId, me.id]);
-          recordsMoved += moved.rowCount || 0;
+          const held = await client.query(`UPDATE ${tbl} SET holder_id = $2 WHERE holder_id = $1`, [oldId, me.id]);
+          recordsMoved += held.rowCount || 0;
         }
         // History has no FKs, so nothing's lost there; this is only so the
         // earlier holders still read under the diver's name.
@@ -1108,9 +1096,8 @@ module.exports = function createUsersRouter({
           action: "user.claimed_past_account",
           metadata: {
             old_user_id:        oldId,
-            dive_count_moved:   moveDives.rowCount || 0,
-            score_count_moved: (moveScoresComp.rowCount || 0) +
-                               (moveScoresJudge.rowCount || 0),
+            dive_count_moved:   moved.dives,
+            score_count_moved:  moved.scores + (moveScoresJudge.rowCount || 0),
             panel_count_moved:  movePanels.rowCount || 0,
             record_count_moved: recordsMoved,
           },
@@ -1269,8 +1256,7 @@ module.exports = function createUsersRouter({
       if (target.email_verified_at) return res.status(400).json({ error: "This email is already verified" });
       if (!JWT_SECRET || typeof sendVerifyEmailEmail !== "function")
         return res.status(503).json({ error: "Email is not configured on this server" });
-      const token = jwt.sign({ sub: req.params.id, type: "email_verify" }, JWT_SECRET, { expiresIn: "24h" });
-      sendVerifyEmailEmail(req.params.id, token, { req }).catch(() => {});
+      sendVerifyEmailEmail(req.params.id, mintVerifyToken(req.params.id), { req }).catch(() => {});
       await recordAudit(pool, {
         ...auditFromReq(req), org_id: target.org_id, entity_type: "user",
         entity_id: req.params.id, entity_name: target.full_name, action: "user.verification_resent",
@@ -1291,9 +1277,7 @@ module.exports = function createUsersRouter({
       if (!target.email) return res.status(400).json({ error: "This user has no email on file" });
       if (!JWT_SECRET || typeof sendPasswordResetEmail !== "function" || typeof hashFingerprint !== "function")
         return res.status(503).json({ error: "Email is not configured on this server" });
-      const token = jwt.sign(
-        { sub: req.params.id, type: "password_reset", fp: hashFingerprint(target.password) },
-        JWT_SECRET, { expiresIn: "30m" });
+      const token = mintResetToken(req.params.id, hashFingerprint(target.password));
       sendPasswordResetEmail(
         { id: req.params.id, full_name: target.full_name, email: target.email },
         token, { req }).catch(() => {});
@@ -1430,10 +1414,7 @@ module.exports = function createUsersRouter({
       )).rows[0];
       if (!g) return res.status(404).json({ error: "Guardian link not found" });
       const isGuardian = g.guardian_user_id === req.user.id;
-      const isAdmin = req.user.is_system_admin || (
-        req.user.org_id === g.org_id &&
-        (req.user.org_roles || []).includes("org_admin")
-      );
+      const isAdmin = isOrgAdminOf(req.user, g.org_id);
       if (!isGuardian && !isAdmin) return res.status(403).json({ error: "Forbidden" });
       await pool.query(
         "UPDATE guardians SET status = 'revoked', reviewed_by = $1, reviewed_at = now() WHERE id = $2",

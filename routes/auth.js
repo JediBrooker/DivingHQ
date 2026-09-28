@@ -7,7 +7,8 @@
 // Mounted at the app root in server.js as:
 //     app.use(require('./routes/auth')({ ... }))
 //
-// Every route here was moved verbatim, no behaviour changes.
+// It started as a straight move out of server.js and has grown a lot
+// since (club-first signup, claims, 2FA).
 
 const express = require("express");
 const bcrypt  = require("bcrypt");
@@ -20,10 +21,18 @@ const { countryByCode } = require("../lib/countries");
 const { materializeRegions } = require("../lib/regions");
 const claims = require("../lib/claims");
 const { supportContact, suspendedAccountMessage } = require("../lib/support");
-const { liveAdminCount } = require("../lib/admin-rows");
+const { liveAdminCount, sysadminIds } = require("../lib/admin-rows");
 const roleRequests = require("../lib/role-requests");
 const clubApprovals = require("../lib/club-approvals");
+const { withTx } = clubApprovals;
+const notices = require("../lib/notices");
 const { recordAudit } = require("../lib/audit");
+const createAuthLinks = require("../lib/auth-links");
+
+// Loose on purpose, something@something.tld: the verification link is what
+// actually proves the address. Register, register-org and the email change
+// all check against this.
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // Plant the JWT in the httpOnly session cookie. This is the SPA's
 // session of record, browser JS can neither read nor exfiltrate it.
@@ -89,15 +98,6 @@ function validatePassword(pw) {
   return null;
 }
 
-// Does this user look after anybody? A guardian with an approved
-// dependent gets to reach the payment surfaces even when they hold no
-// role beyond 'spectator', which is what registration hands out. See
-// the router's allowGuardian meta.
-//
-// Deliberately NOT folded into buildTokenPayload: that shape gets
-// signed into the JWT, and an approval that lands after the cookie was
-// minted would sit stale until the next sign-in. This rides on the
-// response body instead, so /api/auth/me refreshes it on every boot.
 // Clubs this user admins, [{ id, name, region_id, org_claim_state }]. Same reasoning as
 // has_dependents below: a club admin grant lands whenever the federation
 // (or signup) makes it, so it rides on the response body, never the JWT.
@@ -134,20 +134,22 @@ async function loadRegionAdminOf(pool, userId) {
   return r.rows;
 }
 
+// Does this user look after anybody? A guardian with an approved
+// dependent gets to reach the payment surfaces even when they hold no
+// role beyond 'spectator', which is what registration hands out. See
+// the router's allowGuardian meta.
+//
+// Deliberately NOT folded into buildTokenPayload: that shape gets
+// signed into the JWT, and an approval that lands after the cookie was
+// minted would sit stale until the next sign-in. This rides on the
+// response body instead, so /api/auth/me refreshes it on every boot.
 async function loadHasDependents(pool, userId) {
-  try {
-    const r = await pool.query(
-      `SELECT 1 FROM guardians
-        WHERE guardian_user_id = $1 AND status = 'approved' LIMIT 1`,
-      [userId],
-    );
-    return r.rows.length > 0;
-  } catch (err) {
-    // Migration 083 might not have landed on this box yet. A missing
-    // table just means nobody has dependents.
-    if (err.code === "42P01") return false;
-    throw err;
-  }
+  const r = await pool.query(
+    `SELECT 1 FROM guardians
+      WHERE guardian_user_id = $1 AND status = 'approved' LIMIT 1`,
+    [userId],
+  );
+  return r.rows.length > 0;
 }
 
 // Orgs in this country with the given status, skipping the sysadmin's
@@ -177,12 +179,7 @@ async function addSessionExtras(pool, payload, userId) {
   // in their nav so they can follow their claim.
   payload.has_claim = await claims.hasOwnClaim(pool, userId);
   // A founder whose club is waiting on the federation (migration 096).
-  // A box that hasn't run 096 yet has no clubs.status, which just means
-  // nothing is waiting.
-  payload.pending_club = await clubApprovals.pendingClubFor(pool, userId).catch((err) => {
-    if (err.code === "42703") return null;
-    throw err;
-  });
+  payload.pending_club = await clubApprovals.pendingClubFor(pool, userId);
   return payload;
 }
 
@@ -295,6 +292,23 @@ module.exports = function createAuthRouter({
   sendNoticeEmail,     // optional, club approval notices by email (lib/club-approvals.js)
 }) {
   const router = express.Router();
+  const { mintVerifyToken, mintResetToken } = createAuthLinks(JWT_SECRET);
+
+  // Sign a fresh session for userId, set the cookie and answer with
+  // { ...before, user, ...payload, ...after }, plus the token for clients
+  // that want it in the body. Login and login/totp pass withExtras so the
+  // SPA gets the nav flags too; those go on after signing so they never
+  // end up inside the JWT. Change-password and the locale switch never
+  // sent them, and still don't.
+  async function sendSession(req, res, userId, { before = {}, after = {}, withExtras = false } = {}) {
+    const payload = await buildTokenPayload(userId);
+    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRY });
+    setSessionCookie(res, token);
+    if (withExtras) await addSessionExtras(pool, payload, userId);
+    const resBody = { ...before, user: payload, ...payload, ...after };
+    if (includeBodyToken(req)) resBody.token = token;
+    res.json(resBody);
+  }
 
   // -------------------------------------------------------------
   // GET /api/auth/me: rehydrate the signed-in identity from the
@@ -422,19 +436,34 @@ module.exports = function createAuthRouter({
         return res.json({ needs_totp: true, totp_token });
       }
 
-      const payload = await buildTokenPayload(user.id);
-      const token = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRY });
-      setSessionCookie(res, token);
-      // After signing, so the flags never enter the JWT.
-      await addSessionExtras(pool, payload, user.id);
-      const resBody = { user: payload, ...payload };
-      if (includeBodyToken(req)) resBody.token = token;
-      res.json(resBody);
+      await sendSession(req, res, user.id, { withExtras: true });
     } catch (err) {
       console.error("[Login Error]", err.message);
       res.status(500).json({ error: "Login failed" });
     }
   });
+
+  // Replay guard (migration 063): the ±1-step verify window keeps a
+  // code valid for ~90s, so a just-consumed code could otherwise mint a
+  // second session, or be replayed to tear the second factor down.
+  // verifyTokenDelta returns the absolute time-step the code matched; the
+  // conditional UPDATE persists it and only succeeds when it's strictly
+  // newer than the stored last-used step, so a replay (or a concurrent
+  // presentation of the same code) loses the race and is rejected like
+  // any bad code. Login and 2FA disable both spend codes through this.
+  async function consumeTotpStep(userId, secret, code) {
+    const matchedStep = totp.verifyTokenDelta(secret, code);
+    if (matchedStep == null) return false;
+    const consumed = await pool.query(
+      `UPDATE users
+       SET totp_last_used_step = $1
+       WHERE id = $2
+         AND (totp_last_used_step IS NULL OR totp_last_used_step < $1)
+       RETURNING id`,
+      [matchedStep, userId],
+    );
+    return consumed.rowCount > 0;
+  }
 
   // -------------------------------------------------------------
   // POST /api/auth/login/totp: second-factor exchange.
@@ -478,28 +507,7 @@ module.exports = function createAuthRouter({
       const looksLikeTotp = typeof code === "string" && /^\d{6}$/.test(code);
       let accepted = false;
       let consumedRecovery = false;
-      if (looksLikeTotp) {
-        // Replay guard (migration 063): the ±1-step verify window
-        // keeps a code valid for ~90s, so a just-consumed code
-        // could otherwise mint a second session. verifyTokenDelta
-        // returns the absolute time-step the code matched; the
-        // conditional UPDATE below persists it and only succeeds
-        // when it's strictly newer than the stored last-used step,
-        // so a replay (or a concurrent presentation of the same
-        // code) loses the race and is rejected like any bad code.
-        const matchedStep = totp.verifyTokenDelta(user.totp_secret, code);
-        if (matchedStep != null) {
-          const consumed = await pool.query(
-            `UPDATE users
-             SET totp_last_used_step = $1
-             WHERE id = $2
-               AND (totp_last_used_step IS NULL OR totp_last_used_step < $1)
-             RETURNING id`,
-            [matchedStep, user.id],
-          );
-          accepted = consumed.rowCount > 0;
-        }
-      }
+      if (looksLikeTotp) accepted = await consumeTotpStep(user.id, user.totp_secret, code);
       if (!accepted) {
         const { matched, remainingHashes } = await totp.consumeRecoveryCode(
           user.totp_recovery_codes || [],
@@ -518,20 +526,12 @@ module.exports = function createAuthRouter({
         return res.status(401).json({ error: "Invalid TOTP / recovery code" });
       }
 
-      const payload = await buildTokenPayload(user.id);
-      const token = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRY });
-      setSessionCookie(res, token);
-      // Same body-only extras as the password login.
-      await addSessionExtras(pool, payload, user.id);
-      const resBody = {
-        user: payload,
-        ...payload,
-        ...(consumedRecovery
+      await sendSession(req, res, user.id, {
+        withExtras: true,
+        after: consumedRecovery
           ? { warning: "Recovery code consumed. Re-generate your recovery codes when convenient." }
-          : {}),
-      };
-      if (includeBodyToken(req)) resBody.token = token;
-      res.json(resBody);
+          : {},
+      });
     } catch (err) {
       console.error("[Login TOTP Error]", err.message);
       res.status(500).json({ error: "TOTP login failed" });
@@ -657,9 +657,7 @@ module.exports = function createAuthRouter({
       if (matchedStep == null) {
         return res.status(401).json({ error: "Code didn't verify against the new secret. Check your authenticator clock and try again." });
       }
-      const client = await pool.connect();
-      try {
-        await client.query("BEGIN");
+      await withTx(pool, async (client) => {
         // Record the consumed step alongside the enable stamp so
         // the very first login can't replay the confirm code
         // within its ~90s verify window (migration 063). GREATEST
@@ -674,16 +672,8 @@ module.exports = function createAuthRouter({
         );
         // Bump token_version so every device this user is signed
         // in on is forced through the new 2FA flow on next request.
-        if (typeof bumpTokenVersion === "function") {
-          await bumpTokenVersion(client, req.user.id);
-        }
-        await client.query("COMMIT");
-      } catch (txErr) {
-        await client.query("ROLLBACK").catch(() => {});
-        throw txErr;
-      } finally {
-        client.release();
-      }
+        await bumpTokenVersion(client, req.user.id);
+      });
       res.json({ ok: true, message: "2FA enabled. You'll be asked for a code on your next login." });
     } catch (err) {
       console.error("[2FA Confirm Error]", err.message);
@@ -717,21 +707,9 @@ module.exports = function createAuthRouter({
       const looksLikeTotp = typeof code === "string" && /^\d{6}$/.test(code);
       let codeOk = false;
       if (looksLikeTotp) {
-        // Same single-use guard as the login exchange (migration
-        // 063): a code that already minted a session can't be
-        // replayed to tear the second factor down.
-        const matchedStep = totp.verifyTokenDelta(user.totp_secret, code);
-        if (matchedStep != null) {
-          const consumed = await pool.query(
-            `UPDATE users
-             SET totp_last_used_step = $1
-             WHERE id = $2
-               AND (totp_last_used_step IS NULL OR totp_last_used_step < $1)
-             RETURNING id`,
-            [matchedStep, req.user.id],
-          );
-          codeOk = consumed.rowCount > 0;
-        }
+        // Single-use, same as the login exchange: a code that already
+        // minted a session can't be replayed to tear 2FA down.
+        codeOk = await consumeTotpStep(req.user.id, user.totp_secret, code);
       } else {
         const { matched } = await totp.consumeRecoveryCode(
           user.totp_recovery_codes || [],
@@ -744,9 +722,7 @@ module.exports = function createAuthRouter({
           error: "Provide a current 6-digit TOTP or a recovery code to disable 2FA",
         });
       }
-      const client = await pool.connect();
-      try {
-        await client.query("BEGIN");
+      await withTx(pool, async (client) => {
         await client.query(
           `UPDATE users
            SET totp_secret = NULL,
@@ -759,16 +735,8 @@ module.exports = function createAuthRouter({
         // Bump token_version: a session with the disabled 2FA flag
         // baked in is no different from one without, but bumping
         // is the consistent posture after every privilege change.
-        if (typeof bumpTokenVersion === "function") {
-          await bumpTokenVersion(client, req.user.id);
-        }
-        await client.query("COMMIT");
-      } catch (txErr) {
-        await client.query("ROLLBACK").catch(() => {});
-        throw txErr;
-      } finally {
-        client.release();
-      }
+        await bumpTokenVersion(client, req.user.id);
+      });
       res.json({ ok: true, message: "2FA disabled. Re-enable from your account settings any time." });
     } catch (err) {
       console.error("[2FA Disable Error]", err.message);
@@ -796,39 +764,32 @@ module.exports = function createAuthRouter({
   // 'signups' feature flag (migration 086), toggled at /admin/features. Login
   // and every existing-account flow (password reset, email change, 2FA) are
   // NEVER gated, since the super admin must always be able to sign in.
-  //
-  // The env fallback is only for a router constructed without a features
-  // service (some unit tests do this); the real server always passes one.
   function signupsOpen() {
-    return features ? features.enabled("signups") : process.env.SIGNUPS_ENABLED === "true";
+    return features.enabled("signups");
   }
 
   router.get("/api/auth/signups-status", (req, res) => {
     res.json({ enabled: signupsOpen() });
   });
 
-  // Best-effort in-app heads-up to every sysadmin. Fire and forget.
+  // Best-effort in-app heads-up to every sysadmin. Fire and forget: the
+  // lookup runs here, and lib/notices does the push without throwing.
   function notifySysadminsOfClub({ clubName, orgId, countryName, startedCountry }) {
-    if (!push || typeof push.sendNotification !== "function") return;
-    (async () => {
-      try {
-        const admins = await pool.query("SELECT id FROM users WHERE is_system_admin = true");
-        const adminIds = admins.rows.map((r) => r.id);
-        if (!adminIds.length) return;
-        const where = countryName || "an unclaimed country";
-        await push.sendNotification(adminIds, {
-          category:   "club_created",
-          title:      `New club: ${clubName}`,
-          body:       startedCountry
-            ? `First club on DivingHQ from ${where}. The country account was created unclaimed.`
-            : `A new club joined ${where}, which has no federation on DivingHQ yet.`,
-          data:       { org_id: orgId, club_name: clubName },
-          action_url: "/clubs",
-        });
-      } catch (err) {
-        console.error("[Club Created Notification Skipped]", err.message);
-      }
-    })();
+    const where = countryName || "an unclaimed country";
+    const tag = "Club Created Notification Skipped";
+    sysadminIds(pool)
+      .then((userIds) => notices.deliver({ push }, [{
+        userIds,
+        category:   "club_created",
+        title:      `New club: ${clubName}`,
+        body:       startedCountry
+          ? `First club on DivingHQ from ${where}. The country account was created unclaimed.`
+          : `A new club joined ${where}, which has no federation on DivingHQ yet.`,
+        data:       { org_id: orgId, club_name: clubName },
+        action_url: "/clubs",
+        email:      false,
+      }], { tag }))
+      .catch((err) => console.error(`[${tag}]`, err.message));
   }
 
   router.post("/api/auth/register", authLimiter, async (req, res) => {
@@ -868,7 +829,7 @@ module.exports = function createAuthRouter({
     }
     const pwErr = validatePassword(password);
     if (pwErr) return res.status(400).json({ error: pwErr });
-    if (typeof email !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    if (typeof email !== "string" || !EMAIL_RE.test(email)) {
       return res.status(400).json({ error: "A valid email address is required for verification" });
     }
 
@@ -1087,28 +1048,13 @@ module.exports = function createAuthRouter({
 
       await client.query("COMMIT");
 
-      // Email verification is the gate; welcome message goes out
-      // alongside it. Both are best-effort.
-      //
-      // 24h TTL (was 7d): defensive, limits the blast radius of
-      // a leaked verification link via email archives / Sentry
-      // breadcrumbs / mail forwards. A genuine user who misses
-      // the window can request a fresh link via re-registration
-      // or password reset; the cost of a slightly tighter expiry
-      // is far smaller than the cost of a week-long replay
-      // window for a leaked URL.
-      const verifyToken = jwt.sign(
-        { sub: newUserId, type: "email_verify" },
-        JWT_SECRET,
-        { expiresIn: "24h" },
-      );
-      if (typeof sendVerifyEmailEmail === "function") {
-        // Pass `req` so the verify-email subject/body are rendered
-        // in the locale the registrant was using when they submitted
-        // the form (Accept-Language at register-time, since the user
-        // row doesn't have a locale yet).
-        sendVerifyEmailEmail(newUserId, verifyToken, { req }).catch(() => {});
-      }
+      // Email verification is the gate, best effort like every mail here
+      // (lib/auth-links.js has why the link only lasts a day). Pass `req`
+      // so the verify-email subject/body are rendered in the locale the
+      // registrant was using when they submitted the form
+      // (Accept-Language at register-time, since the user row doesn't
+      // have a locale yet).
+      sendVerifyEmailEmail(newUserId, mintVerifyToken(newUserId), { req }).catch(() => {});
       // The welcome mail waits for the verify click (see verify-email),
       // it says "you can sign in now" and that isn't true yet.
       if (requestedRoleSaved) {
@@ -1149,6 +1095,24 @@ module.exports = function createAuthRouter({
     }
   });
 
+  // Following a verify link, or a reset link, proves the inbox, and a few
+  // things wait on exactly that: a federation or state body's claim goes
+  // live (lib/claims.js), a club waiting on its federation gets put in
+  // front of it, and a new club that picked a claimed region asks to join.
+  // Both routes run this one list so a new step can't land in only one.
+  // Best effort: a hiccup mustn't fail the verification or the reset, and
+  // the next click (or support) can redo it. Returns how many claims went
+  // live, which verify-email uses to pick what to say next.
+  async function afterInboxProven(userId) {
+    const opened = await claims.activateForUser(pool, userId, { push, email: { sendClaimEmail } })
+      .catch((err) => { console.error("[Claim Activate Error]", err.message); return 0; });
+    await clubApprovals.submitForUser(pool, userId, { push, email: { sendNoticeEmail } })
+      .catch((err) => console.error("[Club Submit Error]", err.message));
+    await clubApprovals.askRegionsForUser(pool, userId)
+      .catch((err) => console.error("[Club Region Ask Error]", err.message));
+    return opened;
+  }
+
   // Verify email: clicked from the link sent at registration.
   // Single-use via the email_verified_at column, once stamped,
   // re-presenting the same token has no effect.
@@ -1177,17 +1141,7 @@ module.exports = function createAuthRouter({
         return res.status(400).json({ error: "Verification link is invalid" });
       }
       const { fresh, org_status: orgStatus } = r.rows[0];
-      // A federation / state body's claim goes live now (lib/claims.js).
-      // Best-effort: a hiccup here mustn't fail the verification itself,
-      // and the next verify-email click (or support) can redo it.
-      const opened = await claims.activateForUser(pool, decoded.sub, { push, email: { sendClaimEmail } })
-        .catch((err) => { console.error("[Claim Activate Error]", err.message); return 0; });
-      // Same rule for a club waiting on its federation: now it asks.
-      await clubApprovals.submitForUser(pool, decoded.sub, { push, email: { sendNoticeEmail } })
-        .catch((err) => console.error("[Club Submit Error]", err.message));
-      // And for a new club that picked a claimed region at signup.
-      await clubApprovals.askRegionsForUser(pool, decoded.sub)
-        .catch((err) => console.error("[Club Region Ask Error]", err.message));
+      const opened = await afterInboxProven(decoded.sub);
       // Welcome mail only once, and only when they can actually sign in.
       // A pending federation hears from us when it's approved instead.
       if (fresh && orgStatus === "active") sendWelcomeEmail(decoded.sub).catch(() => {});
@@ -1233,11 +1187,9 @@ module.exports = function createAuthRouter({
       if (id && !(last && Date.now() - last < RESEND_COOLDOWN_MS)) {
         resendCooldown.set(id, Date.now());
         if (resendCooldown.size > 5000) resendCooldown.clear();
-        const link = jwt.sign({ sub: id, type: "email_verify" }, JWT_SECRET, { expiresIn: "24h" });
+        const link = mintVerifyToken(id);
         setImmediate(() => {
-          if (typeof sendVerifyEmailEmail === "function") {
-            sendVerifyEmailEmail(id, link, { req }).catch(() => {});
-          }
+          sendVerifyEmailEmail(id, link, { req }).catch(() => {});
         });
       }
       res.json({ ok: true });
@@ -1289,7 +1241,7 @@ module.exports = function createAuthRouter({
     // is returned with a clear error instead.
     if (typeof email !== "string"
         || email.length > 254
-        || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        || !EMAIL_RE.test(email)) {
       return res.status(400).json({ error: "A valid email address is required" });
     }
     // Country is required, alpha-3 only. Signups find their federation by
@@ -1406,10 +1358,7 @@ module.exports = function createAuthRouter({
 
         // The claim goes live (and voters hear about it) when this link
         // is clicked, see the verify-email handler.
-        const verifyLink = jwt.sign({ sub: claimant, type: "email_verify" }, JWT_SECRET, { expiresIn: "24h" });
-        if (typeof sendVerifyEmailEmail === "function") {
-          sendVerifyEmailEmail(claimant, verifyLink, { req }).catch(() => {});
-        }
+        sendVerifyEmailEmail(claimant, mintVerifyToken(claimant), { req }).catch(() => {});
         const who = {
           clubs:    "the clubs already on DivingHQ there vote on it",
           regions:  "the states and provinces already on DivingHQ vote on it",
@@ -1460,51 +1409,30 @@ module.exports = function createAuthRouter({
       // Mint + send the email-verification token, same flow as
       // /api/auth/register. The previous register-org omitted
       // this step, which left the founding org_admin permanently
-      // unable to log in (the login gate at line 82-87 refuses
+      // unable to log in (the login gate in /api/auth/login refuses
       // bcrypt-correct credentials when email_verified_at IS
       // NULL). The operational workaround was for a sysadmin to
       // UPDATE-stamp email_verified_at directly, bypassing
       // proof-of-inbox-control on the highest-privilege account
       // in a fresh tenant.
-      // 24h TTL (was 7d): see /api/auth/register for the
-      // rationale, leaked verification links shouldn't be
-      // replayable for a week.
-      const verifyToken = jwt.sign(
-        { sub: userId, type: "email_verify" },
-        JWT_SECRET,
-        { expiresIn: "24h" },
-      );
-      if (typeof sendVerifyEmailEmail === "function") {
-        sendVerifyEmailEmail(userId, verifyToken, { req }).catch(() => {});
-      }
+      sendVerifyEmailEmail(userId, mintVerifyToken(userId), { req }).catch(() => {});
       // Sysadmins otherwise have no signal that a new org is
       // sitting in the pending queue other than polling the
       // dashboard. Without this, an org can sit unapproved
       // indefinitely with nobody aware it's waiting.
-      if (typeof sendNewOrgRequestEmail === "function") {
-        sendNewOrgRequestEmail(cleanOrgName).catch(() => {});
-      }
-      if (push && typeof push.sendNotification === "function") {
-        (async () => {
-          try {
-            const admins = await pool.query(
-              "SELECT id FROM users WHERE is_system_admin = true",
-            );
-            const adminIds = admins.rows.map((r) => r.id);
-            if (adminIds.length) {
-              await push.sendNotification(adminIds, {
-                category:   "org_pending",
-                title:      `${cleanOrgName} is awaiting approval`,
-                body:       "A new federation registered and needs a system admin to review it.",
-                data:       { org_id: orgId, org_name: cleanOrgName },
-                action_url: "/users",
-              });
-            }
-          } catch (notifErr) {
-            console.error("[Org Pending Notification Skipped]", notifErr.message);
-          }
-        })();
-      }
+      sendNewOrgRequestEmail(cleanOrgName).catch(() => {});
+      // And the same heads-up in-app, fire and forget.
+      sysadminIds(pool)
+        .then((userIds) => notices.deliver({ push }, [{
+          userIds,
+          category:   "org_pending",
+          title:      `${cleanOrgName} is awaiting approval`,
+          body:       "A new federation registered and needs a system admin to review it.",
+          data:       { org_id: orgId, org_name: cleanOrgName },
+          action_url: "/users",
+          email:      false,
+        }], { tag: "Org Pending Notification Skipped" }))
+        .catch((err) => console.error("[Org Pending Notification Skipped]", err.message));
 
       res
         .status(201)
@@ -1566,17 +1494,10 @@ module.exports = function createAuthRouter({
       // has open on other devices. Then issue a replacement JWT
       // carrying the new token_version so this request doesn't
       // strand its own tab on a stale token.
-      if (typeof bumpTokenVersion === "function") {
-        await bumpTokenVersion(client, user.id);
-      }
+      await bumpTokenVersion(client, user.id);
       await client.query("COMMIT");
       sendPasswordChangedEmail(user.id).catch(() => {});
-      const payload = await buildTokenPayload(user.id);
-      const token = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRY });
-      setSessionCookie(res, token);
-      const resBody = { ok: true, user: payload, ...payload };
-      if (includeBodyToken(req)) resBody.token = token;
-      res.json(resBody);
+      await sendSession(req, res, user.id, { before: { ok: true } });
     } catch (err) {
       await client.query("ROLLBACK").catch(() => {});
       console.error("[Change Password Error]", err.message);
@@ -1624,12 +1545,9 @@ module.exports = function createAuthRouter({
       // Reissue the token so the next request resolves this
       // user's locale from req.user.locale (cheap path) rather
       // than falling through to Accept-Language.
-      const payload = await buildTokenPayload(req.user.id);
-      const token = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRY });
-      setSessionCookie(res, token);
-      const resBody = { ok: true, locale: cleared ? null : raw, user: payload, ...payload };
-      if (includeBodyToken(req)) resBody.token = token;
-      res.json(resBody);
+      await sendSession(req, res, req.user.id, {
+        before: { ok: true, locale: cleared ? null : raw },
+      });
     } catch (err) {
       console.error("[Set Locale Error]", err.message);
       res.status(500).json({
@@ -1675,7 +1593,7 @@ module.exports = function createAuthRouter({
     // passes here is the same shape registrations enforce.
     if (typeof new_email !== "string"
         || new_email.length > 254
-        || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(new_email)) {
+        || !EMAIL_RE.test(new_email)) {
       return res.status(400).json({ error: "A valid new email address is required" });
     }
     if (typeof current_password !== "string" || !current_password) {
@@ -1732,15 +1650,14 @@ module.exports = function createAuthRouter({
       // Fire-and-forget the send so a stuck mail API can't hold
       // the request open. The user sees an immediate "check your
       // inbox" response either way.
-      if (typeof sendEmailChangeVerify === "function") {
-        // Capture req at schedule time: setImmediate runs after
-        // the request lifecycle but our translator only reads
-        // req.user.locale + headers['accept-language'], both of
-        // which are plain strings, so it's safe to hold a reference.
-        setImmediate(() => {
-          sendEmailChangeVerify(req.user.id, normalisedNew, token, { req }).catch(() => {});
-        });
-      }
+      //
+      // Capture req at schedule time: setImmediate runs after the
+      // request lifecycle but our translator only reads
+      // req.user.locale + headers['accept-language'], both of which
+      // are plain strings, so it's safe to hold a reference.
+      setImmediate(() => {
+        sendEmailChangeVerify(req.user.id, normalisedNew, token, { req }).catch(() => {});
+      });
 
       res.json({
         ok: true,
@@ -1831,15 +1748,13 @@ module.exports = function createAuthRouter({
       // change / 2FA toggle: a session that's been resting on the
       // old email shouldn't keep going on the new one without an
       // explicit sign-in.
-      if (typeof bumpTokenVersion === "function") {
-        await bumpTokenVersion(client, user.id);
-      }
+      await bumpTokenVersion(client, user.id);
       await client.query("COMMIT");
 
       // Hygiene notice goes to the OLD address; if someone hijacked
       // the session and rotated the email, this is the original
       // owner's signal to lock down their account.
-      if (typeof sendEmailChangedNotice === "function" && oldEmail) {
+      if (oldEmail) {
         sendEmailChangedNotice(user.id, oldEmail, newEmail).catch(() => {});
       }
 
@@ -1888,11 +1803,7 @@ module.exports = function createAuthRouter({
         user = u.rows[0] || null;
       }
       if (user && user.email) {
-        const fingerprint = jwt.sign(
-          { sub: user.id, type: "password_reset", fp: hashFingerprint(user.password) },
-          JWT_SECRET,
-          { expiresIn: "30m" },
-        );
+        const fingerprint = mintResetToken(user.id, hashFingerprint(user.password));
         // Defer the mail API round-trip so the response time doesn't
         // depend on whether we found a user. The catch is swallowed
         // intentionally, we never tell the caller about delivery.
@@ -1947,34 +1858,17 @@ module.exports = function createAuthRouter({
       // Bump token_version atomically with the password write so a
       // racing reset can't end with the password rotated but stale
       // JWTs still valid.
-      const client2 = await pool.connect();
-      try {
-        await client2.query("BEGIN");
+      await withTx(pool, async (client) => {
         // Following a reset link proves the inbox as well as a verify
         // link does, so someone who lost the sign-up mail isn't stuck.
-        await client2.query(
+        await client.query(
           "UPDATE users SET password = $1, email_verified_at = COALESCE(email_verified_at, now()) WHERE id = $2",
           [hash, user.id],
         );
-        if (typeof bumpTokenVersion === "function") {
-          await bumpTokenVersion(client2, user.id);
-        }
-        await client2.query("COMMIT");
-      } catch (txErr) {
-        await client2.query("ROLLBACK").catch(() => {});
-        throw txErr;
-      } finally {
-        client2.release();
-      }
+        await bumpTokenVersion(client, user.id);
+      });
       sendPasswordChangedEmail(user.id).catch(() => {});
-      // Same as verify-email: a claim waiting on the inbox goes live, and
-      // so does a club waiting to be put in front of its federation.
-      await claims.activateForUser(pool, user.id, { push, email: { sendClaimEmail } }).catch((err) =>
-        console.error("[Claim Activate Error]", err.message));
-      await clubApprovals.submitForUser(pool, user.id, { push, email: { sendNoticeEmail } }).catch((err) =>
-        console.error("[Club Submit Error]", err.message));
-      await clubApprovals.askRegionsForUser(pool, user.id).catch((err) =>
-        console.error("[Club Region Ask Error]", err.message));
+      await afterInboxProven(user.id);
       res.json({ ok: true });
     } catch (err) {
       console.error("[Reset Password Error]", err.message);

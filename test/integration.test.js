@@ -1193,6 +1193,7 @@ test("claims: the clubs vote a national federation in", async (t) => {
     assert.equal(list.length, 1);
     assert.equal(list[0].can_vote, true);
     assert.equal(list[0].tally.eligible, 3, "the young club doesn't count");
+    assert.deepEqual(list[0].my_votes, [{ voter_id: A.clubId, name: "Apia Divers", vote: null }]);
 
     // The young club and the claimant don't get a vote.
     assert.equal((await fetchJson("POST", `/api/claims/${claimRow.id}/vote`, { token: young.token, body: { vote: "approve" } })).status, 403);
@@ -1203,6 +1204,13 @@ test("claims: the clubs vote a national federation in", async (t) => {
     let v = await fetchJson("POST", `/api/claims/${claimRow.id}/vote`, { token: A.token, body: { vote: "approve" } });
     assert.equal(v.body.status, "open");
     assert.equal((await fetchJson("POST", `/api/claims/${claimRow.id}/vote`, { token: A.token, body: { vote: "approve" } })).status, 403, "one vote per club");
+    // The listing folds the tally and the caller's seats into its one
+    // query, so check it reads the same as the vote just cast.
+    const voted = (await fetchJson("GET", "/api/claims", { token: A.token })).body[0];
+    assert.deepEqual(voted.tally, { eligible: 3, approvals: 1, objections: 0 });
+    assert.deepEqual(voted.my_votes, [{ voter_id: A.clubId, name: "Apia Divers", vote: "approve" }]);
+    assert.equal(voted.can_vote, false, "its one seat has voted");
+    assert.deepEqual(voted.objections, []);
     v = await fetchJson("POST", `/api/claims/${claimRow.id}/vote`, { token: B.token, body: { vote: "approve" } });
     assert.equal(v.body.status, "approved");
 
@@ -1246,6 +1254,9 @@ test("claims: an objection goes to the sysadmin, who can decide and revoke", asy
     const sysList = (await fetchJson("GET", "/api/claims", { token: sys.token })).body.find((c) => c.id === id);
     assert.deepEqual(sysList.objections, ["Not our federation"]);
     assert.equal(sysList.can_decide, true);
+    const aList = (await fetchJson("GET", "/api/claims", { token: A.token })).body.find((c) => c.id === id);
+    assert.deepEqual(aList.objections, [], "only the sysadmin reads the reasons");
+    assert.deepEqual(aList.tally, { eligible: 2, approvals: 0, objections: 1 });
 
     assert.equal((await fetchJson("POST", `/api/claims/${id}/decide`, { token: sys.token, body: { decision: "approve" } })).status, 200);
     let org = (await pool.query("SELECT name, claim_state FROM organisations WHERE country_code = $1", [CODE])).rows[0];
@@ -6461,6 +6472,157 @@ test("org transfer: the mover's admin seats in the old federation go with the mo
     await pool.query("DELETE FROM clubs WHERE org_id = $1", [X.orgId]).catch(() => {});
     await teardownFixture(Y);
     await teardownFixture(X);
+  }
+});
+
+// clubs.name runs to 255 characters and notifications.title to 160. The
+// "has no admin now" notice used to go in uncut, from inside the
+// transfer's transaction, and one failed insert there aborted the whole
+// thing: the reviewer was told it went through and nothing had moved.
+test("org transfer: a long club name can't sink the move with its notice", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const X = await setupFixture({ withEvent: false });
+  const Y = await setupFixture({ withEvent: false });
+  const longName = `Long Name Divers ${"of the Far Northern Coast ".repeat(9)}`.trim();
+  assert.ok(longName.length > 160 && longName.length <= 255);
+  try {
+    const club = (await pool.query(
+      "INSERT INTO clubs (org_id, name) VALUES ($1, $2) RETURNING id", [X.orgId, longName],
+    )).rows[0].id;
+    const mover = await insertUser({ orgId: X.orgId, username: `int-lm-${X.slug}`, fullName: "Long Mover", role: "diver" });
+    await pool.query("INSERT INTO club_admins (club_id, user_id, org_id) VALUES ($1, $2, $3)", [club, mover, X.orgId]);
+    const token = (await fetchJson("POST", "/api/auth/login", {
+      body: { username: `int-lm-${X.slug}`, password: "not-used-here" },
+    })).body.token;
+
+    const ask = await fetchJson("POST", "/api/club-change-requests", { token, body: { to_org_id: Y.orgId } });
+    assert.equal(ask.status, 201, JSON.stringify(ask.body));
+    const review = (tok) => fetchJson("POST", `/api/club-change-requests/${ask.body.id}/review`, { token: tok, body: { decision: "approved" } });
+    assert.equal((await review(X.adminToken)).body.status, "pending");
+    const done = await review(Y.adminToken);
+    assert.equal(done.status, 200, JSON.stringify(done.body));
+    assert.equal(done.body.status, "approved");
+
+    // The move committed, not just the response...
+    assert.equal((await pool.query("SELECT org_id FROM users WHERE id = $1", [mover])).rows[0].org_id, Y.orgId);
+    assert.equal((await pool.query(
+      "SELECT status FROM club_change_requests WHERE id = $1", [ask.body.id],
+    )).rows[0].status, "approved");
+    assert.equal((await pool.query("SELECT 1 FROM club_admins WHERE user_id = $1", [mover])).rows.length, 0);
+    // ...and X's admin still hears the club has nobody left, cut to fit.
+    const notes = (await pool.query(
+      "SELECT title FROM notifications WHERE user_id = $1 AND data->>'club_id' = $2", [X.adminId, club],
+    )).rows;
+    assert.equal(notes.length, 1);
+    assert.ok(Array.from(notes[0].title).length <= 160);
+    assert.ok(notes[0].title.startsWith("Long Name Divers of the Far Northern Coast"));
+  } finally {
+    await pool.query("DELETE FROM club_change_requests WHERE from_org_id = $1 OR to_org_id = $1", [X.orgId]).catch(() => {});
+    await pool.query("UPDATE users SET org_id = $1 WHERE username = $2", [X.orgId, `int-lm-${X.slug}`]).catch(() => {});
+    await pool.query("DELETE FROM clubs WHERE org_id = $1", [X.orgId]).catch(() => {});
+    await teardownFixture(Y);
+    await teardownFixture(X);
+  }
+});
+
+// lib/admin-rows.js recipient lookups, shared by region requests, club
+// join requests, the transfer notices, club approvals and claims. Live
+// means not deleted and not suspended; sysadminIds has no filter at all.
+test("admin-rows: live admin lookups skip deleted and suspended accounts", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const adminRows = require("../lib/admin-rows");
+  const X = await setupFixture({ withEvent: false });
+  try {
+    const club = (await pool.query(
+      "INSERT INTO clubs (org_id, name) VALUES ($1, 'Lookup Divers') RETURNING id", [X.orgId],
+    )).rows[0].id;
+    const region = (await pool.query(
+      "INSERT INTO regions (org_id, name, short_code) VALUES ($1, 'Lookup Shire', 'LKS') RETURNING id", [X.orgId],
+    )).rows[0].id;
+    const mk = (tag) => insertUser({ orgId: X.orgId, username: `int-lk-${tag}-${X.slug}`, fullName: tag, role: "diver" });
+    const [live, other, suspended, gone] = [await mk("live"), await mk("other"), await mk("susp"), await mk("gone")];
+    await pool.query("UPDATE users SET suspended_at = now() WHERE id = $1", [suspended]);
+    await pool.query("UPDATE users SET deleted_at = now() WHERE id = $1", [gone]);
+    for (const u of [live, other, suspended, gone]) {
+      await pool.query("INSERT INTO club_admins (club_id, user_id, org_id) VALUES ($1, $2, $3)", [club, u, X.orgId]);
+      await pool.query("INSERT INTO region_admins (region_id, user_id, org_id) VALUES ($1, $2, $3)", [region, u, X.orgId]);
+      await pool.query("INSERT INTO user_org_roles (user_id, org_id, role) VALUES ($1, $2, 'org_admin')", [u, X.orgId]);
+    }
+    const sorted = (ids) => [...ids].sort();
+    assert.deepEqual(sorted(await adminRows.liveAdminIds(pool, "club", club)), sorted([live, other]));
+    assert.deepEqual(await adminRows.liveAdminIds(pool, "region", region, { except: other }), [live]);
+    assert.deepEqual(
+      sorted(await adminRows.liveOrgAdminIds(pool, X.orgId)), sorted([X.adminId, live, other]),
+      "the fixture's own org admin plus the two live ones",
+    );
+    const sys = await adminRows.sysadminIds(pool);
+    const expected = (await pool.query("SELECT id FROM users WHERE is_system_admin = true")).rows.map((r) => r.id);
+    assert.deepEqual(sorted(sys), sorted(expected));
+    await assert.rejects(adminRows.liveAdminIds(pool, "meet", club), /unknown scope/);
+  } finally {
+    await pool.query("DELETE FROM clubs WHERE org_id = $1", [X.orgId]).catch(() => {});
+    await teardownFixture(X);
+  }
+});
+
+// The fire-and-forget in-app heads-ups: a new federation (org_pending) and
+// a new club where there's no federation (club_created) go to every
+// sysadmin, and a decision on a federation (org_decision) to its admins.
+test("heads-ups: new federations and clubs reach the sysadmins, decisions reach the federation", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const sysIds = (await pool.query("SELECT id FROM users WHERE is_system_admin = true")).rows.map((r) => r.id).sort();
+  if (!sysIds.length) return t.skip("no sysadmin in this DB");
+  // Nothing awaits these, so give them a moment to land. lib/push writes
+  // one row per recipient, in turn, so with more than one sysadmin the
+  // first poll can catch it halfway. Wait for the whole audience.
+  const waitFor = async (sql, params, want = 1) => {
+    let rows = [];
+    for (let i = 0; i < 60; i++) {
+      rows = (await pool.query(sql, params)).rows;
+      if (rows.length >= want) return rows;
+      await new Promise((r) => setTimeout(r, 50));
+    }
+    return rows;
+  };
+  const CODE = "NCL";
+  await claimKit.wipe(CODE);
+  const X = await setupFixture({ withEvent: false });
+  try {
+    const pending = await waitFor(
+      "SELECT user_id, title, action_url FROM notifications WHERE category = 'org_pending' AND data->>'org_id' = $1", [X.orgId],
+      sysIds.length,
+    );
+    assert.deepEqual(pending.map((n) => n.user_id).sort(), sysIds);
+    assert.equal(pending[0].title, `Integration Test ${X.slug} is awaiting approval`);
+    assert.equal(pending[0].action_url, "/users");
+
+    const founder = await claimKit.founder(CODE, "Noumea Divers");
+    const created = await waitFor(
+      "SELECT user_id, title, body FROM notifications WHERE category = 'club_created' AND data->>'club_name' = 'Noumea Divers'", [],
+      sysIds.length,
+    );
+    assert.deepEqual(created.map((n) => n.user_id).sort(), sysIds);
+    assert.equal(created[0].title, "New club: Noumea Divers");
+    assert.match(created[0].body, /^First club on DivingHQ from New Caledonia\./);
+    assert.ok(founder.clubId);
+
+    const sys = await claimKit.login("admin", "admin");
+    if (!sys?.token) return;
+    const put = await fetchJson("PUT", `/api/orgs/${X.orgId}/status`, { token: sys.token, body: { status: "suspended" } });
+    assert.equal(put.status, 200, JSON.stringify(put.body));
+    const decided = await waitFor(
+      "SELECT user_id, title FROM notifications WHERE category = 'org_decision' AND data->>'org_id' = $1", [X.orgId],
+    );
+    assert.deepEqual(decided.map((n) => n.user_id), [X.adminId]);
+    assert.equal(decided[0].title, `Integration Test ${X.slug} has been suspended`);
+  } finally {
+    await pool.query("DELETE FROM notifications WHERE data->>'org_id' = $1", [X.orgId]).catch(() => {});
+    await pool.query("DELETE FROM notifications WHERE data->>'club_name' = 'Noumea Divers'").catch(() => {});
+    await teardownFixture(X);
+    await claimKit.wipe(CODE);
   }
 });
 

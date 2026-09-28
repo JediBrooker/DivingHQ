@@ -20,16 +20,13 @@ const { recordAudit, auditFromReq } = require("../lib/audit");
 // The code rule and clash check are shared with signup, the approve dialog
 // and the Clubs screen, so a code can't pass one and fail another.
 const { normaliseClubCode, assertCodeFree, ClubApprovalError } = require("../lib/club-approvals");
+const { isOrgAdminOf } = require("../lib/admin-rows");
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 module.exports = function createClubSetupRouter({ pool, verifyToken }) {
   if (!pool || !verifyToken) throw new Error("createClubSetupRouter requires { pool, verifyToken }");
   const router = express.Router();
-
-  const isOrgAdminOf = (user, orgId) =>
-    !!user.is_system_admin
-    || ((user.org_roles || []).includes("org_admin") && user.org_id === orgId);
 
   // The club, if the caller may see it; otherwise writes the 404/403 and
   // returns null. Outside the caller's org it's a 404, same as a club

@@ -32,8 +32,9 @@ const express = require("express");
 const { recordAudit, auditFromReq } = require("../lib/audit");
 const { ADMIN_ORG_ID } = require("../lib/admin-org");
 const { countryByCode, countryFromStored } = require("../lib/countries");
-const { removeAdmin } = require("../lib/admin-rows");
+const { removeAdmin, isOrgAdminOf } = require("../lib/admin-rows");
 const clubApprovals = require("../lib/club-approvals");
+const notices = require("../lib/notices");
 
 module.exports = function createOrgsRouter({
   pool,
@@ -268,35 +269,30 @@ module.exports = function createOrgsRouter({
           if (typeof sendOrgDecisionEmail === "function") {
             sendOrgDecisionEmail(r.rows[0].id, status).catch(() => {});
           }
-          if (push && typeof push.sendNotification === "function") {
-            (async () => {
-              try {
-                const admins = await pool.query(
-                  `SELECT DISTINCT u.id
-                     FROM user_org_roles ur
-                     JOIN users u ON u.id = ur.user_id
-                    WHERE ur.org_id = $1 AND ur.role = 'org_admin'`,
-                  [r.rows[0].id],
-                );
-                const adminIds = admins.rows.map((row) => row.id);
-                if (adminIds.length) {
-                  await push.sendNotification(adminIds, {
-                    category: "org_decision",
-                    title: status === "active"
-                      ? `${r.rows[0].name} has been approved`
-                      : `${r.rows[0].name} has been suspended`,
-                    body: status === "active"
-                      ? "A system admin approved your federation. You can start setting up meets."
-                      : "A system admin suspended your federation's access.",
-                    data:       { org_id: r.rows[0].id, org_name: r.rows[0].name, status },
-                    action_url: "/dashboard",
-                  });
-                }
-              } catch (notifErr) {
-                console.error("[Org Decision Notification Skipped]", notifErr.message);
-              }
-            })();
-          }
+          // In-app as well, fire and forget. Every org_admin row counts
+          // here, live or not, same as it always has.
+          const org = r.rows[0];
+          pool.query(
+            `SELECT DISTINCT u.id
+               FROM user_org_roles ur
+               JOIN users u ON u.id = ur.user_id
+              WHERE ur.org_id = $1 AND ur.role = 'org_admin'`,
+            [org.id],
+          )
+            .then((admins) => notices.deliver({ push }, [{
+              userIds: admins.rows.map((row) => row.id),
+              category: "org_decision",
+              title: status === "active"
+                ? `${org.name} has been approved`
+                : `${org.name} has been suspended`,
+              body: status === "active"
+                ? "A system admin approved your federation. You can start setting up meets."
+                : "A system admin suspended your federation's access.",
+              data:       { org_id: org.id, org_name: org.name, status },
+              action_url: "/dashboard",
+              email:      false,
+            }], { tag: "Org Decision Notification Skipped" }))
+            .catch((err) => console.error("[Org Decision Notification Skipped]", err.message));
         }
       }
 
@@ -461,9 +457,7 @@ module.exports = function createOrgsRouter({
       // The approve dialog is where a waiting club's details get fixed.
       if (target.rows[0].status === "pending") return pendingConflict(res);
       const code = clubApprovals.normaliseClubCode(short_code);
-      const client = await pool.connect();
-      try {
-        await client.query("BEGIN");
+      const club = await clubApprovals.withTx(pool, async (client) => {
         // Only a code that's actually changing is checked, so a club that
         // already shares one from before the rule can still be renamed.
         const current = (await client.query(
@@ -478,14 +472,9 @@ module.exports = function createOrgsRouter({
            RETURNING id, name, short_code`,
           [name.trim(), code, req.params.id],
         );
-        await client.query("COMMIT");
-        res.json(r.rows[0]);
-      } catch (err) {
-        await client.query("ROLLBACK").catch(() => {});
-        throw err;
-      } finally {
-        client.release();
-      }
+        return r.rows[0];
+      });
+      res.json(club);
     } catch (err) {
       approvalError(res, err, "[Update Club Error]");
     }
@@ -635,7 +624,7 @@ module.exports = function createOrgsRouter({
     try {
       const org = await clubApprovals.getSettings(pool, req.params.id);
       if (!org) return res.status(404).json({ error: "Organisation not found" });
-      if (!clubApprovals.canDecide(req.user, org.id)) return res.status(403).json({ error: "Forbidden" });
+      if (!isOrgAdminOf(req.user, org.id)) return res.status(403).json({ error: "Forbidden" });
       res.json({ auto_approve_clubs: org.auto_approve_clubs, claim_state: org.claim_state });
     } catch (err) {
       approvalError(res, err, "[Club Settings Error]");
@@ -693,9 +682,8 @@ module.exports = function createOrgsRouter({
       return null;
     }
     const club = c.rows[0];
-    const isOrgAdmin = (req.user.org_roles || []).includes("org_admin");
     // The club's own admins, or its region's admins one level up.
-    if (!req.user.is_system_admin && !(isOrgAdmin && club.org_id === req.user.org_id)) {
+    if (!isOrgAdminOf(req.user, club.org_id)) {
       if (!(club.claim_state === "unclaimed" && (club.caller_is_admin || club.caller_is_region_admin))) {
         res.status(403).json({ error: "Only your federation's admin can manage club admins" });
         return null;
