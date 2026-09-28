@@ -26,6 +26,9 @@ const {
   teamStandingsCte,
   compStandingsCte,
   PUBLIC_PANEL_SQL,
+  ownStageScores,
+  carriedStageScores,
+  standingsScoreScope,
 } = require("../lib/scoring-sql");
 
 // ---------------------------------------------------------------
@@ -882,4 +885,19 @@ test("PUBLIC_PANEL_SQL: judge chips, approved clubs only, panel order", () => {
   for (const col of ["judge_id", "judge_number", "full_name", "country_code", "org_name", "club_name", "club_code"]) {
     assert.ok(new RegExp(`\\b${col}\\b`).test(PUBLIC_PANEL_SQL), `panel keeps ${col}`);
   }
+});
+
+test("standingsScoreScope: own dives (withdrawn included), plus the carried stage for divers in this one", () => {
+  const own = ownStageScores();
+  assert.ok(own.includes("s.event_id = $1"));
+  assert.ok(own.includes("COALESCE(cdl.is_reserve, FALSE) = FALSE"), "reserves don't count");
+  assert.ok(!own.includes("withdrawn_at"), "a withdrawn diver keeps the dives they did");
+  const carried = carriedStageScores({ eventId: "$3" });
+  assert.ok(carried.includes("SELECT score_carry_from FROM events WHERE id = $3"));
+  assert.ok(carried.includes("r.withdrawn_at IS NULL"), "on this stage's active roster");
+  assert.ok(carried.includes("FROM scores sc WHERE sc.event_id = $3"), "or already scored in it");
+  assert.ok(!carried.includes("$1"));
+  const both = standingsScoreScope();
+  assert.ok(both.includes(own) && both.includes(carriedStageScores()));
+  assert.ok(/\)\n OR \(/.test(both));
 });

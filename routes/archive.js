@@ -18,6 +18,7 @@
 const express = require("express");
 const {
   perDiveSelect, perDivePointsCte, teamStandingsCte, compStandingsCte, PUBLIC_PANEL_SQL,
+  standingsScoreScope,
 } = require("../lib/scoring-sql");
 const { eventRecordMarks } = require("../lib/records");
 
@@ -248,9 +249,12 @@ module.exports = function createArchiveRouter({ pool, readPool }) {
           [req.params.eventId],
         ),
         reads.query(
+          /* Same scores the live scoreboard totals up (a Super Final
+             stage's carry included, standingsScoreScope), so the recap
+             of a finished stage matches what spectators saw live. */
           `WITH ${perDivePointsCte({
-             select: ["s.competitor_id", "cdl.team_id", "s.round_number"],
-             where: `s.event_id = $1
+             select: ["s.competitor_id", "cdl.team_id", "s.event_id", "s.round_number"],
+             where: `${standingsScoreScope()}
                AND COALESCE(e.is_rehearsal, FALSE) = FALSE`,
            })},
            /* Team rows carry the code their divers share (migration

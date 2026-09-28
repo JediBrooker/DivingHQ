@@ -25,7 +25,9 @@
 const express = require("express");
 const PDFDocument = require("pdfkit");
 const { t: serverTranslate } = require("../lib/server-i18n");
-const { perDiveSelect, perDivePointsCte, teamStandingsCte, compStandingsCte } = require("../lib/scoring-sql");
+const {
+  perDiveSelect, perDivePointsCte, teamStandingsCte, compStandingsCte, standingsScoreScope,
+} = require("../lib/scoring-sql");
 const { PUBLIC_CLUB_JOIN } = require("../lib/club-approvals");
 // RFC 4180 quoting plus the spreadsheet formula-injection guard, see
 // lib/csv.js.
@@ -1098,11 +1100,14 @@ module.exports = function createPdfRouter({ pool }) {
         // Keyed by competitor_id (not full_name) so two same-named
         // divers don't collide. World Aquatics Art 4.1.5: equal totals
         // share a place, so RANK() over total alone gives the placing.
+        // Totals use the scoreboard's scope (standingsScoreScope), so a
+        // Super Final stage's carried scores are in final_total.
         pool.query(
           `WITH ${perDivePointsCte({
              select:      ["s.competitor_id"],
              pointsAlias: "pts",
-             groupBy:     ["s.competitor_id", "s.round_number"],
+             groupBy:     ["s.competitor_id", "s.event_id", "s.round_number"],
+             where:       standingsScoreScope(),
            })},
            totals AS (
              SELECT competitor_id, SUM(pts)::numeric(8,2) AS total
@@ -1167,7 +1172,10 @@ module.exports = function createPdfRouter({ pool }) {
           [req.params.id],
         ),
         pool.query(
-          `WITH ${perDivePointsCte({ select: ["s.competitor_id", "cdl.team_id", "s.round_number"] })},
+          `WITH ${perDivePointsCte({
+             select: ["s.competitor_id", "cdl.team_id", "s.event_id", "s.round_number"],
+             where:  standingsScoreScope(),
+           })},
            /* Team events print one line per team, like the scoreboard:
               team name, the code its divers share, team short code
               underneath. This used to list every member separately. */

@@ -21,6 +21,7 @@ const express = require("express");
 const { publicId } = require("../lib/public-id");
 const {
   perDiveSelect, perDivePointsCte, teamStandingsCte, compStandingsCte, PUBLIC_PANEL_SQL,
+  ownStageScores, carriedStageScores, standingsScoreScope,
 } = require("../lib/scoring-sql");
 const { eventRecordMarks } = require("../lib/records");
 const { PUBLIC_CLUB_JOIN } = require("../lib/club-approvals");
@@ -87,21 +88,13 @@ module.exports = function createScoreboardRouter({
       // from BOTH stages: the current event AND the parent stage
       // referenced in score_carry_from. This implements the
       // Diving World Cup Super Final §3.1 rule ("Head-to-Head
-      // scores carry forward to Semi Final"). Filter is scoped
-      // to competitors on the CURRENT event's roster so the H2H
-      // losers (who aren't on the SF roster) don't pollute the
-      // SF standings.
+      // scores carry forward to Semi Final"). standingsScoreScope
+      // (lib/scoring-sql) holds the rule, shared with the recap and
+      // the exports so a finished stage reads the same.
       pool.query(
         `WITH ${perDivePointsCte({
            select: ["s.competitor_id", "cdl.team_id", "s.event_id", "s.round_number"],
-           where: `(s.event_id = $1
-                  OR s.event_id = (SELECT score_carry_from FROM events WHERE id = $1))
-             AND s.competitor_id IN (
-               SELECT competitor_id FROM competitor_dive_lists
-                WHERE event_id = $1
-                  AND withdrawn_at IS NULL
-                  AND is_reserve = FALSE
-             )`,
+           where: standingsScoreScope(),
          })},
          /* Team-event branch: aggregate by team. public_id is
             computed in Node from team_id below, we expose team_id
@@ -309,6 +302,7 @@ module.exports = function createScoreboardRouter({
       `WITH ${perDivePointsCte({
          name:        "dive_totals",
          pointsAlias: "round_total",
+         where:       ownStageScores(),
        })},
        /* SUPER FINAL CARRY: when this event has score_carry_from
           set, prepend each diver's carried total as round 0 so
@@ -319,7 +313,8 @@ module.exports = function createScoreboardRouter({
           scoped to competitors on this event's roster so H2H
           losers don't appear in the SF's leaderboard.
           For non-super-final events (score_carry_from NULL) the
-          CTE is empty and behaviour is unchanged. */
+          CTE is empty and behaviour is unchanged. Same carry rule
+          as the standings (carriedStageScores). */
        ${perDivePointsCte({
          name:        "carry_rounds",
          // round 0 is the synthetic carry row; grouping stays
@@ -328,13 +323,7 @@ module.exports = function createScoreboardRouter({
          select:      ["s.competitor_id", "0 AS round_number"],
          groupBy:     ["s.competitor_id", "s.round_number"],
          pointsAlias: "round_total",
-         where: `s.event_id = (SELECT score_carry_from FROM events WHERE id = $1)
-           AND s.competitor_id IN (
-             SELECT competitor_id FROM competitor_dive_lists
-              WHERE event_id = $1
-                AND withdrawn_at IS NULL
-                AND is_reserve = FALSE
-           )`,
+         where:       carriedStageScores(),
        })},
        carry_totals AS (
          SELECT competitor_id, 0 AS round_number,

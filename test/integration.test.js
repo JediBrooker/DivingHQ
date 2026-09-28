@@ -7103,3 +7103,73 @@ test("sitemap.xml lists the payments and classes guides only while they're switc
     await features.set("classes", saved.classes);
   }
 });
+
+// Super Final Appendix 3 §3.1: Head-to-Head scores carry into the Semi
+// Final. The live scoreboard added them; the recap, results.csv and
+// results.pdf didn't, so a finished SF showed different totals and a
+// different order from what spectators had just watched. The same
+// standings also drop a diver who withdrew after diving, then put them
+// back once the event completes; prior dives count everywhere now.
+test("a Super Final stage keeps its carried scores, and a withdrawn diver keeps their dives, live and after", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const dive = await recordKit.threeMetreDive();
+    const dd = Number((await pool.query("SELECT dd FROM dive_directory WHERE id = $1", [dive])).rows[0].dd);
+    const x = await recordKit.diver(st.orgId, null, "female", "Carry Xena");
+    const y = await recordKit.diver(st.orgId, null, "female", "Carry Yara");
+    const w = await recordKit.diver(st.orgId, null, "female", "Carry Wren");
+    const z = await recordKit.diver(st.orgId, null, "female", "Carry Zola");
+    const h2h = await recordKit.event(st.orgId, { gender: "Female" });
+    await recordKit.dive(h2h, x, 1, dive, 9);
+    await recordKit.dive(h2h, y, 1, dive, 5);
+    await recordKit.dive(h2h, w, 1, dive, 4);
+    await recordKit.dive(h2h, z, 1, dive, 7); // lost her H2H, not in the SF
+    const sf = await recordKit.event(st.orgId, { gender: "Female" });
+    await pool.query("UPDATE events SET score_carry_from = $1 WHERE id = $2", [h2h.id, sf.id]);
+    await recordKit.dive(sf, x, 1, dive, 6);
+    await recordKit.dive(sf, y, 1, dive, 7);
+    await recordKit.dive(sf, w, 1, dive, 3);
+    await pool.query(
+      `INSERT INTO competitor_dive_lists (event_id, competitor_id, dive_id, round_number)
+       VALUES ($1, $2, $3, 2), ($1, $4, $3, 2)`,
+      [sf.id, x, dive, y],
+    );
+    // Wren pulls out after her first dive.
+    await pool.query("UPDATE competitor_dive_lists SET withdrawn_at = now() WHERE event_id = $1 AND competitor_id = $2", [sf.id, w]);
+
+    // Five judges, the middle three count: each dive is 3 × score × DD.
+    const pts = (...scores) => (3 * scores.reduce((a, b) => a + b, 0) * dd).toFixed(2);
+    const expected = { "Carry Xena": pts(9, 6), "Carry Yara": pts(5, 7), "Carry Wren": pts(4, 3) };
+    const table = (rows) => Object.fromEntries(rows.map((r) => [r.full_name, Number(r.total).toFixed(2)]));
+
+    const live = await fetchJson("GET", `/api/scoreboard/${sf.id}?cache=skip`);
+    assert.equal(live.status, 200, JSON.stringify(live.body));
+    assert.deepEqual(table(live.body.standings), expected);
+    assert.deepEqual(live.body.standings.map((r) => r.full_name), ["Carry Xena", "Carry Yara", "Carry Wren"]);
+
+    await pool.query("UPDATE events SET status = 'Completed' WHERE id = $1", [sf.id]);
+    const recap = await fetchJson("GET", `/api/archive/${sf.id}/results`);
+    assert.equal(recap.status, 200, JSON.stringify(recap.body));
+    assert.deepEqual(table(recap.body.standings), expected);
+    assert.deepEqual(recap.body.standings.map((r) => r.full_name), ["Carry Xena", "Carry Yara", "Carry Wren"]);
+
+    const csv = await (await fetch(`${baseUrl}/api/events/${sf.id}/results.csv`)).text();
+    const rows = csv.trim().split(/\r?\n/).slice(1).map((l) => l.split(","));
+    const byName = Object.fromEntries(rows.map((r) => [r[0], [Number(r[12]).toFixed(2), r[13]]]));
+    assert.deepEqual(byName, {
+      "Carry Xena": [expected["Carry Xena"], "1"],
+      "Carry Yara": [expected["Carry Yara"], "2"],
+      "Carry Wren": [expected["Carry Wren"], "3"],
+    });
+
+    const pdf = await fetch(`${baseUrl}/api/events/${sf.id}/results.pdf`);
+    const text = pdfText(Buffer.from(await pdf.arrayBuffer())).join("\n");
+    assert.match(text, new RegExp(`1\\.\\s+Carry Xena[^\\n]*\\n${expected["Carry Xena"]}`));
+    assert.ok(!text.includes("Carry Zola"), "the H2H loser isn't in the SF");
+  } finally {
+    await recordKit.cleanup(st.orgId);
+    await teardownFixture(st);
+  }
+});
