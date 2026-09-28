@@ -773,7 +773,7 @@
       "role_request": "Hiling ng tungkulin",
       "org_pending": "Pederasyon",
       "org_decision": "Pederasyon",
-      "club_created": "Club",
+      "club_created": "Klub",
       "event_started": "Kaganapan",
       "event_live": "Live na kaganapan",
       "event_results_posted": "Mga Resulta",
@@ -791,12 +791,12 @@
       "f_seeded": "Naka-seed (final)",
       "generic": "Pabatid",
       "claim_vote": "Botohan",
-      "claim_review": "Claim",
-      "claim_decided": "Claim",
+      "claim_review": "Reklamo",
+      "claim_decided": "Reklamo",
       "club_change": "Paglipat ng club",
       "region_request": "Rehiyon",
       "club_pending": "Bagong club",
-      "club_decision": "Club"
+      "club_decision": "Klub"
     }
   },
   "compare": {
@@ -1727,7 +1727,7 @@
       "hint": "Singilin ang inyong mga club ng taunang bayad sa alyansa at/o bayad sa akreditasyon. Magbabayad ang admin ng bawat club mula sa pahina ng club; makikita ninyo kung sino ang nagbayad na sa listahan ng mga Clubs.",
       "kind_affiliation": "Taunang alyansa",
       "kind_accreditation": "Akreditasyon",
-      "fee_title": "Club {label}"
+      "fee_title": "Klub {label}"
     },
     "entry_editor": {
       "title": "Bayad sa entry"
@@ -1782,7 +1782,7 @@
     "inactive": "Hindi aktibo",
     "activate": "I-activate",
     "deactivate": "I-deactivate",
-    "pick_club": "Club",
+    "pick_club": "Klub",
     "coach_hint": "Kung sino ang naka-enrol sa mga klase ng iyong club.",
     "coach_no_classes": "Wala pang klase ang iyong club.",
     "my_classes": "Aking mga klase",
@@ -2002,7 +2002,7 @@
     "intro": "Ang pinakamataas na puntos para sa bawat dive, posisyon at taas, na naitala sa mga indibidwal na event na idinaos sa DivingHQ.",
     "book_label": "Aklat ng rekord",
     "book_national": "Pambansa",
-    "book_club": "Club",
+    "book_club": "Klub",
     "book_continental": "Kontinental",
     "gender_label": "Rekord ng kababaihan o kalalakihan",
     "women": "Kababaihan",

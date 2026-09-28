@@ -1696,7 +1696,7 @@
       "hint": "Establece un precio Estándar único, o diferentes precios por grupo de edad. A los atletas se les muestra el grupo que les corresponde.",
       "title": "Membresía — {label}",
       "tier_standard": "Estándar (todas las edades)",
-      "tier_junior": "Junior",
+      "tier_junior": "Júnior",
       "tier_senior": "Sénior",
       "tier_masters": "Máster"
     },
