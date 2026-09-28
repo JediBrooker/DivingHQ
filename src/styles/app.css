@@ -494,6 +494,14 @@ h1, h2, h3, h4 {
   from { opacity: 0; transform: translateY(12px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+/* LIVE-dot pulse. Has to live here: the copies in MeetView and
+   ScoreboardView are scoped, so Vue renames them per file and the
+   dashboard's LIVE card (below) and MeetsBrowser's badges were pointing
+   at a name that didn't exist. HomeView keeps its own, deeper pulse. */
+@keyframes pulse-red {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.7; }
+}
 
 /* ── Utility ──────────────────────────────────────────────── */
 .hidden { display: none !important; }
