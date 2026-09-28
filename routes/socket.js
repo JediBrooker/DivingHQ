@@ -616,7 +616,11 @@ module.exports = function attachSocket({
         reject("rate_limited", { message: "Slow down — too many submissions in the last minute." });
         return;
       }
-      const score = Number(data.score);
+      // The judge's award as sent. `score` is what gets stored, which a
+      // referee call on the dive can bring down (see below).
+      const award = Number(data.score);
+      let score = award;
+      let refereeNote = null;
 
       // Idempotency check. When the client sends an idempotency_key
       // (outbox mode), look up any cached response BEFORE doing DB
@@ -676,9 +680,13 @@ module.exports = function attachSocket({
         }
         judgeNumber = jnRes.rows[0].judge_number;
 
+        // FOR SHARE so a referee call on this dive can't commit between
+        // this read and our write: applyRefereeAction updates this row
+        // first, so one of the two always waits for the other.
         const dvRes = await client.query(
-          `SELECT dive_id FROM competitor_dive_lists
-           WHERE event_id = $1 AND competitor_id = $2 AND round_number = $3`,
+          `SELECT dive_id, referee_call, referee_cap FROM competitor_dive_lists
+           WHERE event_id = $1 AND competitor_id = $2 AND round_number = $3
+           FOR SHARE`,
           [data.event_id, data.competitor_id, round],
         );
         // dive_id comes from the server-side dive list ONLY. When
@@ -687,6 +695,23 @@ module.exports = function attachSocket({
         // value would let a stale client smuggle in the wrong
         // dive's DD.
         const resolvedDiveId = dvRes.rows[0]?.dive_id ?? null;
+
+        // A referee call made before this award landed still holds it
+        // (migration 102). WA 8.6.6: a failed dive gets 0 points. WA
+        // 8.4.7: after a declared maximum, a higher award counts as the
+        // maximum. The referee usually calls it before the panel has
+        // scored, so this is the normal path, not a race.
+        const call = dvRes.rows[0]?.referee_call || null;
+        if (call === "failed") {
+          score = 0;
+        } else if (call === "cap") {
+          const cap = Number(dvRes.rows[0].referee_cap);
+          if (Number.isFinite(cap) && score > cap) score = cap;
+        }
+        if (score !== award) {
+          const label = call === "cap" ? `referee:cap(${Number(dvRes.rows[0].referee_cap)})` : `referee:${call}`;
+          refereeNote = `${label}: award of ${award} held to ${score}`;
+        }
 
         const prior = await client.query(
           `SELECT id, score, score_source FROM scores
@@ -814,6 +839,7 @@ module.exports = function attachSocket({
             oldScore, newScore: score,
             actorId: socket.userId, ip: clientIp(socket),
             userAgent: socket.handshake.headers["user-agent"] || null,
+            reason: refereeNote,
             actorLocalTime, committedNow: true,
           });
         }
@@ -844,6 +870,7 @@ module.exports = function attachSocket({
         idempotency_key: undefined,  // never leak it back
         actor_local_time: undefined,
         dive_id: undefined,           // don't leak whatever the client sent
+        score,                        // what was stored, after any referee call
         judge_id: judgeId,
         judge_number: judgeNumber,
       };
@@ -976,8 +1003,24 @@ module.exports = function attachSocket({
       try {
         await client.query("BEGIN");
         const auditReason = `referee:${action}` + (action === "cap" ? `(${capValue})` : "");
+        // Keep the call on the dive (migration 102) so awards that land
+        // after it are held to it as well, in submit_score. A redive
+        // clears it: that's a fresh dive. This goes first, before the
+        // scores, so a judge's submit reading the row FOR SHARE either
+        // waits for this call or is already in when we update below.
+        await client.query(
+          `UPDATE competitor_dive_lists
+              SET referee_call = $4, referee_cap = $5
+            WHERE event_id = $1 AND competitor_id = $2 AND round_number = $3`,
+          [
+            data.event_id, data.competitor_id, data.round_number,
+            action === "redive" ? null : action,
+            action === "cap" ? capValue : null,
+          ],
+        );
+        let audited;
         if (action === "failed") {
-          await client.query(
+          audited = await client.query(
             `WITH prior AS (
                SELECT id, score AS old_score
                FROM scores
@@ -1008,7 +1051,7 @@ module.exports = function attachSocket({
             ],
           );
         } else if (action === "cap") {
-          await client.query(
+          audited = await client.query(
             `WITH prior AS (
                SELECT id, score AS old_score
                FROM scores
@@ -1053,7 +1096,7 @@ module.exports = function attachSocket({
               WHERE event_id = $1 AND competitor_id = $2 AND round_number = $3`,
             [data.event_id, data.competitor_id, data.round_number],
           );
-          await client.query(
+          audited = await client.query(
             `INSERT INTO score_audit_log
                (score_id, event_id, competitor_id, judge_id, round_number,
                 action, old_score, new_score, actor_user_id, ip_address, user_agent, reason)
@@ -1070,6 +1113,18 @@ module.exports = function attachSocket({
               auditReason,
             ],
           );
+        }
+        // The audit rows above hang off the scores. A call made before
+        // any judge has scored (the usual order under WA 8.4.7) would
+        // leave no trace at all, so it gets one row of its own.
+        if (!audited?.rowCount) {
+          await insertScoreAudit(client, {
+            scoreId: null, eventId: data.event_id, competitorId: data.competitor_id,
+            judgeId: null, round: data.round_number, action: "update",
+            actorId: actorUserId || null, ip: clientIp(socket),
+            userAgent: socket.handshake.headers["user-agent"] || null,
+            reason: auditReason,
+          });
         }
         await client.query("COMMIT");
       } catch (err) {

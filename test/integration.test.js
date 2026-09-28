@@ -7288,3 +7288,64 @@ test("sockets: maintenance mode refuses every live write except a sysadmin's", a
     await compKit.cleanup(orgId);
   }
 });
+
+test("referee calls hold the awards that land after them (WA 8.6.6, 8.4.7)", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const orgId = await compKit.org("ref");
+  const socks = [];
+  try {
+    const referee = await compKit.user(orgId, "Ref Referee", ["referee"]);
+    const j1 = await compKit.user(orgId, "Ref Judge One", ["judge"]);
+    const j2 = await compKit.user(orgId, "Ref Judge Two", ["judge"]);
+    const diver = await compKit.user(orgId, "Ref Diver", ["diver"]);
+    const eventId = await compKit.event(orgId, { status: "Live" });
+    await compKit.enter(eventId, diver.id, await compKit.dives(3), { display_order: 1 });
+    await compKit.panel(eventId, [j1, j2]);
+    const [rs, s1, s2] = await Promise.all([referee, j1, j2].map((u) => compKit.socket(u.token)));
+    socks.push(rs, s1, s2);
+    const dive = (round) => ({ event_id: eventId, competitor_id: diver.id, round_number: round });
+    const stored = async (round) => Object.fromEntries((await pool.query(
+      "SELECT judge_id, score::float AS score FROM scores WHERE event_id = $1 AND round_number = $2",
+      [eventId, round],
+    )).rows.map((r) => [r.judge_id, r.score]));
+
+    // Round 1: one award in, Failed, then the rest of the panel.
+    assert.equal((await compKit.ask(s1, "submit_score", { ...dive(1), score: 7.5 })).ok, true);
+    assert.deepEqual(await compKit.ask(rs, "referee_failed_dive", dive(1)), { ok: true });
+    const late = await compKit.ask(s2, "submit_score", { ...dive(1), score: 8 });
+    assert.equal(late.ok, true);
+    assert.equal(late.response.score, 0, "the judge is told what was stored");
+    assert.deepEqual(await stored(1), { [j1.id]: 0, [j2.id]: 0 });
+
+    // Round 2: the cap goes in before anyone scores, which is the
+    // order WA 8.4.7 describes. It's still on the record.
+    assert.deepEqual(await compKit.ask(rs, "referee_cap_scores", { ...dive(2), cap_value: 2 }), { ok: true });
+    const callRow = (await pool.query(
+      "SELECT judge_id, reason FROM score_audit_log WHERE event_id = $1 AND round_number = 2",
+      [eventId],
+    )).rows;
+    assert.deepEqual(callRow, [{ judge_id: null, reason: "referee:cap(2)" }]);
+    await compKit.ask(s1, "submit_score", { ...dive(2), score: 6 });
+    await compKit.ask(s2, "submit_score", { ...dive(2), score: 1.5 });
+    assert.deepEqual(await stored(2), { [j1.id]: 2, [j2.id]: 1.5 });
+    // Scoring again after the call doesn't get round it either.
+    await compKit.ask(s1, "submit_score", { ...dive(2), score: 9 });
+    assert.deepEqual(await stored(2), { [j1.id]: 2, [j2.id]: 1.5 });
+    const heldReason = (await pool.query(
+      `SELECT reason FROM score_audit_log
+        WHERE event_id = $1 AND round_number = 2 AND judge_id = $2 AND action = 'insert'`,
+      [eventId, j1.id],
+    )).rows[0]?.reason;
+    assert.match(heldReason || "", /referee:cap\(2\).*6.*2/);
+
+    // Round 3: Failed, then a redive. The new dive is scored as it comes.
+    await compKit.ask(rs, "referee_failed_dive", dive(3));
+    await compKit.ask(rs, "referee_redive", dive(3));
+    await compKit.ask(s1, "submit_score", { ...dive(3), score: 7 });
+    assert.deepEqual(await stored(3), { [j1.id]: 7 });
+  } finally {
+    socks.forEach((s) => s.close());
+    await compKit.cleanup(orgId);
+  }
+});
