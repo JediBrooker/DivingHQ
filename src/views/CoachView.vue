@@ -33,6 +33,7 @@ import { RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useSocket } from '@/composables/useSocket'
+import { useSocketEvent } from '@/composables/useSocketEvent'
 import { usePush } from '@/composables/usePush'
 import { diveDescription } from '@/composables/useDiveLabel'
 import { showSuccess, showError } from '@/composables/useNotify'
@@ -117,6 +118,16 @@ function onStateUpdate()         { scheduleReload() }
 function onFinalScoreAnnounced() { scheduleReload() }
 function onMeetHeld()            { scheduleReload() }
 function onMeetResumed()         { scheduleReload() }
+
+// Rooms don't survive a reconnect (the server has no connection state
+// recovery), and subscribedEvents still listed every id, so load() never
+// joined them again. One wifi blip or a deploy restart and the cards
+// froze until a manual refresh. Forget the joins and reload, which
+// rejoins everything and catches up on whatever happened meanwhile.
+useSocketEvent(socket, 'connect', () => {
+  subscribedEvents.value.clear()
+  scheduleReload()
+})
 
 async function loadAlertPrefs() {
   try {
