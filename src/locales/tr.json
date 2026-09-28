@@ -1599,7 +1599,8 @@
       "btn_redirecting": "Yönlendiriliyor…",
       "btn_coming_soon": "Yakında",
       "error_load": "Ücret yüklenemedi",
-      "error_checkout": "Ödeme başlatılamadı"
+      "error_checkout": "Ödeme başlatılamadı",
+      "btn_renew": "Yenile"
     },
     "charges_view": {
       "title": "Ödemeler",

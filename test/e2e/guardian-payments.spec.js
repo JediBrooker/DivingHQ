@@ -66,6 +66,7 @@ test.beforeAll(async ({ request }) => {
 test.afterAll(async () => {
   if (world.orgId) {
     await setup.pool.query("DELETE FROM payments WHERE org_id = $1", [world.orgId]).catch(() => {});
+    await setup.pool.query("DELETE FROM memberships WHERE org_id = $1", [world.orgId]).catch(() => {});
     await setup.deleteOrg(world.orgId);
   }
 });
@@ -124,4 +125,30 @@ test("the guardian can switch /charges to the dependent", async ({ page }) => {
 
   // Appeals belong to the person who was fined, not to their guardian.
   await expect(page.locator(".btn-appeal")).toHaveCount(0);
+});
+
+// The card answers for whoever "Paying for" names, and a membership in its
+// last 30 days keeps a button to renew it (the server sells renewals then).
+test("the membership card follows the dependent and offers a renewal near the end", async ({ page }) => {
+  // The guardian is a member for most of a year; Ivy's runs out in ten days.
+  await setup.pool.query(
+    `INSERT INTO memberships (org_id, user_id, period_start, period_end, status)
+     VALUES ($1, $2, CURRENT_DATE, CURRENT_DATE + 300, 'active'),
+            ($1, $3, CURRENT_DATE - 355, CURRENT_DATE + 10, 'active')`,
+    [world.orgId, world.guardian.userId, world.minor.userId],
+  );
+  try {
+    await signIn(page, world.guardian.username);
+    await page.goto("/membership");
+    const standard = page.locator(".tier-card").first();
+    // As myself: a member, months to go, nothing to buy.
+    await expect(standard.locator(".fp-owned")).toBeVisible({ timeout: 10_000 });
+    await expect(standard.locator(".fp-pay")).toHaveCount(0);
+
+    await page.locator(".subject-selector select").selectOption({ index: 1 });
+    await expect(standard.locator(".fp-owned")).toBeVisible({ timeout: 10_000 });
+    await expect(standard.locator(".fp-pay")).toHaveCount(1);
+  } finally {
+    await setup.pool.query("DELETE FROM memberships WHERE org_id = $1", [world.orgId]);
+  }
 });

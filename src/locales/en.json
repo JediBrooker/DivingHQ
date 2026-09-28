@@ -1599,7 +1599,8 @@
       "btn_redirecting": "Redirecting…",
       "btn_coming_soon": "Coming soon",
       "error_load": "Could not load the fee",
-      "error_checkout": "Could not start checkout"
+      "error_checkout": "Could not start checkout",
+      "btn_renew": "Renew"
     },
     "charges_view": {
       "title": "Charges",

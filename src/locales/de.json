@@ -1599,7 +1599,8 @@
       "btn_redirecting": "Wird weitergeleitet…",
       "btn_coming_soon": "Demnächst verfügbar",
       "error_load": "Die Gebühr konnte nicht geladen werden",
-      "error_checkout": "Der Bezahlvorgang konnte nicht gestartet werden"
+      "error_checkout": "Der Bezahlvorgang konnte nicht gestartet werden",
+      "btn_renew": "Verlängern"
     },
     "charges_view": {
       "title": "Gebühren",

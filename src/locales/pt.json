@@ -1599,7 +1599,8 @@
       "btn_redirecting": "A redirecionar…",
       "btn_coming_soon": "Brevemente",
       "error_load": "Não foi possível carregar a taxa",
-      "error_checkout": "Não foi possível iniciar o pagamento"
+      "error_checkout": "Não foi possível iniciar o pagamento",
+      "btn_renew": "Renovar"
     },
     "charges_view": {
       "title": "Encargos",

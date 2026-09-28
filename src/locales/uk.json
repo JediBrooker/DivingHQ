@@ -1599,7 +1599,8 @@
       "btn_redirecting": "Перенаправлення…",
       "btn_coming_soon": "Незабаром",
       "error_load": "Не вдалося завантажити збір",
-      "error_checkout": "Не вдалося розпочати оформлення"
+      "error_checkout": "Не вдалося розпочати оформлення",
+      "btn_renew": "Продовжити"
     },
     "charges_view": {
       "title": "Платежі",

@@ -1599,7 +1599,8 @@
       "btn_redirecting": "Redirection…",
       "btn_coming_soon": "Bientôt disponible",
       "error_load": "Impossible de charger les frais",
-      "error_checkout": "Impossible de démarrer le paiement"
+      "error_checkout": "Impossible de démarrer le paiement",
+      "btn_renew": "Renouveler"
     },
     "charges_view": {
       "title": "Frais",

@@ -1599,7 +1599,8 @@
       "btn_redirecting": "Omdirigerer…",
       "btn_coming_soon": "Kommer snart",
       "error_load": "Kunne ikke laste inn avgiften",
-      "error_checkout": "Kunne ikke starte betaling"
+      "error_checkout": "Kunne ikke starte betaling",
+      "btn_renew": "Forny"
     },
     "charges_view": {
       "title": "Gebyrer",

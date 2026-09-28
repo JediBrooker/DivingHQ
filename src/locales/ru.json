@@ -1599,7 +1599,8 @@
       "btn_redirecting": "Перенаправление…",
       "btn_coming_soon": "Скоро будет доступно",
       "error_load": "Не удалось загрузить сбор",
-      "error_checkout": "Не удалось начать оформление"
+      "error_checkout": "Не удалось начать оформление",
+      "btn_renew": "Продлить"
     },
     "charges_view": {
       "title": "Взыскания",

@@ -1599,7 +1599,8 @@
       "btn_redirecting": "Reindirizzamento…",
       "btn_coming_soon": "Disponibile a breve",
       "error_load": "Impossibile caricare la quota",
-      "error_checkout": "Impossibile avviare il pagamento"
+      "error_checkout": "Impossibile avviare il pagamento",
+      "btn_renew": "Rinnova"
     },
     "charges_view": {
       "title": "Addebiti",

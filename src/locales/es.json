@@ -1599,7 +1599,8 @@
       "btn_redirecting": "Redirigiendo…",
       "btn_coming_soon": "Próximamente",
       "error_load": "No se pudo cargar la tasa",
-      "error_checkout": "No se pudo iniciar el pago"
+      "error_checkout": "No se pudo iniciar el pago",
+      "btn_renew": "Renovar"
     },
     "charges_view": {
       "title": "Cargos",

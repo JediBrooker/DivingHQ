@@ -1842,19 +1842,27 @@ module.exports = function createPaymentsRouter({
       // card used to answer for the guardian regardless, so a guardian who
       // was a member saw "Member" and no Pay button on their child's card.
       const beneficiary = await readBeneficiary(req);
-      const alreadyMember = beneficiary
+      const current = beneficiary
         ? (await pool.query(
-            `SELECT 1 FROM memberships
+            `SELECT MAX(period_end) AS period_end,
+                    MAX(period_end) <= CURRENT_DATE + make_interval(days => $4) AS renewable
+               FROM memberships
               WHERE org_id = $1 AND user_id = $2 AND status = 'active' AND period_end > now()
-                AND tier IS NOT DISTINCT FROM $3 LIMIT 1`,
-            [orgId, beneficiary, tier],
-          )).rows.length > 0
-        : false;
+                AND tier IS NOT DISTINCT FROM $3`,
+            [orgId, beneficiary, tier, RENEWAL_WINDOW_DAYS],
+          )).rows[0]
+        : null;
+      const alreadyMember = !!current?.period_end;
       return res.json({
         fee: {
           currency: def.currency || org?.default_currency || null,
           tier: def.tier,
           already_member: alreadyMember,
+          period_end: current?.period_end || null,
+          // Inside the renewal window the checkout sells a renewal, so the
+          // card keeps its Pay button next to "Member until" (see
+          // refuseOutsideRenewalWindow for the rule this mirrors).
+          renewable: alreadyMember && current.renewable === true,
           price: chosen ? { amount_cents: chosen.amount_cents, label: chosen.label } : null,
           payer_total_cents: chosen ? payerTotalCents(def, org, chosen.amount_cents) : null,
         },
@@ -2343,15 +2351,21 @@ module.exports = function createPaymentsRouter({
       const def = await resolveClubFee(pool, orgId, scope, clubId);
       const club = (await pool.query("SELECT name FROM clubs WHERE id = $1", [clubId])).rows[0];
       const current = (await pool.query(
-        `SELECT status, period_end FROM club_affiliations
+        `SELECT status, period_end,
+                period_end <= CURRENT_DATE + make_interval(days => $4) AS renewable
+           FROM club_affiliations
           WHERE org_id = $1 AND club_id = $2 AND kind = $3
             AND status = 'active' AND period_end > CURRENT_DATE
           ORDER BY period_end DESC LIMIT 1`,
-        [orgId, clubId, kind],
+        [orgId, clubId, kind, RENEWAL_WINDOW_DAYS],
       )).rows[0];
+      const renewable = !!current && current.renewable === true;
       if (!def) {
         return res.json({
-          fee: { kind, club_name: club?.name || null, active: !!current, period_end: current?.period_end || null, price: null },
+          fee: {
+            kind, club_name: club?.name || null, active: !!current, period_end: current?.period_end || null,
+            renewable, price: null,
+          },
           payments_enabled: payments.enabled,
         });
       }
@@ -2366,6 +2380,7 @@ module.exports = function createPaymentsRouter({
           payer_total_cents: chosen ? payerTotalCents(def, org, chosen.amount_cents) : null,
           active: !!current,
           period_end: current?.period_end || null,
+          renewable,
           price: chosen ? { amount_cents: chosen.amount_cents, label: chosen.label } : null,
         },
         payments_enabled: payments.enabled,
@@ -2441,15 +2456,18 @@ module.exports = function createPaymentsRouter({
     try {
       const def = await resolveOfficialFee(pool, orgId, roleType);
       const current = (await pool.query(
-        `SELECT status, period_end FROM official_accreditations
+        `SELECT status, period_end,
+                period_end <= CURRENT_DATE + make_interval(days => $4) AS renewable
+           FROM official_accreditations
           WHERE org_id = $1 AND user_id = $2 AND role_type = $3 AND meet_id IS NULL
             AND status = 'active' AND (period_end IS NULL OR period_end > CURRENT_DATE)
           ORDER BY period_end DESC NULLS LAST LIMIT 1`,
-        [orgId, req.user.id, roleType],
+        [orgId, req.user.id, roleType, RENEWAL_WINDOW_DAYS],
       )).rows[0];
+      const renewable = !!current && current.renewable === true;
       if (!def) {
         return res.json({
-          fee: { role_type: roleType, active: !!current, period_end: current?.period_end || null, price: null },
+          fee: { role_type: roleType, active: !!current, period_end: current?.period_end || null, renewable, price: null },
           payments_enabled: payments.enabled,
         });
       }
@@ -2462,6 +2480,7 @@ module.exports = function createPaymentsRouter({
           currency: def.currency || org?.default_currency || null,
           active: !!current,
           period_end: current?.period_end || null,
+          renewable,
           price: chosen ? { amount_cents: chosen.amount_cents, label: chosen.label } : null,
           payer_total_cents: chosen ? payerTotalCents(def, org, chosen.amount_cents) : null,
         },

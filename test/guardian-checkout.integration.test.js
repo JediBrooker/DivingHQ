@@ -86,7 +86,7 @@ function buildApp() {
   app.use((req, res, next) => (req.path === "/webhooks/stripe" ? next() : express.json()(req, res, next)));
   app.use(createPaymentsRouter({
     pool, verifyToken: setUser, optionalAuth: setUser, requireOrgRole: () => setUser,
-    requireEventManager, requireMeetEditor: setUser, requireClubAdmin: () => setUser,
+    requireEventManager, requireMeetEditor: setUser, requireClubAdmin: requireClubAdminOnly,
     requireSystemAdmin: setUser, logger: silentLogger, payments: fakePayments, email: fakeEmail,
   }));
   app.use(createClassesRouter({
@@ -315,4 +315,68 @@ test("the membership card answers for the dependent a guardian picked", async (t
   assert.equal(anon.status, 403);
   const junk = await api("GET", `/api/orgs/${orgId}/membership?tier=card&subject_user_id=nope`);
   assert.equal(junk.status, 403);
+});
+
+// B4-03: inside the last 30 days a grant can be renewed (the checkout
+// allows it and the webhook extends from period_end), so the reads say so
+// and the card keeps a Pay button next to "Member until".
+test("membership, affiliation and accreditation reads flag the renewal window", async (t) => {
+  if (!ready) return t.skip();
+  acting = admin;
+  assert.equal((await api("PUT", `/api/orgs/${orgId}/membership-fee`, {
+    prices: [{ amount_cents: 4000 }], currency: "GBP", tier: "renew",
+  })).status, 200);
+  await pool.query(
+    `INSERT INTO memberships (org_id, user_id, tier, period_start, period_end, status)
+     VALUES ($1, $2, 'renew', CURRENT_DATE - 300, CURRENT_DATE + 10, 'active')`,
+    [orgId, A],
+  );
+  await pool.query(
+    `INSERT INTO memberships (org_id, user_id, tier, period_start, period_end, status)
+     VALUES ($1, $2, 'renew', CURRENT_DATE, CURRENT_DATE + 200, 'active')`,
+    [orgId, B],
+  );
+  acting = as(G);
+  const soon = (await api("GET", `/api/orgs/${orgId}/membership?tier=renew&subject_user_id=${A}`)).body.fee;
+  assert.equal(soon.already_member, true);
+  assert.equal(soon.renewable, true, "ten days left: renewal is open");
+  assert.ok(soon.period_end, "the card can say until when");
+  const later = (await api("GET", `/api/orgs/${orgId}/membership?tier=renew&subject_user_id=${B}`)).body.fee;
+  assert.equal(later.already_member, true);
+  assert.equal(later.renewable, false);
+  const none = (await api("GET", `/api/orgs/${orgId}/membership?tier=renew`)).body.fee;
+  assert.equal(none.already_member, false);
+  assert.equal(none.renewable, false);
+  // And the checkout agrees with the flag.
+  assert.equal((await api("POST", `/api/orgs/${orgId}/membership/checkout`, { subject_user_id: A, tier: "renew" })).status, 200);
+  assert.equal((await api("POST", `/api/orgs/${orgId}/membership/checkout`, { subject_user_id: B, tier: "renew" })).status, 409);
+
+  const club = (await pool.query(
+    "INSERT INTO clubs (org_id, name, short_code) VALUES ($1, $2, 'RNW') RETURNING id",
+    [orgId, `Renew Club ${suffix}`],
+  )).rows[0].id;
+  acting = admin;
+  assert.equal((await api("PUT", `/api/orgs/${orgId}/club-fee`, {
+    kind: "affiliation", prices: [{ amount_cents: 10000 }], currency: "GBP",
+  })).status, 200);
+  await pool.query(
+    `INSERT INTO club_affiliations (org_id, club_id, kind, period_start, period_end, status)
+     VALUES ($1, $2, 'affiliation', CURRENT_DATE - 350, CURRENT_DATE + 5, 'active')`,
+    [orgId, club],
+  );
+  const aff = (await api("GET", `/api/clubs/${club}/affiliation?kind=affiliation`)).body.fee;
+  assert.equal(aff.active, true);
+  assert.equal(aff.renewable, true);
+
+  assert.equal((await api("PUT", `/api/orgs/${orgId}/official-fee`, {
+    role_type: "judge", prices: [{ amount_cents: 3000 }], currency: "GBP",
+  })).status, 200);
+  await pool.query(
+    `INSERT INTO official_accreditations (org_id, user_id, role_type, period_start, period_end, status)
+     VALUES ($1, $2, 'judge', CURRENT_DATE - 100, CURRENT_DATE + 250, 'active')`,
+    [orgId, S],
+  );
+  const acc = (await api("GET", `/api/orgs/${orgId}/official-accreditation?role_type=judge`)).body.fee;
+  assert.equal(acc.active, true);
+  assert.equal(acc.renewable, false, "months to go: not yet");
 });

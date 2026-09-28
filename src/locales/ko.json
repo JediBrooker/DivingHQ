@@ -1599,7 +1599,8 @@
       "btn_redirecting": "리디렉션 중…",
       "btn_coming_soon": "곧 제공 예정",
       "error_load": "요금을 불러올 수 없습니다",
-      "error_checkout": "결제를 시작할 수 없습니다"
+      "error_checkout": "결제를 시작할 수 없습니다",
+      "btn_renew": "갱신"
     },
     "charges_view": {
       "title": "청구 내역",

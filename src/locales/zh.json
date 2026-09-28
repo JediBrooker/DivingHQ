@@ -1599,7 +1599,8 @@
       "btn_redirecting": "跳转中…",
       "btn_coming_soon": "即将推出",
       "error_load": "无法加载费用",
-      "error_checkout": "无法开始结账"
+      "error_checkout": "无法开始结账",
+      "btn_renew": "续订"
     },
     "charges_view": {
       "title": "费用",
