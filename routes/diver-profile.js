@@ -233,10 +233,14 @@ module.exports = function createDiverProfileRouter({
            ${DATE_FILTER}`,
          })},
          ranked AS (
+           /* The newest wins a tie on total. Every event at a meet with
+              no scheduled time shares the meet's date (EVENT_DATE), so
+              the event and round settle it rather than the plan. */
            SELECT dt.*, e.name AS event_name, ${EVENT_DATE} AS created_at,
                   ROW_NUMBER() OVER (
                     PARTITION BY dt.dive_code, dt.position, dt.height
-                    ORDER BY dt.dive_total DESC, ${EVENT_DATE} DESC
+                    ORDER BY dt.dive_total DESC, ${EVENT_DATE} DESC,
+                             dt.event_id DESC, dt.round_number DESC
                   ) AS rn
            FROM dive_totals dt
            JOIN events e ON e.id = dt.event_id
@@ -284,7 +288,9 @@ module.exports = function createDiverProfileRouter({
          ) p ON true
          LEFT JOIN users partner ON partner.id = p.partner_id
          LEFT JOIN teams tm ON e.event_type = 'team' AND tm.id = ranked.unit_id
-         ORDER BY ${EVENT_DATE} ASC`,
+         /* A meet's events share its date unless they're scheduled, so
+            the id breaks the tie: the reverse of recent_form's order. */
+         ORDER BY ${EVENT_DATE} ASC, e.id ASC`,
         [req.params.id, fromDate, toDate],
       );
       const [stats, pb, trend] = await Promise.all([statsQuery, pbQuery, trendQuery]);
@@ -537,7 +543,7 @@ module.exports = function createDiverProfileRouter({
                   m.avg_meet_total, m.best_meet_total
            FROM meet_stats m
            LEFT JOIN dive_stats d USING (event_type)
-           ORDER BY m.meets DESC`,
+           ORDER BY m.meets DESC, m.event_type ASC`,
           [id, fromDate, toDate],
         ),
       ]);

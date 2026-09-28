@@ -11061,3 +11061,46 @@ test("the coach dashboard's live place matches the scoreboard in a Super Final s
     await teardownFixture(st);
   }
 });
+
+// Events at one meet share its date (EVENT_DATE) unless they're scheduled,
+// so date ties are the norm there. The trend, recent_form and the personal
+// best pick all break them on the event id, the trend oldest first and
+// recent_form its exact reverse, instead of leaving it to the plan.
+test("a meet's events tie on date, and the id settles the order everywhere", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const dive = await recordKit.threeMetreDive();
+    const me = await recordKit.diver(st.orgId, null, "female", "Tie Tess");
+    const meet = (await pool.query(
+      "INSERT INTO meets (org_id, name, start_date, end_date) VALUES ($1, 'Tie Meet', '2026-03-14', '2026-03-15') RETURNING id",
+      [st.orgId],
+    )).rows[0].id;
+    const evs = [];
+    for (let i = 0; i < 3; i++) {
+      const ev = await recordKit.event(st.orgId, { gender: "Female" });
+      await recordKit.dive(ev, me, 1, dive, 7); // the same dive and total in each
+      evs.push(ev.id);
+    }
+    // Created in the opposite order to their ids, so created_at can't be
+    // what decides it.
+    const byId = evs.slice().sort();
+    for (const [i, id] of byId.entries()) {
+      await pool.query(
+        "UPDATE events SET status = 'Completed', meet_id = $2, created_at = $3 WHERE id = $1",
+        [id, meet, `2026-01-0${3 - i}T09:00:00Z`],
+      );
+    }
+    const prof = await fetchJson("GET", `/api/divers/${me}/profile`);
+    assert.equal(prof.status, 200, JSON.stringify(prof.body));
+    assert.deepEqual(prof.body.score_trend.map((r) => r.event_id), byId);
+    assert.deepEqual(prof.body.personal_bests.map((r) => r.event_id), [byId[2]]);
+    const an = await fetchJson("GET", `/api/divers/${me}/analytics`);
+    assert.deepEqual(an.body.recent_form.map((r) => r.event_id), byId.slice().reverse());
+  } finally {
+    await pool.query("DELETE FROM meets WHERE org_id = $1", [st.orgId]);
+    await recordKit.cleanup(st.orgId);
+    await teardownFixture(st);
+  }
+});
