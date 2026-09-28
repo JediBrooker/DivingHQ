@@ -403,6 +403,13 @@ module.exports = function createControlRoomRouter({
          )
          SELECT cdl.id AS dive_list_id,
                 cdl.display_order, cdl.withdrawn_at,
+                /* Reserves come back in the rows too (sorted last in
+                   their round, no display_order), so the queue has to
+                   be told which ones they are: the Live pool's
+                   nextQueueIndex and the randomise preview both skip
+                   is_reserve rows, and without the flag here they
+                   quietly didn't. */
+                cdl.is_reserve,
                 COALESCE(ordered.round_order, NULL) AS round_order,
                 u.id AS competitor_id, u.full_name,
                 o.id AS competitor_org_id,

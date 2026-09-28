@@ -7840,3 +7840,44 @@ test("the sysadmin's activity feeds keep audit rows whose event or org is gone",
     await teardownFixture(st);
   }
 });
+
+// Reserves (migration 040) come back in the roster rows, sorted last in
+// their round. The Live pool's nextQueueIndex and the randomise preview
+// skip rows flagged is_reserve, but the roster never sent the flag, so
+// Next Diver after the last real diver of a round put the reserve on the
+// stage. The unit tests used a hand-made roster that had the field.
+test("the roster flags reserves, so the Live queue steps over them", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const { nextQueueIndex } = await import("../src/composables/useLivePools.js");
+  const st = await setupFixture();
+  try {
+    const dive = await recordKit.threeMetreDive();
+    const add = async (name, order, reservePos = null) => {
+      const id = await recordKit.diver(st.orgId, null, "female", name);
+      // Two rounds each, like a real dive list.
+      await pool.query(
+        `INSERT INTO competitor_dive_lists (event_id, competitor_id, dive_id, round_number, display_order, is_reserve, reserve_position)
+         SELECT $1::uuid, $2::uuid, $3::uuid, gs.r, $4::int, $5::boolean, $6::int
+           FROM generate_series(1, 2) AS gs(r)`,
+        [st.eventId, id, dive, order, reservePos != null, reservePos],
+      );
+      return id;
+    };
+    const ada = await add("Queue Ada", 1);
+    const bea = await add("Queue Bea", 2);
+    const cleo = await add("Queue Cleo", null, 1);
+    const r = await fetchJson("GET", `/api/events/${st.eventId}/roster`, { token: st.adminToken });
+    assert.equal(r.status, 200, JSON.stringify(r.body));
+    const rows = Array.isArray(r.body) ? r.body : r.body.roster || r.body.rows;
+    assert.deepEqual(
+      rows.map((x) => [x.round_number, x.competitor_id, x.is_reserve]),
+      [[1, ada, false], [1, bea, false], [1, cleo, true], [2, ada, false], [2, bea, false], [2, cleo, true]],
+    );
+    // After Bea in round 1 the next diver is Ada in round 2, not the reserve.
+    assert.equal(nextQueueIndex(rows, 1), 3);
+    assert.equal(nextQueueIndex(rows, 4), -1, "Bea's last dive ends the event");
+  } finally {
+    await teardownFixture(st);
+  }
+});

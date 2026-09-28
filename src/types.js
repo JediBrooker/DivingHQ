@@ -449,6 +449,8 @@
  * @property {string}      dive_list_id      cdl.id, target for reorder/withdraw
  * @property {number|null} display_order
  * @property {string|null} withdrawn_at      ISO timestamp or null
+ * @property {boolean}     is_reserve        A reserve (migration 040): listed, but not in
+ *                                           the diving queue until promoted.
  * @property {string}      competitor_id
  * @property {string}      full_name
  * @property {string}      competitor_org_id
