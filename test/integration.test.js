@@ -4061,9 +4061,11 @@ test("claiming an old account keeps its synchro-partner snapshot", async (t) => 
       await pool.query("UPDATE users SET club_id = $1 WHERE id = $2", [clubId, id]);
       return { id, username };
     };
+    // Same person, so the same name: a claim only takes a past account
+    // with the claimer's name.
     const lead = await mk("Lead Diver", A.clubId);
-    const old = await mk("Old Me", A.clubId);
-    const me = await mk("New Me", leava);
+    const old = await mk("Sione Me", A.clubId);
+    const me = await mk("Sione Me", leava);
 
     const meet = await fetchJson("POST", "/api/meets", { token: A.token, body: { name: "Wallis Open", represent_as: "club" } });
     assert.equal(meet.status, 201, JSON.stringify(meet.body));
