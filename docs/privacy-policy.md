@@ -180,7 +180,7 @@ You can delete your account from **Profile → Delete account**. We ask for your
 
 - The login itself: password, email address, 2FA secret and recovery codes.
 - Personal details and settings: date of birth, gender, nationality, language, dashboard layout, push subscriptions.
-- Anything that links your *account* to other people: roles, coach links, guardian links, role requests, club and region admin roles, any claim you made that's still being decided (it's withdrawn), and your public profile address (so `/profile/<you>` stops working).
+- Anything that links your *account* to other people: roles, coach links, guardian links, role requests, club change or transfer requests still open (they're closed), club and region admin roles, any claim you made that's still being decided (it's withdrawn), and your public profile address (so `/profile/<you>` stops working).
 - Every active session, on every device. You're signed out immediately.
 
 **What stays, and why:**

@@ -592,8 +592,8 @@ module.exports = function createUsersRouter({
   //
   // Self-service account deletion. Strips every PII column from the
   // user row, wipes settings, push subscriptions, role grants and
-  // club / region admin rows, withdraws any claim still being decided,
-  // then stamps deleted_at = now(). What stays: full_name, org_id,
+  // club / region admin rows, withdraws any claim still being decided
+  // and closes any open club change, then stamps deleted_at = now(). What stays: full_name, org_id,
   // club_id, so the user's name remains on the dives they actually
   // competed in (sporting record). See docs/privacy-policy.md §7
   // for the user-facing contract.
@@ -715,6 +715,15 @@ module.exports = function createUsersRouter({
       const regionAdminRows = await client.query(
         "DELETE FROM region_admins WHERE user_id = $1", [req.user.id],
       );
+      // A join or transfer request still open sat in admins' queues under
+      // the kept name, and approving a transfer moved the tombstone into
+      // another federation, where claim-candidates can't find it. It goes
+      // with the account.
+      const clubRequestRows = await client.query(
+        `UPDATE club_change_requests SET status = 'rejected', reviewed_by = $1, reviewed_at = now()
+          WHERE user_id = $1 AND status = 'pending'`,
+        [req.user.id],
+      );
       // Guardian links (parent pays for a child) are a link to another
       // person as well. Revoked rather than deleted, the same way a club
       // transfer ends them (routes/club-changes.js), so payment history
@@ -743,6 +752,7 @@ module.exports = function createUsersRouter({
           role_grants_removed:        grantRows.rowCount,
           club_admin_rows_removed:    clubAdminRows.rowCount,
           region_admin_rows_removed:  regionAdminRows.rowCount,
+          club_requests_closed:       clubRequestRows.rowCount,
           claims_withdrawn:           claimsWithdrawn,
         },
       });

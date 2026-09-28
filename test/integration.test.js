@@ -7763,3 +7763,37 @@ test("asking for 'no club' just clears it, rather than a request nobody in the c
     await teardownFixture(st);
   }
 });
+
+test("deleting your account closes your pending club requests, and a tombstone can't be moved", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const X = await setupFixture({ withEvent: false });
+  const Y = await setupFixture({ withEvent: false });
+  try {
+    const sys = await claimKit.login("admin", "admin");
+    const uname = `int-b3sd-${X.slug}`;
+    const diver = await insertUser({ orgId: X.orgId, role: "diver", username: uname, fullName: "Leaving For Good" });
+    const tok = await b3Login(uname);
+    const made = await fetchJson("POST", "/api/club-change-requests", { token: tok, body: { to_org_id: Y.orgId } });
+    assert.equal(made.status, 201, JSON.stringify(made.body));
+    assert.equal((await fetchJson("POST", "/api/users/me/delete", { token: tok, body: { password: "not-used-here" } })).status, 200);
+
+    assert.equal((await pool.query("SELECT status::text FROM club_change_requests WHERE id = $1", [made.body.id])).rows[0].status, "rejected");
+    const late = await fetchJson("POST", `/api/club-change-requests/${made.body.id}/review`, { token: sys.token, body: { decision: "approved" } });
+    assert.equal(late.status, 409, JSON.stringify(late.body));
+
+    // One left open from before this fix: approving it still doesn't move
+    // the tombstone.
+    const legacy = (await pool.query(
+      `INSERT INTO club_change_requests (user_id, kind, from_org_id, to_org_id, diver_confirmed_at, requested_by)
+       VALUES ($1, 'org_transfer', $2, $3, now(), $1) RETURNING id`,
+      [diver, X.orgId, Y.orgId],
+    )).rows[0].id;
+    const refused = await fetchJson("POST", `/api/club-change-requests/${legacy}/review`, { token: sys.token, body: { decision: "approved" } });
+    assert.equal(refused.status, 409, JSON.stringify(refused.body));
+    assert.equal((await pool.query("SELECT org_id FROM users WHERE id = $1", [diver])).rows[0].org_id, X.orgId);
+  } finally {
+    await teardownFixture(X);
+    await teardownFixture(Y);
+  }
+});

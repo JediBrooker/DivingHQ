@@ -476,9 +476,16 @@ module.exports = function createClubChangesRouter({ pool, verifyToken, bumpToken
         await client.query("ROLLBACK");
         return res.status(403).json({ error: "Not an admin of either organisation in this request" });
       }
-      if (decision === "approved" && r.kind === "club_change") {
-        const still = await client.query("SELECT 1 FROM users WHERE id = $1 AND org_id = $2", [r.user_id, r.to_org_id]);
-        if (!still.rows.length) {
+      if (decision === "approved") {
+        const who = (await client.query("SELECT org_id, deleted_at FROM users WHERE id = $1", [r.user_id])).rows[0];
+        // Self-delete closes open requests now, but one left from before
+        // that would move the tombstone to another federation (granting it
+        // 'diver' there) and out of reach of claim-candidates.
+        if (!who || who.deleted_at) {
+          await client.query("ROLLBACK");
+          return res.status(409).json({ error: "That account has been deleted", code: "account_deleted" });
+        }
+        if (r.kind === "club_change" && who.org_id !== r.to_org_id) {
           await client.query("ROLLBACK");
           return res.status(409).json({ error: "That person has moved to another organisation" });
         }
