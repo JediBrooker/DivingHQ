@@ -648,7 +648,11 @@ module.exports = function attachSocket({
       // Same fields and values as before for a real keypad, so hashes
       // cached before this change still match.
       const idempotencyKey = data.idempotency_key;
-      const actorLocalTime = data.actor_local_time || null;
+      // An ISO string from the outbox, or nothing. Anything else would go
+      // to pg as JSON and back out on the conflict broadcast.
+      const actorLocalTime = typeof data.actor_local_time === "string" && data.actor_local_time
+        ? data.actor_local_time
+        : null;
       let payloadHash = null;
       if (idempotencyKey) {
         const payloadForHash = {};

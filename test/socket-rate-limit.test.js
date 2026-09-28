@@ -276,8 +276,10 @@ test("submit_score acks server_error when the revocation lookup throws", async (
 // works. `writes` records the SQL so a test can see what ran.
 function scoringPool({ status = "Live" } = {}) {
   const writes = [];
-  const answer = async (sql) => {
+  const calls = [];
+  const answer = async (sql, params) => {
     writes.push(sql);
+    calls.push({ sql, params });
     if (/FROM event_judges ej\s+JOIN events e/.test(sql)) return { rows: [{ judge_number: 1, event_status: status }] };
     if (/SELECT status FROM events/.test(sql)) return { rows: [{ status }] };
     if (/INSERT INTO scores/.test(sql)) return { rows: [{ id: "score-1" }] };
@@ -285,6 +287,7 @@ function scoringPool({ status = "Live" } = {}) {
   };
   return {
     writes,
+    calls,
     query: answer,
     connect: async () => ({ query: answer, release() {} }),
   };
@@ -423,4 +426,20 @@ test("submit_score refuses a null or empty score instead of storing 0", async ()
     assert.equal(reply.error, "bad_score", JSON.stringify(score));
   }
   assert.ok(!pool.writes.some((sql) => /INSERT INTO scores/.test(sql)));
+});
+
+// actor_local_time goes into a timestamptz column and back out on the
+// conflict broadcast. A keypad always sends an ISO string; anything else
+// (an object, nested however deep) is dropped rather than handed to pg
+// or the room encoder.
+test("submit_score only keeps a string actor_local_time", async () => {
+  const pool = scoringPool();
+  const h = makeHarness({ deps: { pool } });
+  const c = await h.connect("198.51.100.40", judgeToken("judge-clock"));
+  const reply = await c.ask("submit_score", {
+    event_id: VALID_ID, competitor_id: VALID_ID, round_number: 1, score: 7, actor_local_time: { a: [[[1]]] },
+  });
+  assert.equal(reply.ok, true);
+  const insert = pool.calls.find((q) => /INSERT INTO scores/.test(q.sql));
+  assert.equal(insert.params[6], null);
 });
