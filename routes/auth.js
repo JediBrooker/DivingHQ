@@ -866,7 +866,9 @@ module.exports = function createAuthRouter({
     }
     const pwErr = validatePassword(password);
     if (pwErr) return res.status(400).json({ error: pwErr });
-    if (typeof email !== "string" || !EMAIL_RE.test(email)) {
+    // users.email is varchar(255); a longer one failed the INSERT and came
+    // back a 500. Same cap as register-org and the email change.
+    if (typeof email !== "string" || email.length > 254 || !EMAIL_RE.test(email)) {
       return res.status(400).json({ error: "A valid email address is required for verification" });
     }
 
