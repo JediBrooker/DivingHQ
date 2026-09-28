@@ -351,7 +351,7 @@ test("A6-09/A6-10 a parent can find their child and an admin can approve the lin
 // ---------------------------------------------------------------------
 // A6-11: the language choice follows the account.
 // ---------------------------------------------------------------------
-test("A6-11 switching the UI language saves it to the account", async ({ page, request }) => {
+test("A6-11 switching the UI language saves it to the account", async ({ page, browser, request }) => {
   await withOrg(request, async (org) => {
     const diver = await setup.insertUser({ orgId: org.orgId, role: "diver", fullName: "Lola Langue" });
     await quiet(page);
@@ -361,6 +361,29 @@ test("A6-11 switching the UI language saves it to the account", async ({ page, r
     await expect.poll(async () => (await setup.pool.query(
       "SELECT locale FROM users WHERE id = $1", [diver.userId],
     )).rows[0].locale).toBe("fr");
+
+    // A device that never picked a language follows the account. It
+    // didn't: the boot-time browser-language guess was written to
+    // localStorage, so every device looked like it had chosen already.
+    // One that did pick with the switcher keeps its own choice.
+    for (const [stored, expected] of [[null, "fr"], ["de", "de"]]) {
+      const ctx = await browser.newContext();
+      try {
+        const other = await ctx.newPage();
+        await quiet(other);
+        if (stored) {
+          await other.addInitScript((code) => {
+            try { localStorage.setItem("locale", code); } catch { /* ignore */ }
+          }, stored);
+        }
+        await signIn(other, diver.username);
+        await other.goto("/profile");
+        await expect(other.locator(".locale-select").first()).toHaveValue(expected);
+        await expect(other.locator("html")).toHaveAttribute("lang", expected);
+      } finally {
+        await ctx.close();
+      }
+    }
   });
 });
 

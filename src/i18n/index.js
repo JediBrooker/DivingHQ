@@ -12,9 +12,12 @@
 //   3. app.mount()
 //
 // Locale persistence, in order:
-//   1. localStorage('locale'), the primary source, survives sign-out
-//   2. navigator.language, first-visit fallback
-//   3. 'en', final fallback
+//   1. localStorage('locale'), a choice made on this device with the
+//      switcher, survives sign-out
+//   2. users.locale, the signed-in account's saved choice (see
+//      adoptAccountLocale), once auth has loaded
+//   3. navigator.language, first-visit fallback
+//   4. 'en', final fallback
 //
 // RTL support: setLocale() also sets <html dir="rtl"|"ltr"> based on
 // the SUPPORTED_LOCALES entry's `rtl` flag.
@@ -133,31 +136,43 @@ function applyHtmlAttrs(code) {
 // dynamic load, localStorage write, and <html lang>/<html dir> sync
 // stay in lockstep. Async because non-fallback locales may need a
 // network fetch; LocaleSwitcher awaits before clearing it's busy state.
-export async function setLocale(code) {
+//
+// persist:false is for a language nobody picked on this device (the
+// browser default at boot, the account's saved one). Only a real choice
+// goes in localStorage, since a stored value is exactly what tells
+// adoptAccountLocale() to leave the device alone.
+export async function setLocale(code, { persist = true } = {}) {
   if (!SUPPORTED_LOCALES.some(l => l.code === code)) return
   await ensureLoaded(code)
   i18n.global.locale.value = code
-  try { localStorage.setItem('locale', code) } catch { /* ignore */ }
+  if (persist) {
+    try { localStorage.setItem('locale', code) } catch { /* ignore */ }
+  }
   applyHtmlAttrs(code)
 }
 
 // The language saved on the account (users.locale), applied once it's
 // known, but only on a device that hasn't picked one itself. So a user
 // who chose Español on their laptop gets Español on a fresh phone too,
-// while a device-level choice still wins on that device.
+// while a device-level choice still wins on that device. It isn't
+// written to storage: it belongs to the account, so whoever signs in
+// next on a shared laptop gets their own, not this one's.
 export function adoptAccountLocale(code) {
   if (!code || code === i18n.global.locale.value) return
   try {
     if (localStorage.getItem('locale')) return
   } catch { /* storage blocked, nothing stored to respect */ }
-  return setLocale(code)
+  return setLocale(code, { persist: false })
 }
 
 // Awaited by main.js before app.mount(), guarantees the detected
-// locale's messages are in memory at first paint.
+// locale's messages are in memory at first paint. The browser-language
+// guess isn't stored. It used to be, on every boot, so by the time auth
+// loaded every device looked like it had made a choice and the account's
+// language was never adopted anywhere.
 export async function initI18n() {
   const code = detectInitialLocale()
-  await setLocale(code)
+  await setLocale(code, { persist: false })
 }
 
 // Bootstrap <html lang>/<html dir> immediately so the very first
