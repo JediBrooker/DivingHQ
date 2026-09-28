@@ -12,6 +12,8 @@ import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 
 const state = useConfirmState()
 const confirmBtnRef = ref(null)
+const modalRef = ref(null)
+let lastFocused = null
 
 // Lock background scroll while open. iOS Safari otherwise lets
 // the user drag the page underneath the dialog and end up at a
@@ -22,6 +24,30 @@ useBodyScrollLock().lockWhile(computed(() => !!state.value))
 function onConfirm() { resolveConfirm(true) }
 function onCancel()  { resolveConfirm(false) }
 
+const FOCUSABLE = 'button:not([disabled]), a[href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+
+// Keep Tab inside the dialog. Without this a keyboard user could tab
+// out to the page behind it while the confirm was still waiting.
+function trapTab(e) {
+  const root = modalRef.value
+  if (!root) return
+  const els = [...root.querySelectorAll(FOCUSABLE)]
+  if (!els.length) return
+  const first = els[0]
+  const last = els[els.length - 1]
+  const active = document.activeElement
+  if (!root.contains(active)) {
+    e.preventDefault()
+    ;(e.shiftKey ? last : first).focus()
+  } else if (e.shiftKey && active === first) {
+    e.preventDefault()
+    last.focus()
+  } else if (!e.shiftKey && active === last) {
+    e.preventDefault()
+    first.focus()
+  }
+}
+
 // Esc closes the modal as a cancel. Listener's only mounted when
 // a confirm is active, so it doesn't fight other Esc handlers
 // while dormant.
@@ -30,7 +56,19 @@ function onKey(e) {
   if (e.key === 'Escape') {
     e.preventDefault()
     onCancel()
+  } else if (e.key === 'Tab') {
+    trapTab(e)
   } else if (e.key === 'Enter') {
+    // Enter on Cancel has to cancel. This handler used to confirm on
+    // every Enter wherever focus was, and its preventDefault also ate
+    // Cancel's own activation, so Shift+Tab to Cancel then Enter ran
+    // the destructive action (suspend, withdraw, delete...). Any other
+    // control inside the dialog gets its native behaviour. Enter on
+    // the confirm button, or with focus nowhere useful, confirms,
+    // same as native confirm().
+    const t = e.target
+    const inModal = modalRef.value && t instanceof Node && modalRef.value.contains(t)
+    if (inModal && t !== confirmBtnRef.value && t.matches?.(FOCUSABLE)) return
     e.preventDefault()
     onConfirm()
   }
@@ -38,14 +76,18 @@ function onKey(e) {
 
 // Track when the modal opens so we can move keyboard focus to
 // the primary button. Enter then commits, matching native
-// confirm() behaviour.
-watch(state, async (next) => {
+// confirm() behaviour. Focus goes back to whatever opened it on close.
+watch(state, async (next, prev) => {
   if (next) {
+    if (!prev) lastFocused = document.activeElement
     document.addEventListener('keydown', onKey)
     await nextTick()
     confirmBtnRef.value?.focus()
   } else {
     document.removeEventListener('keydown', onKey)
+    const el = lastFocused
+    lastFocused = null
+    if (el && typeof el.focus === 'function' && document.contains(el)) el.focus()
   }
 })
 onBeforeUnmount(() => document.removeEventListener('keydown', onKey))
@@ -71,7 +113,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKey))
         :aria-labelledby="`confirm-title-${state.id}`"
         @mousedown.self="onCancel"
       >
-        <div class="confirm-modal" :class="`confirm-modal-${state.confirmKind}`">
+        <div ref="modalRef" class="confirm-modal" :class="`confirm-modal-${state.confirmKind}`">
           <div :id="`confirm-title-${state.id}`" class="confirm-title">
             {{ state.title }}
           </div>
