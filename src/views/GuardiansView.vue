@@ -50,9 +50,7 @@ async function revoke(link) {
 function onSearchInput() {
   clearTimeout(searchTimer)
   const q = searchQuery.value.trim()
-  // Clearing the box also retires any search still in flight, or its
-  // answer would put the list back under an empty box.
-  if (!q) { searchSeq++; searchResults.value = []; return }
+  if (!q) { searchResults.value = []; return }
   searchTimer = setTimeout(() => searchUsers(q), 300)
 }
 
@@ -86,8 +84,6 @@ async function requestLink(user) {
       body: JSON.stringify({ dependent_user_id: user.id }),
     })
     showSuccess(t('guardians.request_sent'))
-    clearTimeout(searchTimer)
-    searchSeq++
     searchQuery.value = ''
     searchResults.value = []
   } catch (e) {
