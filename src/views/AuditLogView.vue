@@ -173,14 +173,24 @@ const {
 // Re-load whichever tab is active when its filters change. Each
 // filter watcher hits its own loader so switching between tabs
 // is cheap (loader runs once, cached in the row ref).
+//
+// Tabs whose rows were loaded under a different org filter are marked
+// stale. The org filter only reloads the tab you're on, so without this
+// a tab loaded earlier kept showing the previous org's rows (with the
+// Org column hidden, since a filter is set) until it happened to empty.
+const staleTabs = new Set()
+
 watch(() => activeTab.value, (next) => {
-  if (next === 'recent'   && !recentRows.value.length)   loadRecent()
-  if (next === 'scores'   && !scoreRows.value.length)    loadScores()
-  if (next === 'roles'    && !roleRows.value.length)     loadRoles()
-  if (next === 'activity' && !activityRows.value.length) loadActivity()
+  const stale = staleTabs.delete(next)
+  if (next === 'recent'   && (stale || !recentRows.value.length))   loadRecent()
+  if (next === 'scores'   && (stale || !scoreRows.value.length))    loadScores()
+  if (next === 'roles'    && (stale || !roleRows.value.length))     loadRoles()
+  if (next === 'activity' && (stale || !activityRows.value.length)) loadActivity()
 })
 watch(() => orgFilter.value, () => {
-  // Org filter is global, refetch wichever tab is visible.
+  // Org filter is global: refetch whichever tab is visible, and the
+  // others when they're next opened.
+  for (const tab of TABS) if (tab.id !== activeTab.value) staleTabs.add(tab.id)
   if (activeTab.value === 'recent')   loadRecent()
   if (activeTab.value === 'scores')   loadScores()
   if (activeTab.value === 'roles')    loadRoles()
