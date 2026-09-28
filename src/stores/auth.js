@@ -175,6 +175,26 @@ export const useAuthStore = defineStore('auth', () => {
     return { 'Content-Type': 'application/json' }
   }
 
+  // A 401 doesn't always mean the session is gone. Change password, the
+  // 2FA confirm/disable pair, delete account, claim past entries and the
+  // referee's credential sign-off all answer 401 for "the password or
+  // code you typed is wrong", and the sign-off one fires on the
+  // OPERATOR's laptop mid-meet (every 2FA referee's first try gets a
+  // 401 needs_totp). So before throwing anyone out we ask /api/auth/me
+  // whether the cookie still works. Concurrent 401s share one probe.
+  // If the probe can't reach the server we keep the session, same call
+  // fetchMe() makes: the next request that gets through settles it.
+  let sessionProbe = null
+  function sessionIsDead() {
+    if (!sessionProbe) {
+      sessionProbe = fetch('/api/auth/me', { credentials: 'same-origin' })
+        .then((r) => r.status === 401 || r.status === 403)
+        .catch(() => false)
+        .finally(() => { sessionProbe = null })
+    }
+    return sessionProbe
+  }
+
   async function apiFetch(url, options = {}) {
     const res = await fetch(url, {
       ...options,
@@ -182,12 +202,14 @@ export const useAuthStore = defineStore('auth', () => {
       credentials: 'same-origin',
       headers: { ...getHeaders(), ...(options.headers ?? {}) },
     })
-    // 401 = cookie expired or revoked. Clear the session so the router
-    // guard sends the user back to /login instead of every page throwing
-    // red errors. Skip the redirect for viewers who weren't signed in to
-    // begin with, a 401 there just means a public endpoint is genuinely
-    // refusing them, not a session-expiry signal.
-    if (res.status === 401 && isLoggedIn.value) {
+    // 401 with a dead cookie (expired or revoked): clear the session so
+    // the router guard sends the user back to /login instead of every
+    // page throwing red errors. Skip it for viewers who weren't signed in
+    // to begin with, a 401 there just means a public endpoint is
+    // genuinely refusing them, not a session-expiry signal. The second
+    // isLoggedIn check is for a sibling request that already cleared it
+    // while we were waiting on the probe.
+    if (res.status === 401 && isLoggedIn.value && await sessionIsDead() && isLoggedIn.value) {
       clearSession()
       if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
         window.location.href = '/login'
