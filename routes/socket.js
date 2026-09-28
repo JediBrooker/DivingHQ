@@ -33,6 +33,7 @@ const { readSessionCookie } = require("../lib/session-cookie");
 const { trustProxyHops } = require("../lib/trust-proxy");
 const { announceRecords } = require("../lib/records");
 const { insertScoreAudit, isValidScore } = require("../lib/score-audit");
+const { isUuid } = require("../lib/uuid");
 // Held as the module object and called through it, never destructured:
 // test/socket-rate-limit.test.js swaps emitVenueState on this cached
 // module to keep the DB out of the unit tests.
@@ -266,11 +267,6 @@ module.exports = function attachSocket({
     "event_id", "competitor_id", "round_number", "dive_id", "judge_id", "judge_number", "score",
   ];
 
-  // events.id is a UUID; reject anything else before doing DB work.
-  // Same lenient shape used for event ids elsewhere (lib/records.js).
-  const EVENT_UUID_RE =
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
   // How many event rooms one socket may sit in (see joinEvent).
   const MAX_EVENT_ROOMS = 50;
 
@@ -319,8 +315,11 @@ module.exports = function attachSocket({
     }
     // A junk id used to go straight into the events lookup, and the
     // uuid cast error it threw took the whole process down (nothing
-    // catches a rejected socket listener). Refuse it up front.
-    if (!EVENT_UUID_RE.test(String(data?.event_id ?? ""))) {
+    // catches a rejected socket listener). Refuse it up front. Every id
+    // check in this file is isUuid (lib/uuid), a string and a UUID: the
+    // old String() test here waved through an array holding one UUID,
+    // which socketCanManageEvent then refused anyway.
+    if (!isUuid(data?.event_id)) {
       // Same 'unauthorized' event socketCanManageEvent sends for one, so
       // a client listening for refusals hears about this too.
       socket.emit("unauthorized", { reason: "bad_event_id" });
@@ -361,7 +360,7 @@ module.exports = function attachSocket({
     for (const k of PRIVATE_ACTIVE_FIELDS) delete out[k];
     if (out.club_name != null || out.club_code != null) {
       let clubPublic = false;
-      if (EVENT_UUID_RE.test(String(out.competitor_id ?? ""))) {
+      if (isUuid(out.competitor_id)) {
         const r = await pool.query(
           `SELECT cl.status FROM users u JOIN clubs cl ON cl.id = u.club_id WHERE u.id = $1`,
           [out.competitor_id],
@@ -499,7 +498,7 @@ module.exports = function attachSocket({
     // for longest. Returns whether the socket is (now) in the room.
     const joinedEvents = new Set();
     function joinEvent(eventId) {
-      if (typeof eventId !== "string" || !EVENT_UUID_RE.test(eventId)) return false;
+      if (!isUuid(eventId)) return false;
       joinedEvents.delete(eventId);
       if (joinedEvents.size >= MAX_EVENT_ROOMS) {
         const oldest = joinedEvents.values().next().value;
@@ -522,7 +521,7 @@ module.exports = function attachSocket({
     on("claim_event_control", async (data) => {
       const eventId = data?.event_id;
       if (!socketRequireRole(socket)) return;
-      if (!EVENT_UUID_RE.test(String(eventId ?? ""))) {
+      if (!isUuid(eventId)) {
         socket.emit("unauthorized", { reason: "bad_event_id" });
         return;
       }
@@ -562,7 +561,7 @@ module.exports = function attachSocket({
       // Validate shape before any work: events.id is a UUID, so a
       // malformed id is junk, reject it without joining a room or
       // touching the DB. (Also short-circuits a missing id.)
-      if (!EVENT_UUID_RE.test(String(eventId ?? ""))) return;
+      if (!isUuid(eventId)) return;
       // Per-IP throttle. subscribe_venue triggers emitVenueState, which
       // runs the most expensive query in the app (the multi-CTE
       // leaderboard build in lib/venue-state.js). The per-(action,user)
@@ -589,7 +588,7 @@ module.exports = function attachSocket({
       console.error("[connection] active-diver replay failed", err.message));
     async function replayOwnActiveDivers() {
       if (!socket.userId) return;
-      const ids = Object.keys(activeDivers).filter((id) => EVENT_UUID_RE.test(id));
+      const ids = Object.keys(activeDivers).filter(isUuid);
       if (!ids.length) return;
       const drives = CONTROL_ROLES.some((r) => (socket.userOrgRoles || []).includes(r));
       const r = await pool.query(
@@ -725,9 +724,10 @@ module.exports = function attachSocket({
         return;
       }
       // Both ids are uuids; a malformed one is a bad payload, not a
-      // server_error out of the cast inside the transaction.
-      if (!EVENT_UUID_RE.test(String(data?.event_id ?? ""))
-          || !EVENT_UUID_RE.test(String(data?.competitor_id ?? ""))) {
+      // server_error out of the cast inside the transaction. An array
+      // holding one uuid is malformed too (it used to pass a String()
+      // test and fail in the cast).
+      if (!isUuid(data?.event_id) || !isUuid(data?.competitor_id)) {
         reject("bad_payload");
         return;
       }
@@ -1100,7 +1100,10 @@ module.exports = function attachSocket({
         socket.disconnect(true);
         return;
       }
-      if (!data?.event_id || !data?.competitor_id) return;
+      // Same id check as submit_score. competitor_id goes straight back
+      // out to the whole room below, so it has to be a real id and not
+      // whatever object or megabyte string a keypad sent.
+      if (!isUuid(data?.event_id) || !isUuid(data?.competitor_id)) return;
       const round = Number(data.round_number);
       if (!Number.isInteger(round) || round < 1) return;
       try {

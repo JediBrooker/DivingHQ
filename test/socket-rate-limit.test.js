@@ -279,6 +279,7 @@ function scoringPool({ status = "Live" } = {}) {
     writes.push(sql);
     calls.push({ sql, params });
     if (/FROM event_judges ej\s+JOIN events e/.test(sql)) return { rows: [{ judge_number: 1, event_status: status }] };
+    if (/SELECT judge_number FROM event_judges/.test(sql)) return { rows: [{ judge_number: 1 }] };
     if (/SELECT status FROM events/.test(sql)) return { rows: [{ status }] };
     if (/INSERT INTO scores/.test(sql)) return { rows: [{ id: "score-1" }] };
     return { rows: [], rowCount: 0 };
@@ -454,4 +455,38 @@ test("submit_score only keeps a string actor_local_time", async () => {
   assert.equal(reply.ok, true);
   const insert = pool.calls.find((q) => /INSERT INTO scores/.test(q.sql));
   assert.equal(insert.params[6], null);
+});
+
+// Ids off the wire are checked one way everywhere in routes/socket.js: a
+// string that's a UUID. Some handlers used String(x), which turns an
+// array holding one UUID into that UUID. The Control Room gate happened
+// to catch it later (socketCanManageEvent checks the type), submit_score
+// sent it on into the cast and answered server_error, and judge_signal
+// echoed whatever competitor_id it got to the whole room.
+test("an array holding a UUID isn't an id on any socket event", async () => {
+  const wrapped = [VALID_ID];
+  const pool = scoringPool();
+  const h = makeHarness({ canManage: () => true, deps: { pool } });
+  const m = await h.connect("198.51.100.41", token("mgr-array"));
+  for (const ev of ["set_active_diver", "meet_hold", "announce_score", "referee_redive"]) {
+    assert.deepEqual(await m.ask(ev, { event_id: wrapped, competitor_id: VALID_ID, round_number: 1 }),
+      { ok: false, error: ev === "announce_score" ? "not authorised" : "unauthorized" }, ev);
+  }
+  assert.ok(m.emitted.every((e) => e.name !== "unauthorized" || e.payload.reason === "bad_event_id"));
+  await m.fire("subscribe_venue", { event_id: wrapped });
+  assert.equal(h.emits(), 0, "no venue snapshot for a wrapped id");
+
+  const j = await h.connect("198.51.100.42", judgeToken("judge-array"));
+  for (const bad of [{ event_id: wrapped, competitor_id: VALID_ID }, { event_id: VALID_ID, competitor_id: wrapped }]) {
+    const reply = await j.ask("submit_score", { ...bad, round_number: 1, score: 7 });
+    assert.equal(reply.error, "bad_payload", JSON.stringify(bad));
+  }
+  for (const competitor_id of [wrapped, { a: 1 }, "x".repeat(1000)]) {
+    await j.fire("judge_signal", { event_id: VALID_ID, competitor_id, round_number: 1, signaled: true });
+  }
+  assert.equal(h.broadcasts.length, 0, "nothing junk reaches the room");
+  // A real one still goes out.
+  await j.fire("judge_signal", { event_id: VALID_ID, competitor_id: VALID_ID, round_number: 1, signaled: true });
+  assert.deepEqual(h.broadcasts.map((b) => b.name), ["judge_signal"]);
+  assert.ok(!pool.writes.some((sql) => /INSERT INTO scores/.test(sql)));
 });

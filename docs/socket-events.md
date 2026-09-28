@@ -84,10 +84,12 @@ Every async handler runs through a small wrapper in `routes/socket.js`
 (`on(name, handler)`): a throw is logged and, when the client passed an
 ack callback, answered with `{ ok: false, error: 'server_error' }`. A
 rejected socket listener used to be an unhandled rejection, which ends a
-Node 20 process. A malformed `event_id` (not a UUID) is refused before
+Node 20 process. An id has to be a UUID string (`isUuid`, `lib/uuid.js`;
+an array holding one isn't), and a malformed `event_id` is refused before
 any DB work: `unauthorized` with reason `bad_event_id` on the Control
-Room events (a non-string id counts as malformed too), `bad_payload` on
-`submit_score`.
+Room events and `claim_event_control`, `bad_payload` on `submit_score`
+(which checks `competitor_id` the same way), and silently everywhere
+else.
 
 Maintenance mode (the `maintenance` feature flag) refuses every socket
 write from a non-sysadmin. The check is `socketMaintenanceBlocked`
@@ -102,7 +104,7 @@ directly. A refused write gets ack `{ ok: false, error: 'maintenance' }`
 |---|---|---|---|
 | `subscribe_event`         | none (any socket)             | `{ event_id }` | Joins room `event:<event_id>`. How a spectator, judge or Control Room gets that event's broadcasts. The id must be a UUID (anything else is ignored), and one socket sits in at most 50 event rooms: joining a 51st drops the room it touched longest ago (joins through `get_active_diver` / `get_meet_hold` count as touches). |
 | `claim_event_control`     | `socketCanManageEvent` (control roles or delegate) | `{ event_id }` | Asks for the advisory per-event lease. Answered with `event_control_granted`, or `event_control_conflict` (and `event_control_contested` to the holder). Silently ignored for anyone who couldn't drive the event; a malformed `event_id` gets `unauthorized` with reason `bad_event_id`. |
-| `judge_signal`            | signed in, seat on the event's panel (`event_judges`) | `{ event_id, competitor_id, round_number, signaled }` | Rate-limited per user, token version re-checked. Rebroadcast as `judge_signal` to the event room. A caller not on the panel is dropped silently. |
+| `judge_signal`            | signed in, seat on the event's panel (`event_judges`) | `{ event_id, competitor_id, round_number, signaled }` | Rate-limited per user, token version re-checked. Rebroadcast as `judge_signal` to the event room. A caller not on the panel, or a malformed `event_id` / `competitor_id`, is dropped silently. |
 | `set_active_diver`        | meet_manager / referee / org_admin / sysadmin | Roster row + `diverName`, `diveCode`, `eventName`, `status` (built by `activeDiverPayload` in `src/lib/activeDiver.js`) | The server keeps and broadcasts a public copy: `paid_entry`, `competitor_org_id`, `competitor_org_name` and `dive_list_id` are dropped, and `club_name` / `club_code` are nulled unless the diver's club is approved (`clubs.status = 'active'`). That copy goes in `activeDivers[event_id]` (and `event_live_state`) so late-joiners see it. Readers run `normaliseActiveDiver` so a replayed payload without the display fields still renders. |
 | `get_active_diver`        | none (any socket)             | `{ event_id }` | Read-only — joins the room (same rules as `subscribe_event`) and returns the current state to the asking socket only. |
 | `submit_score`            | judge / referee / sysadmin    | `{ event_id, competitor_id, round_number, score, dive_id?, judge_number? }` | Server-trusted `judge_id = socket.userId`. Rate-limited (60/min/judge). Validates 0–10 in 0.5 steps, confirms event_judges membership. A sync that differs from an operator's manual entry is refused but still acked, `{ ok: true, superseded_by: 'manual_entry', response }` with the operator's value, and cached under its `idempotency_key` so a retry replays it. The idempotency hash covers the submission fields only (`event_id`, `competitor_id`, `round_number`, `dive_id`, `judge_id`, `judge_number`, `score`), and `actor_local_time` is kept only when it's a string. |
