@@ -966,7 +966,8 @@ function onBeforeUnload(e) {
                 :key="`${s.competitor_id || s.public_id || i}`"
                 class="cv2-srow"
               >
-                <span class="cv2-srow-rank">{{ i + 1 }}</span>
+                <!-- the server's RANK(): tied totals share the place -->
+                <span class="cv2-srow-rank">{{ s.rank ?? i + 1 }}</span>
                 <span class="cv2-srow-name">{{ s.full_name }}</span>
                 <span class="cv2-srow-total">{{ fmtTotal(s.total) }}</span>
               </div>

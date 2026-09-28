@@ -7,7 +7,7 @@
 // the recap.
 const { test, expect } = require("@playwright/test");
 const setup = require("./_setup");
-const { liveEvent, emitAck } = require("./_meetday");
+const { liveEvent, emitAck, signIn } = require("./_meetday");
 
 test.describe.configure({ mode: "serial" });
 
@@ -79,5 +79,43 @@ test("live pills sit under their own judge, and a synchro total uses the WA trim
   await expect(page.locator(".sb-live-total-value")).toHaveText("68.4", { timeout: 6_000 });
   const dropped = await pills.evaluateAll((els) => els.map((el, i) => (el.classList.contains("j-dropped") ? i + 1 : null)).filter(Boolean));
   expect(dropped).toEqual([3, 4, 5, 9]);
+  await setup.deleteOrg(orgId);
+});
+
+// Art 4.1.5: equal totals share the place. The Control Room's standings,
+// the scoreboard's "Currently Nth" and its recap badges numbered by list
+// position, so a tie read 1st and 2nd next to a panel saying 1 and 1.
+test("tied divers share the place everywhere it's shown", async ({ browser, request, baseURL }) => {
+  test.setTimeout(120_000);
+  const { orgId, username, adminToken } = await setup.createOrgAndAdmin(request, { countryCode: "AUS", orgName: "Shared Places" });
+  const { event, diveId, divers, judges } = await liveEvent(request, {
+    orgId, adminToken, name: "Tie Event", diverNames: ["AAA Tie", "BBB Tie", "CCC Tie"], rounds: 2,
+  });
+  // AAA and BBB on identical panels, CCC behind
+  for (const [d, score] of [[divers[0], 7], [divers[1], 7], [divers[2], 6]]) {
+    for (const j of judges) {
+      await setup.insertScore({ eventId: event.id, competitorId: d.userId, judgeId: j.userId, diveId, roundNumber: 1, score });
+    }
+  }
+  expect(await emitAck(baseURL, adminToken, "set_active_diver", {
+    event_id: event.id, competitor_id: divers[1].userId, round_number: 2,
+    full_name: "BBB Tie", diverName: "BBB Tie", dd: 1.5, status: "ready",
+  })).toMatchObject({ ok: true });
+
+  const sctx = await browser.newContext();
+  const spage = await sctx.newPage();
+  await spage.goto(`/scoreboard/${event.id}`);
+  await expect(spage.locator(".sb-name").first()).toContainText("BBB Tie", { timeout: 10_000 });
+  await expect(spage.locator(".sb-live-rank")).toContainText("1st", { timeout: 6_000 });
+
+  const cctx = await browser.newContext();
+  const cpage = await cctx.newPage();
+  await signIn(cpage, username);
+  await cpage.goto(`/control?event=${event.id}`);
+  const ranks = cpage.locator(".cv2-srow-rank");
+  await expect(ranks).toHaveCount(3, { timeout: 10_000 });
+  expect(await ranks.allInnerTexts()).toEqual(["1", "1", "3"]);
+
+  await sctx.close(); await cctx.close();
   await setup.deleteOrg(orgId);
 });

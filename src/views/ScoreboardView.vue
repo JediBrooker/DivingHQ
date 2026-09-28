@@ -14,6 +14,7 @@ import {
 } from '@/composables/useScoreCategories'
 import { diveDescription } from '@/composables/useDiveLabel'
 import { livePanel } from '@/composables/useScoreTrim'
+import { sharedRanks, placeOf } from '@/lib/standings'
 import { normaliseActiveDiver } from '@/lib/activeDiver'
 import { cachedFetch, idbInvalidate } from '@/lib/idbCache'
 import { SCOREBOARD_LIVE_TTL_MS, SCOREBOARD_ARCHIVE_TTL_MS } from '@/lib/cache-policy'
@@ -408,6 +409,9 @@ const divesByDiver = computed(() => {
   const teamMode = isTeamEvent.value
   const order = new Map()
   ;(archiveResults.value.standings || []).forEach((s, i) => order.set(s.full_name, i))
+  // Tied totals share the place on the badge too (Art 4.1.5), as they do
+  // in the standings table.
+  const places = sharedRanks(archiveResults.value.standings || [])
 
   const grouped = new Map()
   for (const d of archiveResults.value.dives || []) {
@@ -439,7 +443,7 @@ const divesByDiver = computed(() => {
         partner_country: teamMode ? null : (dives[0]?.partner_country || null),
         isTeam: teamMode,
         total: standRow?.total ?? null,
-        rank: (order.get(key) ?? -1) + 1,
+        rank: order.has(key) ? places[order.get(key)] : 0,
         dives,
       }
     })
@@ -473,27 +477,19 @@ const countryMedalTable = computed(() => {
   if (!archiveResults.value) return null
   const standings = archiveResults.value.standings || []
   if (!standings.length) return null
-  // Derive rank from index, the archive endpoint returns standings
+  // Derive rank from the totals, the archive endpoint returns standings
   // already sorted by total descending but doesn't include a rank
   // column. Without this the medal table was rendering 0/0/0 for
   // every country because s.rank was always undefined. Tied totals
   // share a rank (World Aquatics practice: both divers on the same
   // total get gold), and subsequent ranks skip by the size of the
-  // tied group (1, 1, 3).
-  let prevTotal = null
-  let prevRank  = 0
+  // tied group (1, 1, 3). See src/lib/standings.js.
+  const places = sharedRanks(standings)
   const byCountry = new Map()
   for (let i = 0; i < standings.length; i++) {
     const s = standings[i]
     const total = parseFloat(s.total) || 0
-    let rank
-    if (prevTotal !== null && Math.abs(total - prevTotal) < 1e-9) {
-      rank = prevRank
-    } else {
-      rank = i + 1
-      prevRank  = rank
-      prevTotal = total
-    }
+    const rank = places[i]
     const code = s.country_code || '—'
     if (!byCountry.has(code)) {
       byCountry.set(code, { code, gold: 0, silver: 0, bronze: 0, total_pts: 0 });
@@ -955,15 +951,26 @@ const livePanelState = computed(() => livePanel(
 const liveJudgeSlots = computed(() => livePanelState.value.slots)
 const liveDiveTotal = computed(() => livePanelState.value.total)
 
-// 1-based rank of the active diver in the current standings, or
-// null if we can't find them (e.g. before the first refresh).
-// Matches by the diverName field that set_active_diver carries.
+// Where a performer sits in the current standings: by competitor id
+// (standings rows carry it), by name for a row that doesn't. -1 when
+// they're not in it yet.
+function standingsIndexFor(subject) {
+  if (!subject) return -1
+  const id = subject.competitor_id
+  if (id) {
+    const byId = standings.value.findIndex(s => s.competitor_id && String(s.competitor_id) === String(id))
+    if (byId >= 0) return byId
+  }
+  const name = subject.full_name || subject.diverName
+  return name ? standings.value.findIndex(s => s.full_name === name) : -1
+}
+
+// The active diver's place in the current standings, or null if we
+// can't find them (e.g. before the first refresh). A tie shares the
+// place (Art 4.1.5), the same number the standings panel beside it shows.
 const activeDiverRank = computed(() => {
   if (!activeDiver.value || !standings.value.length) return null
-  const target = activeDiver.value.full_name || activeDiver.value.diverName
-  if (!target) return null
-  const idx = standings.value.findIndex(s => s.full_name === target)
-  return idx >= 0 ? idx + 1 : null
+  return placeOf(standings.value, standingsIndexFor(activeDiver.value))
 })
 
 // Catch-up projection: mirrors the Control Room indicator. For the
@@ -1013,7 +1020,7 @@ const activeProjection = computed(() => {
   if (!subject || !standings.value.length) return null
   const target = subject.full_name || subject.diverName
   if (!target) return null
-  const idx = standings.value.findIndex(s => s.full_name === target)
+  const idx = standingsIndexFor(subject)
   const leader = standings.value[0]
   if (!leader) return null
   const totalRounds = parseInt(currentEvent.value?.total_rounds) || 0
@@ -1082,7 +1089,7 @@ const activeProjection = computed(() => {
     const gap = Number(opponent.total || 0) - myTotal
     const { score, possible } = avgJudgeForGap(gap)
     targets.push({
-      rank: r + 1,
+      rank: placeOf(standings.value, r),
       name: pairLabel(opponent),
       gap,
       avgJudge: score,
@@ -1092,7 +1099,7 @@ const activeProjection = computed(() => {
   return {
     kind: 'chase',
     activeName: myLabel,
-    currentRank: idx + 1,
+    currentRank: placeOf(standings.value, idx),
     remaining,
     targets,
   }
@@ -1492,7 +1499,7 @@ onMounted(async () => {
                 {{ activeProjection.remaining === 1 ? 'dive' : 'dives' }} left
                 · currently {{ ordinal(activeProjection.currentRank) }}
               </div>
-              <div v-for="t in activeProjection.targets" :key="t.rank" class="sb-catchup-row">
+              <div v-for="t in activeProjection.targets" :key="`${t.rank}-${t.name}`" class="sb-catchup-row">
                 <span class="sb-catchup-rank">{{ ordinal(t.rank) }}</span>
                 <span class="sb-catchup-name">{{ t.name }}</span>
                 <span :class="['sb-catchup-target', t.possible === false ? 'sb-catchup-impossible' : '']">
