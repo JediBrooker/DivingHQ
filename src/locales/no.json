@@ -606,7 +606,8 @@
         "step_4": "På stevnedagen styrer du poenggivningen fra <strong>Kontrollrommet</strong>",
         "step_5": "Når forbundet eller det regionale organet ditt kommer, stemmer du over kravet under <strong>Krav</strong>",
         "cta": "Arrangere et stevne ↗",
-        "step_invite": "Del klubbens invitasjonslenke og angi klubbkoden under <strong>Min klubb</strong>"
+        "step_invite": "Del klubbens invitasjonslenke og angi klubbkoden under <strong>Min klubb</strong>",
+        "step_templates": "Lagre innstillinger du bruker ofte som en <strong>mal</strong> i skjemaet Ny konkurranse. Den tilhører klubben din: bare klubbens administratorer ser den, ikke regionen eller forbundet ditt"
       },
       "region_admin": {
         "name": "Regionsadministrator",
@@ -614,7 +615,8 @@
         "step_1": "Åpne <strong>Min region</strong> for å se klubbene og hvem som driver dem",
         "step_2": "Opprett mesterskapene i <strong>Stevneadministrator</strong> med regionen som arrangør",
         "step_3": "Der det ennå ikke finnes et forbund: godkjenn medlemmer som vil stupe, dømme eller være trener, og klubber som ber om å bli med i regionen din",
-        "cta": "Arrangere et stevne ↗"
+        "cta": "Arrangere et stevne ↗",
+        "step_templates": "Lagre regionens egne <strong>maler</strong> i skjemaet Ny konkurranse. Bare regionens administratorer ser dem, ikke klubbene i regionen eller forbundet ditt"
       },
       "org_admin": {
         "name": "Forbundsadministrator",
@@ -1004,6 +1006,17 @@
       "region": "Delstaten / provinsen sin (nasjonale mesterskap)",
       "club": "Klubben sin (klubb- og mellomklubbstevner)",
       "hint": "Vises ved hver stuper på resultattavlen, i resultater og PDF-er, og er det medaljeoversikten grupperes etter. En stuper uten delstats- eller klubbkode vises med landet sitt."
+    },
+    "templates": {
+      "owner_org": "Organisasjonens maler",
+      "owner_named": "Maler for {name}",
+      "delete_tip": "Slett mal",
+      "delete_title": "Slette malen «{name}»?",
+      "delete_body": "Den forsvinner for alle som bruker disse malene. Konkurranser som allerede er laget fra den, påvirkes ikke.",
+      "deleted": "Malen «{name}» er slettet",
+      "delete_failed": "Kunne ikke slette malen: {error}",
+      "name_placeholder": "Navn på malen (f.eks. «U16 kvinner 3m»)",
+      "name_required": "Gi malen et navn"
     }
   },
   "user_manager": {

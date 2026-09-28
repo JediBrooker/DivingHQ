@@ -595,7 +595,8 @@
         "step_4": "Na dan natjecanja vodite bodovanje iz <strong>Kontrolne sobe</strong>",
         "step_5": "Kad stigne vaš savez ili regionalno tijelo, glasajte o njegovu zahtjevu u <strong>Zahtjevima</strong>",
         "cta": "Organizacija natjecanja ↗",
-        "step_invite": "Na stranici <strong>Moj klub</strong> podijelite poveznicu za pozivnicu svojeg kluba i postavite oznaku kluba"
+        "step_invite": "Na stranici <strong>Moj klub</strong> podijelite poveznicu za pozivnicu svojeg kluba i postavite oznaku kluba",
+        "step_templates": "Postavke koje često koristite spremite kao <strong>predložak</strong> u obrascu Novo natjecanje. Pripada vašem klubu: vide ga samo njegovi administratori, ne vaša regija ni savez"
       },
       "region_admin": {
         "name": "Administrator regije",
@@ -603,7 +604,8 @@
         "step_1": "Otvorite <strong>Moja regija</strong> za svoje klubove i tko ih vodi",
         "step_2": "Stvorite prvenstva u <strong>Menadžeru natjecanja</strong> s regijom kao organizatorom",
         "step_3": "Gdje još nema saveza, odobrite članove koji žele skakati, suditi ili trenirati druge te klubove koji traže ulazak u vašu regiju",
-        "cta": "Organizacija natjecanja ↗"
+        "cta": "Organizacija natjecanja ↗",
+        "step_templates": "Vlastite <strong>predloške</strong> vaše regije spremite u obrascu Novo natjecanje. Vide ih samo njezini administratori, ne njezini klubovi ni vaš savez"
       },
       "org_admin": {
         "name": "Administrator organizacije",
@@ -993,6 +995,17 @@
       "region": "Svoju saveznu državu / pokrajinu (državna prvenstva)",
       "club": "Svoj klub (klupska i međuklupska natjecanja)",
       "hint": "Prikazuje se uz svakog skakača na semaforu, u rezultatima i PDF-ovima, a prema tome se grupira i tablica medalja. Skakač bez oznake savezne države ili kluba prikazuje se sa svojom zemljom."
+    },
+    "templates": {
+      "owner_org": "Predlošci vaše organizacije",
+      "owner_named": "Predlošci: {name}",
+      "delete_tip": "Obriši predložak",
+      "delete_title": "Obrisati predložak „{name}”?",
+      "delete_body": "Nestat će za sve koji koriste ove predloške. Natjecanja već stvorena iz njega ostaju kakva jesu.",
+      "deleted": "Predložak „{name}” obrisan",
+      "delete_failed": "Predložak nije moguće obrisati: {error}",
+      "name_placeholder": "Naziv predloška (npr. „U16 žene 3m”)",
+      "name_required": "Upišite naziv predloška"
     }
   },
   "user_manager": {

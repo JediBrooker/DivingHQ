@@ -606,7 +606,8 @@
         "step_4": "Kilpailupäivänä ohjaat pisteytystä <strong>Ohjaamosta</strong>",
         "step_5": "Kun liittosi tai alueellinen elin liittyy, äänestä sen vaatimuksesta sivulla <strong>Vaatimukset</strong>",
         "cta": "Kilpailun järjestäminen ↗",
-        "step_invite": "Jaa seurasi kutsulinkki ja aseta seuran lyhenne sivulla <strong>Oma seura</strong>"
+        "step_invite": "Jaa seurasi kutsulinkki ja aseta seuran lyhenne sivulla <strong>Oma seura</strong>",
+        "step_templates": "Tallenna toistuvat asetukset <strong>mallina</strong> Uusi kisalaji -lomakkeella. Malli kuuluu seurallesi: vain sen ylläpitäjät näkevät sen, eivät alueesi tai liittosi"
       },
       "region_admin": {
         "name": "Alueen ylläpitäjä",
@@ -614,7 +615,8 @@
         "step_1": "Avaa <strong>Oma alue</strong> nähdäksesi seurasi ja niiden vetäjät",
         "step_2": "Luo mestaruuskilpailusi <strong>Kilpailun hallinnassa</strong> alueesi järjestämänä",
         "step_3": "Missä liittoa ei vielä ole, hyväksy jäsenet, jotka haluavat hypätä, tuomita tai valmentaa, sekä seurat, jotka pyytävät liittymistä alueellesi",
-        "cta": "Kilpailun järjestäminen ↗"
+        "cta": "Kilpailun järjestäminen ↗",
+        "step_templates": "Tallenna alueesi omat <strong>mallit</strong> Uusi kisalaji -lomakkeella. Vain alueen ylläpitäjät näkevät ne, eivät sen seurat tai liittosi"
       },
       "org_admin": {
         "name": "Liittokoordinaattori",
@@ -1004,6 +1006,17 @@
       "region": "Osavaltiotaan / provinssiaan (kansalliset mestaruuskilpailut)",
       "club": "Seuraansa (seura- ja seurojen väliset kilpailut)",
       "hint": "Näkyy jokaisen hyppääjän vieressä tulostaululla, tuloksissa ja PDF-tiedostoissa, ja mitalitaulukko ryhmitellään sen mukaan. Jos hyppääjällä ei ole osavaltio- tai seuralyhennettä, näytetään hänen maansa."
+    },
+    "templates": {
+      "owner_org": "Organisaatiosi mallit",
+      "owner_named": "Mallit: {name}",
+      "delete_tip": "Poista malli",
+      "delete_title": "Poistetaanko malli «{name}»?",
+      "delete_body": "Se katoaa kaikilta, jotka käyttävät näitä malleja. Sen pohjalta jo luotuihin kisalajeihin tämä ei vaikuta.",
+      "deleted": "Malli «{name}» poistettu",
+      "delete_failed": "Mallia ei voitu poistaa: {error}",
+      "name_placeholder": "Mallin nimi (esim. «U16 naiset 3m»)",
+      "name_required": "Anna mallille nimi"
     }
   },
   "user_manager": {

@@ -5,10 +5,10 @@
 const { test, before } = require('node:test')
 const assert = require('node:assert/strict')
 
-let isClubScoped, isMyClubMeetFor, narrowEventsTo, MANAGER_ROLES, CONTROL_ROOM_ROLES
+let isClubScoped, isMyClubMeetFor, narrowEventsTo, templateScopeFor, templateScopeQuery, MANAGER_ROLES, CONTROL_ROOM_ROLES
 
 before(async () => {
-  ;({ isClubScoped, isMyClubMeetFor, narrowEventsTo, MANAGER_ROLES, CONTROL_ROOM_ROLES } = await import(
+  ;({ isClubScoped, isMyClubMeetFor, narrowEventsTo, templateScopeFor, templateScopeQuery, MANAGER_ROLES, CONTROL_ROOM_ROLES } = await import(
     '../src/composables/club-scope-core.js'
   ))
 })
@@ -81,4 +81,26 @@ test('narrowEventsTo keeps events in my meets and drops the rest', () => {
   const kept = narrowEventsTo(events, meets, new Set(['club-1']), new Set())
   assert.deepEqual(kept.map(e => e.id), ['e1'])
   assert.deepEqual(narrowEventsTo(events, null, new Set(['club-1']), new Set()), [])
+})
+
+// Saved event templates belong to the club or region that made them
+// (migration 104), so club mode picks the host of the meet the event goes
+// into, and never a club the caller doesn't admin.
+test('templateScopeFor follows the meet host: my club, my region, or the region above the host club', () => {
+  const clubs = new Set(['club-1'])
+  const regions = new Set(['region-1'])
+  assert.deepEqual(templateScopeFor({ host_club_id: 'club-1', host_club_region_id: 'region-1' }, clubs, regions), { club_id: 'club-1' })
+  assert.deepEqual(templateScopeFor({ host_region_id: 'region-1' }, clubs, regions), { region_id: 'region-1' })
+  // A region admin working a club meet in their region uses the region's templates.
+  assert.deepEqual(templateScopeFor({ host_club_id: 'club-9', host_club_region_id: 'region-1' }, clubs, regions), { region_id: 'region-1' })
+  assert.equal(templateScopeFor({ host_club_id: 'club-9' }, clubs, regions), null)
+  assert.equal(templateScopeFor({ host_club_id: null, host_region_id: null }, clubs, regions), null)
+  assert.equal(templateScopeFor(null, clubs, regions), null)
+})
+
+test('templateScopeQuery: the org is no params, a club or region is one, no scope is null', () => {
+  assert.equal(templateScopeQuery({}), '')
+  assert.equal(templateScopeQuery({ club_id: 'c 1' }), '?club_id=c%201')
+  assert.equal(templateScopeQuery({ region_id: 'r1' }), '?region_id=r1')
+  assert.equal(templateScopeQuery(null), null)
 })

@@ -606,7 +606,8 @@
         "step_4": "På tävlingsdagen styr du poängsättningen från <strong>Kontrollrummet</strong>",
         "step_5": "När ditt förbund eller regionala organ ansluter röstar du om dess anspråk under <strong>Anspråk</strong>",
         "cta": "Arrangera en tävling ↗",
-        "step_invite": "Dela klubbens inbjudningslänk och ange klubbkoden under <strong>Min klubb</strong>"
+        "step_invite": "Dela klubbens inbjudningslänk och ange klubbkoden under <strong>Min klubb</strong>",
+        "step_templates": "Spara inställningar du använder om och om igen som en <strong>mall</strong> i formuläret Ny gren. Den tillhör din klubb: bara klubbens administratörer ser den, inte din region eller ditt förbund"
       },
       "region_admin": {
         "name": "Regionadministratör",
@@ -614,7 +615,8 @@
         "step_1": "Öppna <strong>Min region</strong> för att se dina klubbar och vem som driver dem",
         "step_2": "Skapa mästerskapen i <strong>Tävlingshanterare</strong> med regionen som arrangör",
         "step_3": "Där det ännu inte finns något förbund: godkänn medlemmar som vill hoppa, döma eller vara tränare, och klubbar som vill gå med i din region",
-        "cta": "Arrangera en tävling ↗"
+        "cta": "Arrangera en tävling ↗",
+        "step_templates": "Spara regionens egna <strong>mallar</strong> i formuläret Ny gren. Bara regionens administratörer ser dem, inte dess klubbar eller ditt förbund"
       },
       "org_admin": {
         "name": "Förbundsadministratör",
@@ -1004,6 +1006,17 @@
       "region": "Sin delstat / provins (nationella mästerskap)",
       "club": "Sin klubb (klubb- och mellanklubbstävlingar)",
       "hint": "Visas bredvid varje hoppare på resultattavlan, i resultat och PDF:er, och är det som medaljtabellen grupperas efter. En hoppare utan delstats- eller klubbkod visas med sitt land."
+    },
+    "templates": {
+      "owner_org": "Din organisations mallar",
+      "owner_named": "Mallar för {name}",
+      "delete_tip": "Ta bort mall",
+      "delete_title": "Ta bort mallen «{name}»?",
+      "delete_body": "Den försvinner för alla som använder de här mallarna. Grenar som redan skapats från den påverkas inte.",
+      "deleted": "Mallen «{name}» är borttagen",
+      "delete_failed": "Det gick inte att ta bort mallen: {error}",
+      "name_placeholder": "Mallens namn (t.ex. «U16 damer 3m»)",
+      "name_required": "Ge mallen ett namn"
     }
   },
   "user_manager": {

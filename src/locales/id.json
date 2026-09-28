@@ -595,7 +595,8 @@
         "step_4": "Pada hari kompetisi, jalankan penilaian dari <strong>Ruang Kontrol</strong>",
         "step_5": "Saat federasi atau badan wilayah Anda bergabung, beri suara atas klaimnya di <strong>Klaim</strong>",
         "cta": "Menyelenggarakan kompetisi ↗",
-        "step_invite": "Di <strong>Klub saya</strong>, bagikan tautan undangan klub Anda dan atur kode klub"
+        "step_invite": "Di <strong>Klub saya</strong>, bagikan tautan undangan klub Anda dan atur kode klub",
+        "step_templates": "Simpan pengaturan yang sering Anda pakai sebagai <strong>templat</strong> di formulir Acara Baru. Templat itu milik klub Anda: hanya admin klub yang melihatnya, bukan wilayah atau federasi Anda"
       },
       "region_admin": {
         "name": "Admin wilayah",
@@ -603,7 +604,8 @@
         "step_1": "Buka <strong>Wilayah saya</strong> untuk melihat klub dan pengelolanya",
         "step_2": "Buat kejuaraan Anda di <strong>Pengelola kompetisi</strong> dengan wilayah Anda sebagai tuan rumah",
         "step_3": "Jika belum ada federasi, setujui anggota yang ingin menjadi atlet, juri, atau pelatih, serta klub yang ingin bergabung ke wilayah Anda",
-        "cta": "Menyelenggarakan kompetisi ↗"
+        "cta": "Menyelenggarakan kompetisi ↗",
+        "step_templates": "Simpan <strong>templat</strong> milik wilayah Anda sendiri di formulir Acara Baru. Hanya admin wilayah yang melihatnya, bukan klub-klubnya atau federasi Anda"
       },
       "org_admin": {
         "name": "Admin Organisasi",
@@ -993,6 +995,17 @@
       "region": "Negara bagian / provinsinya (kejuaraan nasional)",
       "club": "Klubnya (kompetisi klub dan antarklub)",
       "hint": "Ditampilkan di samping setiap atlet pada papan skor, hasil, dan PDF, serta menjadi dasar pengelompokan tabel medali. Atlet tanpa kode negara bagian atau klub akan ditampilkan dengan negaranya."
+    },
+    "templates": {
+      "owner_org": "Templat organisasi Anda",
+      "owner_named": "Templat untuk {name}",
+      "delete_tip": "Hapus templat",
+      "delete_title": "Hapus templat \"{name}\"?",
+      "delete_body": "Templat ini hilang bagi semua yang memakai templat-templat ini. Acara yang sudah dibuat darinya tidak terpengaruh.",
+      "deleted": "Templat \"{name}\" dihapus",
+      "delete_failed": "Templat tidak dapat dihapus: {error}",
+      "name_placeholder": "Nama templat (mis. \"U16 Putri 3m\")",
+      "name_required": "Beri nama templat"
     }
   },
   "user_manager": {

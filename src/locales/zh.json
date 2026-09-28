@@ -595,7 +595,8 @@
         "step_4": "比赛当天，在<strong>控制室</strong>中主持评分",
         "step_5": "当您的联合会或地区机构加入时，请在<strong>接管申请</strong>中对其申请投票",
         "cta": "组织比赛 ↗",
-        "step_invite": "在<strong>我的俱乐部</strong>中分享俱乐部的邀请链接，并设置俱乐部代码"
+        "step_invite": "在<strong>我的俱乐部</strong>中分享俱乐部的邀请链接，并设置俱乐部代码",
+        "step_templates": "在新建赛事表单中，把常用的设置另存为<strong>模板</strong>。模板归您的俱乐部所有：只有俱乐部管理员能看到，您所在的地区和联合会看不到"
       },
       "region_admin": {
         "name": "地区管理员",
@@ -603,7 +604,8 @@
         "step_1": "打开<strong>我的地区</strong>查看俱乐部及其负责人",
         "step_2": "在<strong>赛事经理</strong>中创建由您所在地区主办的锦标赛",
         "step_3": "在尚无联合会的地方，审批希望成为运动员、裁判或教练的会员，以及申请加入您所在地区的俱乐部",
-        "cta": "组织比赛 ↗"
+        "cta": "组织比赛 ↗",
+        "step_templates": "在新建赛事表单中保存您所在地区自己的<strong>模板</strong>。只有地区管理员能看到，其下属俱乐部和您的联合会看不到"
       },
       "org_admin": {
         "name": "组织管理员",
@@ -993,6 +995,17 @@
       "region": "所属州 / 省（全国锦标赛）",
       "club": "所属俱乐部（俱乐部及俱乐部间比赛）",
       "hint": "显示在记分牌、成绩和 PDF 中每位运动员旁边，奖牌榜也按此分组。没有州或俱乐部代码的运动员显示其国家。"
+    },
+    "templates": {
+      "owner_org": "您所在组织的模板",
+      "owner_named": "{name}的模板",
+      "delete_tip": "删除模板",
+      "delete_title": "删除模板「{name}」？",
+      "delete_body": "所有使用这些模板的人都将看不到它。已用它创建的赛事不受影响。",
+      "deleted": "已删除模板「{name}」",
+      "delete_failed": "无法删除模板：{error}",
+      "name_placeholder": "模板名称（例如「U16 女子 3m」）",
+      "name_required": "请输入模板名称"
     }
   },
   "user_manager": {

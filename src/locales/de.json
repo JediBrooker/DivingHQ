@@ -606,7 +606,8 @@
         "step_4": "Am Wettkampftag steuern Sie die Wertung aus dem <strong>Kontrollraum</strong>",
         "step_5": "Kommt Ihr Verband oder Landesverband dazu, stimmen Sie unter <strong>Ansprüche</strong> über seinen Anspruch ab",
         "cta": "Einen Wettkampf ausrichten ↗",
-        "step_invite": "Teilen Sie unter <strong>Mein Verein</strong> den Einladungslink Ihres Vereins und legen Sie das Vereinskürzel fest"
+        "step_invite": "Teilen Sie unter <strong>Mein Verein</strong> den Einladungslink Ihres Vereins und legen Sie das Vereinskürzel fest",
+        "step_templates": "Speichern Sie wiederkehrende Einstellungen im Formular „Neuer Wettbewerb“ als <strong>Vorlage</strong>. Sie gehört Ihrem Verein: Nur dessen Admins sehen sie, nicht Ihre Region oder Ihr Verband"
       },
       "region_admin": {
         "name": "Regionsadmin",
@@ -614,7 +615,8 @@
         "step_1": "Öffnen Sie <strong>Meine Region</strong> für Ihre Vereine und deren Leitung",
         "step_2": "Legen Sie Ihre Meisterschaften im <strong>Wettkampf-Manager</strong> mit Ihrer Region als Ausrichter an",
         "step_3": "Wo es noch keinen Verband gibt: Genehmigen Sie Mitglieder, die springen, werten oder trainieren möchten, und Vereine, die Ihrer Region beitreten wollen",
-        "cta": "Einen Wettkampf ausrichten ↗"
+        "cta": "Einen Wettkampf ausrichten ↗",
+        "step_templates": "Speichern Sie eigene <strong>Vorlagen</strong> Ihrer Region im Formular „Neuer Wettbewerb“. Nur deren Admins sehen sie, nicht die Vereine der Region oder Ihr Verband"
       },
       "org_admin": {
         "name": "Verbandsadmin",
@@ -1004,6 +1006,17 @@
       "region": "Ihren Bundesstaat / ihre Provinz (nationale Meisterschaften)",
       "club": "Ihren Verein (Vereins- und Vergleichswettkämpfe)",
       "hint": "Wird neben jedem Springer auf der Anzeigetafel, in den Ergebnissen und PDFs angezeigt und bestimmt die Gruppierung des Medaillenspiegels. Springer ohne Bundesstaats- oder Vereinskürzel werden mit ihrem Land angezeigt."
+    },
+    "templates": {
+      "owner_org": "Vorlagen Ihrer Organisation",
+      "owner_named": "Vorlagen von {name}",
+      "delete_tip": "Vorlage löschen",
+      "delete_title": "Vorlage „{name}“ löschen?",
+      "delete_body": "Sie verschwindet für alle, die diese Vorlagen nutzen. Bereits damit angelegte Wettbewerbe sind nicht betroffen.",
+      "deleted": "Vorlage „{name}“ gelöscht",
+      "delete_failed": "Die Vorlage konnte nicht gelöscht werden: {error}",
+      "name_placeholder": "Name der Vorlage (z. B. „U16 Damen 3m“)",
+      "name_required": "Bitte geben Sie der Vorlage einen Namen"
     }
   },
   "user_manager": {

@@ -595,7 +595,8 @@
         "step_4": "Yarışma günü puanlamayı <strong>Kontrol Odası</strong>'ndan yönetin",
         "step_5": "Federasyonunuz veya bölgesel kurumunuz geldiğinde, talebini <strong>Devralma talepleri</strong> sayfasında oylayın",
         "cta": "Yarışma düzenlemek ↗",
-        "step_invite": "<strong>Kulübüm</strong> sayfasında kulübünüzün davet bağlantısını paylaşın ve kulüp kodunu belirleyin"
+        "step_invite": "<strong>Kulübüm</strong> sayfasında kulübünüzün davet bağlantısını paylaşın ve kulüp kodunu belirleyin",
+        "step_templates": "Sık kullandığınız ayarları Yeni Etkinlik formunda <strong>şablon</strong> olarak kaydedin. Şablon kulübünüzündür: yalnızca kulübün yöneticileri görür, bölgeniz veya federasyonunuz görmez"
       },
       "region_admin": {
         "name": "Bölge yöneticisi",
@@ -603,7 +604,8 @@
         "step_1": "Kulüplerinizi ve yöneticilerini görmek için <strong>Bölgem</strong>'i açın",
         "step_2": "Şampiyonalarınızı bölgenizin ev sahipliğinde <strong>Yarışma Yöneticisi</strong>'nde oluşturun",
         "step_3": "Henüz federasyon olmayan yerlerde atlamak, hakemlik yapmak veya antrenörlük yapmak isteyen üyeleri ve bölgenize katılmak isteyen kulüpleri onaylayın",
-        "cta": "Yarışma düzenlemek ↗"
+        "cta": "Yarışma düzenlemek ↗",
+        "step_templates": "Bölgenize ait <strong>şablonları</strong> Yeni Etkinlik formunda kaydedin. Yalnızca bölgenin yöneticileri görür, kulüpleri veya federasyonunuz görmez"
       },
       "org_admin": {
         "name": "Kuruluş Yöneticisi",
@@ -993,6 +995,17 @@
       "region": "Eyaletlerini / illerini (ulusal şampiyonalar)",
       "club": "Kulüplerini (kulüp ve kulüplerarası yarışmalar)",
       "hint": "Skor tablosunda, sonuçlarda ve PDF'lerde her atlayıcının yanında gösterilir ve madalya tablosu buna göre gruplanır. Eyalet veya kulüp kodu olmayan atlayıcı ülkesiyle gösterilir."
+    },
+    "templates": {
+      "owner_org": "Kuruluşunuzun şablonları",
+      "owner_named": "{name} şablonları",
+      "delete_tip": "Şablonu sil",
+      "delete_title": "\"{name}\" şablonu silinsin mi?",
+      "delete_body": "Bu şablonları kullanan herkes için kaybolur. Bu şablondan önceden oluşturulmuş etkinlikler etkilenmez.",
+      "deleted": "\"{name}\" şablonu silindi",
+      "delete_failed": "Şablon silinemedi: {error}",
+      "name_placeholder": "Şablon adı (ör. \"U16 Kadınlar 3m\")",
+      "name_required": "Şablona bir ad verin"
     }
   },
   "user_manager": {

@@ -606,7 +606,8 @@
         "step_4": "På dagen styrer du pointgivningen fra <strong>Kontrolrummet</strong>",
         "step_5": "Når dit forbund eller regionale organ kommer til, stemmer du om dets krav under <strong>Krav</strong>",
         "cta": "Afvikling af et stævne ↗",
-        "step_invite": "Del klubbens invitationslink og angiv klubkoden under <strong>Min klub</strong>"
+        "step_invite": "Del klubbens invitationslink og angiv klubkoden under <strong>Min klub</strong>",
+        "step_templates": "Gem indstillinger, du bruger igen og igen, som en <strong>skabelon</strong> i formularen Ny konkurrence. Den er din klubs: kun klubbens administratorer ser den, ikke din region eller dit forbund"
       },
       "region_admin": {
         "name": "Regionsadministrator",
@@ -614,7 +615,8 @@
         "step_1": "Åbn <strong>Min region</strong> for at se dine klubber og hvem der driver dem",
         "step_2": "Opret dine mesterskaber i <strong>Stævnehåndtering</strong> med din region som vært",
         "step_3": "Hvor der endnu ikke er et forbund: godkend medlemmer, der vil springe, dømme eller være træner, og klubber, der beder om optagelse i din region",
-        "cta": "Afvikling af et stævne ↗"
+        "cta": "Afvikling af et stævne ↗",
+        "step_templates": "Gem din regions egne <strong>skabeloner</strong> i formularen Ny konkurrence. Kun regionens administratorer ser dem, ikke dens klubber eller dit forbund"
       },
       "org_admin": {
         "name": "Forbundsadministrator",
@@ -1004,6 +1006,17 @@
       "region": "Deres stat / provins (nationale mesterskaber)",
       "club": "Deres klub (klub- og mellemklubstævner)",
       "hint": "Vises ved hver udspringer på resultattavlen, i resultater og PDF'er, og det er det, medaljeoversigten grupperer efter. En udspringer uden stats- eller klubkode vises med sit land."
+    },
+    "templates": {
+      "owner_org": "Din organisations skabeloner",
+      "owner_named": "Skabeloner for {name}",
+      "delete_tip": "Slet skabelon",
+      "delete_title": "Slet skabelonen «{name}»?",
+      "delete_body": "Den forsvinder for alle, der bruger disse skabeloner. Konkurrencer, der allerede er oprettet ud fra den, påvirkes ikke.",
+      "deleted": "Skabelonen «{name}» er slettet",
+      "delete_failed": "Skabelonen kunne ikke slettes: {error}",
+      "name_placeholder": "Skabelonens navn (f.eks. «U16 kvinder 3m»)",
+      "name_required": "Giv skabelonen et navn"
     }
   },
   "user_manager": {
