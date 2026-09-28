@@ -7320,3 +7320,28 @@ test("overlapping decisions on one request: exactly one lands", async (t) => {
     await teardownFixture(st);
   }
 });
+
+// PUT /api/users/me/password was the one password check with no limiter,
+// and it held a pooled connection through bcrypt, so one signed-in user
+// could stall the app with parallel wrong guesses, or a stolen session
+// could guess the password without limit. A non-string password 500'd.
+test("changing your password: wrong guesses are limited per account, junk is a 400", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  const saved = process.env.RATE_LIMIT_DISABLED;
+  try {
+    const me = await sweepKit.member(st.orgId, "spectator");
+    const change = (current_password) => fetchJson("PUT", "/api/users/me/password", {
+      token: me.token, body: { current_password, new_password: "a-brand-new-password-123" },
+    });
+    assert.equal((await change({ not: "a string" })).status, 400);
+    process.env.RATE_LIMIT_DISABLED = "false";
+    const statuses = [];
+    for (let i = 0; i < 6; i++) statuses.push((await change(`wrong-guess-${i}`)).status);
+    assert.deepEqual(statuses, [401, 401, 401, 401, 401, 429]);
+  } finally {
+    process.env.RATE_LIMIT_DISABLED = saved;
+    await teardownFixture(st);
+  }
+});
