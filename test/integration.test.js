@@ -7964,3 +7964,44 @@ test("duplicating a session moves its blocks by exactly the days asked, east of 
     await compKit.cleanup(orgId);
   }
 });
+
+test("synchro reserve swap takes either diver of a pair, never the other gender's", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const orgId = await compKit.org("swap");
+  const guestOrg = await compKit.org("swapg");
+  try {
+    const admin = await compKit.user(orgId, "Swap Admin", ["org_admin"]);
+    const meet = (await pool.query("INSERT INTO meets (org_id, name) VALUES ($1, 'Swap Meet') RETURNING id", [orgId])).rows[0].id;
+    const withdrawing = await compKit.user(orgId, "Swap Withdrawing", ["diver"]);
+    const lead = await compKit.user(guestOrg, "Swap Lead", ["diver"]);
+    const partner = await compKit.user(guestOrg, "Swap Partner", ["diver"]);
+    const manLead = await compKit.user(guestOrg, "Swap Man Lead", ["diver"]);
+    const manPartner = await compKit.user(guestOrg, "Swap Man Partner", ["diver"]);
+    const dives = await compKit.dives(3);
+    const h2h = await compKit.event(orgId, {
+      name: "Swap H2H", gender: "Female", event_format: "super_final_h2h", meet_id: meet, number_of_judges: 5,
+    });
+    await compKit.enter(h2h, withdrawing.id, dives, { display_order: 1 });
+    const women = await compKit.event(orgId, { name: "Swap W synchro", gender: "Female", event_type: "synchro_pair", meet_id: meet, number_of_judges: 9 });
+    const men = await compKit.event(orgId, { name: "Swap M synchro", gender: "Male", event_type: "synchro_pair", meet_id: meet, number_of_judges: 9 });
+    // A pair is one row a round, the partner in partner_id.
+    await compKit.enter(women, lead.id, dives, { partner_id: partner.id });
+    await compKit.enter(men, manLead.id, dives, { partner_id: manPartner.id });
+    const swap = (replacement) => fetchJson("POST", `/api/events/${h2h}/replace-from-synchro`, {
+      token: admin.token,
+      body: { withdraw_competitor_id: withdrawing.id, replacement_competitor_id: replacement.id },
+    });
+    // A Male synchro diver can't take a slot in a Female H2H.
+    const wrong = await swap(manLead);
+    assert.equal(wrong.status, 400, JSON.stringify(wrong.body));
+    // The pair's second diver, listed by the reserve pool, is accepted.
+    const ok = await swap(partner);
+    assert.equal(ok.status, 200, JSON.stringify(ok.body));
+    const inH2h = (await pool.query(
+      "SELECT DISTINCT competitor_id FROM competitor_dive_lists WHERE event_id = $1 AND withdrawn_at IS NULL", [h2h])).rows;
+    assert.deepEqual(inH2h.map((r) => r.competitor_id), [partner.id]);
+  } finally {
+    await compKit.cleanup(orgId, guestOrg);
+  }
+});

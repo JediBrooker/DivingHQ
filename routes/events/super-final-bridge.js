@@ -280,7 +280,7 @@ module.exports = function createSuperFinalBridgeRoutes({ pool, requireEventManag
         await client.query("BEGIN");
 
         const evRes = await client.query(
-          `SELECT id, event_format, status, meet_id FROM events WHERE id = $1`,
+          `SELECT id, event_format, status, meet_id, gender FROM events WHERE id = $1`,
           [eventId],
         );
         if (!evRes.rows.length) {
@@ -389,9 +389,14 @@ module.exports = function createSuperFinalBridgeRoutes({ pool, requireEventManag
           });
         }
 
-        // Verify replacement is in the meet's synchro pool. We
-        // do this by checking they're on a synchro_pair event
-        // at the same meet.
+        // Verify replacement is in the meet's synchro pool: on a
+        // synchro_pair event of the H2H's gender at the same meet,
+        // as either diver of the pair. The pool lists both divers,
+        // but a pair is one row a round with the second diver in
+        // partner_id, so matching competitor_id alone refused the
+        // partner. The gender filter is the one the pool has (Audit
+        // Strong-5); without it a direct call could put a Male
+        // synchro diver into a Female H2H.
         if (!ev.meet_id) {
           await client.query("ROLLBACK");
           return res.status(400).json({
@@ -404,14 +409,15 @@ module.exports = function createSuperFinalBridgeRoutes({ pool, requireEventManag
              JOIN events e ON e.id = cdl.event_id
             WHERE e.meet_id = $1
               AND e.event_type = 'synchro_pair'
-              AND cdl.competitor_id = $2
+              AND e.gender = $3
+              AND (cdl.competitor_id = $2 OR cdl.partner_id = $2)
             LIMIT 1`,
-          [ev.meet_id, replacement_competitor_id],
+          [ev.meet_id, replacement_competitor_id, ev.gender],
         );
         if (!synchroCheckRes.rows.length) {
           await client.query("ROLLBACK");
           return res.status(400).json({
-            error: "Replacement is not on any synchro_pair event at this meet",
+            error: `Replacement is not on any ${ev.gender} synchro_pair event at this meet`,
           });
         }
 
