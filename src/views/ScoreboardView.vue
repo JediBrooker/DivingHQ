@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, watch, defineAsyncComponent } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, defineAsyncComponent } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
@@ -735,6 +735,31 @@ async function refreshData() {
   }
 }
 
+// Live refresh. Standings, Completed Dives and Up Next only change when a
+// dive completes or the operator moves on, and nobody else was telling
+// this view to re-pull: a projector or overlay opened at the start of a
+// meet showed its first snapshot all day. The socket handlers below call
+// this at those moments. Debounced so a panel landing in a burst, or a
+// score and the next diver arriving together, costs one fetch.
+let refreshTimer = null
+function scheduleRefresh(delayMs = 600) {
+  if (refreshTimer) clearTimeout(refreshTimer)
+  refreshTimer = setTimeout(() => {
+    refreshTimer = null
+    refreshData()
+  }, delayMs)
+}
+onUnmounted(() => {
+  if (refreshTimer) clearTimeout(refreshTimer)
+})
+
+// Panel size for "has the dive completed". The archive list row has it;
+// the Control Room's payload carries it too, for a deep link whose event
+// isn't in that list.
+const panelSize = computed(() =>
+  Number(currentEvent.value?.number_of_judges) || Number(activeDiver.value?.number_of_judges) || 5,
+)
+
 // fmtDate imported from @/lib/format, single source of truth.
 
 
@@ -791,6 +816,8 @@ useSocketEvent(socket, 'state_update', data => {
   // A payload persisted before the Control Room sent diverName / diveCode
   // can still be replayed, fill those from the raw roster row.
   activeDiver.value = normaliseActiveDiver(data)
+  // A new diver up means Up Next moved on, re-pull it.
+  if (!sameDive) scheduleRefresh()
 })
 
 // Per-judge live score updates. Each judge's submit_score is
@@ -809,9 +836,15 @@ useSocketEvent(socket, 'score_received', data => {
   }
   if (!currentEventId.value) return
   if (data.event_id !== currentEventId.value) return
-  if (!activeDiver.value) return
-  if (data.competitor_id !== activeDiver.value.competitor_id) return
-  if (Number(data.round_number) !== Number(activeDiver.value.round_number)) return
+  // A score for some other dive (no live diver known here, say, because
+  // the operator is offline) still changes the standings. Nothing to pill,
+  // so just re-pull, a bit lazier than a completed panel.
+  if (!activeDiver.value
+      || data.competitor_id !== activeDiver.value.competitor_id
+      || Number(data.round_number) !== Number(activeDiver.value.round_number)) {
+    scheduleRefresh(2000)
+    return
+  }
   // Same judge resubmitting (rare, referee correction path)
   // overwrites their pill rather than adding a 6th.
   const idx = liveJudgeScores.value.findIndex(s => s.judge_number === data.judge_number)
@@ -819,6 +852,20 @@ useSocketEvent(socket, 'score_received', data => {
   if (idx >= 0) liveJudgeScores.value[idx] = next
   else liveJudgeScores.value = [...liveJudgeScores.value, next]
   liveJudgeScores.value.sort((a, b) => a.judge_number - b.judge_number)
+  // The panel's complete, so the dive has a total: standings and
+  // Completed Dives both change.
+  if (liveJudgeScores.value.length >= panelSize.value) scheduleRefresh()
+})
+
+// Live -> Completed (or back) flips this page between the live board and
+// the recap. The server tells every socket, and the /api/archive list this
+// page took its statuses from was loaded once, so patch the row: the
+// currentEvent.status watcher above does the re-pull.
+useSocketEvent(socket, 'event_status_changed', (data) => {
+  if (!data?.event_id || !data.to) return
+  const ev = events.value.find(e => String(e.id) === String(data.event_id))
+  if (ev) ev.status = data.to
+  else if (String(data.event_id) === String(currentEventId.value)) scheduleRefresh()
 })
 
 // On (re)connect, re-request the current active diver if an
