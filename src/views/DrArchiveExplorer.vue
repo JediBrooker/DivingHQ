@@ -11,7 +11,7 @@
 // date range, matching the source site's own navigation. System
 // admins additionally get an "Import" panel to pull newly-published
 // meets on demand (the same job the scheduled sync runs).
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { groupArchiveEvents } from '@/composables/useProgressionGroups'
@@ -380,6 +380,17 @@ onMounted(() => {
   loadCountries()
   loadDateRange()
   loadImportStatus()
+})
+
+// The import poll only stopped itself when a status call said
+// running:false, so leaving the page mid-import kept a dead view hitting
+// the status endpoint every 3s (forever, if the call kept failing) and
+// reloading meets it no longer showed. Same for the debounce timers.
+onUnmounted(() => {
+  clearInterval(statusTimer)
+  clearTimeout(sliderTimer)
+  clearTimeout(searchTimer)
+  clearTimeout(meetTimer)
 })
 </script>
 
