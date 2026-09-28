@@ -7261,3 +7261,47 @@ test("transferring away drops the old org's roles, so coming back doesn't restor
     await teardownFixture(Y);
   }
 });
+
+// Rows like these are what transfers before the fix above left behind:
+// org_admin in a federation the person has since left.
+test("someone who left a federation isn't counted as its admin or told about its business", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const { liveOrgAdminIds } = require("../lib/admin-rows");
+  const clubApprovals = require("../lib/club-approvals");
+  const CODE = "GUY";
+  await claimKit.wipe(CODE);
+  const X = await setupFixture({ withEvent: false });
+  const Y = await setupFixture({ withEvent: false });
+  try {
+    const gone = await insertUser({ orgId: Y.orgId, role: "diver", username: `int-b3gone-${X.slug}`, fullName: "Former Admin" });
+    await pool.query("INSERT INTO user_org_roles (user_id, org_id, role) VALUES ($1, $2, 'org_admin')", [gone, X.orgId]);
+
+    assert.deepEqual(await liveOrgAdminIds(pool, X.orgId), [X.adminId]);
+    assert.deepEqual(await clubApprovals.reviewerIds(pool, X.orgId), [X.adminId]);
+
+    // A region claim the federation decides: its admins hear when it goes
+    // live and again when it's decided. The one who left hears neither.
+    await pool.query("UPDATE organisations SET country_code = $2 WHERE id = $1", [X.orgId, CODE]);
+    await pool.query("INSERT INTO regions (org_id, name, short_code) VALUES ($1, 'Demerara', 'DE')", [X.orgId]);
+    const body = await claimKit.claim({ org_name: "Demerara Diving", country_code: CODE, region_code: "de" });
+    assert.equal(body.res.status, 201, JSON.stringify(body.res.body));
+    assert.equal(body.res.body.approver, "parent");
+    await claimKit.verify(body.id);
+    const told = async (id) => (await pool.query(
+      "SELECT count(*)::int AS n FROM notifications WHERE user_id = $1", [id],
+    )).rows[0].n;
+    assert.ok(await told(X.adminId) >= 1, "the federation's real admin hears about it");
+    const decided = await fetchJson("POST", `/api/claims/${body.res.body.claim_id}/decide`, {
+      token: X.adminToken, body: { decision: "approve" },
+    });
+    assert.equal(decided.status, 200, JSON.stringify(decided.body));
+    assert.equal(await told(gone), 0, "nothing reaches someone who's left");
+  } finally {
+    await pool.query("DELETE FROM claims WHERE org_id = $1", [X.orgId]).catch(() => {});
+    await pool.query("DELETE FROM users WHERE username = $1", [`int-b3gone-${X.slug}`]);
+    await teardownFixture(X);
+    await teardownFixture(Y);
+    await claimKit.wipe(CODE);
+  }
+});
