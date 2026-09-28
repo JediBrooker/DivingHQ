@@ -7818,3 +7818,78 @@ test("club member counts leave out deleted accounts", async (t) => {
     await teardownFixture(st);
   }
 });
+
+test("malformed ids and impossible dates in the accounts and org routes are 4xx, never 500", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const sys = (await claimKit.login("admin", "admin")).token;
+    const tok = st.adminToken;
+    const probes = [
+      ["GET", "/api/orgs/nope/clubs", null, null],
+      ["POST", "/api/auth/register", null, { username: `int-b3bad-${st.slug}`, password: TEST_PASSWORD, full_name: "X", email: `bad-${st.slug}@example.test`, org_id: "nope" }],
+      ["POST", "/api/auth/register", null, { username: `int-b3bad2-${st.slug}`, password: TEST_PASSWORD, full_name: "X", email: `bad2-${st.slug}@example.test`, org_id: st.orgId, club_id: "nope" }],
+      ["PUT", "/api/users/nope/roles", sys, { roles: ["diver"] }],
+      ["PUT", "/api/users/nope/profile", tok, { full_name: "X" }],
+      ["POST", "/api/users/nope/suspend", tok, {}],
+      ["POST", "/api/users/nope/reactivate", tok, {}],
+      ["GET", "/api/users/nope/role-audit", tok, null],
+      ["PUT", "/api/users/nope/club", tok, { club_id: null }],
+      ["POST", "/api/role-requests/nope/review", tok, { decision: "approved" }],
+      ["POST", "/api/club-change-requests/nope/review", sys, { decision: "approved" }],
+      ["POST", "/api/club-change-requests/nope/confirm", tok, {}],
+      ["POST", "/api/club-change-requests/nope/cancel", tok, {}],
+      ["POST", "/api/club-change-requests", tok, { to_club_id: "nope" }],
+      ["POST", "/api/club-change-requests", tok, { to_org_id: "nope" }],
+      ["POST", "/api/club-change-requests", tok, { user_id: "nope" }],
+      ["POST", "/api/guardian-requests/nope/review", sys, { decision: "approved" }],
+      ["POST", "/api/guardians/nope/revoke", tok, {}],
+      ["POST", "/api/guardians/request", tok, { dependent_user_id: "nope" }],
+      ["POST", "/api/notifications/nope/acknowledge", tok, {}],
+      ["DELETE", "/api/clubs/nope", tok, null],
+      ["PUT", "/api/clubs/nope", tok, { name: "X" }],
+      ["GET", "/api/orgs/nope/divers", tok, null],
+      ["GET", "/api/orgs/nope/members", tok, null],
+      ["POST", "/api/claims/nope/vote", tok, { vote: "approve" }],
+      ["POST", "/api/claims/nope/decide", sys, { decision: "approve" }],
+      ["POST", "/api/claims/nope/revoke", sys, {}],
+    ];
+    const bad = [];
+    for (const [method, path, token, body] of probes) {
+      const r = await fetchJson(method, path, { token, body });
+      if (r.status >= 500 || r.status < 400) bad.push(`${method} ${path} ${JSON.stringify(body)} -> ${r.status}`);
+    }
+    assert.deepEqual(bad, []);
+
+    const member = await insertUser({ orgId: st.orgId, role: "diver", username: `int-b3dob-${st.slug}`, fullName: "Leap Day" });
+    for (const date_of_birth of ["2020-02-30", "2020-13-01", 20200101]) {
+      const dob = await fetchJson("PUT", `/api/users/${member}/profile`, { token: tok, body: { date_of_birth } });
+      assert.equal(dob.status, 400, `${date_of_birth}: ${JSON.stringify(dob.body)}`);
+    }
+    const ok = await fetchJson("PUT", `/api/users/${member}/profile`, { token: tok, body: { date_of_birth: "2020-02-29" } });
+    assert.equal(ok.status, 200, JSON.stringify(ok.body));
+  } finally {
+    await teardownFixture(st);
+  }
+});
+
+test("deleting a club that has paid for things is a 409 club_has_payments, not a 500", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const club = (await pool.query("INSERT INTO clubs (org_id, name) VALUES ($1, 'Paying Club') RETURNING id", [st.orgId])).rows[0].id;
+    await pool.query(
+      `INSERT INTO payments (org_id, subject_type, amount_cents, currency, payer_type, payer_club_id, status)
+       VALUES ($1, 'club_affiliation', 500, 'aud', 'club', $2, 'paid')`, [st.orgId, club]);
+    const del = await fetchJson("DELETE", `/api/clubs/${club}`, { token: st.adminToken });
+    assert.equal(del.status, 409, JSON.stringify(del.body));
+    assert.equal(del.body.code, "club_has_payments");
+    assert.equal((await pool.query("SELECT count(*)::int AS n FROM clubs WHERE id = $1", [club])).rows[0].n, 1);
+  } finally {
+    await pool.query("DELETE FROM payments WHERE org_id = $1", [st.orgId]);
+    await pool.query("DELETE FROM clubs WHERE org_id = $1", [st.orgId]);
+    await teardownFixture(st);
+  }
+});

@@ -14,8 +14,7 @@
 //   app.use(require('./routes/push')({ verifyToken, push }))
 
 const express = require("express");
-
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const { isUuid } = require("../lib/uuid");
 
 module.exports = function createPushRouter({ verifyToken, push }) {
   if (!verifyToken || !push) {
@@ -85,7 +84,7 @@ module.exports = function createPushRouter({ verifyToken, push }) {
     const n = Number.parseInt(req.query.limit, 10);
     const limit = Number.isFinite(n) ? Math.min(Math.max(n, 1), 100) : 20;
     const beforeId = req.query.before_id || req.query.since_id || null;
-    if (beforeId && (typeof beforeId !== "string" || !UUID_RE.test(beforeId))) {
+    if (beforeId && !isUuid(beforeId)) {
       return res.status(400).json({ error: "before_id must be a notification id" });
     }
     try {
@@ -104,6 +103,7 @@ module.exports = function createPushRouter({ verifyToken, push }) {
   // a system notification clears it from the inbox.
   // -------------------------------------------------------------
   router.post("/api/notifications/:id/acknowledge", verifyToken, async (req, res) => {
+    if (!isUuid(req.params.id)) return res.status(404).json({ error: "Notification not found" });
     try {
       const ok = await push.acknowledgeNotification(req.params.id, req.user.id);
       if (!ok) return res.status(404).json({ error: "Notification not found" });

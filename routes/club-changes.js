@@ -24,10 +24,12 @@ const express = require("express");
 const { recordAudit, auditFromReq } = require("../lib/audit");
 const notices = require("../lib/notices");
 const { isOrgAdminOf, liveAdminIds, liveOrgAdminIds } = require("../lib/admin-rows");
+const { isUuid, requireUuidParam } = require("../lib/uuid");
 
 module.exports = function createClubChangesRouter({ pool, verifyToken, bumpTokenVersion }) {
   if (!pool) throw new Error("createClubChangesRouter requires { pool }");
   const router = express.Router();
+  router.param("id", requireUuidParam);
 
   // Can this club (or region) admin decide this request? Only a within-org
   // move into a club they run, in an org with no federation to ask, and
@@ -293,6 +295,9 @@ module.exports = function createClubChangesRouter({ pool, verifyToken, bumpToken
   // --- CREATE -------------------------------------------------
   router.post("/api/club-change-requests", verifyToken, async (req, res) => {
     const { user_id, to_club_id, to_org_id, note } = req.body || {};
+    for (const [name, v] of [["user_id", user_id], ["to_club_id", to_club_id], ["to_org_id", to_org_id]]) {
+      if (v != null && v !== "" && !isUuid(v)) return res.status(400).json({ error: `${name} must be an id` });
+    }
     const targetId = user_id || req.user.id;
     const client = await pool.connect();
     try {

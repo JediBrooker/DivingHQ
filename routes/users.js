@@ -48,6 +48,7 @@ const { recordAudit, auditFromReq } = require("../lib/audit");
 const { supportContact } = require("../lib/support");
 const { ADMIN_ORG_ID } = require("../lib/admin-org");
 const { isOrgAdminOf } = require("../lib/admin-rows");
+const { isUuid, requireUuidParam } = require("../lib/uuid");
 
 // Enum values from init.sql's CREATE TYPE org_role. system_admin is
 // intentionally NOT in this set, it's a column on users, not a role
@@ -84,6 +85,8 @@ module.exports = function createUsersRouter({
 }) {
   if (!pool) throw new Error("createUsersRouter requires { pool, … }");
   const router = express.Router();
+  // Every :id here is a users, role_requests or guardians row.
+  router.param("id", requireUuidParam);
   // Same links the self-service flows in routes/auth.js send. The routes
   // below 503 before minting when JWT_SECRET isn't wired in.
   const { mintVerifyToken, mintResetToken } = createAuthLinks(JWT_SECRET);
@@ -1233,8 +1236,13 @@ module.exports = function createUsersRouter({
       }
       if (date_of_birth !== undefined) {
         const dob = date_of_birth || null;
-        if (dob && !/^\d{4}-\d{2}-\d{2}$/.test(dob))
-          return res.status(400).json({ error: "Date of birth must be YYYY-MM-DD" });
+        // The shape alone let 2020-02-30 through to Postgres, which
+        // refused it and the route answered 500. Round-trip it through a
+        // real date so only ones that exist pass.
+        const parsed = typeof dob === "string" ? new Date(`${dob}T00:00:00Z`) : null;
+        if (dob && (!/^\d{4}-\d{2}-\d{2}$/.test(String(dob)) || Number.isNaN(parsed.getTime())
+            || parsed.toISOString().slice(0, 10) !== dob))
+          return res.status(400).json({ error: "Date of birth must be a real date, YYYY-MM-DD" });
         sets.push(`date_of_birth = $${i++}`); vals.push(dob);
       }
       if (gender !== undefined) {
@@ -1429,6 +1437,7 @@ module.exports = function createUsersRouter({
   router.post("/api/guardians/request", verifyToken, async (req, res) => {
     const { dependent_user_id } = req.body || {};
     if (!dependent_user_id) return res.status(400).json({ error: "dependent_user_id is required" });
+    if (!isUuid(dependent_user_id)) return res.status(404).json({ error: "User not found" });
     if (dependent_user_id === req.user.id) return res.status(400).json({ error: "Cannot link to yourself" });
     try {
       const dep = (await pool.query(

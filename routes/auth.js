@@ -28,6 +28,7 @@ const { withTx } = clubApprovals;
 const notices = require("../lib/notices");
 const { recordAudit } = require("../lib/audit");
 const createAuthLinks = require("../lib/auth-links");
+const { isUuid } = require("../lib/uuid");
 
 // Loose on purpose, something@something.tld: the verification link is what
 // actually proves the address. Register, register-org and the email change
@@ -853,6 +854,14 @@ module.exports = function createAuthRouter({
     const country = org_id ? null : countryByCode(country_code);
     if (!org_id && !country) {
       return res.status(400).json({ error: "Pick your country" });
+    }
+    // Same answers as an id that matches nothing, rather than the 500 a
+    // failed uuid cast used to give.
+    if (org_id && !isUuid(org_id)) {
+      return res.status(400).json({ error: "Organisation not found or not yet active" });
+    }
+    if (club_id && !isUuid(club_id)) {
+      return res.status(400).json({ error: "Selected club doesn't belong to that organisation" });
     }
 
     const fullName = safeText(req.body?.full_name, 100);

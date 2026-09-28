@@ -35,6 +35,8 @@ const { countryByCode, countryFromStored } = require("../lib/countries");
 const { removeAdmin, isOrgAdminOf } = require("../lib/admin-rows");
 const clubApprovals = require("../lib/club-approvals");
 const notices = require("../lib/notices");
+const { supportContact } = require("../lib/support");
+const { UUID_RE, requireUuidParam } = require("../lib/uuid");
 
 module.exports = function createOrgsRouter({
   pool,
@@ -52,7 +54,8 @@ module.exports = function createOrgsRouter({
   // router built without the org-admin gate still refuses the wrong people.
   const orgAdminGate = requireOrgAdmin || verifyToken;
   const router = express.Router();
-  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  // Every :id in here is an organisations or clubs row.
+  router.param("id", requireUuidParam);
 
   // -------- Orgs --------
   router.get("/api/orgs", requireSystemAdmin, async (req, res) => {
@@ -525,7 +528,18 @@ module.exports = function createOrgsRouter({
             RETURNING user_id`,
           [club.id, req.user.id],
         )).rows;
-        await client.query("DELETE FROM clubs WHERE id = $1", [club.id]);
+        // payments.payer_club_id is ON DELETE RESTRICT: a club that has
+        // paid for something can't go. Same 409 the reject path gives.
+        try {
+          await client.query("DELETE FROM clubs WHERE id = $1", [club.id]);
+        } catch (err) {
+          if (err.code !== "23503") throw err;
+          throw new clubApprovals.ClubApprovalError(
+            409,
+            `This club has payments on record, so it can't be deleted. Contact ${supportContact()}.`,
+            "club_has_payments",
+          );
+        }
         await recordAudit(client, {
           ...auditFromReq(req),
           org_id:      club.org_id,
@@ -556,8 +570,7 @@ module.exports = function createOrgsRouter({
         unassigned_members: memberCount.rows[0].n,
       });
     } catch (err) {
-      console.error("[Delete Club Error]", err.message);
-      res.status(500).json({ error: "Internal server error" });
+      approvalError(res, err, "[Delete Club Error]");
     }
   });
 
