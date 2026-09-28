@@ -210,7 +210,7 @@ async function onCheckoutCompleted(pool, logger, payments, email, session) {
 // while active" is the checkout's renewal-window guard).
 async function grantMembership(client, payment) {
   const def = await client.query(
-    "SELECT membership_period, tier FROM fee_definitions WHERE id = $1",
+    "SELECT tier FROM fee_definitions WHERE id = $1",
     [payment.fee_definition_id],
   );
   const tier = def.rows[0]?.tier ?? null;
