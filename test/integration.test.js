@@ -7436,3 +7436,36 @@ test("a 2FA recovery code signs in once, however many requests race it", async (
     await teardownFixture(st);
   }
 });
+
+// PUT /api/scores/:id read the old score, updated it and wrote the audit
+// row as three separate statements with no lock, so two corrections at
+// once both logged the same old score and the trail skipped a step.
+test("score corrections at the same moment leave an unbroken audit chain", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const { scoreId } = await sweepKit.scoredDive(st.orgId, 6);
+    const put = (score) => fetchJson("PUT", `/api/scores/${scoreId}`, { token: st.adminToken, body: { score } });
+    for (let i = 0; i < 3; i++) {
+      const [a, b] = await Promise.all([put(6.5 + i), put(8 + i)]);
+      assert.equal(a.status, 200, JSON.stringify(a.body));
+      assert.equal(b.status, 200, JSON.stringify(b.body));
+    }
+    const trail = (await pool.query(
+      `SELECT old_score::float AS o, new_score::float AS n FROM score_audit_log
+        WHERE score_id = $1 AND action = 'update' ORDER BY created_at, id`,
+      [scoreId],
+    )).rows;
+    assert.equal(trail.length, 6);
+    // Each correction starts from where the one before it left the score:
+    // the old values are the starting 6 plus every new value but the last.
+    const final = Number((await pool.query("SELECT score FROM scores WHERE id = $1", [scoreId])).rows[0].score);
+    const news = [6, ...trail.map((r) => r.n)];
+    news.splice(news.indexOf(final), 1);
+    assert.deepEqual(trail.map((r) => r.o).sort(), news.sort(), JSON.stringify(trail));
+  } finally {
+    await recordKit.cleanup(st.orgId);
+    await teardownFixture(st);
+  }
+});

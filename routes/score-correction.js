@@ -73,26 +73,34 @@ module.exports = function createScoreCorrectionRouter({
       const scoreErr = scoreBodyError(score, "Score");
       if (scoreErr) return res.status(400).json({ error: scoreErr });
       const newScore = Number(score);
+      const trimmedReason = typeof reason === "string" ? reason.trim().slice(0, 500) : null;
+      // Read, update and audit in one transaction with the row locked.
+      // They used to be three separate statements, so two corrections at
+      // once both logged the same old score (the trail skipped a step),
+      // and an audit insert that failed was swallowed with the score
+      // already changed. The audit row is durable iff the score is, same
+      // contract as submit_score.
+      let existing, oldScore;
+      const client = await pool.connect();
       try {
-        const prior = await pool.query(
-          "SELECT id, score, event_id, competitor_id, judge_id, round_number FROM scores WHERE id = $1",
+        await client.query("BEGIN");
+        const prior = await client.query(
+          `SELECT s.id, s.score, s.event_id, s.competitor_id, s.judge_id, s.round_number, e.org_id
+             FROM scores s JOIN events e ON e.id = s.event_id
+            WHERE s.id = $1
+            FOR UPDATE OF s`,
           [req.params.id],
         );
         if (!prior.rows.length) {
+          await client.query("ROLLBACK");
           return res.status(404).json({ error: "Score not found" });
         }
-        const existing = prior.rows[0];
+        existing = prior.rows[0];
 
         // Org guard: the score must belong to an event in the
         // caller's org. sysadmin can correct scores in any org.
-        const ev = await pool.query(
-          "SELECT org_id FROM events WHERE id = $1",
-          [existing.event_id],
-        );
-        if (!ev.rows.length) {
-          return res.status(404).json({ error: "Event not found" });
-        }
-        if (!req.user.is_system_admin && ev.rows[0].org_id !== req.user.org_id) {
+        if (!req.user.is_system_admin && existing.org_id !== req.user.org_id) {
+          await client.query("ROLLBACK");
           return res.status(403).json({ error: "Cannot correct scores in other organisations" });
         }
 
@@ -108,45 +116,48 @@ module.exports = function createScoreCorrectionRouter({
           // the meet. Falls back to the plain row check for old mounts.
           const ok = isEventDelegate
             ? await isEventDelegate(existing.event_id, req.user.id)
-            : (await pool.query(
+            : (await client.query(
                 "SELECT 1 FROM event_managers WHERE event_id = $1 AND user_id = $2",
                 [existing.event_id, req.user.id],
               )).rows.length > 0;
           if (!ok) {
+            await client.query("ROLLBACK");
             return res.status(403).json({
               error: "You are not a manager of this event",
             });
           }
         }
 
-        const oldScore = Number(existing.score);
+        oldScore = Number(existing.score);
         if (oldScore === newScore) {
+          await client.query("ROLLBACK");
           return res.json({ ok: true, unchanged: true });
         }
 
-        await pool.query("UPDATE scores SET score = $1 WHERE id = $2", [newScore, existing.id]);
-        try {
-          // The `reason` column was added in migration 018. Cap the
-          // free-text length so a malicious / accidentally-pasted
-          // multi-MB blob can't bloat the audit table.
-          const trimmedReason = typeof reason === "string"
-            ? reason.trim().slice(0, 500)
-            : null;
-          // No committedNow here: this path has never stamped
-          // server_committed_at (reported separately, not changed in
-          // passing).
-          await insertScoreAudit(pool, {
-            scoreId: existing.id, eventId: existing.event_id,
-            competitorId: existing.competitor_id, judgeId: existing.judge_id,
-            round: existing.round_number, action: "update",
-            oldScore, newScore,
-            actorId: req.user.id, ip: req.ip, userAgent: req.headers["user-agent"] || null,
-            reason: trimmedReason || null,
-          });
-        } catch (auditErr) {
-          console.error("[Score Correction Audit Skipped]", auditErr.message);
-        }
+        await client.query("UPDATE scores SET score = $1 WHERE id = $2", [newScore, existing.id]);
+        // The `reason` column was added in migration 018, capped above so
+        // a pasted multi-MB blob can't bloat the audit table. No
+        // committedNow here: this path has never stamped
+        // server_committed_at (reported separately, not changed in
+        // passing).
+        await insertScoreAudit(client, {
+          scoreId: existing.id, eventId: existing.event_id,
+          competitorId: existing.competitor_id, judgeId: existing.judge_id,
+          round: existing.round_number, action: "update",
+          oldScore, newScore,
+          actorId: req.user.id, ip: req.ip, userAgent: req.headers["user-agent"] || null,
+          reason: trimmedReason || null,
+        });
+        await client.query("COMMIT");
+      } catch (err) {
+        await client.query("ROLLBACK").catch(() => {});
+        console.error("[Score Correction Error]", err.message);
+        return res.status(500).json({ error: "Internal server error" });
+      } finally {
+        client.release();
+      }
 
+      try {
         // Flush the cached scoreboard payload so the next
         // re-pull rebuilds with the corrected score. Without this
         // the broadcast below tells viewers to re-fetch but the
@@ -175,12 +186,13 @@ module.exports = function createScoreCorrectionRouter({
             eventId: existing.event_id, competitorId: existing.competitor_id, roundNumber: existing.round_number,
           });
         }
-
-        res.json({ ok: true, old_score: oldScore, new_score: newScore });
       } catch (err) {
-        console.error("[Score Correction Error]", err.message);
-        res.status(500).json({ error: "Internal server error" });
+        // The correction is committed; a broadcast or record replay
+        // hiccup shouldn't tell the client it failed.
+        console.error("[Score Correction Follow-up]", err.message);
       }
+
+      res.json({ ok: true, old_score: oldScore, new_score: newScore });
     },
   );
 
