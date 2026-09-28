@@ -11,12 +11,12 @@
 // emit + finalise PUT. The card cancels its own in-flight auto-advance on
 // a manual click so the operator wins the race. Class names mirror the
 // old inline markup so the control-v2 e2e selectors keep resolving.
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, inject } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { deriveStatus } from '@/composables/useLivePools'
 import { useShotClock } from '@/composables/useShotClock'
 import { useAutoAdvance, AUTO_ADVANCE_KEY } from '@/composables/useAutoAdvance'
-import { useMeetHold } from '@/composables/useMeetHold'
+import { useMeetHold, MEET_HOLD_STORE } from '@/composables/useMeetHold'
 import { useHttpOutbox } from '@/composables/useHttpOutbox'
 
 const props = defineProps({
@@ -42,11 +42,14 @@ const { autoAdvanceSeconds, autoAdvanceCountdown, startAutoAdvance, cancelAutoAd
   storageKey: `${AUTO_ADVANCE_KEY}:${props.event.id}`,
 })
 const { queueSocketAction: qsa } = useHttpOutbox()
+// The Control Room's shared per-event hold store, so this card, the
+// focused banner and the 'h' hotkey read the same hold.
 const { isHeld, holdReason, resumeMeet, confirmHold } = useMeetHold({
   socket: props.socket,
   event: () => props.event,
   onHold: () => resetShotClock(),
   queueSocketAction: qsa,
+  store: inject(MEET_HOLD_STORE, null),
 })
 
 // ---- Derived display state (per pool) ---------------------------------

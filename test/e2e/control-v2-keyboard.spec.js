@@ -136,3 +136,37 @@ test("Space presses the focused button and answers the confirm, it doesn't advan
   await expect(cardA.locator(".cv2-live-diver")).toContainText("BBB S");
   await setup.deleteOrg(orgId);
 });
+
+// Hold is per event. The focused banner and 'h' used to share a single
+// flag that stayed put when focus moved, so pool A's hold showed on B and
+// 'h' on B sent a resume for B instead of a hold.
+test("the hold banner and 'h' follow the focused pool", async ({ request, page, baseURL }) => {
+  test.setTimeout(120_000);
+  const { orgId, username, adminToken } = await setup.createOrgAndAdmin(request, { countryCode: "AUS", orgName: "Keyboard Hold Diving" });
+  const A = await liveEvent(request, { orgId, adminToken, name: "Hold Pool A", diverNames: ["AAA HA", "ZZZ HA"] });
+  const B = await liveEvent(request, { orgId, adminToken, name: "Hold Pool B", diverNames: ["AAA HB", "ZZZ HB"] });
+
+  await signIn(page, username);
+  await page.goto(`/control?event=${A.event.id}`);
+  const cardA = page.locator(`.cv2-pool[data-event-id="${A.event.id}"]`);
+  const cardB = page.locator(`.cv2-pool[data-event-id="${B.event.id}"]`);
+  await expect(cardA.locator(".cv2-live-diver")).toContainText("AAA HA", { timeout: 10_000 });
+  await expect(cardB.locator(".cv2-live-diver")).toContainText("AAA HB", { timeout: 10_000 });
+
+  await cardA.locator(".cv2-pool-hold").click();
+  await expect(cardA.locator(".cv2-pool-heldbar")).toBeVisible();
+  await expect(page.locator(".cv2-hold-banner")).toBeVisible();
+
+  // Focus B: its banner is clear, because B isn't held
+  await cardA.locator(".cv2-live-diver").click();
+  await page.keyboard.press("2");
+  await expect(page.locator(".cv2-chip.is-focused")).toContainText("Hold Pool B");
+  await expect(page.locator(".cv2-hold-banner")).toHaveCount(0);
+
+  // 'h' holds B, and A stays held
+  await page.keyboard.press("h");
+  await expect(cardB.locator(".cv2-pool-heldbar")).toBeVisible();
+  await expect(cardA.locator(".cv2-pool-heldbar")).toBeVisible();
+  await expect(page.locator(".cv2-hold-banner")).toBeVisible();
+  await setup.deleteOrg(orgId);
+});

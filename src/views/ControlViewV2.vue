@@ -8,7 +8,7 @@
 // controllers + meet-day tools; the mode gets chosen by the shared
 // useControlStage derivation. Same /control URL, ?event= deep-link, role
 // gate + AppShell as before.
-import { ref, reactive, computed, watch, onMounted, onUnmounted, nextTick, defineAsyncComponent } from 'vue'
+import { ref, reactive, computed, watch, onMounted, onUnmounted, nextTick, defineAsyncComponent, provide } from 'vue'
 import { useRoute, onBeforeRouteLeave } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useClubScope, CONTROL_ROOM_ROLES } from '@/composables/useClubScope'
@@ -41,7 +41,7 @@ import { controlKeyIntent, hotkeyBlocked } from '@/composables/useControlKeymap'
 import { diveDescription } from '@/composables/useDiveLabel'
 import { idbInvalidate } from '@/lib/idbCache'
 import { activeDiverPayload } from '@/lib/activeDiver'
-import { useMeetHold } from '@/composables/useMeetHold'
+import { useMeetHold, MEET_HOLD_STORE } from '@/composables/useMeetHold'
 import { useHttpOutbox, waitForOutboxEntry } from '@/composables/useHttpOutbox'
 import { useOutbox } from '@/composables/useOutbox'
 import { confirmAction } from '@/composables/useConfirm'
@@ -162,13 +162,16 @@ const currentEvent = computed(
 const { workflowMode } = useControlStage(currentEvent)
 
 // Safe recovery: meet hold/resume on the FOCUSED event, driving the
-// recovery center mode + the focused hold banner. Per-pool hold (from any
-// card) lives inside LivePoolCard; this focused instance just mirrors the
-// same server meet_held/meet_resumed broadcasts so the two stay in sync.
-// The focused pool's clock gets paused by its own card's hold instance,
-// so onHold here is a no-op.
+// recovery center mode + the focused hold banner. Hold state lives in one
+// per-event store shared with every LivePoolCard (provide/inject), so the
+// banner, the cards and the 'h' hotkey all agree about which event is
+// held, and the banner follows focus from pool to pool. The focused
+// pool's clock gets paused by its own card's hold instance, so onHold
+// here is a no-op.
+const holdStore = reactive({}) // event_id -> { reason }
+provide(MEET_HOLD_STORE, holdStore)
 const { isHeld, holdReason, holdPromptOpen, holdReasonInput, openHoldPrompt, confirmHold, resumeMeet } =
-  useMeetHold({ socket, event: () => currentEvent.value, onHold: () => {}, queueSocketAction })
+  useMeetHold({ socket, event: () => currentEvent.value, onHold: () => {}, queueSocketAction, store: holdStore })
 
 // Recovery is the one explicit cross-cutting mode (offer, not seize).
 // Off by default so the center always shows the stage mode.
@@ -504,6 +507,9 @@ function joinPoolRooms(eventId) {
 useSocketEvent(socket, 'connect', () => {
   for (const ev of events.value) {
     if (ev.status !== 'Live' || !wiredPools.has(ev.id)) continue
+    // A resume that happened while we were away never reached us. Forget
+    // the hold and let get_meet_hold put it back if it's still on.
+    delete holdStore[String(ev.id)]
     joinPoolRooms(ev.id)
     socket.emit('get_active_diver', { event_id: ev.id })
   }
