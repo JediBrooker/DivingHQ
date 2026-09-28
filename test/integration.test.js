@@ -7216,3 +7216,36 @@ test("maintenance mode refuses socket score submits and Control Room actions fro
     await teardownFixture(st);
   }
 });
+
+test("a null, empty or boolean score is refused on the socket and HTTP paths, never stored as 0", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  const ev = await recordKit.event(st.orgId, { gender: "Female" });
+  const diver = await recordKit.diver(st.orgId, null, "female", "Null Score Diver");
+  await b1Kit.enter(ev, diver);
+  const judgeName = (await pool.query("SELECT username FROM users WHERE id = $1", [ev.judges[0]])).rows[0].username;
+  const judge = await b1Kit.connect({ token: await b1Kit.login(judgeName) });
+  try {
+    for (const score of [null, "", " ", false, true, []]) {
+      const out = await b1Kit.ack(judge, "submit_score", { event_id: ev.id, competitor_id: diver, round_number: 1, score });
+      assert.equal(out.ok, false, JSON.stringify(score));
+      assert.equal(out.error, "bad_score", JSON.stringify(score));
+    }
+    assert.equal((await pool.query("SELECT 1 FROM scores WHERE event_id = $1", [ev.id])).rows.length, 0);
+
+    const ok = await b1Kit.ack(judge, "submit_score", { event_id: ev.id, competitor_id: diver, round_number: 1, score: "6.5" });
+    assert.equal(ok.ok, true, JSON.stringify(ok));
+    const id = (await pool.query("SELECT id FROM scores WHERE event_id = $1", [ev.id])).rows[0].id;
+    for (const score of [null, "", false]) {
+      const put = await fetchJson("PUT", `/api/scores/${id}`, { token: st.adminToken, body: { score, reason: "typo" } });
+      assert.equal(put.status, 400, `${JSON.stringify(score)}: ${JSON.stringify(put.body)}`);
+    }
+    const kept = await pool.query("SELECT score::float AS score FROM scores WHERE id = $1", [id]);
+    assert.equal(kept.rows[0].score, 6.5);
+  } finally {
+    judge.close();
+    await recordKit.cleanup(st.orgId);
+    await teardownFixture(st);
+  }
+});

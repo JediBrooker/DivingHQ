@@ -12,15 +12,23 @@ test("isValidScore: 0 to 10 in half points", () => {
   }
 });
 
-test("isValidScore agrees with lib/middleware's copy", () => {
-  // The socket path still validates through lib/middleware. Until that
-  // one becomes a re-export, pin that the two can't drift apart.
+test("isValidScore: null, blanks, booleans and arrays aren't a 0", () => {
+  // Number() turns every one of these into 0, a valid mark. Stored as
+  // such, a judge's missing score read as a 0.0 on the scoreboard.
+  for (const bad of [null, "", "   ", false, true, [], [7], {}]) {
+    assert.equal(isValidScore(bad), false, JSON.stringify(bad));
+    assert.equal(scoreBodyError(bad, "score"), "score must be between 0 and 10", JSON.stringify(bad));
+  }
+});
+
+test("isValidScore is the one lib/middleware hands the socket path", () => {
+  // The socket path validates through lib/middleware, the HTTP routes
+  // through here. Same function, so the two can't drift apart.
   const mw = require("../lib/middleware")({
     pool: { query: async () => ({ rows: [] }) },
     JWT_SECRET: "x".repeat(40),
   });
-  const samples = [-1, -0.5, 0, 0.25, 0.5, 1, 2.5, 6.75, 9.5, 10, 10.5, 11, NaN, Infinity, "7", "7.5", "x", null, ""];
-  for (const s of samples) assert.equal(isValidScore(s), mw.isValidScore(s), String(s));
+  assert.equal(mw.isValidScore, isValidScore);
 });
 
 test("scoreBodyError: each route's own wording", () => {
