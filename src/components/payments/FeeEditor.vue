@@ -9,6 +9,7 @@ import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { showSuccess, showError } from '@/composables/useNotify'
 import ComingSoonBanner from '@/components/ComingSoonBanner.vue'
+import { dayStartIso, dayEndIso, localDay } from '@/lib/dayWindow'
 
 const props = defineProps({
   loadUrl: { type: String, required: true },
@@ -63,8 +64,10 @@ async function load() {
         label: p.label,
         amount: (p.amount_cents / 100).toString(),
         audience: p.audience,
-        starts_at: p.starts_at ? p.starts_at.slice(0, 10) : '',
-        ends_at: p.ends_at ? p.ends_at.slice(0, 10) : '',
+        // Local dates, not the UTC half of the stored instant: slicing
+        // the ISO string moved the window a day on every load east of UTC.
+        starts_at: localDay(p.starts_at),
+        ends_at: localDay(p.ends_at),
       }))
     }
     if (!prices.value.length) prices.value = [blankPrice()]
@@ -103,8 +106,11 @@ async function save() {
         label: p.label || 'standard',
         amount_cents: Math.round(parseFloat(p.amount) * 100),
         audience: props.flat ? 'all' : p.audience,
-        starts_at: props.flat ? null : (p.starts_at || null),
-        ends_at: props.flat ? null : (p.ends_at || null),
+        // Start of the first day through the end of the last one, as
+        // instants, so the DB's time zone can't shift them and the
+        // "Until" day is inside the window (see lib/dayWindow).
+        starts_at: props.flat ? null : dayStartIso(p.starts_at),
+        ends_at: props.flat ? null : dayEndIso(p.ends_at),
       })),
     }
     await auth.apiFetch(props.saveUrl, { method: 'PUT', body: JSON.stringify(payload) })
