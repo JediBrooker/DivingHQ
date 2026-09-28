@@ -170,12 +170,16 @@ module.exports = function createCoachRouter({
              AND e.status IN ('Live', 'Upcoming')
          ),
          /* Pick the diver's next round in each event: the lowest
-            round_number that doesn't yet have all judges' scores. */
+            round_number that doesn't yet have all judges' scores.
+            Only upcoming_raw's events ever join back to this, so
+            there's no point counting the squad's whole scoring
+            history (it grew with every meet they'd ever dived). */
          scored_rounds AS (
            SELECT s.event_id, s.competitor_id, s.round_number,
                   COUNT(*) AS judges_in
            FROM scores s
            WHERE s.competitor_id IN (SELECT id FROM my_divers)
+             AND s.event_id IN (SELECT event_id FROM upcoming_raw)
            GROUP BY s.event_id, s.competitor_id, s.round_number
          ),
          upcoming_with_status AS (
@@ -521,9 +525,16 @@ module.exports = function createCoachRouter({
                     ON active_cdl.event_id = e.id
                    AND active_cdl.competitor_id = ml.diver_id
                    AND active_cdl.withdrawn_at IS NULL
-            WHERE ml.diver_org_id = e.org_id
-               OR epo.org_id IS NOT NULL
-               OR ml.link_org_id = e.org_id
+            -- The status test just narrows this to events the final
+            -- SELECT can return (entered and open_for_entry are both
+            -- Upcoming or Live), otherwise it grouped every event in the
+            -- divers' orgs across all time. The eligibility test in the
+            -- parentheses is the bit that mirrors requireCoachLink, and
+            -- it hasn't changed.
+            WHERE e.status IN ('Upcoming', 'Live')
+              AND (ml.diver_org_id = e.org_id
+                   OR epo.org_id IS NOT NULL
+                   OR ml.link_org_id = e.org_id)
             GROUP BY e.id
          )
          SELECT e.id AS event_id, e.name AS event_name,
