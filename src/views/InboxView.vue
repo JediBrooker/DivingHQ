@@ -315,7 +315,13 @@ onMounted(load)
           :class="['inbox-row', r.status === 'acknowledged' ? 'is-read' : '', r.action_url ? 'is-clickable' : '']"
           @click="clickRow(r)">
         <div class="inbox-row-bar" :data-cat="r.category"></div>
-        <div class="inbox-row-body">
+        <!-- The row's click lives on the <li>; this is the keyboard way
+             in (a role on the li itself would break the list). -->
+        <div class="inbox-row-body"
+             role="button"
+             tabindex="0"
+             @keydown.enter.self.prevent="clickRow(r)"
+             @keydown.space.self.prevent="clickRow(r)">
           <div class="inbox-row-head">
             <span class="inbox-row-cat">{{ categoryLabel(r.category) }}</span>
             <span class="inbox-row-time">{{ fmtTime(r.created_at) }}</span>
@@ -331,6 +337,7 @@ onMounted(load)
 </template>
 
 <style scoped>
+.inbox-row-body:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
 .inbox-wrap { max-width: 900px; margin: 0 auto; padding: 2rem; }
 
 .page-header {

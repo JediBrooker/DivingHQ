@@ -1233,7 +1233,11 @@ watch(currentEvent, async (ev) => {
             v-for="(dive, idx) in selectedDives"
             :key="idx"
             :class="['dive-row', dive ? 'filled' : '', isPrescribedRound(idx) ? 'locked' : '']"
+            role="button"
+            tabindex="0"
             @click="openModal(idx)"
+            @keydown.enter.self.prevent="openModal(idx)"
+            @keydown.space.self.prevent="openModal(idx)"
           >
             <div :class="['row-num', dive ? 'filled-num' : '']">{{ idx + 1 }}</div>
             <div class="row-info" v-if="dive">
@@ -1326,7 +1330,11 @@ watch(currentEvent, async (ev) => {
           v-for="d in searchResults"
           :key="d.id"
           class="result-item"
+          role="button"
+          tabindex="0"
           @click="selectDive(d)"
+          @keydown.enter.self.prevent="selectDive(d)"
+          @keydown.space.self.prevent="selectDive(d)"
         >
           <div>
             <div class="result-code">{{ d.dive_code }}<span class="result-pos">{{ d.position }}</span></div>
@@ -1343,6 +1351,9 @@ watch(currentEvent, async (ev) => {
 </template>
 
 <style scoped>
+/* Dive rows and search results are divs acting as buttons (keyboard
+   reachable via role/tabindex), so give them a visible focus ring. */
+.dive-row:focus-visible,.result-item:focus-visible{outline:2px solid var(--cyan);outline-offset:2px;}
 .submit-violations{margin:0.4rem 0 0;padding-inline-start:1.2rem;}
 .page-header{display:flex;align-items:center;justify-content:space-between;padding:1.5rem 2rem;border-bottom:1px solid var(--border);max-width:900px;margin:0 auto;}
 /* Back-to-dashboard is redundant inside the app shell sidebar. */
