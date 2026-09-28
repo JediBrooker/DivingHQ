@@ -508,7 +508,8 @@
       "dialog_what_stays_items": "Navnet ditt på hoppene du konkurrerte i, dommerpanelene du satt i og stevnene du var med i. Logginnslag du utløste (slettes ved den vanlige 30-dagers rotasjonen).",
       "confirmation_toast": "Konto slettet. Konkurransehistorikken din er anonymisert. Logg inn med en ny konto for å hente den tilbake senere.",
       "password_wrong": "Feil passord",
-      "deleting": "Sletter…"
+      "deleting": "Sletter…",
+      "last_org_admin": "Du er den siste administratoren i organisasjonen din, så kontoen din kan ikke slettes ennå. Utnevn en annen administrator først, eller skriv til {email}, så hjelper vi deg."
     },
     "claim": {
       "title": "Krev tidligere stevner",
@@ -1114,7 +1115,8 @@
     "org_suspended": "Suspendert",
     "orgs_show_all": "Vis alle {n}",
     "guardian_requests_title": "Forespørsler om foresattkobling",
-    "guardian_request_by": "{name} ber om å betale på vegne av denne personen"
+    "guardian_request_by": "{name} ber om å betale på vegne av denne personen",
+    "last_org_admin": "Da ville organisasjonen stå uten administrator. Utnevn en annen administrator først, eller skriv til {email}, så hjelper vi deg."
   },
   "setup": {
     "title": "Forbundsoppsett",

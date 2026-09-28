@@ -497,7 +497,8 @@
       "dialog_what_stays_items": "Tu nombre en los saltos en los que competiste, en los jurados en los que participaste y en los eventos en los que apareciste. Las entradas del registro de auditoría que generaste (se purgan en la rotación normal de 30 días).",
       "confirmation_toast": "Cuenta eliminada. Tu historial de competición queda anonimizado. Inicia sesión con una nueva cuenta para reclamarlo más adelante.",
       "password_wrong": "Contraseña incorrecta",
-      "deleting": "Eliminando…"
+      "deleting": "Eliminando…",
+      "last_org_admin": "Eres el último administrador de tu organización, así que tu cuenta todavía no se puede eliminar. Nombra primero a otro administrador, o escribe a {email} y te ayudaremos."
     },
     "claim": {
       "title": "Reclamar competiciones anteriores",
@@ -1103,7 +1104,8 @@
     "org_suspended": "Suspendida",
     "orgs_show_all": "Ver las {n}",
     "guardian_requests_title": "Solicitudes de vínculo de tutor",
-    "guardian_request_by": "{name} pide pagar en su nombre"
+    "guardian_request_by": "{name} pide pagar en su nombre",
+    "last_org_admin": "La organización se quedaría sin administrador. Nombra primero a otro administrador, o escribe a {email} y te ayudaremos."
   },
   "setup": {
     "title": "Configuración de la federación",

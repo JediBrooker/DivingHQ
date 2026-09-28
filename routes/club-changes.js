@@ -23,7 +23,7 @@
 const express = require("express");
 const { recordAudit, auditFromReq } = require("../lib/audit");
 const notices = require("../lib/notices");
-const { isOrgAdminOf, liveAdminIds, liveOrgAdminIds } = require("../lib/admin-rows");
+const { isOrgAdminOf, liveAdminIds, liveOrgAdminIds, orgAdminHold, lastOrgAdminRefusal } = require("../lib/admin-rows");
 const { isUuid, requireUuidParam } = require("../lib/uuid");
 
 module.exports = function createClubChangesRouter({ pool, verifyToken, bumpTokenVersion }) {
@@ -155,6 +155,15 @@ module.exports = function createClubChangesRouter({ pool, verifyToken, bumpToken
     return { ids: sys, orphaned: true };
   }
 
+  // finalizeIfReady throws one of these to refuse a move outright. The
+  // route's catch has already rolled back, it just answers with the body.
+  function refusal(status, body) {
+    const err = new Error(body.error);
+    err.status = status;
+    err.refusal = body;
+    return err;
+  }
+
   async function finalizeIfReady(client, r, req) {
     const ready =
       r.kind === "club_change"
@@ -168,6 +177,15 @@ module.exports = function createClubChangesRouter({ pool, verifyToken, bumpToken
     let closedRoleRequests = 0;
 
     if (r.kind === "org_transfer") {
+      // Moving out takes every role in the old org with it, so the last
+      // live org admin of a federation can't go until someone else runs
+      // it. Whichever approval or confirmation lands last gets the 409 and
+      // the request stays pending. The sysadmin can still move them.
+      if (!req.user.is_system_admin) {
+        const cur = (await client.query("SELECT org_id FROM users WHERE id = $1", [r.user_id])).rows[0];
+        const hold = cur ? await orgAdminHold(client, cur.org_id, r.user_id) : null;
+        if (hold) throw refusal(409, lastOrgAdminRefusal(hold, { self: r.user_id === req.user.id }));
+      }
       await client.query(
         "UPDATE users SET org_id = $1, club_id = $2 WHERE id = $3",
         [r.to_org_id, r.to_club_id || null, r.user_id],
@@ -411,6 +429,7 @@ module.exports = function createClubChangesRouter({ pool, verifyToken, bumpToken
       res.status(201).json({ ...r, finalised });
     } catch (err) {
       await client.query("ROLLBACK").catch(() => {});
+      if (err.refusal) return res.status(err.status).json(err.refusal);
       console.error("[club-change create]", err.message);
       res.status(500).json({ error: "Internal server error" });
     } finally {
@@ -543,6 +562,7 @@ module.exports = function createClubChangesRouter({ pool, verifyToken, bumpToken
       res.json({ status: finalised ? "approved" : "pending", finalised });
     } catch (err) {
       await client.query("ROLLBACK").catch(() => {});
+      if (err.refusal) return res.status(err.status).json(err.refusal);
       console.error("[club-change review]", err.message);
       res.status(500).json({ error: "Internal server error" });
     } finally {
@@ -568,6 +588,7 @@ module.exports = function createClubChangesRouter({ pool, verifyToken, bumpToken
       res.json({ status: finalised ? "approved" : "pending", finalised });
     } catch (err) {
       await client.query("ROLLBACK").catch(() => {});
+      if (err.refusal) return res.status(err.status).json(err.refusal);
       console.error("[club-change confirm]", err.message);
       res.status(500).json({ error: "Internal server error" });
     } finally {

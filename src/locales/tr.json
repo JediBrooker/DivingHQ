@@ -497,7 +497,8 @@
       "dialog_what_stays_items": "Yarıştığınız atlayışlardaki, görev aldığınız hakem kurullarındaki ve katıldığınız etkinliklerdeki adınız. Tetiklediğiniz denetim günlüğü kayıtları (normal 30 günlük rotasyonla silinir).",
       "confirmation_toast": "Hesap silindi. Yarışma geçmişiniz anonimleştirildi. Daha sonra geri talep etmek için yeni bir hesapla oturum açın.",
       "password_wrong": "Şifre yanlış",
-      "deleting": "Siliniyor…"
+      "deleting": "Siliniyor…",
+      "last_org_admin": "Kuruluşunuzun son yöneticisi sizsiniz, bu yüzden hesabınız henüz silinemez. Önce başka bir yönetici atayın ya da {email} adresine yazın, size yardımcı olalım."
     },
     "claim": {
       "title": "Geçmiş yarışmaları talep et",
@@ -1103,7 +1104,8 @@
     "org_suspended": "Askıya alındı",
     "orgs_show_all": "Tümünü göster ({n})",
     "guardian_requests_title": "Veli bağlantı istekleri",
-    "guardian_request_by": "{name} onun adına ödeme yapmak istiyor"
+    "guardian_request_by": "{name} onun adına ödeme yapmak istiyor",
+    "last_org_admin": "Bu işlem kuruluşu yöneticisiz bırakır. Önce başka bir yönetici atayın ya da {email} adresine yazın, size yardımcı olalım."
   },
   "setup": {
     "title": "Federasyon Kurulumu",

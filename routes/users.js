@@ -47,7 +47,7 @@ const createAuthLinks = require("../lib/auth-links");
 const { recordAudit, auditFromReq } = require("../lib/audit");
 const { supportContact } = require("../lib/support");
 const { ADMIN_ORG_ID } = require("../lib/admin-org");
-const { isOrgAdminOf } = require("../lib/admin-rows");
+const { isOrgAdminOf, orgAdminHold, lastOrgAdminRefusal } = require("../lib/admin-rows");
 const { isUuid, requireUuidParam } = require("../lib/uuid");
 
 // Enum values from init.sql's CREATE TYPE org_role. system_admin is
@@ -177,6 +177,19 @@ module.exports = function createUsersRouter({
 
       await client.query("BEGIN");
 
+      // A federation keeps one live org admin. Taking the role off the
+      // last one (themselves included) is refused, unless it's the
+      // sysadmin doing it. Before the diff below, so a second admin doing
+      // the same thing at the same moment waits here and then sees this.
+      if (!req.user.is_system_admin && !roles.includes("org_admin")) {
+        const hold = await orgAdminHold(client, targetOrgId, req.params.id);
+        if (hold) {
+          await client.query("ROLLBACK");
+          const self = String(req.params.id).toLowerCase() === req.user.id;
+          return res.status(409).json(lastOrgAdminRefusal(hold, { self }));
+        }
+      }
+
       // Diff against what's already there so the audit log only
       // records the actual grant / revoke events, not the full
       // delete + insert.
@@ -184,18 +197,28 @@ module.exports = function createUsersRouter({
         "SELECT role::text FROM user_org_roles WHERE user_id = $1 AND org_id = $2",
         [req.params.id, targetOrgId],
       );
+      const wanted = [...new Set(roles)];
       const before = new Set(existing.rows.map((row) => row.role));
-      const after = new Set(roles);
-      const granted = roles.filter((r) => !before.has(r));
+      const after = new Set(wanted);
+      const granted = wanted.filter((r) => !before.has(r));
       const revoked = [...before].filter((r) => !after.has(r));
 
-      await client.query(
-        "DELETE FROM user_org_roles WHERE user_id = $1 AND org_id = $2",
-        [req.params.id, targetOrgId],
-      );
-      for (const role of roles) {
+      // Only the revoked rows go. The kept ones are restamped in place
+      // (granted_by and granted_at, as the old delete-everything-and-
+      // reinsert did, lib/claims.js leans on that), not swapped for new
+      // rows: a new org_admin row is invisible to an orgAdminHold that was
+      // waiting on the old one, which then counted one admin too few.
+      if (revoked.length) {
         await client.query(
-          "INSERT INTO user_org_roles (user_id, org_id, role, granted_by) VALUES ($1,$2,$3,$4)",
+          "DELETE FROM user_org_roles WHERE user_id = $1 AND org_id = $2 AND role::text = ANY($3::text[])",
+          [req.params.id, targetOrgId, revoked],
+        );
+      }
+      for (const role of wanted) {
+        await client.query(
+          `INSERT INTO user_org_roles (user_id, org_id, role, granted_by) VALUES ($1,$2,$3,$4)
+           ON CONFLICT (user_id, org_id, role)
+           DO UPDATE SET granted_by = EXCLUDED.granted_by, granted_at = now()`,
           [req.params.id, targetOrgId, role, req.user.id],
         );
       }
@@ -669,6 +692,19 @@ module.exports = function createUsersRouter({
       }
 
       await client.query("BEGIN");
+
+      // The last live org admin of a federation can't leave it with
+      // nobody. They appoint someone first, or ask DivingHQ, whose
+      // sysadmin can take the role off them (it isn't held to this), and
+      // then the account can go. Locks the org's admin rows, so two admins
+      // deleting at once can't both get through.
+      if (!req.user.is_system_admin) {
+        const hold = await orgAdminHold(client, user.org_id, user.id);
+        if (hold) {
+          await client.query("ROLLBACK");
+          return res.status(409).json(lastOrgAdminRefusal(hold, { self: true }));
+        }
+      }
 
       // The big-redact UPDATE. Keep full_name, org_id, club_id
       // intact, they anchor the historical sporting record and the
@@ -1310,7 +1346,26 @@ module.exports = function createUsersRouter({
         return res.status(403).json({ error: "Cannot suspend a system administrator" });
       if (req.params.id === req.user.id)
         return res.status(400).json({ error: "You can't suspend your own account" });
-      await pool.query("UPDATE users SET suspended_at = now() WHERE id = $1", [req.params.id]);
+      // Whoever does this is an org admin themselves, so one is always left,
+      // except when two admins suspend each other at the same moment. The
+      // lock makes the second one wait and then see the first's suspension.
+      // The sysadmin isn't held to it.
+      const client = await pool.connect();
+      try {
+        await client.query("BEGIN");
+        const hold = req.user.is_system_admin ? null : await orgAdminHold(client, target.org_id, req.params.id);
+        if (hold) {
+          await client.query("ROLLBACK");
+          return res.status(409).json(lastOrgAdminRefusal(hold));
+        }
+        await client.query("UPDATE users SET suspended_at = now() WHERE id = $1", [req.params.id]);
+        await client.query("COMMIT");
+      } catch (err) {
+        await client.query("ROLLBACK").catch(() => {});
+        throw err;
+      } finally {
+        client.release();
+      }
       // bumpTokenVersion(db, userId): pass the pool as the first arg.
       // Heads up, a single-arg call lands the id in `db`, leaves
       // userId undefined, and the helper's `if (!userId) return;`

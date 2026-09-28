@@ -508,7 +508,8 @@
       "dialog_what_stays_items": "A neved azokon az ugrásokon, amelyeken versenyeztél, azokon a zsűripaneleken, amelyekben részt vettél, és azokon az eseményeken, amelyeken megjelentél. Az általad kiváltott auditnapló-bejegyzések (a normál 30 napos rotációval törlődnek).",
       "confirmation_toast": "Fiók törölve. A versenytörténeted anonimizálva van. Jelentkezz be új fiókkal, hogy később visszaigényeld.",
       "password_wrong": "Helytelen jelszó",
-      "deleting": "Törlés…"
+      "deleting": "Törlés…",
+      "last_org_admin": "Te vagy a szervezeted utolsó adminisztrátora, ezért a fiókod még nem törölhető. Előbb nevezz ki egy másik adminisztrátort, vagy írj a(z) {email} címre, és segítünk."
     },
     "claim": {
       "title": "Korábbi versenyek visszaigénylése",
@@ -1114,7 +1115,8 @@
     "org_suspended": "Felfüggesztve",
     "orgs_show_all": "Mind a(z) {n} megjelenítése",
     "guardian_requests_title": "Gyámkapcsolati kérelmek",
-    "guardian_request_by": "{name} kéri, hogy fizethessen a nevében"
+    "guardian_request_by": "{name} kéri, hogy fizethessen a nevében",
+    "last_org_admin": "Így a szervezet adminisztrátor nélkül maradna. Előbb nevezz ki egy másik adminisztrátort, vagy írj a(z) {email} címre, és segítünk."
   },
   "setup": {
     "title": "Szövetség beállítása",

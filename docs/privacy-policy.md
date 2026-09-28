@@ -1,6 +1,6 @@
 # DivingHQ Privacy Policy
 
-Last updated: 27 September 2026
+Last updated: 29 September 2026
 
 This policy explains what DivingHQ collects, why, who can see it, how long it's kept, and how to get it removed. It covers the hosted service at [divinghq.app](https://divinghq.app).
 
@@ -175,6 +175,8 @@ We don't use third-party analytics or marketing tools.
 ## 7. Deleting your account
 
 You can delete your account from **Profile → Delete account**. We ask for your password first.
+
+If you're the only administrator left in your federation, we ask you to appoint another one first, so the federation isn't left with nobody who can run it. If there's nobody to hand it to, write to us at [support@divinghq.app](mailto:support@divinghq.app): we can take the administrator role off your account, and then you can delete it as usual.
 
 **What we delete, straight away:**
 

@@ -74,6 +74,8 @@ Click any user's row to open the **edit drawer** on the right. The drawer shows:
 
 Tick the role chip → grant. Untick → revoke. Both write to the role audit log automatically. The user's JWT becomes invalid the moment a role changes (token version is bumped); they're forced to sign in again, picking up the new role.
 
+Your federation always keeps at least one live **Org Admin**. Unticking it on the last one (yourself included) is refused with a message, and the box ticks itself back; appoint another admin first, or write to DivingHQ support. The same goes for suspending the last one, and for the last one deleting their own account or transferring out. Suspended and deleted accounts don't count as admins.
+
 ### Coach ↔ Diver links
 
 Coach role users can request to be linked to a diver from their own dashboard. The request lands as a pending row in the diver's User Manager record; an org admin approves or rejects. Once linked, the coach sees the diver's full profile + analytics + templates.

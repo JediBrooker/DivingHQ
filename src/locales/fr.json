@@ -508,7 +508,8 @@
       "dialog_what_stays_items": "Votre nom sur les plongeons que vous avez disputés, les jurys auxquels vous avez siégé et les épreuves auxquelles vous avez participé. Les entrées du journal d’audit que vous avez déclenchées (purgées selon la rotation normale de 30 jours).",
       "confirmation_toast": "Compte supprimé. Votre historique de compétition est anonymisé. Connectez-vous avec un nouveau compte pour le récupérer plus tard.",
       "password_wrong": "Mot de passe incorrect",
-      "deleting": "Suppression…"
+      "deleting": "Suppression…",
+      "last_org_admin": "Vous êtes le dernier administrateur de votre organisme, votre compte ne peut donc pas encore être supprimé. Nommez d’abord un autre administrateur, ou écrivez à {email} et nous vous aiderons."
     },
     "claim": {
       "title": "Récupérer mes compétitions passées",
@@ -1114,7 +1115,8 @@
     "org_suspended": "Suspendue",
     "orgs_show_all": "Tout afficher ({n})",
     "guardian_requests_title": "Demandes de lien de tuteur",
-    "guardian_request_by": "{name} demande à payer en son nom"
+    "guardian_request_by": "{name} demande à payer en son nom",
+    "last_org_admin": "L’organisme se retrouverait sans administrateur. Nommez d’abord un autre administrateur, ou écrivez à {email} et nous vous aiderons."
   },
   "setup": {
     "title": "Configuration de la fédération",

@@ -11653,3 +11653,369 @@ test("the sysadmin can remove a coach link in another org", async (t) => {
     await teardownFixture(st);
   }
 });
+
+// =====================================================================
+// Migration 103: the one-off data cleanup (synchro mirror rows, roles
+// left behind by org transfers, referees club or region admins handed
+// out). It works on the whole database, and other suites run beside this
+// one against the same DB, so the fixtures and both runs of the file all
+// happen on one client inside a transaction that's rolled back at the
+// end. Nothing seeded or removed here ever lands in the shared test DB.
+// =====================================================================
+test("migration 103 removes mirror rows, transfer leftovers and club-granted referees, and a re-run changes nothing", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const fs = require("node:fs");
+  const path = require("node:path");
+  const file = fs.readFileSync(path.join(__dirname, "..", "migrations", "103_data_cleanup.sql"), "utf8");
+  // It carries its own BEGIN/COMMIT, which would commit ours halfway.
+  assert.match(file, /^BEGIN;$/m);
+  assert.match(file, /^COMMIT;$/m);
+  const body = file.replace(/^BEGIN;$/m, "").replace(/^COMMIT;$/m, "");
+  const sys = await claimSysadmin();
+  if (!sys) return t.skip("no sysadmin in this DB");
+
+  const c = await pool.connect();
+  try {
+    await c.query("BEGIN");
+    const q = async (sql, params) => (await c.query(sql, params)).rows;
+    const tag = crypto.randomBytes(3).toString("hex");
+    const org = async (name, claimState) => (await q(
+      `INSERT INTO organisations (name, country_code, slug, status, claim_state)
+       VALUES ($1, 'MNG', $1, 'active', $2) RETURNING id`, [`m103-${name}-${tag}`, claimState],
+    ))[0].id;
+    const user = async (orgId, name, roles = [], grantedBy = null) => {
+      const id = (await q(
+        "INSERT INTO users (username, full_name, org_id, email_verified_at) VALUES ($1, $2, $3, now()) RETURNING id",
+        [`m103-${name}-${tag}`, name, orgId],
+      ))[0].id;
+      for (const role of roles) {
+        await q("INSERT INTO user_org_roles (user_id, org_id, role, granted_by) VALUES ($1, $2, $3, $4)", [id, orgId, role, grantedBy]);
+      }
+      return id;
+    };
+    const grant = (userId, orgId, role, grantedBy = null) =>
+      q("INSERT INTO user_org_roles (user_id, org_id, role, granted_by) VALUES ($1, $2, $3, $4)", [userId, orgId, role, grantedBy]);
+
+    const home = await org("home", "claimed");
+    const away = await org("away", "claimed");
+    const clubsOnly = await org("clubs", "unclaimed");
+
+    // ---- synchro pairs, entered the way the old portal code did ----
+    const ev = (await q(
+      `INSERT INTO events (org_id, name, gender, height, number_of_judges, total_rounds, event_type, status)
+       VALUES ($1, 'Mirror Synchro', 'Mixed', '3m', 9, 2, 'synchro_pair', 'Completed') RETURNING id`, [home],
+    ))[0].id;
+    const dives = (await q("SELECT id FROM dive_directory WHERE height = 3 ORDER BY dive_code, id LIMIT 2")).map((r) => r.id);
+    const row = (competitor, partner, round, withdrawn = false) => q(
+      `INSERT INTO competitor_dive_lists (event_id, competitor_id, partner_id, round_number, dive_id, withdrawn_at)
+       VALUES ($1, $2, $3, $4, $5, $6)`, [ev, competitor, partner, round, dives[round - 1], withdrawn ? new Date() : null],
+    );
+    const pairing = (requester, partner, status, respondedAgo = 0) => q(
+      `INSERT INTO pending_partner_pairings (event_id, requester_id, partner_id, status, responded_at)
+       VALUES ($1, $2, $3, $4, now() - make_interval(days => $5))`, [ev, requester, partner, status, respondedAgo],
+    );
+    const D = {};
+    for (const n of "abcdefghij") D[n] = await user(home, `Diver ${n.toUpperCase()}`, ["diver"]);
+    // A plain pair: B's rows mirror A's.
+    await pairing(D.a, D.b, "accepted");
+    for (const r of [1, 2]) { await row(D.a, D.b, r); await row(D.b, D.a, r); }
+    // D's round 1 mirror got scored. Round 1 stays, round 2 goes.
+    await pairing(D.c, D.d, "accepted");
+    for (const r of [1, 2]) { await row(D.c, D.d, r); await row(D.d, D.c, r); }
+    const judge = await user(home, "Mirror Judge", ["judge"]);
+    await q("INSERT INTO scores (event_id, competitor_id, judge_id, round_number, score) VALUES ($1, $2, $3, 1, 6.5)", [ev, D.d, judge]);
+    // Somebody withdrew E's round 1 by hand and kept F's: that's F's to keep.
+    await pairing(D.e, D.f, "accepted");
+    await row(D.e, D.f, 1, true); await row(D.f, D.e, 1);
+    await row(D.e, D.f, 2); await row(D.f, D.e, 2);
+    // Accepted both ways round: the newer pairing (H asked) names the lead.
+    await pairing(D.g, D.h, "accepted", 2);
+    await pairing(D.h, D.g, "accepted", 0);
+    await row(D.g, D.h, 1); await row(D.h, D.g, 1);
+    // Still pending: nothing to go by, both rows stay.
+    await pairing(D.i, D.j, "pending");
+    await row(D.i, D.j, 1); await row(D.j, D.i, 1);
+
+    // ---- roles ----
+    const clubAdmin = await user(clubsOnly, "Club Admin", ["diver"]);
+    // Moved home -> away long ago; the old org_admin and meet_manager stayed.
+    const mover = await user(away, "Moved Admin", ["diver"]);
+    await grant(mover, home, "org_admin");
+    await grant(mover, home, "meet_manager");
+    const legit = await user(home, "Own Org Admin", ["org_admin", "judge"]);
+    // Referees in the country with no federation.
+    const refOnly = await user(clubsOnly, "Club Referee", [], null);
+    await grant(refOnly, clubsOnly, "referee", clubAdmin);
+    const refDiver = await user(clubsOnly, "Diving Referee", ["diver"]);
+    await grant(refDiver, clubsOnly, "referee", clubAdmin);
+    const refSys = await user(clubsOnly, "DivingHQ Referee", ["referee"], sys.id);
+    const refNull = await user(clubsOnly, "Seeded Referee", ["referee"], null);
+    // Granted by the same club admin, but in a claimed org: not ours to judge.
+    const refClaimed = await user(home, "Federation Referee", ["referee"], clubAdmin);
+    // Both at once: a club admin's referee grant in an org they've left.
+    const refMoved = await user(home, "Moved Referee", ["diver"]);
+    await grant(refMoved, clubsOnly, "referee", clubAdmin);
+
+    const everyone = [...Object.values(D), judge, clubAdmin, mover, legit, refOnly, refDiver, refSys, refNull, refClaimed, refMoved];
+    const versions = async () => Object.fromEntries((await q(
+      "SELECT id, token_version FROM users WHERE id = ANY($1::uuid[])", [everyone],
+    )).map((r) => [r.id, r.token_version]));
+    const rolesOf = async (id) => (await q(
+      "SELECT org_id, role::text AS role FROM user_org_roles WHERE user_id = $1 ORDER BY org_id, role", [id],
+    )).map((r) => `${r.org_id === home ? "home" : r.org_id === away ? "away" : "clubs"}:${r.role}`);
+    const audit = async (id) => (await q(
+      "SELECT role::text AS role, action::text AS action, actor_id, note FROM role_audit_log WHERE user_id = $1 ORDER BY role, action", [id],
+    ));
+    const entries = async () => (await q(
+      "SELECT competitor_id, round_number FROM competitor_dive_lists WHERE event_id = $1", [ev],
+    )).map((r) => `${Object.keys(D).find((k) => D[k] === r.competitor_id)}${r.round_number}`).sort();
+    const before = await versions();
+
+    await c.query(body);
+
+    assert.deepEqual(await entries(), [
+      "a1", "a2",        // B's mirrors gone
+      "c1", "c2", "d1",  // D's scored round 1 stays
+      "e1", "e2", "f1",  // F's round 1 was the one kept by hand
+      "h1",              // the newer pairing's lead
+      "i1", "j1",        // pending, untouched
+    ]);
+    assert.equal((await q("SELECT count(*)::int AS n FROM scores WHERE event_id = $1", [ev]))[0].n, 1, "the score stays");
+
+    assert.deepEqual(await rolesOf(mover), ["away:diver"]);
+    assert.deepEqual((await audit(mover)).map((r) => `${r.role}:${r.action}`), ["meet_manager:revoked", "org_admin:revoked"]);
+    for (const r of await audit(mover)) {
+      assert.equal(r.actor_id, null);
+      assert.match(r.note, /migration 103/);
+    }
+    assert.deepEqual(await rolesOf(legit), ["home:judge", "home:org_admin"]);
+
+    assert.deepEqual(await rolesOf(refOnly), ["clubs:spectator"], "not left with nothing");
+    assert.deepEqual((await audit(refOnly)).map((r) => `${r.role}:${r.action}`), ["referee:revoked", "spectator:granted"]);
+    assert.deepEqual(await rolesOf(refDiver), ["clubs:diver"]);
+    assert.deepEqual((await audit(refDiver)).map((r) => `${r.role}:${r.action}`), ["referee:revoked"]);
+    assert.deepEqual(await rolesOf(refSys), ["clubs:referee"]);
+    assert.deepEqual(await rolesOf(refNull), ["clubs:referee"]);
+    assert.deepEqual(await rolesOf(refClaimed), ["home:referee"]);
+    assert.deepEqual(await rolesOf(refMoved), ["home:diver"]);
+    const movedAudit = await audit(refMoved);
+    assert.equal(movedAudit.length, 1, "audited once, as a transfer leftover");
+    assert.match(movedAudit[0].note, /another organisation/);
+
+    const after = await versions();
+    const bumped = everyone.filter((id) => after[id] !== before[id]).sort();
+    assert.deepEqual(bumped, [mover, refOnly, refDiver, refMoved].sort(), "only the people who lost a role sign in again");
+    for (const id of bumped) assert.equal(after[id], before[id] + 1);
+    assert.equal((await q("SELECT version FROM schema_meta WHERE id = 1"))[0].version, 103);
+
+    // Again: nothing left to do, so nothing moves.
+    const snapshot = async () => JSON.stringify({
+      entries: await entries(),
+      roles: await (async () => { const out = []; for (const id of everyone) out.push(await rolesOf(id)); return out; })(),
+      audit: (await q("SELECT count(*)::int AS n FROM role_audit_log WHERE user_id = ANY($1::uuid[])", [everyone]))[0].n,
+      versions: await versions(),
+    });
+    const once = await snapshot();
+    await c.query(body);
+    assert.equal(await snapshot(), once);
+  } finally {
+    await c.query("ROLLBACK").catch(() => {});
+    c.release();
+  }
+});
+
+// ---------------------------------------------------------------------
+// A federation keeps one live org admin (lib/admin-rows.js orgAdminHold).
+// Only an org admin can appoint another, so the last one leaving (deleting
+// their account, dropping the role, being suspended or moved out) left the
+// federation with nobody but DivingHQ. Orgs made here, in a country no
+// other test uses, since nothing below needs register-org.
+// ---------------------------------------------------------------------
+const lastAdminKit = {
+  async org(name, tag) {
+    return (await pool.query(
+      `INSERT INTO organisations (name, country_code, slug, status, claim_state)
+       VALUES ($1, 'KHM', $1, 'active', 'claimed') RETURNING id`, [`lastadm-${name}-${tag}`],
+    )).rows[0].id;
+  },
+  del: (token) => fetchJson("POST", "/api/users/me/delete", { token, body: { password: "not-used-here" } }),
+  setRoles: (token, id, roles) => fetchJson("PUT", `/api/users/${id}/roles`, { token, body: { roles } }),
+  suspend: (token, id) => fetchJson("POST", `/api/users/${id}/suspend`, { token }),
+  async admins(orgId) {
+    return (await pool.query(
+      `SELECT r.user_id FROM user_org_roles r JOIN users u ON u.id = r.user_id AND u.org_id = r.org_id
+        WHERE r.org_id = $1 AND r.role = 'org_admin' AND u.deleted_at IS NULL AND u.suspended_at IS NULL
+        ORDER BY r.user_id`, [orgId],
+    )).rows.map((r) => r.user_id);
+  },
+};
+
+test("the last live org admin can't delete their account or drop the role, and two can't both go at once", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const tag = crypto.randomBytes(3).toString("hex");
+  const fed = await lastAdminKit.org("fed", tag);
+  const { del, setRoles, suspend, admins } = lastAdminKit;
+  try {
+    const uname = (n) => `int-la-${n}-${tag}`;
+    const a = await insertUser({ orgId: fed, role: "org_admin", username: uname("a"), fullName: "Admin A" });
+    let aTok = await b3Login(uname("a"));
+
+    // On their own: no deleting the account, no dropping the role.
+    let r = await del(aTok);
+    assert.equal(r.status, 409, JSON.stringify(r.body));
+    assert.equal(r.body.code, "last_org_admin");
+    assert.match(r.body.error, /Appoint another administrator/);
+    assert.match(r.body.error, /support@/);
+    assert.equal((await pool.query("SELECT deleted_at FROM users WHERE id = $1", [a])).rows[0].deleted_at, null);
+    r = await setRoles(aTok, a, ["diver"]);
+    assert.equal(r.status, 409, JSON.stringify(r.body));
+    assert.equal(r.body.code, "last_org_admin");
+    assert.deepEqual(await admins(fed), [a]);
+    // Changing the rest while keeping org_admin is fine.
+    assert.equal((await setRoles(aTok, a, ["org_admin", "judge"])).status, 200);
+    aTok = await b3Login(uname("a"));
+
+    // A suspended second admin doesn't count.
+    const b = await insertUser({ orgId: fed, role: "org_admin", username: uname("b"), fullName: "Admin B" });
+    await pool.query("UPDATE users SET suspended_at = now() WHERE id = $1", [b]);
+    assert.equal((await del(aTok)).status, 409);
+    assert.equal((await setRoles(aTok, a, ["judge"])).status, 409);
+    await pool.query("UPDATE users SET suspended_at = NULL WHERE id = $1", [b]);
+    let bTok = await b3Login(uname("b"));
+
+    // Demoting the other admin is fine while one is left...
+    assert.equal((await setRoles(bTok, a, ["judge"])).status, 200);
+    // ...and then B is the last one.
+    r = await setRoles(bTok, b, ["judge"]);
+    assert.equal(r.status, 409);
+    assert.match(r.body.error, /^You're the last administrator/);
+    assert.equal((await setRoles(bTok, a, ["org_admin", "judge"])).status, 200);
+    aTok = await b3Login(uname("a"));
+
+    // Both step down at the same moment: one gets through.
+    const down = await Promise.all([setRoles(aTok, a, ["judge"]), setRoles(bTok, b, ["judge"])]);
+    assert.deepEqual(down.map((x) => x.status).sort(), [200, 409], JSON.stringify(down.map((x) => x.body)));
+    let left = await admins(fed);
+    assert.equal(left.length, 1);
+    const [stay] = left;
+    const [went, wentName] = stay === a ? [b, uname("b")] : [a, uname("a")];
+    const stayTok = await b3Login(stay === a ? uname("a") : uname("b"));
+    assert.equal((await setRoles(stayTok, went, ["org_admin", "judge"])).status, 200);
+    const wentTok = await b3Login(wentName);
+
+    // Both delete their accounts at the same moment: one gets through.
+    const gone = await Promise.all([del(stayTok), del(wentTok)]);
+    assert.deepEqual(gone.map((x) => x.status).sort(), [200, 409], JSON.stringify(gone.map((x) => x.body)));
+    left = await admins(fed);
+    assert.equal(left.length, 1, "one admin still runs it");
+
+    // Two admins suspending each other at once: never both.
+    const lastName = left[0] === a ? uname("a") : uname("b");
+    const lastTok = await b3Login(lastName);
+    const c = await insertUser({ orgId: fed, role: "org_admin", username: uname("c"), fullName: "Admin C" });
+    const cTok = await b3Login(uname("c"));
+    const sus = await Promise.all([suspend(lastTok, c), suspend(cTok, left[0])]);
+    assert.equal(sus.filter((x) => x.status === 200).length, 1, JSON.stringify(sus.map((x) => [x.status, x.body])));
+    assert.equal((await admins(fed)).length, 1);
+
+    // The sysadmin isn't held to it.
+    const sys = await claimKit.login("admin", "admin");
+    if (sys?.token) {
+      const [only] = await admins(fed);
+      assert.equal((await setRoles(sys.token, only, ["judge"])).status, 200);
+      assert.deepEqual(await admins(fed), []);
+    }
+  } finally {
+    await compKit.cleanup(fed);
+  }
+});
+
+test("an org transfer can't take a federation's last live org admin, unless the sysadmin moves them", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const tag = crypto.randomBytes(3).toString("hex");
+  const from = await lastAdminKit.org("from", tag);
+  const to = await lastAdminKit.org("to", tag);
+  try {
+    const mover = await insertUser({ orgId: from, role: "org_admin", username: `int-la-mv-${tag}`, fullName: "Moving Admin" });
+    await insertUser({ orgId: to, role: "org_admin", username: `int-la-to-${tag}`, fullName: "Receiving Admin" });
+    const moverTok = await b3Login(`int-la-mv-${tag}`);
+    const toTok = await b3Login(`int-la-to-${tag}`);
+
+    const made = await fetchJson("POST", "/api/club-change-requests", { token: moverTok, body: { to_org_id: to } });
+    assert.equal(made.status, 201, JSON.stringify(made.body));
+    const review = (token) => fetchJson("POST", `/api/club-change-requests/${made.body.id}/review`, { token, body: { decision: "approved" } });
+    // Their own federation's side, which they can sign as its admin.
+    assert.equal((await review(moverTok)).body.status, "pending");
+    // The receiving side is the last one in, and that's refused.
+    const r = await review(toTok);
+    assert.equal(r.status, 409, JSON.stringify(r.body));
+    assert.equal(r.body.code, "last_org_admin");
+    assert.equal((await pool.query("SELECT status::text FROM club_change_requests WHERE id = $1", [made.body.id])).rows[0].status, "pending");
+    assert.equal((await pool.query("SELECT org_id FROM users WHERE id = $1", [mover])).rows[0].org_id, from);
+    assert.deepEqual(await lastAdminKit.admins(from), [mover]);
+
+    const sys = await claimKit.login("admin", "admin");
+    if (!sys?.token) return t.skip("no sysadmin login in this DB");
+    const ok = await review(sys.token);
+    assert.equal(ok.body.status, "approved", JSON.stringify(ok.body));
+    assert.equal((await pool.query("SELECT org_id FROM users WHERE id = $1", [mover])).rows[0].org_id, to);
+  } finally {
+    await pool.query("DELETE FROM club_change_requests WHERE from_org_id = ANY($1::uuid[]) OR to_org_id = ANY($1::uuid[])", [[from, to]]);
+    await compKit.cleanup(from, to);
+  }
+});
+
+// The lock in orgAdminHold, with no HTTP timing in the way. Two requests
+// racing through the server only sometimes overlap (the concurrent role
+// edits above got through with the lock taken out), so this drives two
+// connections by hand the way two admins' transactions would go: the
+// first checks, takes itself out and hasn't committed yet. The second
+// has to wait for it, and once it commits, see nobody else is left. Both
+// ways out an admin can take without touching the other's rows: the role
+// row going (needs the lock on the role rows) and the account being
+// suspended (needs the one on the users rows).
+test("orgAdminHold makes a second admin wait for the first one's transaction, then counts them out", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  const { orgAdminHold } = require("../lib/admin-rows");
+  const tag = crypto.randomBytes(3).toString("hex");
+  const fed = await lastAdminKit.org("lock", tag);
+  const c1 = await pool.connect();
+  const c2 = await pool.connect();
+  try {
+    const a = await insertUser({ orgId: fed, role: "org_admin", username: `int-lk-a-${tag}`, fullName: "Lock A" });
+    const b = await insertUser({ orgId: fed, role: "org_admin", username: `int-lk-b-${tag}`, fullName: "Lock B" });
+    const ways = {
+      "drops the role": (c) => c.query(
+        "DELETE FROM user_org_roles WHERE user_id = $1 AND org_id = $2 AND role = 'org_admin'", [a, fed]),
+      "is suspended": (c) => c.query("UPDATE users SET suspended_at = now() WHERE id = $1", [a]),
+    };
+    for (const [how, leave] of Object.entries(ways)) {
+      await c1.query("BEGIN");
+      assert.equal(await orgAdminHold(c1, fed, a), null, `${how}: B is still there for A`);
+      await leave(c1);
+      await c2.query("BEGIN");
+      let settled = false;
+      const second = orgAdminHold(c2, fed, b).then((v) => { settled = true; return v; });
+      await new Promise((r) => setTimeout(r, 300));
+      assert.equal(settled, false, `${how}: B's check waits on A's open transaction`);
+      await c1.query("COMMIT");
+      const hold = await second;
+      assert.equal(hold?.org_id, fed, `${how}: and then sees B is the last one`);
+      await c2.query("ROLLBACK");
+      // A back as a live admin for the next round.
+      await pool.query("UPDATE users SET suspended_at = NULL WHERE id = $1", [a]);
+      await pool.query(
+        "INSERT INTO user_org_roles (user_id, org_id, role) VALUES ($1, $2, 'org_admin') ON CONFLICT DO NOTHING", [a, fed]);
+    }
+  } finally {
+    // c1 first: if an assertion failed while c2 was still waiting on it.
+    await c1.query("ROLLBACK").catch(() => {});
+    await c2.query("ROLLBACK").catch(() => {});
+    c1.release();
+    c2.release();
+    await compKit.cleanup(fed);
+  }
+});

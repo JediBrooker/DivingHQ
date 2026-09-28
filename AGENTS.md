@@ -388,6 +388,7 @@ until the operator has switched maintenance mode on and passed
 | Instant tooltip (no native `title` lag) | `v-tip="…"` directive | `src/directives/tip.js` + `src/styles/app.css` |
 | Shared frontend tokens and primitives | Design-system guide | `docs/design-system.md` + `src/styles/app.css` |
 | "Does this person run this event?" (event_managers row, or admin of the club / region hosting its meet, or of the host club's region) | `isEventDelegate(eventId, userId)` | `lib/middleware.js` |
+| Would this leave a claimed federation with no live org admin? (locks its admin rows, so call it inside the transaction before a delete, demotion, suspension or transfer; the sysadmin skips it; any new path that takes org_admin away goes through it too) | `orgAdminHold(client, orgId, userId)` + `lastOrgAdminRefusal(hold, { self })` for the 409 | `lib/admin-rows.js` |
 | Role gate that also lets the event's delegates in | `requireRoleOrEventDelegate(roles, eventIdOf)` | `lib/middleware.js` |
 | Meet routes open to club admins (then pin with `isMeetHostAdmin`) | `requireMeetEditorOrClubAdmin` / server.js `requireMeetOrClubEditor` | `lib/middleware.js` |
 | Who reviews a role request (federation vs club-first) | `listForOrgAdmin` / `listForDelegate` / `delegateCanReview` / `reviewersFor` | `lib/role-requests.js` |
