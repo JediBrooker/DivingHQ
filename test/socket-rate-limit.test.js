@@ -50,7 +50,7 @@ function makeHarness(opts = {}) {
       io,
       pool: { query: async () => ({ rows: [] }) },
       JWT_SECRET: "test-secret",
-      socketRequireRole: () => {},
+      socketRequireRole: (socket) => !!socket.userId,
       socketCanManageEvent: async () => canManage(),
       isValidScore: () => true,
       isTokenVersionCurrent: async () => true,

@@ -67,11 +67,10 @@ module.exports = function attachSocket({
   io,
   pool,
   JWT_SECRET,
-  // From lib/middleware. socketRequireRole is passed in but nothing
-  // here calls it: submit_score does its own role check and the
-  // Control Room events go through socketCanManageEvent. Heads up,
-  // that means the maintenance-mode check that lives in
-  // socketRequireRole doesn't run for any socket write today.
+  // From lib/middleware. socketRequireRole (no roles) is the auth +
+  // maintenance gate every write below passes first; the role checks
+  // proper are socketCanManageEvent for the Control Room events and
+  // submit_score's own panel check.
   socketRequireRole,
   socketCanManageEvent,
   isValidScore,
@@ -110,10 +109,6 @@ module.exports = function attachSocket({
   if (!io || !pool || !JWT_SECRET) {
     throw new Error("attachSocket requires { io, pool, JWT_SECRET, … }");
   }
-  // Not called yet (see the note on the parameter), void keeps lint
-  // quiet without dropping it from the mount.
-  void socketRequireRole;
-
   // Idempotency layer (migration 054 + lib/idempotency.js).
   // Socket handlers that accept writes call `idem.socketCheck`
   // on the incoming payload's `idempotency_key` and replay the
@@ -278,6 +273,12 @@ module.exports = function attachSocket({
   // answered in its own words, hence `errors`.
   const GUARD_ERRORS = { unauthorized: "unauthorized", rateLimited: "rate_limited" };
   async function guardControl(socket, data, ack, action, errors = GUARD_ERRORS) {
+    // Signed in, and not in maintenance (sysadmins pass). It emits its
+    // own 'unauthorized' event; the ack says which of the two it was.
+    if (!socketRequireRole(socket)) {
+      ackWith(ack, { ok: false, error: socket.userId ? "maintenance" : errors.unauthorized });
+      return false;
+    }
     // A junk id used to go straight into the events lookup, and the
     // uuid cast error it threw took the whole process down (nothing
     // catches a rejected socket listener). Refuse it up front.
@@ -422,7 +423,7 @@ module.exports = function attachSocket({
     // one warned. Both sides are notified so neither drives blind.
     on("claim_event_control", async (data) => {
       const eventId = data?.event_id;
-      if (!socket.userId || !EVENT_UUID_RE.test(String(eventId ?? ""))) return;
+      if (!EVENT_UUID_RE.test(String(eventId ?? "")) || !socketRequireRole(socket)) return;
       // Only real controllers can hold a lease (same gate as the actions).
       if (!(await socketCanManageEvent(socket, eventId, CONTROL_ROLES))) return;
       if (typeof getEventController !== "function") return;
@@ -567,6 +568,12 @@ module.exports = function attachSocket({
 
       if (!socket.userId) {
         reject("not_authenticated", { message: "You must be signed in to submit scores." });
+        return;
+      }
+      // Maintenance lockdown: the socket side of maintenanceGate. The
+      // outbox gets a real answer so it doesn't sit out its timeout.
+      if (!socketRequireRole(socket)) {
+        reject("maintenance", { message: "DivingHQ is in maintenance mode, scores can't be saved right now." });
         return;
       }
       const judgeId = socket.userId;
@@ -899,7 +906,7 @@ module.exports = function attachSocket({
     // submit_score.
     // -----------------------------------------------------------
     on("judge_signal", async (data) => {
-      if (!socket.userId) return;
+      if (!socketRequireRole(socket)) return;
       if (socketActionRateLimited("judge_signal", socket.userId)) return;
       if (typeof socket.userTokenVersion === "number"
           && !(await isTokenVersionCurrent(socket.userId, socket.userTokenVersion))) {

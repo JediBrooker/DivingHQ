@@ -18,7 +18,7 @@ that's intentional, but every privileged event must call
 |---|---|---|
 | `state_update`            | `{ event_id, diverName, country_code, club_name, club_code, diveCode, description, round_number, status, … }` | A diver becomes active in the Control Room, or a new client connects (rebroadcast on demand). |
 | `score_received`          | The full score-submit payload + `judge_id`, `judge_number` | A judge submits a score. Broadcast to everyone watching the meet. |
-| `score_rejected`          | `{ reason: 'not_authenticated' \| 'insufficient_role' \| 'not_on_panel' \| 'bad_payload' \| 'bad_round' \| 'bad_score' \| 'rate_limited', message?: string }` | A submit_score from this socket failed validation. Sent only to the offending socket. |
+| `score_rejected`          | `{ reason: 'not_authenticated' \| 'maintenance' \| 'insufficient_role' \| 'not_on_panel' \| 'bad_payload' \| 'bad_round' \| 'bad_score' \| 'rate_limited', message?: string }` | A submit_score from this socket failed validation. Sent only to the offending socket. |
 | `score_corrected`         | The new score row from `PUT /api/scores/:id` | A referee corrects a score via HTTP (the socket bus rebroadcasts so other operators see it live). |
 | `final_score_announced`   | Whatever the announcer sent | Announcer presses "Announce" in the Control Room. |
 | `referee_action_failed`   | `{ event_id, competitor_id, round_number, … }` | Referee marks a dive failed. |
@@ -28,7 +28,7 @@ that's intentional, but every privileged event must call
 | `meet_held`               | `{ event_id, reason \| null, since: <ms epoch> }` | Operator holds the meet, or a new client joins while a hold is active. |
 | `meet_resumed`            | `{ event_id }` | Operator resumes the meet. |
 | `venue.scoreboard_state`  | Canonical venue payload from `lib/venue-state.js` | Emitted to `venue:<event_id>` subscribers after subscribe, active-diver changes, score changes, score announce, hold, and resume. Used by hardware bridges. |
-| `unauthorized`            | `{ reason: 'not_authenticated' \| 'insufficient_role' }` | A privileged event was attempted by an anonymous or under-roled socket. |
+| `unauthorized`            | `{ reason: 'not_authenticated' \| 'maintenance' \| 'insufficient_role' \| 'wrong_org' \| 'event_not_found' \| 'token_revoked' }` | A privileged event was attempted by an anonymous or under-roled socket, or by anyone but a sysadmin while maintenance mode is on. |
 | `schedule:conflict_dismissed` | `{ meet_id, action: 'dismiss' \| 'undismiss' }` | A scheduler conflict was dismissed or un-dismissed via the editor-only API. Drawer clients refetch `/api/meets/:id/conflicts` on receipt. The broadcast is intentionally minimal and does not include personnel labels. |
 | `schedule:block_updated`      | `{ meet_id, session_id, block_id?, created?, session_updated? }` | A Phase 3 manual edit landed (`PUT /api/blocks/:id`, `POST /api/sessions/:sessionId/blocks`, or `PUT /api/sessions/:id`). Other timeline tabs refetch `/sessions` and update inline. The broadcast is intentionally minimal; conflict details stay behind `/api/meets/:id/conflicts`. |
 | `schedule:block_deleted`      | `{ meet_id, session_id, block_id }` | A schedule block was deleted via `DELETE /api/blocks/:id`. Other tabs refetch the schedule. |
@@ -54,6 +54,12 @@ malformed `event_id` (not a UUID) is refused before any DB work, as
 `unauthorized` on the Control Room events and `bad_payload` on
 `submit_score`. A rejected socket listener used to be an unhandled
 rejection, which ends a Node 20 process.
+
+Maintenance mode (`lib/features` 'maintenance') is checked by
+`socketRequireRole(socket)` at the top of every write: the Control Room
+events, `submit_score`, `judge_signal` and `claim_event_control`. A
+non-sysadmin is refused with ack `{ ok: false, error: 'maintenance' }`
+(`score_rejected` reason `maintenance` for a score).
 
 | Event | Required role | Payload | Notes |
 |---|---|---|---|

@@ -7141,7 +7141,7 @@ const compKit = {
   },
   async event(orgId, fields = {}) {
     const f = {
-      name: "BRN event", gender: "Mixed", height: 3, number_of_judges: 5, total_rounds: 3,
+      name: "BRN event", gender: "Mixed", height: "3m", number_of_judges: 5, total_rounds: 3,
       event_type: "individual", event_format: "final", status: "Upcoming", ...fields,
     };
     const cols = Object.keys(f);
@@ -7237,6 +7237,53 @@ test("sockets: a junk event id is refused and the server stays up", async (t) =>
     const health = await fetchJson("GET", "/api/health");
     assert.equal(health.status, 200);
   } finally {
+    socks.forEach((s) => s.close());
+    await compKit.cleanup(orgId);
+  }
+});
+
+test("sockets: maintenance mode refuses every live write except a sysadmin's", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const { features } = require("../server.js");
+  const realEnabled = features.enabled;
+  const orgId = await compKit.org("maint");
+  const socks = [];
+  try {
+    const manager = await compKit.user(orgId, "Maint Manager", ["meet_manager"]);
+    const judge = await compKit.user(orgId, "Maint Judge", ["judge"]);
+    const diver = await compKit.user(orgId, "Maint Diver", ["diver"]);
+    const sys = await compKit.user(orgId, "Maint Sysadmin", [], { sysadmin: true });
+    const eventId = await compKit.event(orgId, { status: "Live" });
+    await compKit.enter(eventId, diver.id, await compKit.dives(3), { display_order: 1 });
+    await compKit.panel(eventId, [judge]);
+    const [ms, js, ss] = await Promise.all([manager, judge, sys].map((u) => compKit.socket(u.token)));
+    socks.push(ms, js, ss);
+    js.emit("subscribe_event", { event_id: eventId });
+
+    // Only this process sees the flag, so no other suite's server is
+    // locked down while this runs.
+    features.enabled = (k) => (k === "maintenance" ? true : realEnabled.call(features, k));
+    const payload = { event_id: eventId, competitor_id: diver.id, round_number: 1 };
+    for (const ev of ["meet_hold", "set_active_diver", "announce_score", "referee_failed_dive", "meet_resume"]) {
+      assert.deepEqual(await compKit.ask(ms, ev, payload), { ok: false, error: "maintenance" }, ev);
+    }
+    const sub = await compKit.ask(js, "submit_score", { ...payload, score: 6.5 });
+    assert.equal(sub.ok, false);
+    assert.equal(sub.error, "maintenance");
+    const signals = compKit.listen(js, "judge_signal");
+    js.emit("judge_signal", { ...payload, signaled: true });
+    assert.equal((await signals).length, 0, "no judge signal goes out");
+    assert.equal((await pool.query("SELECT COUNT(*)::int AS n FROM scores WHERE event_id = $1", [eventId])).rows[0].n, 0);
+    // A sysadmin keeps working, on purpose.
+    assert.deepEqual(await compKit.ask(ss, "meet_hold", payload), { ok: true });
+    assert.deepEqual(await compKit.ask(ss, "meet_resume", payload), { ok: true });
+
+    features.enabled = realEnabled;
+    const after = await compKit.ask(js, "submit_score", { ...payload, score: 6.5 });
+    assert.equal(after.ok, true, "back to normal once it's off");
+  } finally {
+    features.enabled = realEnabled;
     socks.forEach((s) => s.close());
     await compKit.cleanup(orgId);
   }
