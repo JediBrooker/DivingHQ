@@ -33,6 +33,8 @@ const { readSessionCookie } = require("../lib/session-cookie");
 const { trustProxyHops } = require("../lib/trust-proxy");
 const { announceRecords } = require("../lib/records");
 const { insertScoreAudit, isValidScore } = require("../lib/score-audit");
+const { isUuid } = require("../lib/uuid");
+const { isSessionClaims } = require("../lib/middleware");
 // Held as the module object and called through it, never destructured:
 // test/socket-rate-limit.test.js swaps emitVenueState on this cached
 // module to keep the DB out of the unit tests.
@@ -106,6 +108,9 @@ module.exports = function attachSocket({
   // increment the connection gauge + score counters; when null
   // (tests) the calls are no-ops.
   metrics,
+  // From server.js: app.get("trust proxy fn"), so clientIp resolves
+  // the same address req.ip does. Optional; see clientIp.
+  trustProxy,
   // From lib/push: optional. When supplied the connection
   // handler joins per-user rooms (`user:<id>`) so the engine can
   // io.to()` an in-app banner, and adopts a `notification:ack`
@@ -148,41 +153,60 @@ module.exports = function attachSocket({
         : (authToken || readSessionCookie(socket.handshake.headers?.cookie));
       if (raw) {
         const decoded = jwt.verify(raw, JWT_SECRET, { algorithms: ["HS256"] });
+        // Sessions only, verifyToken's own test: the 2FA step-up,
+        // password-reset and email-verify tokens share the secret but
+        // carry `type` and no `id`.
         // Validate tv via the same 30s cache the HTTP path uses.
         // A revoked session must lose its socket privileges too.
-        const tvOk = await isTokenVersionCurrent(decoded.id, decoded.tv);
-        if (!tvOk) return next();        // stale, fall through to anonymous
-        socket.userId = decoded.id;
-        socket.userOrgId = decoded.org_id;
-        socket.userIsSystemAdmin = !!decoded.is_system_admin;
-        socket.userOrgRoles = decoded.org_roles || [];
-        // Stash the token version so socketCanManageEvent can
-        // re-check it on every privileged action (catches role
-        // revocation / 2FA-bump on a long-lived websocket).
-        socket.userTokenVersion = decoded.tv != null ? Number(decoded.tv) : null;
+        const tvOk = isSessionClaims(decoded) && await isTokenVersionCurrent(decoded.id, decoded.tv);
+        if (tvOk) {
+          socket.userId = decoded.id;
+          socket.userOrgId = decoded.org_id;
+          socket.userIsSystemAdmin = !!decoded.is_system_admin;
+          socket.userOrgRoles = decoded.org_roles || [];
+          // Stash the token version so socketCanManageEvent can
+          // re-check it on every privileged action (catches role
+          // revocation / 2FA-bump on a long-lived websocket).
+          socket.userTokenVersion = decoded.tv != null ? Number(decoded.tv) : null;
+        }
       }
     } catch {
-      // Invalid token (or we couldn't check it), treat as anonymous.
+      // Invalid token (or a DB wobble on the tv check), treat as
+      // anonymous (spectator).
     }
     next();
   });
 
   // -----------------------------------------------------------
-  // XFF / IP: the same TRUST_PROXY chain length the Express side
-  // uses (one parser, lib/trust-proxy.js) so audit-log IPs aren't
-  // trivially forgeable.
+  // XFF / IP: the same answer Express gives for req.ip, so audit-log
+  // IPs and the per-IP limits can't be forged from the header.
   // -----------------------------------------------------------
-  const TRUST_PROXY_HOPS = trustProxyHops();
+  // server.js hands in app.get("trust proxy fn"), the exact predicate
+  // Express compiled from TRUST_PROXY. Without it (unit tests) we count
+  // hops the way lib/trust-proxy reads the variable, so the two can't
+  // disagree about what "true" means.
+  const isTrustedProxy = typeof trustProxy === "function"
+    ? trustProxy
+    : (() => {
+        const hops = trustProxyHops();
+        return (_addr, i) => i < hops;
+      })();
 
+  // proxy-addr's walk, which is what Express runs: start at the socket
+  // peer, step left through X-Forwarded-For while the address we're on
+  // is a trusted proxy, and stop at the first one that isn't. The old
+  // version took one entry further left than Express, which behind
+  // Cloudflare is whatever the client typed into the header.
   function clientIp(socket) {
     const fwd = socket.handshake.headers["x-forwarded-for"];
-    if (fwd && TRUST_PROXY_HOPS > 0) {
-      const parts = fwd.split(",").map((s) => s.trim()).filter(Boolean);
-      const idx = Math.max(0, parts.length - 1 - TRUST_PROXY_HOPS);
-      if (parts[idx]) return parts[idx];
-      if (parts[0]) return parts[0];
+    const hops = typeof fwd === "string"
+      ? fwd.split(",").map((s) => s.trim()).filter(Boolean).reverse()
+      : [];
+    const addrs = [socket.handshake.address || null, ...hops];
+    for (let i = 0; i < addrs.length - 1; i++) {
+      if (!isTrustedProxy(addrs[i], i)) return addrs[i];
     }
-    return socket.handshake.address || null;
+    return addrs[addrs.length - 1];
   }
 
   // -----------------------------------------------------------
@@ -237,10 +261,14 @@ module.exports = function attachSocket({
     return ipWindows.limited(`${action}:${ip}`, cfg);
   }
 
-  // events.id is a UUID; reject anything else before doing DB work.
-  // Same lenient shape used for event ids elsewhere (lib/records.js).
-  const EVENT_UUID_RE =
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  // What a keypad sends with submit_score, the idempotency hash covers
+  // exactly these (see the handler).
+  const SUBMISSION_FIELDS = [
+    "event_id", "competitor_id", "round_number", "dive_id", "judge_id", "judge_number", "score",
+  ];
+
+  // How many event rooms one socket may sit in (see joinEvent).
+  const MAX_EVENT_ROOMS = 50;
 
   // Per-IP concurrent connection cap. Defence-in-depth so a single
   // client can't open thousands of sockets to exhaust file descriptors
@@ -287,8 +315,11 @@ module.exports = function attachSocket({
     }
     // A junk id used to go straight into the events lookup, and the
     // uuid cast error it threw took the whole process down (nothing
-    // catches a rejected socket listener). Refuse it up front.
-    if (!EVENT_UUID_RE.test(String(data?.event_id ?? ""))) {
+    // catches a rejected socket listener). Refuse it up front. Every id
+    // check in this file is isUuid (lib/uuid), a string and a UUID: the
+    // old String() test here waved through an array holding one UUID,
+    // which socketCanManageEvent then refused anyway.
+    if (!isUuid(data?.event_id)) {
       // Same 'unauthorized' event socketCanManageEvent sends for one, so
       // a client listening for refusals hears about this too.
       socket.emit("unauthorized", { reason: "bad_event_id" });
@@ -329,7 +360,7 @@ module.exports = function attachSocket({
     for (const k of PRIVATE_ACTIVE_FIELDS) delete out[k];
     if (out.club_name != null || out.club_code != null) {
       let clubPublic = false;
-      if (EVENT_UUID_RE.test(String(out.competitor_id ?? ""))) {
+      if (isUuid(out.competitor_id)) {
         const r = await pool.query(
           `SELECT cl.status FROM users u JOIN clubs cl ON cl.id = u.club_id WHERE u.id = $1`,
           [out.competitor_id],
@@ -452,12 +483,33 @@ module.exports = function attachSocket({
 
     // Helper: clients join `event:${id}` rooms when they
     // subscribe to an event (via get_active_diver, get_meet_hold,
-    // or by explicit `subscribe_event`).
+    // or by explicit `subscribe_event`). Anonymous, so it's fenced: the
+    // id has to look like an event id, and one socket sits in at most
+    // MAX_EVENT_ROOMS of them. Before, any string made a room, and one
+    // socket looping unique ids ate a couple of hundred MB in seconds.
+    //
+    // Past the cap the room touched longest ago gets dropped instead of
+    // the new join being refused. The SPA's socket lasts the whole
+    // session and never leaves a room, so a scoreboard left up on a TV
+    // over a two-day meet (or an operator who never reloads) walks past
+    // 50 events, and a hard cap froze live updates for every event after
+    // that. The Set keeps insertion order and a rejoin moves the id to
+    // the back, so the one that goes is the one nobody has asked about
+    // for longest. Returns whether the socket is (now) in the room.
+    const joinedEvents = new Set();
     function joinEvent(eventId) {
-      if (!eventId) return;
+      if (!isUuid(eventId)) return false;
+      joinedEvents.delete(eventId);
+      if (joinedEvents.size >= MAX_EVENT_ROOMS) {
+        const oldest = joinedEvents.values().next().value;
+        joinedEvents.delete(oldest);
+        socket.leave(`event:${oldest}`);
+      }
+      joinedEvents.add(eventId);
       socket.join(`event:${eventId}`);
+      return true;
     }
-    socket.on("subscribe_event", (data) => joinEvent(data?.event_id));
+    on("subscribe_event", (data) => { joinEvent(data?.event_id); });
 
     // Per-event control LEASE (advisory). A Control Room claims control of
     // each event it drives. The lease never BLOCKS an action (a crashed
@@ -469,7 +521,7 @@ module.exports = function attachSocket({
     on("claim_event_control", async (data) => {
       const eventId = data?.event_id;
       if (!socketRequireRole(socket)) return;
-      if (!EVENT_UUID_RE.test(String(eventId ?? ""))) {
+      if (!isUuid(eventId)) {
         socket.emit("unauthorized", { reason: "bad_event_id" });
         return;
       }
@@ -509,7 +561,7 @@ module.exports = function attachSocket({
       // Validate shape before any work: events.id is a UUID, so a
       // malformed id is junk, reject it without joining a room or
       // touching the DB. (Also short-circuits a missing id.)
-      if (!EVENT_UUID_RE.test(String(eventId ?? ""))) return;
+      if (!isUuid(eventId)) return;
       // Per-IP throttle. subscribe_venue triggers emitVenueState, which
       // runs the most expensive query in the app (the multi-CTE
       // leaderboard build in lib/venue-state.js). The per-(action,user)
@@ -536,7 +588,7 @@ module.exports = function attachSocket({
       console.error("[connection] active-diver replay failed", err.message));
     async function replayOwnActiveDivers() {
       if (!socket.userId) return;
-      const ids = Object.keys(activeDivers).filter((id) => EVENT_UUID_RE.test(id));
+      const ids = Object.keys(activeDivers).filter(isUuid);
       if (!ids.length) return;
       const drives = CONTROL_ROLES.some((r) => (socket.userOrgRoles || []).includes(r));
       const r = await pool.query(
@@ -590,9 +642,8 @@ module.exports = function attachSocket({
       ackWith(ack, { ok: true });
     });
 
-    socket.on("get_active_diver", (data) => {
-      if (!data?.event_id) return;
-      joinEvent(data.event_id);
+    on("get_active_diver", (data) => {
+      if (!joinEvent(data?.event_id)) return;
       const state = activeDivers[data.event_id];
       if (state) socket.emit("state_update", state);
     });
@@ -642,10 +693,15 @@ module.exports = function attachSocket({
         reject("not_authenticated", { message: "You must be signed in to submit scores." });
         return;
       }
-      // Maintenance lockdown: the socket side of maintenanceGate. The
-      // outbox gets a real answer so it doesn't sit out its timeout.
+      // Maintenance lockdown: the socket side of maintenanceGate, and a
+      // read-only one, scores included. The outbox gets a real answer so
+      // it doesn't sit out its timeout. The mark isn't lost: the judge's
+      // outbox keeps it and retries a few times with backoff, and if
+      // maintenance outlasts those it parks the entry as failed, where
+      // the judge can send it again by hand. It won't land by itself once
+      // a long lockdown lifts, hence the wording below.
       if (!socketRequireRole(socket)) {
-        reject("maintenance", { message: "DivingHQ is in maintenance mode, scores can't be saved right now." });
+        reject("maintenance", { message: "DivingHQ is in maintenance mode, so scores can't be saved right now. Your score is kept on this device; send it again once maintenance is over." });
         return;
       }
       const judgeId = socket.userId;
@@ -654,16 +710,6 @@ module.exports = function attachSocket({
           && !roles.includes("judge")
           && !roles.includes("referee")) {
         reject("insufficient_role");
-        return;
-      }
-      // Maintenance mode is a read-only lockdown, scores included. The
-      // mark isn't lost: the judge's outbox keeps it and retries a few
-      // times with backoff, and if maintenance outlasts those it parks
-      // the entry as failed, where the judge can send it again by hand.
-      // It won't land by itself once a long lockdown lifts, hence the
-      // wording below.
-      if (socketMaintenanceBlocked(socket)) {
-        reject("maintenance", { message: "DivingHQ is in maintenance mode, so scores can't be saved right now. Your score is kept on this device; send it again once maintenance is over." });
         return;
       }
       // Re-check revocation on this long-lived socket. The handshake
@@ -678,9 +724,10 @@ module.exports = function attachSocket({
         return;
       }
       // Both ids are uuids; a malformed one is a bad payload, not a
-      // server_error out of the cast inside the transaction.
-      if (!EVENT_UUID_RE.test(String(data?.event_id ?? ""))
-          || !EVENT_UUID_RE.test(String(data?.competitor_id ?? ""))) {
+      // server_error out of the cast inside the transaction. An array
+      // holding one uuid is malformed too (it used to pass a String()
+      // test and fail in the cast).
+      if (!isUuid(data?.event_id) || !isUuid(data?.competitor_id)) {
         reject("bad_payload");
         return;
       }
@@ -706,16 +753,26 @@ module.exports = function attachSocket({
 
       // Idempotency check. When the client sends an idempotency_key
       // (outbox mode), look up any cached response BEFORE doing DB
-      // work. Hash excludes the key itself + actor_local_time so a
-      // retry with the same semantic payload but different wall-clock
-      // claim still matches the cache.
+      // work. The hash covers the fields the keypad sends
+      // (SUBMISSION_FIELDS) and nothing else, so the key and
+      // actor_local_time stay out and a retry with a different
+      // wall-clock claim still matches. It used to hash the whole client
+      // object, recursively, and a payload nested 20k deep blew the stack.
+      // Same fields and values as before for a real keypad, so hashes
+      // cached before this change still match.
       const idempotencyKey = data.idempotency_key;
-      const actorLocalTime = data.actor_local_time || null;
+      // An ISO string from the outbox, or nothing. Anything else would go
+      // to pg as JSON and back out on the conflict broadcast.
+      const actorLocalTime = typeof data.actor_local_time === "string" && data.actor_local_time
+        ? data.actor_local_time
+        : null;
       let payloadHash = null;
       if (idempotencyKey) {
-        const payloadForHash = { ...data };
-        delete payloadForHash.idempotency_key;
-        delete payloadForHash.actor_local_time;
+        const payloadForHash = {};
+        for (const k of SUBMISSION_FIELDS) {
+          const v = data[k];
+          if (v !== undefined && (v === null || typeof v !== "object")) payloadForHash[k] = v;
+        }
         payloadHash = idem.hashPayload(payloadForHash);
         const cached = await idem.socketCheck(idempotencyKey, judgeId, payloadHash);
         if (cached?.error) {
@@ -965,11 +1022,14 @@ module.exports = function attachSocket({
       // broadcast it AND cache it in idempotency_keys. Caching the
       // exact payload (not just "ok: true") means a replay can
       // tell the judge's UI the same details the original got.
+      // Built from what the server checked, never by spreading the
+      // client's object: that echoed arbitrary junk to the whole room
+      // (the encoder walks it recursively, so a deep enough one crashed
+      // the emit) and sent the raw score, say null, while 0 was stored.
       const scoreReceivedBody = {
-        ...data,
-        idempotency_key: undefined,  // never leak it back
-        actor_local_time: undefined,
-        dive_id: undefined,           // don't leak whatever the client sent
+        event_id: data.event_id,
+        competitor_id: data.competitor_id,
+        round_number: round,
         score,                        // what was stored, after any referee call
         judge_id: judgeId,
         judge_number: judgeNumber,
@@ -1040,7 +1100,10 @@ module.exports = function attachSocket({
         socket.disconnect(true);
         return;
       }
-      if (!data?.event_id || !data?.competitor_id) return;
+      // Same id check as submit_score. competitor_id goes straight back
+      // out to the whole room below, so it has to be a real id and not
+      // whatever object or megabyte string a keypad sent.
+      if (!isUuid(data?.event_id) || !isUuid(data?.competitor_id)) return;
       const round = Number(data.round_number);
       if (!Number.isInteger(round) || round < 1) return;
       try {
@@ -1070,8 +1133,12 @@ module.exports = function attachSocket({
     // 'redive' → no score change (new dive overwrites via
     // submit_score on the same UNIQUE key).
     // -----------------------------------------------------------
+    // Resolves { ok: true, capValue } when the action landed, otherwise
+    // { ok: false, error } (and referee_action_rejected has gone to the
+    // socket where there's a reason worth telling it).
+    const REFEREE_FAILED = { ok: false, error: "action_failed" };
     async function applyRefereeAction(action, data, actorUserId) {
-      if (!data?.event_id || !data?.competitor_id) return;
+      if (!data?.event_id || !data?.competitor_id) return REFEREE_FAILED;
       // Validate round_number is a positive integer, matching the
       // submit_score / judge_signal paths. Previously only truthiness
       // was checked, so a malformed value reached the parameterized
@@ -1081,7 +1148,7 @@ module.exports = function attachSocket({
       const round = Number(data.round_number);
       if (!Number.isInteger(round) || round < 1) {
         socket.emit("referee_action_rejected", { reason: "bad_round" });
-        return;
+        return REFEREE_FAILED;
       }
       // Use the coerced integer downstream so a value like "3.0"
       // (passes the integer check but fails a Postgres int cast)
@@ -1095,13 +1162,26 @@ module.exports = function attachSocket({
             reason: "bad_cap_value",
             message: "cap_value must be between 0 and 10.",
           });
-          return;
+          return REFEREE_FAILED;
         }
         capValue = raw;
       }
       const client = await pool.connect();
       try {
         await client.query("BEGIN");
+        // Live events only, same as submit_score. Otherwise a referee
+        // could fail, cap or redive a dive in a finalised event and move
+        // the published results and record books after the fact. FOR
+        // SHARE holds the status still until this commits.
+        const ev = await client.query("SELECT status FROM events WHERE id = $1 FOR SHARE", [data.event_id]);
+        if (ev.rows[0]?.status !== "Live") {
+          await client.query("ROLLBACK");
+          socket.emit("referee_action_rejected", {
+            reason: "event_not_live",
+            message: "Referee actions only apply while the event is Live.",
+          });
+          return { ok: false, error: "event_not_live" };
+        }
         const auditReason = `referee:${action}` + (action === "cap" ? `(${capValue})` : "");
         // Keep the call on the dive (migration 102) so awards that land
         // after it are held to it as well, in submit_score. A redive
@@ -1231,7 +1311,7 @@ module.exports = function attachSocket({
         await client.query("ROLLBACK").catch(() => {});
         console.error("[Referee Action Failed]", err.message);
         socket.emit("referee_action_rejected", { reason: "server_error" });
-        return;
+        return REFEREE_FAILED;
       } finally {
         client.release();
       }
@@ -1248,13 +1328,14 @@ module.exports = function attachSocket({
           eventId: data.event_id, competitorId: data.competitor_id, roundNumber: data.round_number,
         });
       }
-      return true;
+      return { ok: true, capValue };
     }
 
     on("referee_failed_dive", async (data, ack) => {
       if (!(await guardControl(socket, data, ack, "referee_action"))) return;
-      if (!(await applyRefereeAction("failed", data, socket.userId))) {
-        ackWith(ack, { ok: false, error: "action_failed" });
+      const result = await applyRefereeAction("failed", data, socket.userId);
+      if (!result.ok) {
+        ackWith(ack, { ok: false, error: result.error });
         return;
       }
       io.to(`event:${data.event_id}`).emit("referee_action_failed", data);
@@ -1268,8 +1349,9 @@ module.exports = function attachSocket({
     });
     on("referee_cap_scores", async (data, ack) => {
       if (!(await guardControl(socket, data, ack, "referee_action"))) return;
-      if (!(await applyRefereeAction("cap", data, socket.userId))) {
-        ackWith(ack, { ok: false, error: "action_failed" });
+      const result = await applyRefereeAction("cap", data, socket.userId);
+      if (!result.ok) {
+        ackWith(ack, { ok: false, error: result.error });
         return;
       }
       io.to(`event:${data.event_id}`).emit("referee_action_cap", data);
@@ -1277,14 +1359,17 @@ module.exports = function attachSocket({
         event_id: data.event_id,
         competitor_id: data.competitor_id,
         round_number: data.round_number,
-        reason: `referee:cap(${data.cap_value || 2.0})`,
+        // The value actually applied. `data.cap_value || 2.0` read a cap
+        // of 0 as 2.
+        reason: `referee:cap(${result.capValue})`,
       });
       ackWith(ack, { ok: true });
     });
     on("referee_redive", async (data, ack) => {
       if (!(await guardControl(socket, data, ack, "referee_action"))) return;
-      if (!(await applyRefereeAction("redive", data, socket.userId))) {
-        ackWith(ack, { ok: false, error: "action_failed" });
+      const result = await applyRefereeAction("redive", data, socket.userId);
+      if (!result.ok) {
+        ackWith(ack, { ok: false, error: result.error });
         return;
       }
       io.to(`event:${data.event_id}`).emit("referee_action_redive", data);
@@ -1324,9 +1409,8 @@ module.exports = function attachSocket({
       emitVenue(data.event_id, "meet_resume");
       ackWith(ack, { ok: true });
     });
-    socket.on("get_meet_hold", (data) => {
-      if (!data?.event_id) return;
-      joinEvent(data.event_id);
+    on("get_meet_hold", (data) => {
+      if (!joinEvent(data?.event_id)) return;
       const state = meetHolds[data.event_id];
       if (state) socket.emit("meet_held", { event_id: data.event_id, ...state });
     });

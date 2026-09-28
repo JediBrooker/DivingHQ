@@ -437,7 +437,9 @@ module.exports = function createAuditRouter({ pool, requireOrgAdmin }) {
                 a.role::text AS role, a.note,
                 a.org_id, o.name AS org_name
          FROM role_audit_log a
-         JOIN organisations o ON o.id = a.org_id
+         -- LEFT JOIN, like the score rows above: org_id is nullable
+         -- (migration 035) and the org filter keeps orphans sysadmin-only.
+         LEFT JOIN organisations o ON o.id = a.org_id
          LEFT JOIN users target ON target.id = a.user_id
          LEFT JOIN users actor  ON actor.id  = a.actor_id
          WHERE a.created_at >= $1

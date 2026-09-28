@@ -201,6 +201,8 @@ Open the diver's row actions in the dive order → **Withdraw**. The diver is hi
 
 Use **Scratch** for a diver who never started — they're removed from the standings entirely.
 
+A coach can also withdraw one of their divers from the coach console while the event is Live. The Control Room hears about it straight away: the queue reloads (the diver on stage stays up, so a dive in progress can finish), a warning names the diver, and **Next Diver** steps over them. Their dives so far stay in the standings, live and on the recap.
+
 ## Undoing a misclick
 
 The bottom-of-screen Undo snackbar catches the most common operator-day misclicks so you don't need to call an admin to recover. Currently wired to:
@@ -328,7 +330,7 @@ After the F event completes, the public scoreboard shows a merged 1–12 ranking
 - **Positions 5–6** — H2H + SF cumulative
 - **Positions 7–12** — H2H scores only (3 dives)
 
-Within each tier, ties resolve via the standard WA tie-break (cumulative_total DESC, dives_desc DESC).
+Within each tier, equal totals share the place and the next place is skipped (WA Art 4.1.5: a tie is declared for that place).
 
 ## Confirm dialogs and toast feedback
 

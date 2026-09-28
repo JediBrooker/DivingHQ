@@ -1625,7 +1625,8 @@
       "btn_redirecting": "Uudelleenohjataan…",
       "btn_coming_soon": "Tulossa pian",
       "error_load": "Maksua ei voitu ladata",
-      "error_checkout": "Maksutapahtumaa ei voitu aloittaa"
+      "error_checkout": "Maksutapahtumaa ei voitu aloittaa",
+      "btn_renew": "Uusi"
     },
     "charges_view": {
       "title": "Maksut",

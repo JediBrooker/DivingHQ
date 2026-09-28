@@ -17,8 +17,8 @@
 
 const express = require("express");
 const {
-  perDiveSelect, perDivePointsCte, teamStandingsCte, compStandingsCte,
-  eventRepCodesCte, PUBLIC_PANEL_SQL,
+  perDiveSelect, teamStandingsCte, compStandingsCte,
+  eventRepCodesCte, standingsPerDiveCte, PUBLIC_PANEL_SQL,
 } = require("../lib/scoring-sql");
 const { eventRecordMarks } = require("../lib/records");
 
@@ -31,6 +31,7 @@ const { eventRecordMarks } = require("../lib/records");
 // (current_round, last_diver_name, counts).
 const archiveCache = require("../lib/archive-cache");
 const { PUBLIC_CLUB_JOIN } = require("../lib/club-approvals");
+const { uuidParams } = require("../lib/uuid-params");
 const archiveCacheGet = archiveCache.get;
 const archiveCacheSet = archiveCache.set;
 const archiveCacheGeneration = archiveCache.generation;
@@ -44,6 +45,8 @@ module.exports = function createArchiveRouter({ pool, readPool }) {
   // when no replica is configured, just in case.
   const reads = readPool || pool;
   const router = express.Router();
+  // Malformed path ids fall through to a 404 (lib/uuid-params).
+  uuidParams(router, "eventId");
 
   // -------------------------------------------------------------
   // GET /api/archive: every Live or Completed event with the
@@ -228,8 +231,9 @@ module.exports = function createArchiveRouter({ pool, readPool }) {
   //   event:     event metadata, plus the meet's represent_as and the
   //              org's region_label for the medal table heading
   //   standings: total per competitor (or per team, for team
-  //              events), World Aquatics tie-break by descending dive
-  //              points
+  //              events), ranked on the total alone: equal totals
+  //              share the place (WA Art 4.1.5), same as the live
+  //              scoreboard
   //   dives:     dive-by-dive history with judge scores chips
   //              ordered by panel position
   //   records:   record marks the event's dives hold (scoreboard chip)
@@ -255,10 +259,13 @@ module.exports = function createArchiveRouter({ pool, readPool }) {
           [req.params.eventId],
         ),
         reads.query(
-          `WITH ${perDivePointsCte({
-             select: ["s.competitor_id", "cdl.team_id", "s.round_number"],
-             where: `s.event_id = $1
-               AND COALESCE(e.is_rehearsal, FALSE) = FALSE`,
+          /* Same scores the live scoreboard totals up (a Super Final
+             stage's carry included, standingsScoreScope), so the recap
+             of a finished stage matches what spectators saw live. The
+             UNION form of it, see standingsPerDiveCte. */
+          `WITH ${standingsPerDiveCte({
+             select: ["s.competitor_id", "cdl.team_id", "s.event_id", "s.round_number"],
+             and:    "COALESCE(e.is_rehearsal, FALSE) = FALSE",
            })},
            /* Team rows carry the code their divers share (migration
               095), so team events get chips and a medal table too. */

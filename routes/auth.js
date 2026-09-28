@@ -13,6 +13,7 @@
 const express = require("express");
 const bcrypt  = require("bcrypt");
 const jwt     = require("jsonwebtoken");
+const rateLimit = require("express-rate-limit");
 const crypto  = require("node:crypto");
 const totp    = require("../lib/totp");
 const { SESSION_COOKIE, cookieOptions } = require("../lib/session-cookie");
@@ -511,30 +512,6 @@ module.exports = function createAuthRouter({
   // ...payload }. Recovery codes are one-time, on success the
   // matched hash is removed from the user's stored array.
   // -------------------------------------------------------------
-  // Spend one recovery code. The bcrypt compares take a while, and the
-  // write used to be a plain overwrite of the whole list, so two logins
-  // racing with the same code both matched it and both got a session
-  // (and two different codes at once wrote one of them back, unused).
-  // The write is a compare-and-set against the list we matched in: if it
-  // changed underneath us, re-read and match again. A code the other
-  // request already spent isn't there the second time, so it fails.
-  async function consumeRecoveryAtomically(userId, hashes, code) {
-    let current = hashes || [];
-    for (let attempt = 0; attempt < 5; attempt++) {
-      const { matched, remainingHashes } = await totp.consumeRecoveryCode(current, code);
-      if (!matched) return false;
-      const done = await pool.query(
-        `UPDATE users SET totp_recovery_codes = $1::jsonb
-          WHERE id = $2 AND totp_recovery_codes = $3::jsonb`,
-        [JSON.stringify(remainingHashes), userId, JSON.stringify(current)],
-      );
-      if (done.rowCount) return true;
-      const fresh = await pool.query("SELECT totp_recovery_codes FROM users WHERE id = $1", [userId]);
-      current = fresh.rows[0]?.totp_recovery_codes || [];
-    }
-    return false;
-  }
-
   router.post("/api/auth/login/totp", authLimiter, async (req, res) => {
     const { totp_token, code } = req.body || {};
     if (!totp_token || !code) {
@@ -567,7 +544,8 @@ module.exports = function createAuthRouter({
       let consumedRecovery = false;
       if (looksLikeTotp) accepted = await consumeTotpStep(user.id, user.totp_secret, code);
       if (!accepted) {
-        consumedRecovery = await consumeRecoveryAtomically(user.id, user.totp_recovery_codes, code);
+        // Single use even when two logins race with it, see spendRecoveryCode.
+        consumedRecovery = await totp.spendRecoveryCode(pool, user.id, user.totp_recovery_codes, code);
         accepted = consumedRecovery;
       }
       if (!accepted) {
@@ -1524,31 +1502,52 @@ module.exports = function createAuthRouter({
   // current password as a defence against a hijacked session
   // silently rotating the credential.
   // -------------------------------------------------------------
-  router.put("/api/users/me/password", verifyToken, async (req, res) => {
+  // Per account, on top of authLimiter's per-IP budget: a stolen session
+  // can come from anywhere, and a right guess here locks the owner out.
+  // Only misses count. The skip is read per request (not at load like
+  // server.js's limiters) so a test can switch it on for itself.
+  const passwordChangeLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 5,
+    skipSuccessfulRequests: true,
+    standardHeaders: "draft-7",
+    legacyHeaders: false,
+    keyGenerator: (req) => `password-change:${req.user.id}`,
+    message: { error: "Too many attempts, please try again in 15 minutes." },
+    skip: () => process.env.RATE_LIMIT_DISABLED === "true",
+  });
+
+  router.put("/api/users/me/password", authLimiter, verifyToken, passwordChangeLimiter, async (req, res) => {
     const { current_password, new_password } = req.body || {};
-    if (!current_password || !new_password) {
+    // bcrypt throws on anything but a string, which came back as a 500.
+    if (typeof current_password !== "string" || typeof new_password !== "string"
+        || !current_password || !new_password) {
       return res.status(400).json({ error: "Current and new password are required" });
     }
     const pwErr = validatePassword(new_password);
     if (pwErr) return res.status(400).json({ error: pwErr });
+    // Check the current password on a plain read first. The transaction
+    // (and its pooled connection) only starts once it's right: holding a
+    // connection through a cost-12 compare let a few dozen parallel wrong
+    // guesses starve the pool for the whole app.
+    let user;
+    try {
+      user = (await pool.query(
+        "SELECT id, password, full_name, email FROM users WHERE id = $1",
+        [req.user.id],
+      )).rows[0];
+      if (!user) return res.status(404).json({ error: "User not found" });
+      if (!user.password || !(await bcrypt.compare(current_password, user.password))) {
+        return res.status(401).json({ error: "Current password is incorrect" });
+      }
+    } catch (err) {
+      console.error("[Change Password Error]", err.message);
+      return res.status(500).json({ error: "Password change failed" });
+    }
+    const hash = await bcrypt.hash(new_password, 12);
     const client = await pool.connect();
     try {
       await client.query("BEGIN");
-      const u = await client.query(
-        "SELECT id, password, full_name, email FROM users WHERE id = $1",
-        [req.user.id],
-      );
-      const user = u.rows[0];
-      if (!user) {
-        await client.query("ROLLBACK");
-        return res.status(404).json({ error: "User not found" });
-      }
-      const ok = await bcrypt.compare(current_password, user.password);
-      if (!ok) {
-        await client.query("ROLLBACK");
-        return res.status(401).json({ error: "Current password is incorrect" });
-      }
-      const hash = await bcrypt.hash(new_password, 12);
       await client.query("UPDATE users SET password = $1 WHERE id = $2", [hash, user.id]);
       // Migration 021: invalidate every other session this user
       // has open on other devices. Then issue a replacement JWT

@@ -578,8 +578,8 @@ const requireMeetOrClubEditor = [
 // request from a non-sysadmin is refused, but reads, the scoreboard, admin
 // sign-in, and the Stripe webhook stay live. Mounted here so it fronts every
 // router below; the socket side is gated in lib/middleware too
-// (socketMaintenanceBlocked, which socketCanManageEvent and the judge's
-// submit_score both ask).
+// (socketMaintenanceBlocked, which socketRequireRole and
+// socketCanManageEvent both run for every socket write).
 //
 // Reads are the overwhelming majority of traffic, so the fast path is a
 // method + flag check before we spend anything decoding a token.
@@ -948,6 +948,10 @@ app.use(require("./routes/coach")({
   bulkWriteLimiter,
   loadEventForEntries,
   push,
+  // A mid-event withdrawal tells the Control Room (roster_changed) and
+  // drops the cached scoreboard.
+  io,
+  scoreboardCache,
 }));
 
 // =============================================================
@@ -1233,6 +1237,7 @@ app.use(require("./routes/event-templates")({ pool, requireMeetEditor }));
 // =============================================================
 app.use(require("./routes/conflicts")({
   pool, io, scoreboardCache, requireOrgRole, requireRoleOrEventDelegate, recomputeRecordKeys,
+  isEventDelegate,
 }));
 
 // =============================================================
@@ -1380,6 +1385,7 @@ require("./routes/socket")({
   scoreboardCache,
   metrics,
   push,
+  trustProxy: app.get("trust proxy fn"),
 });
 
 // =============================================================
@@ -1450,7 +1456,7 @@ app.use(limitRoutes(createSearchLimiter(), require("./routes/dr-archive")({ pool
 // the local csvCell / csvRow helpers and the World Aquatics trim
 // annotation used by the score sheet.
 // =============================================================
-app.use(limitRoutes(createExportLimiter(), require("./routes/pdf")({ pool })));
+app.use(limitRoutes(createExportLimiter(), require("./routes/pdf")({ pool, optionalAuth })));
 
 // =============================================================
 // JUDGE RANKING ANALYSIS
@@ -1461,7 +1467,7 @@ app.use(limitRoutes(createExportLimiter(), require("./routes/pdf")({ pool })));
 // + PDF exports for federation reporting. See routes/judge-
 // ranking.js for the rationale (public read; v1 individual only).
 // =============================================================
-app.use(limitRoutes(createExportLimiter(), require("./routes/judge-ranking")({ pool })));
+app.use(limitRoutes(createExportLimiter(), require("./routes/judge-ranking")({ pool, optionalAuth })));
 
 // =============================================================
 // PUBLIC DIVER PROFILE

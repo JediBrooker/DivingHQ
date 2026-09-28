@@ -22,9 +22,12 @@ const { publicId } = require("../lib/public-id");
 const {
   perDiveSelect, perDivePointsCte, teamStandingsCte, compStandingsCte,
   eventRepCodesCte, PUBLIC_PANEL_SQL,
+  ownStageScores, carriedStageScores, standingsPerDiveCte,
 } = require("../lib/scoring-sql");
 const { eventRecordMarks } = require("../lib/records");
 const { PUBLIC_CLUB_JOIN } = require("../lib/club-approvals");
+const { ensureEventVisible } = require("../lib/event-visibility");
+const { uuidParams } = require("../lib/uuid-params");
 
 module.exports = function createScoreboardRouter({
   pool,
@@ -33,31 +36,14 @@ module.exports = function createScoreboardRouter({
   optionalAuth,
 }) {
   const router = express.Router();
+  // Malformed path ids fall through to a 404 (lib/uuid-params).
+  uuidParams(router, "eventId");
   const maybeAuth = optionalAuth || ((req, _res, next) => next());
 
-  async function ensureScoreboardVisible(req, res, eventId) {
-    const ev = await pool.query(
-      "SELECT id, org_id, status FROM events WHERE id = $1",
-      [eventId],
-    );
-    if (!ev.rows.length) {
-      res.status(404).json({ error: "Event not found" });
-      return false;
-    }
-    const event = ev.rows[0];
-    if (["Live", "Completed"].includes(event.status)) return true;
-    if (req.user?.is_system_admin || req.user?.org_id === event.org_id) return true;
-    if (req.user?.org_id) {
-      const part = await pool.query(
-        `SELECT 1 FROM event_participating_orgs
-          WHERE event_id = $1 AND org_id = $2`,
-        [eventId, req.user.org_id],
-      );
-      if (part.rows.length) return true;
-    }
-    res.status(404).json({ error: "Event not found" });
-    return false;
-  }
+  // Live and Completed events are public, earlier ones only to the host
+  // or a participating org (lib/event-visibility, shared with the
+  // exports and the judge ranking analysis).
+  const ensureScoreboardVisible = (req, res, eventId) => ensureEventVisible(pool, req, res, eventId);
 
   // A miss goes through getOrBuild so a burst of viewers refetching on
   // the same socket event shares one rebuild. ?cache=skip is someone
@@ -79,13 +65,6 @@ module.exports = function createScoreboardRouter({
   // The main scoreboard payload. Only takes the event id, never req:
   // one build can end up answering several requests at once.
   async function buildScoreboard(eventId) {
-    // Standings roster filter, shared by both per_dive branches below.
-    const onRoster = `s.competitor_id IN (
-               SELECT competitor_id FROM competitor_dive_lists
-                WHERE event_id = $1
-                  AND withdrawn_at IS NULL
-                  AND is_reserve = FALSE
-             )`;
     const standingsCols = ["s.competitor_id", "cdl.team_id", "s.event_id", "s.round_number"];
     const [st, hi, up, panel, records] = await Promise.all([
       // Standings: per-dive points (trimmed × DD × scaling) summed
@@ -96,29 +75,19 @@ module.exports = function createScoreboardRouter({
       // from BOTH stages: the current event AND the parent stage
       // referenced in score_carry_from. This implements the
       // Diving World Cup Super Final §3.1 rule ("Head-to-Head
-      // scores carry forward to Semi Final"). Filter is scoped
-      // to competitors on the CURRENT event's roster so the H2H
-      // losers (who aren't on the SF roster) don't pollute the
-      // SF standings.
+      // scores carry forward to Semi Final"). standingsScoreScope
+      // (lib/scoring-sql) holds the rule, shared with the recap and
+      // the exports so a finished stage reads the same: every dive
+      // scored in this event (withdrawn divers keep theirs, reserves
+      // aside), plus the parent stage's for divers who are in this one.
       //
-      // The two stages are two branches of a UNION, not one
-      // `event_id = $1 OR event_id = carry_from` filter. With the OR
-      // the planner can't push the event id down into the cdl and
-      // event_judges joins, so it hashed both tables whole and this
-      // query got slower as the archive grew, whatever the event's
-      // size. Plain UNION rather than ALL: each branch's rows are
-      // already unique, so the only thing it can merge is a
-      // carry_from pointing at the event itself, which the OR
-      // counted once as well.
+      // standingsPerDiveCte writes the two stages as two branches of a
+      // UNION, not one `own OR carried` filter. With the OR the planner
+      // can't push the event id down into the cdl and event_judges
+      // joins, so it hashed both tables whole and this query got slower
+      // as the archive grew, whatever the event's size.
       pool.query(
-        `WITH per_dive AS (
-${perDiveSelect({ select: standingsCols, where: `s.event_id = $1\n  AND ${onRoster}` })}
-UNION
-${perDiveSelect({
-  select: standingsCols,
-  where: `s.event_id = (SELECT score_carry_from FROM events WHERE id = $1)\n  AND ${onRoster}`,
-})}
-         ),
+        `WITH ${standingsPerDiveCte({ select: standingsCols })},
          /* Team-event branch: aggregate by team. public_id is
             computed in Node from team_id below, we expose team_id
             here so the router can hash it. The spectator-facing
@@ -324,10 +293,13 @@ ${perDiveSelect({
   // correction) call invalidate(eventId), which clears derived
   // keys too, no new hook needed.
   async function buildLeaderboard(eventId) {
+    const ev = await pool.query("SELECT event_type FROM events WHERE id = $1", [eventId]);
+    if (ev.rows[0]?.event_type === "team") return buildTeamLeaderboard(eventId);
     const r = await pool.query(
       `WITH ${perDivePointsCte({
          name:        "dive_totals",
          pointsAlias: "round_total",
+         where:       ownStageScores(),
        })},
        /* SUPER FINAL CARRY: when this event has score_carry_from
           set, prepend each diver's carried total as round 0 so
@@ -338,7 +310,8 @@ ${perDiveSelect({
           scoped to competitors on this event's roster so H2H
           losers don't appear in the SF's leaderboard.
           For non-super-final events (score_carry_from NULL) the
-          CTE is empty and behaviour is unchanged. */
+          CTE is empty and behaviour is unchanged. Same carry rule
+          as the standings (carriedStageScores). */
        ${perDivePointsCte({
          name:        "carry_rounds",
          // round 0 is the synthetic carry row; grouping stays
@@ -347,13 +320,7 @@ ${perDiveSelect({
          select:      ["s.competitor_id", "0 AS round_number"],
          groupBy:     ["s.competitor_id", "s.round_number"],
          pointsAlias: "round_total",
-         where: `s.event_id = (SELECT score_carry_from FROM events WHERE id = $1)
-           AND s.competitor_id IN (
-             SELECT competitor_id FROM competitor_dive_lists
-              WHERE event_id = $1
-                AND withdrawn_at IS NULL
-                AND is_reserve = FALSE
-           )`,
+         where:       carriedStageScores(),
        })},
        carry_totals AS (
          SELECT competitor_id, 0 AS round_number,
@@ -407,8 +374,9 @@ ${perDiveSelect({
        JOIN users u ON u.id = wp.competitor_id
        ${PUBLIC_CLUB_JOIN}
        /* One row per diver per round, so rep codes come from reps,
-          once per diver. Carried rounds are limited to this event's
-          roster above, so every diver here is in it. */
+          once per diver. Carried rounds only count divers who are in
+          this stage (carriedStageScores) and a withdrawn diver keeps
+          their dive-list rows, so every diver here is in reps. */
        LEFT JOIN reps rc ON rc.id = wp.competitor_id
        /* Filter the synthetic carry-row (round_number=0) out of
           the rendered leaderboard. Its contribution survives in
@@ -418,12 +386,72 @@ ${perDiveSelect({
       [eventId],
     );
 
+    return { rounds: roundsFrom(eventId, r.rows) };
+  }
+
+  // Team events rank teams, like the standings beside the By-Round tab.
+  // This tab used to rank every member against the rest, so a team's
+  // divers turned up as a dozen individual places. Round totals are the
+  // sum of the team's dives in that round; no Super Final carry here,
+  // the H2H stages are individual.
+  async function buildTeamLeaderboard(eventId) {
+    const r = await pool.query(
+      `WITH ${perDivePointsCte({
+         select:  ["cdl.team_id", "s.competitor_id", "s.round_number"],
+         where:   ownStageScores(),
+       })},
+       round_totals AS (
+         SELECT team_id, round_number, SUM(dive_points) AS round_total
+         FROM per_dive
+         WHERE team_id IS NOT NULL
+         GROUP BY team_id, round_number
+       ),
+       cumulative AS (
+         SELECT team_id, round_number, round_total,
+                SUM(round_total) OVER (
+                  PARTITION BY team_id
+                  ORDER BY round_number
+                  ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+                ) AS cumulative_total
+         FROM round_totals
+       ),
+       ranked AS (
+         /* WA Art 4.1.5 shared places, same as the individual branch. */
+         SELECT *, RANK() OVER (PARTITION BY round_number ORDER BY cumulative_total DESC) AS rnk
+         FROM cumulative
+       ),
+       with_prev AS (
+         SELECT r.*, LAG(r.rnk) OVER (PARTITION BY r.team_id ORDER BY r.round_number) AS prev_rnk
+         FROM ranked r
+       )
+       SELECT wp.team_id, t.name AS full_name,
+              event_team_rep_code($1, t.id) AS country_code,
+              t.short_code AS club_name,
+              wp.round_number, wp.round_total, wp.cumulative_total,
+              wp.rnk AS rank, wp.prev_rnk AS prev_rank,
+              CASE WHEN wp.prev_rnk IS NULL THEN NULL
+                   ELSE (wp.prev_rnk - wp.rnk) END AS movement
+       FROM with_prev wp
+       JOIN teams t ON t.id = wp.team_id
+       ORDER BY wp.round_number ASC, wp.rnk ASC, t.name ASC`,
+      [eventId],
+    );
+    return { rounds: roundsFrom(eventId, r.rows) };
+  }
+
+  // Shape leaderboard rows into rounds. A team row has no competitor_id
+  // (nothing to link to), so every row carries a public_id the SPA keys
+  // its list on, the same hash the standings use.
+  function roundsFrom(eventId, rows) {
     const byRound = {};
-    for (const row of r.rows) {
+    for (const row of rows) {
       const rn = row.round_number;
       if (!byRound[rn]) byRound[rn] = [];
       byRound[rn].push({
-        competitor_id: row.competitor_id,
+        competitor_id: row.competitor_id || null,
+        public_id: row.competitor_id
+          ? publicId("comp", eventId, row.competitor_id)
+          : publicId("team", eventId, row.team_id),
         full_name: row.full_name,
         country_code: row.country_code,
         club_name: row.club_name,
@@ -434,11 +462,10 @@ ${perDiveSelect({
         movement: row.movement == null ? null : Number(row.movement),
       });
     }
-    const rounds = Object.keys(byRound)
+    return Object.keys(byRound)
       .map(Number)
       .sort((a, b) => a - b)
       .map((n) => ({ round_number: n, rankings: byRound[n] }));
-    return { rounds };
   }
 
   router.get("/api/scoreboard/:eventId", maybeAuth, async (req, res) => {

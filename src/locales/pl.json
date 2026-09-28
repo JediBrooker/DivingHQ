@@ -1625,7 +1625,8 @@
       "btn_redirecting": "Przekierowywanie…",
       "btn_coming_soon": "Wkrótce",
       "error_load": "Nie udało się załadować opłaty",
-      "error_checkout": "Nie udało się rozpocząć zakupu"
+      "error_checkout": "Nie udało się rozpocząć zakupu",
+      "btn_renew": "Odnów"
     },
     "charges_view": {
       "title": "Opłaty",

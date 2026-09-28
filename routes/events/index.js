@@ -37,7 +37,7 @@ const {
   stampDiveListLock,
   refuseIfScoresExist,
 } = require("./stage-helpers");
-const { canSeeEvent } = require("./visibility");
+const { canSeeEvent } = require("../../lib/event-visibility");
 
 // Migration 039: shape-check operator-prescribed round_dives. We
 // only validate structure here (round numbering 1..N contiguous,
@@ -902,6 +902,10 @@ module.exports = function createEventsRouter({
         }
       }
       await pool.query("DELETE FROM events WHERE id = $1", [ev.id]);
+      // Its live state goes with it (the event_live_state row cascades),
+      // same as the Completed flip below does.
+      if (activeDivers) delete activeDivers[ev.id];
+      if (meetHolds) delete meetHolds[ev.id];
       // A Live/Completed event may sit in the cached public
       // archive listing for up to 60s, bust it so the deleted
       // event drops out immediately.
@@ -1118,7 +1122,7 @@ module.exports = function createEventsRouter({
   //
   // Public for Live/Completed events; before that, the host org, a
   // sysadmin, or a federation on the participating list (the same
-  // people GET /api/events lists it for, see ./visibility.js).
+  // people GET /api/events lists it for, see lib/event-visibility.js).
   // -------------------------------------------------------------
   router.get("/api/events/:id/round-dives", optionalAuth, async (req, res) => {
     try {

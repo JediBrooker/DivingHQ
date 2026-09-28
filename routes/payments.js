@@ -26,9 +26,11 @@ const express = require("express");
 const { resolvePrice, priceCharge } = require("../lib/fee-pricing");
 const { recordAudit, auditFromReq } = require("../lib/audit");
 const ledger = require("../lib/payout-ledger");
+const { CLUB_SEAT_SQL } = require("../lib/middleware");
+const { uuidParams } = require("../lib/uuid-params");
 const { fromStripeAmount, toAlpha2 } = require("../lib/stripe");
 const {
-  retirePendingPayment, retireBlocked, resumeOrRetireCheckout, applyFullRefundSideEffects,
+  canReconcile, retirePendingPayment, retireBlocked, resumeOrRetireCheckout, applyFullRefundSideEffects,
 } = require("../lib/payment-lifecycle");
 
 const APP_BASE_URL =
@@ -103,6 +105,8 @@ module.exports = function createPaymentsRouter({
   email = null,
 }) {
   const router = express.Router();
+  // Malformed path ids fall through to a 404 (lib/uuid-params).
+  uuidParams(router, "id");
 
   // club_affiliation / club_accreditation share all plumbing and differ
   // only by scope + the club_affiliations.kind they grant. One mapper
@@ -233,6 +237,26 @@ module.exports = function createPaymentsRouter({
       throw err;
     }
     return subjectUserId;
+  }
+
+  // Buyer-facing reads take ?subject_user_id= so a guardian's card shows
+  // the dependent's price and status. Returns who the read is about: the
+  // dependent when the caller is their approved guardian, otherwise the
+  // caller (null for an anonymous read). A subject needs a signed-in
+  // guardian, anyone else gets validateGuardian's 403, so the param can't
+  // be used to look up whether a stranger has paid or is a member.
+  async function readBeneficiary(req) {
+    const raw = req.query.subject_user_id;
+    if (raw !== undefined && raw !== "") {
+      if (!req.user) {
+        const err = new Error("You are not an approved guardian of this user.");
+        err.status = 403;
+        throw err;
+      }
+      const subject = await validateGuardian(req, raw);
+      if (subject) return subject;
+    }
+    return req.user ? req.user.id : null;
   }
 
   // "Can the caller act on something that belongs to ownerUserId?"
@@ -503,13 +527,18 @@ module.exports = function createPaymentsRouter({
     // surcharge. Expire its Stripe session and free the one-live-payment slot
     // so the fresh, correctly-priced row can be inserted. Same-priced pending
     // rows are left alone (they collide → 409 "in progress", which is right).
+    //
+    // Keyed on the beneficiary like the one-live index is. Matching on the
+    // payer meant a guardian checking out for one child could expire the
+    // pending checkout they'd opened for a sibling.
     if (surchargeCents > 0 && subjectType === "event_entry") {
       const stale = (await pool.query(
         `SELECT id, stripe_checkout_session, amount_cents FROM payments
-          WHERE event_id = $1 AND payer_user_id = $2 AND fee_definition_id = $3
+          WHERE event_id = $1 AND COALESCE(subject_user_id, payer_user_id) = $2
+            AND fee_definition_id = $3
             AND subject_type = 'event_entry' AND status = 'pending'
           LIMIT 1`,
-        [eventId, userId, fee.id],
+        [eventId, beneficiaryId, fee.id],
       )).rows[0];
       if (stale && stale.amount_cents < chargeAmountCents) {
         if (stale.stripe_checkout_session) {
@@ -531,6 +560,14 @@ module.exports = function createPaymentsRouter({
     // retries (see insertPaymentOrResume).
     // subject_user_id has no default, so a NULL here (buying for
     // yourself) is the same row as leaving the column out.
+    //
+    // findBlocking has to match what the one-live indexes key on
+    // (migration 083): COALESCE(subject_user_id, payer_user_id). On
+    // payer_user_id alone it never found a guardian's own row for their
+    // child, so every retry dead-ended in a 409 until Stripe expired the
+    // session. And because the dependent and a guardian can now both be
+    // mid-checkout on the same slot, actingUserId makes sure one of them
+    // is never resumed into the other's Stripe session.
     const feeScoped = subjectType === "event_entry" || subjectType === "membership";
     const attempt = await insertPaymentOrResume({
       insert: async () => (await pool.query(
@@ -543,14 +580,15 @@ module.exports = function createPaymentsRouter({
          chargeAmountCents, applicationFeeCents, currency, fee.fee_payer],
       )).rows[0].id,
       findBlocking: async () => (await pool.query(
-        `SELECT id, status, stripe_checkout_session FROM payments
-          WHERE subject_type = $1 AND payer_user_id = $2
+        `SELECT id, status, stripe_checkout_session, payer_user_id FROM payments
+          WHERE subject_type = $1 AND COALESCE(subject_user_id, payer_user_id) = $2
             AND event_id IS NOT DISTINCT FROM $3 AND meet_id IS NOT DISTINCT FROM $4
             AND ($5::boolean = false OR fee_definition_id = $6)
             AND status IN ('pending', 'paid')
           ORDER BY (status = 'pending') DESC, created_at DESC LIMIT 1`,
         [subjectType, beneficiaryId, eventId || null, meetId || null, feeScoped, fee.id],
       )).rows[0],
+      actingUserId: userId,
       alreadyDoneMessage: subjectUserId
         ? "A payment is already in progress or completed for this dependent."
         : "You already have a payment in progress or completed for this.",
@@ -941,6 +979,11 @@ module.exports = function createPaymentsRouter({
       let accountId = org.stripe_account_id;
       if (!accountId) {
         const country = toAlpha2(org.country_code);
+        if (!country) {
+          return res.status(409).json({
+            error: "Set your federation's country before setting up payouts. Stripe opens the payout account in that country, and it can't be changed afterwards.",
+          });
+        }
         // Stripe requires a contact email on the recipient account. The JWT
         // doesn't carry email, so fetch the acting admin's; the recipient
         // can change it during onboarding anyway.
@@ -1028,8 +1071,10 @@ module.exports = function createPaymentsRouter({
   // Federation withdraws its owed balance. lib/payout-ledger locks the org
   // row so two concurrent requests can't over-withdraw, books one pending
   // payout PER CURRENCY, then fires the real Stripe transfer to the org's
-  // recipient account: success settles to 'paid', any Stripe error to
-  // 'failed' (balance auto-restores). No operator step, no bank details.
+  // recipient account: success settles to 'paid', a refusal from Stripe to
+  // 'failed' (balance auto-restores), and an uncertain outcome stays
+  // 'pending' for the auto-withdraw sweep to settle under the same id (see
+  // lib/payout-ledger executePayouts). No operator step, no bank details.
   router.post("/api/orgs/:id/withdrawals", requireOrgRole(["org_admin"]), async (req, res) => {
     if (!ensurePayments(res)) return;
     const orgId = req.params.id;
@@ -1153,18 +1198,21 @@ module.exports = function createPaymentsRouter({
       if (!feeRes.rows.length) return res.json({ fee: null, payments_enabled: payments.enabled });
       const def = feeRes.rows[0];
       const prices = (await pool.query("SELECT * FROM fee_prices WHERE fee_definition_id = $1", [def.id])).rows;
-      const member = req.user ? await isActiveMember(pool, orgId, req.user.id) : false;
+      // Priced and checked for the diver the card is about (a guardian's
+      // dependent, or the caller), the same person startCheckout prices.
+      const beneficiary = await readBeneficiary(req);
+      const member = await isActiveMember(pool, orgId, beneficiary);
       const chosen = resolvePrice(prices, { isMember: member });
       const org = await loadOrg(orgId);
       // "Submit, then pay": the dive-list entry exists independently; an
-      // entry is confirmed once a paid payment exists for this diver.
-      const checkUserId = req.query.subject_user_id || (req.user && req.user.id);
-      const alreadyPaid = checkUserId
+      // entry is confirmed once a paid payment exists for this diver,
+      // whoever paid it (a guardian's row has the diver as subject).
+      const alreadyPaid = beneficiary
         ? (await pool.query(
             `SELECT 1 FROM payments
-              WHERE event_id = $1 AND payer_user_id = $2
+              WHERE event_id = $1 AND COALESCE(subject_user_id, payer_user_id) = $2
                 AND subject_type = 'event_entry' AND status = 'paid' LIMIT 1`,
-            [eventId, checkUserId],
+            [eventId, beneficiary],
           )).rows.length > 0
         : false;
       const late = await resolveLateFee(pool, eventId);
@@ -1188,6 +1236,7 @@ module.exports = function createPaymentsRouter({
         payments_enabled: payments.enabled,
       });
     } catch (err) {
+      if (err.status) return res.status(err.status).json({ error: err.message });
       logger.error({ err: err.message }, "[payments] read event fee failed");
       return res.status(500).json({ error: "Failed to read the entry fee." });
     }
@@ -1387,16 +1436,16 @@ module.exports = function createPaymentsRouter({
       if (!feeRes.rows.length) return res.json({ fee: null, payments_enabled: payments.enabled });
       const def = feeRes.rows[0];
       const prices = (await pool.query("SELECT * FROM fee_prices WHERE fee_definition_id = $1", [def.id])).rows;
-      const member = req.user ? await isActiveMember(pool, orgId, req.user.id) : false;
+      const beneficiary = await readBeneficiary(req);
+      const member = await isActiveMember(pool, orgId, beneficiary);
       const chosen = resolvePrice(prices, { isMember: member });
       const org = await loadOrg(orgId);
-      const meetCheckUserId = req.query.subject_user_id || (req.user && req.user.id);
-      const alreadyPaid = meetCheckUserId
+      const alreadyPaid = beneficiary
         ? (await pool.query(
             `SELECT 1 FROM payments
-              WHERE meet_id = $1 AND payer_user_id = $2
+              WHERE meet_id = $1 AND COALESCE(subject_user_id, payer_user_id) = $2
                 AND subject_type = 'event_entry' AND status = 'paid' LIMIT 1`,
-            [meetId, meetCheckUserId],
+            [meetId, beneficiary],
           )).rows.length > 0
         : false;
       return res.json({
@@ -1411,6 +1460,7 @@ module.exports = function createPaymentsRouter({
         payments_enabled: payments.enabled,
       });
     } catch (err) {
+      if (err.status) return res.status(err.status).json({ error: err.message });
       logger.error({ err: err.message }, "[payments] read meet fee failed");
       return res.status(500).json({ error: "Failed to read the meet fee." });
     }
@@ -1534,13 +1584,13 @@ module.exports = function createPaymentsRouter({
       const prices = (await pool.query("SELECT * FROM fee_prices WHERE fee_definition_id = $1", [def.id])).rows;
       const chosen = resolvePrice(prices, { isMember: false });
       const org = await loadOrg(orgId);
-      const accessCheckUserId = req.query.subject_user_id || (req.user && req.user.id);
-      const alreadyPaid = accessCheckUserId
+      const beneficiary = await readBeneficiary(req);
+      const alreadyPaid = beneficiary
         ? (await pool.query(
             `SELECT 1 FROM payments
-              WHERE meet_id = $1 AND payer_user_id = $2
+              WHERE meet_id = $1 AND COALESCE(subject_user_id, payer_user_id) = $2
                 AND subject_type = $3 AND status = 'paid' LIMIT 1`,
-            [meetId, accessCheckUserId, req.query.kind],
+            [meetId, beneficiary, req.query.kind],
           )).rows.length > 0
         : false;
       return res.json({
@@ -1554,6 +1604,7 @@ module.exports = function createPaymentsRouter({
         payments_enabled: payments.enabled,
       });
     } catch (err) {
+      if (err.status) return res.status(err.status).json({ error: err.message });
       logger.error({ err: err.message }, "[payments] read meet access failed");
       return res.status(500).json({ error: "Failed to read the access fee." });
     }
@@ -1705,13 +1756,13 @@ module.exports = function createPaymentsRouter({
       // public card hides itself rather than offering an empty purchase.
       if (!events.length) return res.json({ fee: null, payments_enabled: payments.enabled });
       const org = await loadOrg(orgId);
-      const bundleCheckUserId = req.query.subject_user_id || (req.user && req.user.id);
-      const alreadyPaid = bundleCheckUserId
+      const beneficiary = await readBeneficiary(req);
+      const alreadyPaid = beneficiary
         ? (await pool.query(
             `SELECT 1 FROM payments
-              WHERE meet_id = $1 AND payer_user_id = $2
+              WHERE meet_id = $1 AND COALESCE(subject_user_id, payer_user_id) = $2
                 AND subject_type = 'meet_bundle' AND status = 'paid' LIMIT 1`,
-            [meetId, bundleCheckUserId],
+            [meetId, beneficiary],
           )).rows.length > 0
         : false;
       return res.json({
@@ -1725,6 +1776,7 @@ module.exports = function createPaymentsRouter({
         payments_enabled: payments.enabled,
       });
     } catch (err) {
+      if (err.status) return res.status(err.status).json({ error: err.message });
       logger.error({ err: err.message }, "[payments] read meet bundle failed");
       return res.status(500).json({ error: "Failed to read the meet bundle." });
     }
@@ -1804,25 +1856,38 @@ module.exports = function createPaymentsRouter({
       const prices = (await pool.query("SELECT * FROM fee_prices WHERE fee_definition_id = $1", [def.id])).rows;
       const chosen = resolvePrice(prices, { isMember: false });
       const org = await loadOrg(orgId);
-      const alreadyMember = req.user
+      // MembershipView's "Paying for" picker sends the dependent here. The
+      // card used to answer for the guardian regardless, so a guardian who
+      // was a member saw "Member" and no Pay button on their child's card.
+      const beneficiary = await readBeneficiary(req);
+      const current = beneficiary
         ? (await pool.query(
-            `SELECT 1 FROM memberships
+            `SELECT MAX(period_end) AS period_end,
+                    MAX(period_end) <= CURRENT_DATE + make_interval(days => $4) AS renewable
+               FROM memberships
               WHERE org_id = $1 AND user_id = $2 AND status = 'active' AND period_end > now()
-                AND tier IS NOT DISTINCT FROM $3 LIMIT 1`,
-            [orgId, req.user.id, tier],
-          )).rows.length > 0
-        : false;
+                AND tier IS NOT DISTINCT FROM $3`,
+            [orgId, beneficiary, tier, RENEWAL_WINDOW_DAYS],
+          )).rows[0]
+        : null;
+      const alreadyMember = !!current?.period_end;
       return res.json({
         fee: {
           currency: def.currency || org?.default_currency || null,
           tier: def.tier,
           already_member: alreadyMember,
+          period_end: current?.period_end || null,
+          // Inside the renewal window the checkout sells a renewal, so the
+          // card keeps its Pay button next to "Member until" (see
+          // refuseOutsideRenewalWindow for the rule this mirrors).
+          renewable: alreadyMember && current.renewable === true,
           price: chosen ? { amount_cents: chosen.amount_cents, label: chosen.label } : null,
           payer_total_cents: chosen ? payerTotalCents(def, org, chosen.amount_cents) : null,
         },
         payments_enabled: payments.enabled,
       });
     } catch (err) {
+      if (err.status) return res.status(err.status).json({ error: err.message });
       logger.error({ err: err.message }, "[payments] read membership (diver) failed");
       return res.status(500).json({ error: "Failed to read membership." });
     }
@@ -1965,12 +2030,12 @@ module.exports = function createPaymentsRouter({
   // Returns { paymentId } for a fresh insert or { resumedUrl, paymentId }
   // when the payer should be sent back into their existing session.
   //
-  // actingUserId: whoever is trying to pay right now. The fine and
-  // entry-charge slots are the only ones two different people can
-  // contest, because their unique indexes key on fine_id /
-  // entry_charge_id alone, never on the payer. Once a guardian may pay a
-  // dependent's penalty, both of them can be mid-checkout on the same
-  // row.
+  // actingUserId: whoever is trying to pay right now. Two different
+  // people can contest one slot whenever its unique index doesn't key on
+  // the payer: fines and entry charges (fine_id / entry_charge_id), and
+  // every guardian-payable purchase in startCheckout, whose indexes key
+  // on the beneficiary. Once a guardian may pay for a dependent, both of
+  // them can be mid-checkout on the same row.
   //
   // Handing the second caller the first caller's open Stripe session
   // would take the money off card B while the payment row still names
@@ -2304,15 +2369,21 @@ module.exports = function createPaymentsRouter({
       const def = await resolveClubFee(pool, orgId, scope, clubId);
       const club = (await pool.query("SELECT name FROM clubs WHERE id = $1", [clubId])).rows[0];
       const current = (await pool.query(
-        `SELECT status, period_end FROM club_affiliations
+        `SELECT status, period_end,
+                period_end <= CURRENT_DATE + make_interval(days => $4) AS renewable
+           FROM club_affiliations
           WHERE org_id = $1 AND club_id = $2 AND kind = $3
             AND status = 'active' AND period_end > CURRENT_DATE
           ORDER BY period_end DESC LIMIT 1`,
-        [orgId, clubId, kind],
+        [orgId, clubId, kind, RENEWAL_WINDOW_DAYS],
       )).rows[0];
+      const renewable = !!current && current.renewable === true;
       if (!def) {
         return res.json({
-          fee: { kind, club_name: club?.name || null, active: !!current, period_end: current?.period_end || null, price: null },
+          fee: {
+            kind, club_name: club?.name || null, active: !!current, period_end: current?.period_end || null,
+            renewable, price: null,
+          },
           payments_enabled: payments.enabled,
         });
       }
@@ -2327,6 +2398,7 @@ module.exports = function createPaymentsRouter({
           payer_total_cents: chosen ? payerTotalCents(def, org, chosen.amount_cents) : null,
           active: !!current,
           period_end: current?.period_end || null,
+          renewable,
           price: chosen ? { amount_cents: chosen.amount_cents, label: chosen.label } : null,
         },
         payments_enabled: payments.enabled,
@@ -2402,15 +2474,18 @@ module.exports = function createPaymentsRouter({
     try {
       const def = await resolveOfficialFee(pool, orgId, roleType);
       const current = (await pool.query(
-        `SELECT status, period_end FROM official_accreditations
+        `SELECT status, period_end,
+                period_end <= CURRENT_DATE + make_interval(days => $4) AS renewable
+           FROM official_accreditations
           WHERE org_id = $1 AND user_id = $2 AND role_type = $3 AND meet_id IS NULL
             AND status = 'active' AND (period_end IS NULL OR period_end > CURRENT_DATE)
           ORDER BY period_end DESC NULLS LAST LIMIT 1`,
-        [orgId, req.user.id, roleType],
+        [orgId, req.user.id, roleType, RENEWAL_WINDOW_DAYS],
       )).rows[0];
+      const renewable = !!current && current.renewable === true;
       if (!def) {
         return res.json({
-          fee: { role_type: roleType, active: !!current, period_end: current?.period_end || null, price: null },
+          fee: { role_type: roleType, active: !!current, period_end: current?.period_end || null, renewable, price: null },
           payments_enabled: payments.enabled,
         });
       }
@@ -2423,6 +2498,7 @@ module.exports = function createPaymentsRouter({
           currency: def.currency || org?.default_currency || null,
           active: !!current,
           period_end: current?.period_end || null,
+          renewable,
           price: chosen ? { amount_cents: chosen.amount_cents, label: chosen.label } : null,
           payer_total_cents: chosen ? payerTotalCents(def, org, chosen.amount_cents) : null,
         },
@@ -2785,8 +2861,15 @@ module.exports = function createPaymentsRouter({
   // the Stripe call) so two concurrent refund requests can't both read the
   // same refunded_amount and pay the money out twice: the second waits,
   // re-reads, and is capped/refused against the updated row.
+  //
+  // Gated on Stripe being configured, not on the payments flag. A refund
+  // gives back money already taken (lib/stripe createRefund asserts only
+  // `configured` for the same reason), and an operator who switches
+  // payments off to stop new sales still has to be able to refund.
   router.post("/api/payments/:id/refund", verifyToken, async (req, res) => {
-    if (!ensurePayments(res)) return;
+    if (!canReconcile(payments)) {
+      return res.status(503).json({ error: "Payments are not configured on this server." });
+    }
     const paymentId = req.params.id;
     const client = await pool.connect();
     try {
@@ -2800,10 +2883,9 @@ module.exports = function createPaymentsRouter({
 
       if (!req.user.is_system_admin) {
         if (p.recipient_type === "club") {
-          const isClubAdmin = (await client.query(
-            "SELECT 1 FROM club_admins WHERE club_id = $1 AND user_id = $2",
-            [p.club_id, req.user.id],
-          )).rows.length > 0;
+          // A seat left behind by a transfer doesn't count (CLUB_SEAT_SQL),
+          // same as on every other club route.
+          const isClubAdmin = (await client.query(CLUB_SEAT_SQL, [p.club_id, req.user.id])).rows.length > 0;
           if (!isClubAdmin) {
             await client.query("ROLLBACK");
             return res.status(403).json({ error: "Only this club's admins can refund its class payments." });

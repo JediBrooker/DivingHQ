@@ -30,12 +30,22 @@ test("every socket event the server listens for or emits is in docs/socket-event
   for (const f of serverSources()) {
     // Comments show made-up usage (lib/idempotency.js), not real traffic.
     const code = fs.readFileSync(f, "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
-    for (const m of code.matchAll(/socket\.on\(\s*["']([\w:.-]+)["']/g)) names.add(m[1]);
+    // routes/socket.js registers its listeners through a local
+    // on(name, handler) wrapper, so a bare on(" counts as well as
+    // socket.on(". Method calls on anything else (process.on, pool.on,
+    // req.on) aren't socket events and stay out.
+    for (const m of code.matchAll(/(?:socket\.|(?<![\w.$]))on\(\s*["']([\w:.-]+)["']/g)) names.add(m[1]);
     for (const m of code.matchAll(/\.emit\(\s*["']([\w:.-]+)["']/g)) names.add(m[1]);
     for (const m of code.matchAll(/emitEvent\??\.?\(\s*[^,]+,\s*["']([\w:.-]+)["']/g)) names.add(m[1]);
   }
   for (const builtin of ["connection", "disconnect"]) names.delete(builtin);
   assert.ok(names.size > 20, `only found ${names.size} events, has the scan broken?`);
+  // The client-to-server side has to be in the scan too. When the
+  // handlers moved behind on() the regex above stopped seeing any of
+  // them, and nothing noticed.
+  for (const listened of ["submit_score", "set_active_diver", "subscribe_event", "notification:ack"]) {
+    assert.ok(names.has(listened), `the scan missed the ${listened} listener`);
+  }
 
   const doc = fs.readFileSync(path.join(root, "docs", "socket-events.md"), "utf8");
   const missing = [...names].filter((n) => !doc.includes("`" + n + "`")).sort();

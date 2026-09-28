@@ -20,10 +20,11 @@
 // for each judge) so the score-chip tooltip on the scoreboard can
 // say "J3 ranked this diver 2nd of 12 in round 1".
 //
-// Permission: PUBLIC read. Every input (per-judge per-dive score)
-// is already visible on the existing scoreboard, archive, and judge
-// profile pages. Re-aggregating into a hypothetical ranking surfaces
-// no new private data, it just visualises a pattern that was
+// Permission: PUBLIC read once the event is Live or Completed, the same
+// rule as the scoreboard (lib/event-visibility). Every input (per-judge
+// per-dive score) is already visible on the scoreboard, archive, and
+// judge profile pages by then. Re-aggregating into a hypothetical ranking
+// surfaces no new private data, it just visualises a pattern that was
 // already in plain sight.
 //
 // Event-type handling: all three types (individual / synchro_pair
@@ -60,8 +61,14 @@
 //     CSV export uses.
 
 const express = require("express");
-const PDFDocument = require("pdfkit");
 const { perDivePointsCte } = require("../lib/scoring-sql");
+// Approved clubs only: this is a public read, and a club still waiting on
+// its federation keeps its name private (migration 096).
+const { PUBLIC_CLUB_JOIN } = require("../lib/club-approvals");
+const { ensureEventVisible } = require("../lib/event-visibility");
+const { uuidParams } = require("../lib/uuid-params");
+// Unicode names print readably, see lib/pdf-document.
+const { createPdfDocument } = require("../lib/pdf-document");
 // CSV escaping + formula-injection guard, and the filename slug the
 // PDF/CSV exports share.
 const { csvRow, slugify } = require("../lib/csv");
@@ -104,7 +111,7 @@ async function buildAnalysis(pool, eventId) {
        FROM event_judges ej
        JOIN users u         ON u.id = ej.judge_id
        JOIN organisations o ON o.id = u.org_id
-       LEFT JOIN clubs cl   ON cl.id = u.club_id
+       ${PUBLIC_CLUB_JOIN}
       WHERE ej.event_id = $1
       ORDER BY ej.judge_number ASC`,
     [eventId],
@@ -250,7 +257,9 @@ async function buildAnalysis(pool, eventId) {
          SELECT NULL::uuid AS competitor_id,
                 t.team_id,
                 tm.name AS full_name,
-                NULL::char(3) AS country_code,
+                /* Same codes as the scoreboard beside it (migrations
+                   090 and 095): the meet's representation code. */
+                event_team_rep_code($1, t.team_id) AS country_code,
                 tm.short_code AS club_name,
                 NULL::uuid AS partner_id,
                 NULL::varchar AS partner_name,
@@ -272,7 +281,7 @@ async function buildAnalysis(pool, eventId) {
          SELECT u.id AS competitor_id,
                 NULL::uuid AS team_id,
                 u.full_name,
-                o.country_code,
+                event_rep_code($1, u.id, o.country_code) AS country_code,
                 cl.name AS club_name,
                 /* Synchro partner — first non-null partner_id across
                    the diver's rounds (constant for a given pair). */
@@ -283,7 +292,7 @@ async function buildAnalysis(pool, eventId) {
            FROM totals t
            JOIN users u ON u.id = t.competitor_id
            JOIN organisations o ON o.id = u.org_id
-           LEFT JOIN clubs cl ON cl.id = u.club_id
+           ${PUBLIC_CLUB_JOIN}
            LEFT JOIN LATERAL (
              SELECT DISTINCT cdl.partner_id
                FROM competitor_dive_lists cdl
@@ -378,16 +387,25 @@ async function buildAnalysis(pool, eventId) {
   };
 }
 
-module.exports = function createJudgeRankingRouter({ pool }) {
+module.exports = function createJudgeRankingRouter({ pool, optionalAuth }) {
   if (!pool) throw new Error("createJudgeRankingRouter requires { pool }");
   const router = express.Router();
+  // Malformed path ids fall through to a 404 (lib/uuid-params).
+  uuidParams(router, "id");
+  // Public once the event is Live or Completed; before that it's the host
+  // and participating orgs only, same as the scoreboard
+  // (lib/event-visibility). Scores typed into an Upcoming event are
+  // Control Room try-outs, not something to rank judges on in public.
+  const maybeAuth = optionalAuth || ((_req, _res, next) => next());
+  const visible = (req, res) => ensureEventVisible(pool, req, res, req.params.id);
 
   // -------------------------------------------------------------
   // JSON payload, drives the in-page JudgeRankingTable + the
   // scoreboard's chip-tooltip enhancement (per_dive_ranks).
   // -------------------------------------------------------------
-  router.get("/api/events/:id/judge-ranking-analysis", async (req, res) => {
+  router.get("/api/events/:id/judge-ranking-analysis", maybeAuth, async (req, res) => {
     try {
+      if (!(await visible(req, res))) return;
       const result = await buildAnalysis(pool, req.params.id);
       if (result.notFound) return res.status(404).json({ error: "Event not found" });
       res.json(result);
@@ -403,8 +421,9 @@ module.exports = function createJudgeRankingRouter({ pool }) {
   // this into central record-keeping systems, so the formula-injection
   // guard (csvCell) is essential.
   // -------------------------------------------------------------
-  router.get("/api/events/:id/judge-ranking-analysis.csv", async (req, res) => {
+  router.get("/api/events/:id/judge-ranking-analysis.csv", maybeAuth, async (req, res) => {
     try {
+      if (!(await visible(req, res))) return;
       const result = await buildAnalysis(pool, req.params.id);
       if (result.notFound) return res.status(404).json({ error: "Event not found" });
       const { event, judges, divers } = result;
@@ -447,14 +466,15 @@ module.exports = function createJudgeRankingRouter({ pool }) {
   // -------------------------------------------------------------
   // PDF export, landscape A4 table, mirrors the on-screen layout.
   // -------------------------------------------------------------
-  router.get("/api/events/:id/judge-ranking-analysis.pdf", async (req, res) => {
+  router.get("/api/events/:id/judge-ranking-analysis.pdf", maybeAuth, async (req, res) => {
     try {
+      if (!(await visible(req, res))) return;
       const result = await buildAnalysis(pool, req.params.id);
       if (result.notFound) return res.status(404).json({ error: "Event not found" });
       const { event, judges, divers } = result;
       const slug = slugify(event.name);
 
-      const doc = new PDFDocument({ margin: 40, size: "A4", layout: "landscape" });
+      const doc = createPdfDocument({ margin: 40, size: "A4", layout: "landscape" });
       res.setHeader("Content-Type", "application/pdf");
       res.setHeader(
         "Content-Disposition",

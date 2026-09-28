@@ -1625,7 +1625,8 @@
       "btn_redirecting": "Preusmjeravanje…",
       "btn_coming_soon": "Uskoro dostupno",
       "error_load": "Nije moguće učitati naknadu",
-      "error_checkout": "Nije moguće pokrenuti naplatu"
+      "error_checkout": "Nije moguće pokrenuti naplatu",
+      "btn_renew": "Obnovi"
     },
     "charges_view": {
       "title": "Troškovi",

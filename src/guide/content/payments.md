@@ -9,7 +9,7 @@ This page covers setup, fee configuration, paying and receiving money, fines and
 Before your organisation can collect fees or receive payouts, an org admin needs to complete Stripe onboarding.
 
 1. Go to `/payments`. The **Overview** tab shows a four-step "How it works" explainer summarising the flow: configure fees, collect payments, platform keeps 15%, you withdraw the rest.
-2. Open the **Account details** tab and click **Set up payouts**. This redirects to Stripe's hosted onboarding where you enter bank account details and complete identity verification. Bank details are held only by Stripe — DivingHQ never stores them.
+2. Open the **Account details** tab and click **Set up payouts**. This redirects to Stripe's hosted onboarding where you enter bank account details and complete identity verification. Bank details are held only by Stripe — DivingHQ never stores them. Stripe opens the payout account in your federation's country (clubs use their federation's), and that can't be changed later, so the button refuses until the federation's country is set.
 3. When onboarding completes, you're redirected back to DivingHQ. The status refreshes to "Payouts are set up".
 4. Open the **Fees & pricing** tab to configure what you charge (see the next section).
 5. Optionally, enable **automatic withdrawals** with a threshold on the **Withdrawals** tab — for example, "withdraw when balance reaches $100".
@@ -43,7 +43,7 @@ The payment flow is the same regardless of fee type. Here is how it works from t
 4. Complete payment on Stripe (card, Apple Pay, Google Pay — whatever Stripe supports in your region).
 5. Stripe redirects you back to `/payments/return` with a confirmation message.
 6. A webhook from Stripe fulfils the purchase on the backend — granting membership, activating accreditation, confirming entry, and so on.
-7. Renewals are allowed within a 30-day window before your current membership or accreditation expires.
+7. Renewals are allowed within a 30-day window before your current membership or accreditation expires. Inside that window the card shows your current end date alongside a **Renew** button, and the new period starts where the old one ends, so no paid-for days are lost.
 
 ![The Membership page, one card per tier, each showing its resolved price and a Pay button](/guide-screenshots/payments-membership.png)
 

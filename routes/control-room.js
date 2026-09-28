@@ -32,7 +32,7 @@ const { recordAudit, auditFromReq } = require("../lib/audit");
 const createIdempotency = require("../lib/idempotency");
 const { perDiveSelect, eventRepCodesCte } = require("../lib/scoring-sql");
 const { PUBLIC_CLUB_JOIN } = require("../lib/club-approvals");
-const { canSeeEvent } = require("./events/visibility");
+const { canSeeEvent } = require("../lib/event-visibility");
 
 const EVENT_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -274,11 +274,17 @@ module.exports = function createControlRoomRouter({
             });
             continue;
           }
+          // Core row first. A custom row can share the code, position
+          // and height with a DD of its own, and only the event's org's
+          // own custom rows are in play at all.
           const d = await client.query(
             `SELECT id FROM dive_directory
              WHERE dive_code = $1 AND position = $2::dive_position
-               AND ($3::numeric IS NULL OR height = $3::numeric)`,
-            [code, pos, heightNumeric],
+               AND ($3::numeric IS NULL OR height = $3::numeric)
+               AND (NOT is_custom OR created_org_id = $4)
+             ORDER BY is_custom, created_at
+             LIMIT 1`,
+            [code, pos, heightNumeric, event.org_id],
           );
           if (!d.rows.length) {
             stats.errors.push({
@@ -389,8 +395,10 @@ module.exports = function createControlRoomRouter({
          )
          SELECT cdl.id AS dive_list_id,
                 cdl.display_order, cdl.withdrawn_at,
-                /* Reserves ride along like withdrawn rows do. The Control
-                   Room and the draw both leave them out of the order, and
+                /* Reserves ride along like withdrawn rows do (sorted last
+                   in their round, no display_order). The Live pool's
+                   nextQueueIndex, the Control Room order and the
+                   randomise preview all leave is_reserve rows out, and
                    without the flag they had to guess from a null
                    round_order. */
                 cdl.is_reserve,
@@ -418,13 +426,13 @@ module.exports = function createControlRoomRouter({
                 e.event_type, e.number_of_judges,
                 /* Payments (Migration 066): is this diver's entry paid?
                    Correlated EXISTS, not a JOIN — the roster is the
-                   scoring queue, so it must never multiply rows. */
+                   scoring queue, so it must never multiply rows. Keyed
+                   on the beneficiary like the one-live indexes (083):
+                   a guardian's payment names the diver as subject. */
                 EXISTS (
                   SELECT 1 FROM payments p
-                   /* Whose entry it is: subject_user_id when a guardian
-                      paid for a dependent (the parent is the payer),
-                      otherwise the diver who paid for themselves. */
                    WHERE COALESCE(p.subject_user_id, p.payer_user_id) = cdl.competitor_id
+                     AND p.payer_user_id IS NOT NULL
                      AND p.subject_type = 'event_entry'
                      AND p.status = 'paid'
                      /* per-event entry OR a meet-level registration

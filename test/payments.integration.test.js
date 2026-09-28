@@ -1343,9 +1343,16 @@ test("a failed transfer marks the payout 'failed', restores the balance, and ale
   );
   const before = (await orgStatus()).balance_cents;
   assert.ok(before >= 8500);
-  // Simulate Stripe rejecting the transfer (e.g. onboarding lapsed).
+  // Simulate Stripe rejecting the transfer (e.g. onboarding lapsed): an
+  // API error with a 4xx status, the shape the SDK throws.
   const prev = createTransferImpl;
-  createTransferImpl = async () => { const e = new Error("insufficient_capabilities_for_transfer"); e.code = "insufficient_capabilities_for_transfer"; throw e; };
+  createTransferImpl = async () => {
+    const e = new Error("insufficient_capabilities_for_transfer");
+    e.code = "insufficient_capabilities_for_transfer";
+    e.type = "StripeInvalidRequestError";
+    e.statusCode = 400;
+    throw e;
+  };
   lastPayoutFailedEmail = null;
   try {
     const res = await api("POST", `/api/orgs/${orgId}/withdrawals`, {});
@@ -1700,4 +1707,127 @@ test("retire when the session already COMPLETED at Stripe (expire fails): the ac
   });
   assert.equal((await pool.query("SELECT status FROM fines WHERE id = $1", [fineId])).rows[0].status, "paid",
     "the late webhook settles normally — money and roster agree");
+});
+
+// B4-09: a transfer that errored without a definite "no" from Stripe (a
+// timeout, a dropped connection) may already exist. Marking it failed freed
+// the balance, the next withdrawal booked a new payout id (a new
+// idempotency key) and Stripe sent the money twice. Such a payout stays
+// pending, still counted against the balance, and the sweeper settles it
+// under the same id: from the transfer it finds, or by retrying the same key.
+test("an ambiguous transfer error leaves the payout pending, and the sweeper settles it once", async (t) => {
+  if (!ready) return t.skip();
+  const { retryPendingPayouts } = require("../lib/payout-ledger");
+  await pool.query(
+    `INSERT INTO payments (org_id, payer_user_id, subject_type, amount_cents, platform_fee_cents, currency, status)
+     VALUES ($1, $2, 'donation', 20000, 3000, 'GBP', 'paid')`,
+    [orgId, userId],
+  );
+  const before = (await orgStatus()).balance_cents;
+  assert.ok(before >= 17000);
+  const prev = createTransferImpl;
+  const sent = [];
+  createTransferImpl = async (args) => {
+    sent.push(args.idempotencyKey);
+    const e = new Error("An error occurred with our connection to Stripe.");
+    e.type = "StripeConnectionError";
+    throw e;
+  };
+  let payout;
+  try {
+    const res = await api("POST", `/api/orgs/${orgId}/withdrawals`, {});
+    assert.equal(res.status, 201);
+    [payout] = await res.json();
+    assert.equal(payout.status, "pending", "not failed: the transfer may have gone through");
+  } finally {
+    createTransferImpl = prev;
+  }
+  assert.equal((await orgStatus()).balance_cents, 0, "still counted against the balance");
+  const again = await api("POST", `/api/orgs/${orgId}/withdrawals`, {});
+  assert.equal(again.status, 409, "nothing left to withdraw a second time");
+
+  // Too fresh for the sweeper: a withdrawal in flight isn't touched.
+  const quiet = await retryPendingPayouts({ pool, payments: fakePayments, logger: silentLogger });
+  assert.ok(!quiet.some((p) => p.id === payout.id));
+
+  await pool.query("UPDATE payouts SET created_at = now() - interval '1 hour' WHERE id = $1", [payout.id]);
+  // Stripe had created it after all: the sweeper finds it by its group and
+  // settles the row without a second transfer.
+  const prevFind = fakePayments.findTransfer;
+  fakePayments.findTransfer = async ({ payoutId }) => (payoutId === payout.id ? { id: "tr_found_" + suffix } : null);
+  createTransferImpl = async (args) => { sent.push(args.idempotencyKey); return { id: "tr_dupe" }; };
+  try {
+    const settled = await retryPendingPayouts({ pool, payments: fakePayments, logger: silentLogger });
+    assert.deepEqual(settled.filter((p) => p.id === payout.id).map((p) => p.status), ["paid"]);
+  } finally {
+    fakePayments.findTransfer = prevFind;
+    createTransferImpl = prev;
+  }
+  assert.deepEqual(sent, [payout.id], "one transfer request, under the payout's own id");
+  const row = (await pool.query("SELECT status, stripe_transfer_id FROM payouts WHERE id = $1", [payout.id])).rows[0];
+  assert.deepEqual(row, { status: "paid", stripe_transfer_id: "tr_found_" + suffix });
+  assert.equal((await orgStatus()).balance_cents, 0);
+});
+
+test("a pending payout Stripe has no record of is retried under the same key", async (t) => {
+  if (!ready) return t.skip();
+  const { retryPendingPayouts } = require("../lib/payout-ledger");
+  const id = (await pool.query(
+    `INSERT INTO payouts (org_id, amount_cents, currency, status, note, created_at)
+     VALUES ($1, 1234, 'GBP', 'pending', 'stuck', now() - interval '2 hours') RETURNING id`,
+    [orgId],
+  )).rows[0].id;
+  const prev = createTransferImpl;
+  const prevFind = fakePayments.findTransfer;
+  let key = null;
+  fakePayments.findTransfer = async () => null;
+  createTransferImpl = async (args) => { key = args.idempotencyKey; return { id: "tr_retry_" + suffix }; };
+  try {
+    await retryPendingPayouts({ pool, payments: fakePayments, logger: silentLogger });
+  } finally {
+    createTransferImpl = prev;
+    fakePayments.findTransfer = prevFind;
+  }
+  assert.equal(key, id);
+  assert.equal((await pool.query("SELECT status FROM payouts WHERE id = $1", [id])).rows[0].status, "paid");
+});
+
+// Stripe only remembers an idempotency key for about a day. Past that a
+// resend under the payout id is a brand new transfer, and "no transfer in
+// this group" can't be trusted for a payout booked before transfers
+// carried a transfer_group. So an old pending payout Stripe shows nothing
+// for stays pending (its balance still held) instead of being paid again.
+test("a pending payout past the idempotency window is never sent again blind", async (t) => {
+  if (!ready) return t.skip();
+  const { retryPendingPayouts } = require("../lib/payout-ledger");
+  const id = (await pool.query(
+    `INSERT INTO payouts (org_id, amount_cents, currency, status, note, created_at)
+     VALUES ($1, 4321, 'GBP', 'pending', 'ancient', now() - interval '30 hours') RETURNING id`,
+    [orgId],
+  )).rows[0].id;
+  const prev = createTransferImpl;
+  const prevFind = fakePayments.findTransfer;
+  const sent = [];
+  fakePayments.findTransfer = async () => null;
+  createTransferImpl = async (args) => { sent.push(args.idempotencyKey); return { id: "tr_blind_" + suffix }; };
+  try {
+    const settled = await retryPendingPayouts({ pool, payments: fakePayments, logger: silentLogger });
+    assert.ok(!settled.some((p) => p.id === id));
+  } finally {
+    createTransferImpl = prev;
+    fakePayments.findTransfer = prevFind;
+  }
+  assert.ok(!sent.includes(id), "no second transfer under an expired key");
+  assert.equal((await pool.query("SELECT status FROM payouts WHERE id = $1", [id])).rows[0].status, "pending");
+  // It still settles if Stripe turns out to have the transfer.
+  fakePayments.findTransfer = async ({ payoutId }) => (payoutId === id ? { id: "tr_late_" + suffix } : null);
+  try {
+    await retryPendingPayouts({ pool, payments: fakePayments, logger: silentLogger });
+  } finally {
+    fakePayments.findTransfer = prevFind;
+  }
+  assert.deepEqual(
+    (await pool.query("SELECT status, stripe_transfer_id FROM payouts WHERE id = $1", [id])).rows[0],
+    { status: "paid", stripe_transfer_id: "tr_late_" + suffix },
+  );
 });

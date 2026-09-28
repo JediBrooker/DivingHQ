@@ -20,7 +20,7 @@
 
 const express = require("express");
 const { recordAudit, auditFromReq } = require("../../lib/audit");
-const { canSeeEvent } = require("./visibility");
+const { canSeeEvent } = require("../../lib/event-visibility");
 
 module.exports = function createParticipationRoutes({
   pool,

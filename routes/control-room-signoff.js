@@ -416,17 +416,9 @@ module.exports = function createSignoffRoutes({
             accepted = consumed.rowCount > 0;
           }
         }
+        // Single use even under a race, see spendRecoveryCode.
         if (!accepted) {
-          const recovery = await totp.consumeRecoveryCode(
-            user.totp_recovery_codes || [], code,
-          );
-          if (recovery.matched) {
-            await pool.query(
-              `UPDATE users SET totp_recovery_codes = $1::jsonb WHERE id = $2`,
-              [JSON.stringify(recovery.remainingHashes), user.id],
-            );
-            accepted = true;
-          }
+          accepted = await totp.spendRecoveryCode(pool, user.id, user.totp_recovery_codes, code);
         }
         if (!accepted) return res.status(401).json({ error: "Invalid TOTP code" });
       }

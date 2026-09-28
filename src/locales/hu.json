@@ -1625,7 +1625,8 @@
       "btn_redirecting": "Átirányítás…",
       "btn_coming_soon": "Hamarosan elérhető",
       "error_load": "Nem sikerült betölteni a díjat",
-      "error_checkout": "Nem sikerült elindítani a fizetést"
+      "error_checkout": "Nem sikerült elindítani a fizetést",
+      "btn_renew": "Megújítás"
     },
     "charges_view": {
       "title": "Díjak",

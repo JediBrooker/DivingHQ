@@ -1625,7 +1625,8 @@
       "btn_redirecting": "リダイレクト中…",
       "btn_coming_soon": "近日公開",
       "error_load": "料金を読み込めませんでした",
-      "error_checkout": "チェックアウトを開始できませんでした"
+      "error_checkout": "チェックアウトを開始できませんでした",
+      "btn_renew": "更新する"
     },
     "charges_view": {
       "title": "請求",

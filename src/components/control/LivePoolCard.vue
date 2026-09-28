@@ -13,7 +13,7 @@
 // old inline markup so the control-v2 e2e selectors keep resolving.
 import { ref, computed, watch, onMounted, inject } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { deriveStatus } from '@/composables/useLivePools'
+import { deriveStatus, nextQueueIndex } from '@/composables/useLivePools'
 import { useShotClock } from '@/composables/useShotClock'
 import { useAutoAdvance, AUTO_ADVANCE_KEY } from '@/composables/useAutoAdvance'
 import { useMeetHold, MEET_HOLD_STORE } from '@/composables/useMeetHold'
@@ -67,8 +67,10 @@ const liveStatus = computed(() =>
   }),
 )
 
+// Last = nobody left to dive after this one (withdrawn rows and reserves
+// don't count, see nextQueueIndex).
 const isLast = computed(
-  () => !!props.pool && props.pool.currentIndex >= (props.pool.roster?.length || 0) - 1,
+  () => !!props.pool && nextQueueIndex(props.pool.roster, props.pool.currentIndex) < 0,
 )
 const nextBtnComplete = computed(() => !!props.pool?.advanceArmed && isLast.value)
 const nextBtnDisabled = computed(() => !props.pool?.advanceArmed || isHeld.value)

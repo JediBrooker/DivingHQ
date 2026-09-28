@@ -25,6 +25,7 @@
 const express = require("express");
 const sharp = require("sharp");
 const { perDivePointsCte } = require("../lib/scoring-sql");
+const { fullFieldRanking, diverDivesWhere, EVENT_DATE } = require("../db/queries");
 const { PUBLIC_CLUB_JOIN } = require("../lib/club-approvals");
 
 // In-memory cache of rendered OG cards. Each crawler hits the
@@ -112,7 +113,8 @@ module.exports = function createPublicProfileRouter({ pool, readPool }) {
   //                    over the diver's full history, so the
   //                    page has something to say even for a
   //                    diver who just wrapped one event)
-  //   recent_meets:    last 5 events with placing + score
+  //   recent_meets:    last 5 events with placing + score, newest
+  //                    first; created_at is when the event took place
   //
   // No PII (no email, no internal id, no dashboard layout).
   // -------------------------------------------------------------
@@ -140,7 +142,8 @@ module.exports = function createPublicProfileRouter({ pool, readPool }) {
            select:      ["s.event_id", "s.round_number"],
            pointsAlias: "dive_total",
            selectExtra: ["MAX(d.dd) AS dd"],
-           where: `s.competitor_id = $1
+           // Synchro partners get the pair's dives, see diverDivesWhere.
+           where: `${diverDivesWhere("$1")}
              AND COALESCE(e.is_rehearsal, FALSE) = FALSE`,
          })}
          SELECT
@@ -152,51 +155,35 @@ module.exports = function createPublicProfileRouter({ pool, readPool }) {
         [diver.id],
       ),
 
-      // Last 5 meets ranked against the full field. Same FULL_FIELD
-      // ranking shape as the analytics dashboard's recent_form,
-      // simplified for public consumption.
+      // Last 5 meets ranked against the full field, the same ranking as
+      // the analytics dashboard's recent_form (FULL_FIELD_RANKING, so a
+      // team event reads as the team's place and a synchro partner gets
+      // the pair's result). No date filter here, the public page is all
+      // time.
       //
       // A place only depends on that event's own field, so pick the 5
-      // events first and rank just those. Ranking the diver's whole
-      // career and then keeping 5 cost ~300ms for a long career, on a
-      // public, uncached URL that link-preview crawlers hit too. Both
-      // ORDER BYs break created_at ties on the id so they agree on
-      // which 5.
+      // events first and rank just those (latest: 5). Ranking the diver's
+      // whole career and then keeping 5 cost ~300ms for a long career, on
+      // a public, uncached URL that link-preview crawlers hit too.
+      //
+      // Newest first by when the event took place (EVENT_DATE), and that's
+      // the created_at sent back, same as the analytics recent_form. Events
+      // are set up weeks before they're held, so ordering on the row's
+      // created_at put a January meet made in December behind December's,
+      // and could pick a different five from the dashboard's. Both ORDER
+      // BYs break ties on the id so they agree on which 5.
       reads.query(
-        `WITH ${perDivePointsCte({
-           select:      ["s.event_id", "s.competitor_id", "s.round_number"],
-           pointsAlias: "pts",
-           where: `s.event_id IN (
-             SELECT e0.id
-             FROM events e0
-             WHERE COALESCE(e0.is_rehearsal, FALSE) = FALSE
-               AND EXISTS (SELECT 1 FROM scores s0
-                            WHERE s0.event_id = e0.id AND s0.competitor_id = $1)
-             ORDER BY e0.created_at DESC, e0.id DESC
-             LIMIT 5
-           )`,
-         })},
-         totals AS (
-           SELECT event_id, competitor_id, SUM(pts) AS total
-           FROM per_dive GROUP BY event_id, competitor_id
-         ),
-         ranked AS (
-           SELECT *, RANK() OVER (PARTITION BY event_id ORDER BY total DESC) AS rnk,
-                  COUNT(*) OVER (PARTITION BY event_id)::int AS field_size
-           FROM totals
-         )
-         SELECT e.id AS event_id, e.name AS event_name, e.created_at,
+        `WITH ${fullFieldRanking({ latest: 5 })}
+         SELECT e.id AS event_id, e.name AS event_name, ${EVENT_DATE} AS created_at,
                 e.event_type::text AS event_type, e.height,
                 ranked.total::numeric(8,2) AS total,
-                ranked.rnk::int AS rank,
+                ranked.rank::int AS rank,
                 ranked.field_size
          FROM ranked
          JOIN events e ON e.id = ranked.event_id
-         WHERE ranked.competitor_id = $1
-           AND COALESCE(e.is_rehearsal, FALSE) = FALSE
-         ORDER BY e.created_at DESC, e.id DESC
+         ORDER BY ${EVENT_DATE} DESC, e.id DESC
          LIMIT 5`,
-        [diver.id],
+        [diver.id, null, null],
       )]);
 
       res.json({
@@ -262,7 +249,7 @@ module.exports = function createPublicProfileRouter({ pool, readPool }) {
         `WITH ${perDivePointsCte({
            select:      [],
            pointsAlias: "dive_total",
-           where: `s.competitor_id = $1
+           where: `${diverDivesWhere("$1")}
              AND COALESCE(e.is_rehearsal, FALSE) = FALSE`,
            groupBy:     ["s.event_id", "s.round_number"],
          })}

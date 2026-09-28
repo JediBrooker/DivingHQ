@@ -167,12 +167,13 @@ opened an IDOR — the audit caught three of these.
 Socket handlers that mutate state (`submit_score`, `set_active_diver`,
 `referee_*`, `meet_hold`, `meet_resume`, `announce_score`, `judge_signal`,
 `claim_event_control`) must check the caller first. In `routes/socket.js`
-the Control Room writes go through `guardControl`, which is
-`socketCanManageEvent` (signed in, token version current, event in the
-caller's org, a control role or a delegate of the event) plus the rate
-limit; `submit_score` and `judge_signal` do their own signed-in and
-role/panel checks. `socketRequireRole` exists but nothing calls it (see the
-maintenance note below). Anonymous spectators connect without a token and
+the Control Room writes go through `guardControl`: `socketRequireRole`
+(signed in, not in maintenance mode), then `socketCanManageEvent` (token
+version current, event in the caller's org, a control role or a delegate
+of the event), then the rate limit. `submit_score` and `judge_signal` pass
+`socketRequireRole` and then do their own role/panel checks. Ids off the
+wire go through `isUuid` (`lib/uuid.js`), never `String(x)` and a regex.
+Anonymous spectators connect without a token and
 that's intentional, but they can only listen, never emit. **Don't fall back
 to `data.judge_id`** — that's the spoof the audit closed.
 `docs/socket-events.md` has the per-event gates.
@@ -181,9 +182,10 @@ to `data.judge_id`** — that's the spoof the audit closed.
 
 Any code path that accepts a score must validate `0 ≤ n ≤ 10` in 0.5
 increments. Helper is `isValidScore(s)` in `lib/score-audit.js` (the HTTP
-writes reach it through `scoreBodyError`); `lib/middleware.js` still has its
-own copy of the same rule, which is the one the socket path gets. The HTTP and Socket paths must agree, otherwise
-one becomes a back-door.
+writes reach it through `scoreBodyError`, `routes/socket.js` requires it
+directly, and `lib/middleware.js` re-exports the same function). A number
+or a plain numeric string only: `null`, `""` and `false` aren't a 0. The
+HTTP and Socket paths must agree, otherwise one becomes a back-door.
 
 ### Feature flags: `configured` is not `enabled`
 
@@ -236,8 +238,10 @@ existing-account flow stay open regardless.
 read-only lockdown. `maintenanceGate` in `server.js` refuses non-sysadmin
 write-method requests (allowlist: login, logout, health, `/webhooks/`); the
 socket side is one check, `socketMaintenanceBlocked` (`lib/middleware.js`),
-which `socketRequireRole` and `socketCanManageEvent` both run and `submit_score`,
-`judge_signal` and `notification:ack` call directly. Every mutating socket event has to reach that
+which `socketRequireRole` and `socketCanManageEvent` both run: `submit_score`
+and `judge_signal` pass `socketRequireRole` before their own panel checks, the
+Control Room events pass it (`guardControl`) and then `socketCanManageEvent`,
+and `notification:ack` (no role needed) calls it directly. Every mutating socket event has to reach that
 check and not roll its own. `MaintenanceBanner.vue` shows the notice, suppressed in the chromeless
 broadcast/overlay modes. `bootChecks()` loads flags before `listen()`, so a
 test that `require()`s `server.js` (only `integration.test.js` does) must call
@@ -358,15 +362,22 @@ until the operator has switched maintenance mode on and passed
 | Auth + maintenance gate for socket writes | `socketRequireRole(socket, [...])` | `lib/middleware.js` |
 | Auth gate for socket events (per event: org, role or delegate, token version) | `socketCanManageEvent(socket, eventId, roles)`, wrapped with the rate limit as `guardControl` in `routes/socket.js` | `lib/middleware.js` |
 | Is this socket locked out by maintenance mode? | `socketMaintenanceBlocked(socket)` | `lib/middleware.js` |
-| Read TRUST_PROXY (Express value, socket hop count) | `expressTrustProxy()` / `trustProxyHops()` | `lib/trust-proxy.js` |
+| Read TRUST_PROXY (Express value; the socket side uses Express's compiled `app.get("trust proxy fn")`, with the hop count only as a fallback) | `expressTrustProxy()` / `trustProxyHops()` | `lib/trust-proxy.js` |
 | Audit snapshot + purge (daily, high-water mark) | `createAuditSnapshot({ pool, logger })` | `lib/audit-snapshot.js` |
 | When an event took place, for analytics dates | `EVENT_DATE` / `EVENT_DATE_FILTER` | `db/queries.js` |
-| Validate a score from the wire (0–10, half-points) | `isValidScore(s)` | `lib/middleware.js` |
+| Validate a score from the wire (0–10, half-points) | `isValidScore(s)` / `scoreBodyError(v, label)` | `lib/score-audit.js` (re-exported by `lib/middleware.js`) |
 | Parse `?from_date=&to_date=` query params | `parseDateRange(query)` | `lib/middleware.js` |
 | Rate-limit one router's routes (never `app.use(limiter, router)`, that counts every later request too) | `limitRoutes(limiter, router)` | `lib/scoped-limiter.js` |
 | Per-query catch-and-log (analytics) | `runQuery(label, sql, params)` | inline in `/api/divers/:id/analytics` |
 | Standard analytics CTE for per-dive rows | `PER_DIVE` | `db/queries.js` |
-| Standard analytics CTE for full-field ranking | `FULL_FIELD_RANKING` | `db/queries.js` |
+| Standard analytics CTE for full-field ranking (the standings' scope, so a team event ranks the team, reserves stay out and a Super Final semi keeps its carry; `latest: n` ranks only the n newest events by event date) | `FULL_FIELD_RANKING` / `fullFieldRanking({ latest })` | `db/queries.js` |
+| A diver's scored dives, a synchro pair stored under the lead included (WHERE fragment; `competing: true` drops reserve rows, for places) | `diverDivesWhere(param, { competing })` | `db/queries.js` |
+| Which scores make an event's standings (withdrawn divers keep theirs, reserves out, Super Final carry for divers in the stage) | `standingsScoreScope()`; as a per_dive CTE, `standingsPerDiveCte({ select })` (UNION form, keeps the event-id pushdown); over many events at once, `standingsPerDiveForEventsCte({ events })`; who's in a stage, `stageMembers()` | `lib/scoring-sql.js` |
+| May this caller see an event's scores? (Live/Completed public, else host or participating org) | `ensureEventVisible(pool, req, res, eventId)`, or `canSeeEvent(db, eventRow, user)` when the handler already has the row | `lib/event-visibility.js` |
+| Is this id a UUID string? (the one test, sockets and gates included) | `isUuid(v)` / `router.param("id", requireUuidParam)` | `lib/uuid.js` |
+| Malformed id in a path (404) or a filter (400), not a Postgres 500 | `uuidParams(router, ...names)` / `rejectBadUuidQuery(req, res, ...names)` | `lib/uuid-params.js` (built on `lib/uuid.js`) |
+| A PDF export (Unicode font if configured, else WinAnsi folding) | `createPdfDocument()` / `pdfTranslate()` | `lib/pdf-document.js` |
+| The Control Room's live queue (competing rows only, swap in a fresh roster, next diver) | `competingQueue` / `rebaseQueue` / `nextQueueIndex` | `src/composables/useLivePools.js` |
 | Computed dive points (server) | `calc_event_dive_points(...)` SQL function | `init.sql` |
 | Auth-aware fetch with auto-redirect on 401 | `auth.apiFetch(url, opts)` | `src/stores/auth.js` |
 | Stale-while-revalidate fetch | `cachedFetch(url, opts, { onUpdate })` | `src/lib/idbCache.js` |
@@ -428,7 +439,8 @@ know X":
    the FULL field of competitors, not the diver alone.** The temptation
    is to feed `RANK()` a CTE that's already filtered to the diver, which
    silently makes every meet rank 1st-of-1. Use `FULL_FIELD_RANKING`
-   from `db/queries.js` and filter to the diver only after `ranked`.
+   from `db/queries.js`: it ranks the whole field (the teams, in a team
+   event) and its `ranked` CTE hands back just the diver's rows.
    The analytics endpoint reads it once (the `ranked_events` query) and
    cuts all four widgets from that read, so don't add a second copy.
 2. **The World Aquatics category boundaries are duplicated.** Source of truth is

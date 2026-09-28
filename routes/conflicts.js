@@ -27,7 +27,15 @@
 //
 // Auth: referee, meet_manager, or org_admin (per DEC-05 in
 // docs/offline-inventory.md). Sysadmin always passes via
-// requireOrgRole.
+// requireOrgRole. Past the role gate it's the same rule as
+// PUT /api/scores/:id: an org admin can settle any event in the org,
+// anyone else has to run this event (isEventDelegate).
+//
+// And there has to be a conflict to settle: the row is still a
+// manual entry and a 'rejected_duplicate' audit row says a judge's
+// sync disagreed with it. accept_proposed only takes that judge's
+// value. Without these the endpoint rewrote any score in the org to
+// whatever the body said, finished meets included.
 //
 // The :conflict_id path param is the scores.id row (it's what
 // routes/socket.js emits as conflict_id in the conflict_pending
@@ -41,6 +49,7 @@ module.exports = function createConflictsRouter({
   pool, io, scoreboardCache, requireOrgRole,
   recomputeRecordKeys,          // optional; lib/records.js
   requireRoleOrEventDelegate,   // optional, migration 087
+  isEventDelegate,              // optional; falls back to the event_managers row
 }) {
   if (!pool) throw new Error("createConflictsRouter requires { pool, requireOrgRole }");
   const router = express.Router();
@@ -108,6 +117,47 @@ module.exports = function createConflictsRouter({
         if (!req.user.is_system_admin && row.org_id !== req.user.org_id) {
           await client.query("ROLLBACK");
           return res.status(403).json({ error: "Cannot resolve conflicts in other organisations" });
+        }
+
+        // Per-event check, mirrored from score-correction.js.
+        const isOrgAdmin = req.user.is_system_admin
+          || (req.user.org_roles || []).includes("org_admin");
+        if (!isOrgAdmin) {
+          const runsEvent = isEventDelegate
+            ? await isEventDelegate(row.event_id, req.user.id)
+            : (await client.query(
+                "SELECT 1 FROM event_managers WHERE event_id = $1 AND user_id = $2",
+                [row.event_id, req.user.id],
+              )).rows.length > 0;
+          if (!runsEvent) {
+            await client.query("ROLLBACK");
+            return res.status(403).json({ error: "You are not a manager of this event" });
+          }
+        }
+
+        // Is there actually a conflict on this row? The latest rejected
+        // sync carries the judge's value. score_id has no index of its
+        // own on the audit log (every score writes a row there), so the
+        // event_id is what lets this ride idx_score_audit_event_created
+        // instead of scanning the whole table.
+        const rejected = row.score_source === "manual_entry"
+          ? (await client.query(
+              `SELECT new_score FROM score_audit_log
+                WHERE event_id = $2 AND score_id = $1 AND action = 'rejected_duplicate'
+                ORDER BY created_at DESC, id DESC LIMIT 1`,
+              [row.id, row.event_id],
+            )).rows[0]
+          : null;
+        if (!rejected) {
+          await client.query("ROLLBACK");
+          return res.status(409).json({ error: "There's no open conflict on this score" });
+        }
+        if (decision === "accept_proposed" && Number(proposedScore) !== Number(rejected.new_score)) {
+          await client.query("ROLLBACK");
+          return res.status(409).json({
+            error: "proposed_score has to be the judge's synced value",
+            judge_score: Number(rejected.new_score),
+          });
         }
 
         const oldScore = Number(row.score);

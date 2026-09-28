@@ -314,6 +314,10 @@ async function onChargeRefunded(pool, email, charge) {
   // charge.amount_refunded is in STRIPE minor units; the ledger stores the
   // app's uniform hundredths (they differ for zero/three-decimal currencies).
   const refundedCents = fromStripeAmount(charge.currency, charge.amount_refunded || 0);
+  // Only rows whose refunded amount actually grows. A refund made through
+  // our own API has already updated the row and emailed the payer, and
+  // the charge.refunded Stripe sends for it (or any redelivery) used to
+  // match 'partially_refunded' again and send the same email twice.
   const upd = await pool.query(
     `UPDATE payments
         SET refunded_amount_cents = LEAST($2, amount_cents),
@@ -321,6 +325,7 @@ async function onChargeRefunded(pool, email, charge) {
             refunded_at = now()
       WHERE stripe_payment_intent = $1
         AND status IN ('paid', 'partially_refunded')
+        AND COALESCE(refunded_amount_cents, 0) < LEAST($2, amount_cents)
       RETURNING id`,
     [pi, refundedCents],
   );
@@ -340,13 +345,16 @@ async function onChargeRefunded(pool, email, charge) {
               refunded_at = now(),
               stripe_payment_intent = COALESCE(stripe_payment_intent, $3)
         WHERE id = $1 AND status IN ('pending', 'paid', 'partially_refunded')
+          AND COALESCE(refunded_amount_cents, 0) < LEAST($2, amount_cents)
         RETURNING id`,
       [charge.metadata.payment_id, refundedCents, pi],
     );
     refundedIds = fallback.rows.map((r) => r.id);
   }
-  // Backfill stripe_charge_id if the refund handler got here first.
-  if (charge.id && refundedIds.length) {
+  // Backfill stripe_charge_id if the refund handler got here first. Not
+  // tied to anything changing above: after an API refund this delivery
+  // may be the first place the charge id shows up.
+  if (charge.id) {
     await pool.query(
       "UPDATE payments SET stripe_charge_id = COALESCE(stripe_charge_id, $2) WHERE stripe_payment_intent = $1",
       [pi, charge.id],

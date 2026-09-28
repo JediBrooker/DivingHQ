@@ -108,7 +108,12 @@ module.exports = function createDiveDirectoryRouter({ pool, verifyToken, require
                  OR dd.id IN (SELECT DISTINCT dive_id FROM scores WHERE dive_id IS NOT NULL))
                   AS in_use
          FROM dive_directory dd
+         WHERE NOT dd.is_custom OR $1::boolean OR dd.created_org_id = $2
          ORDER BY dd.is_custom ASC, dd.dive_code ASC, dd.height ASC`,
+        // Custom rows are an org's own drills. Another org's never get
+        // past a dive-list submit, so offering them in the picker only
+        // sets up a 400 (and showed every org's drills to everyone).
+        [!!req.user.is_system_admin, req.user.org_id || null],
       );
       res.json(r.rows);
     } catch (err) {

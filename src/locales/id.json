@@ -1625,7 +1625,8 @@
       "btn_redirecting": "Mengalihkan…",
       "btn_coming_soon": "Segera hadir",
       "error_load": "Tidak dapat memuat biaya",
-      "error_checkout": "Tidak dapat memulai checkout"
+      "error_checkout": "Tidak dapat memulai checkout",
+      "btn_renew": "Perpanjang"
     },
     "charges_view": {
       "title": "Tagihan",

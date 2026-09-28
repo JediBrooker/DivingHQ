@@ -1,6 +1,8 @@
 // PDF + CSV exports: printable artefacts for officials and
-// federations. Six public endpoints (data is already exposed via
-// the live scoreboard / archive, no auth gate):
+// federations. Six public endpoints (the same data the live
+// scoreboard and archive show). The ones with scores in them follow
+// the scoreboard's visibility rule (lib/event-visibility): public once
+// an event is Live or Completed, host and participating orgs before.
 //
 //   GET /api/meets/:id/program.pdf                       meet program (PDF)
 //   GET /api/meets/:id/program.csv                       meet program (CSV)
@@ -15,25 +17,70 @@
 //
 // Each handler streams the bytes straight back via doc.pipe(res)
 // (or res.write for CSV) so a 500-row meet doesn't buffer in
-// memory before sending. PDFKit comes with the standard
-// Helvetica family bundled, so there's no font-installation
-// dependency on the host.
+// memory before sending. Documents come from lib/pdf-document:
+// PDFKit's bundled Helvetica by default, with names folded to
+// what it can print, or Unicode fonts when PDF_FONT_REGULAR
+// points at one.
 //
 // Mounted via:
 //   app.use(require('./routes/pdf')({ pool }))
 
 const express = require("express");
-const PDFDocument = require("pdfkit");
-const { t: serverTranslate } = require("../lib/server-i18n");
-const { perDiveSelect, perDivePointsCte, teamStandingsCte, compStandingsCte } = require("../lib/scoring-sql");
+// createPdfDocument prints names in any script it can (see the module
+// header); pdfTranslate falls back to English headers when it can't.
+const { createPdfDocument, pdfTranslate } = require("../lib/pdf-document");
+const {
+  perDiveSelect, teamStandingsCte, compStandingsCte, standingsPerDiveCte,
+} = require("../lib/scoring-sql");
 const { PUBLIC_CLUB_JOIN } = require("../lib/club-approvals");
 // RFC 4180 quoting plus the spreadsheet formula-injection guard, see
 // lib/csv.js.
 const { csvRow, slugify } = require("../lib/csv");
+const { ensureEventVisible } = require("../lib/event-visibility");
+const { uuidParams } = require("../lib/uuid-params");
 
-module.exports = function createPdfRouter({ pool }) {
+// The trim that marks judges' scores kept or dropped lives in the SPA
+// (src/composables/useScoreTrim.js, ESM) and AGENTS.md wants one copy of
+// it, so the score sheet imports that rather than keeping its own. Loaded
+// on first use and cached.
+let scoreTrim;
+function loadScoreTrim() {
+  if (!scoreTrim) scoreTrim = import("../src/composables/useScoreTrim.js");
+  return scoreTrim;
+}
+
+module.exports = function createPdfRouter({ pool, optionalAuth }) {
   if (!pool) throw new Error("createPdfRouter requires { pool }");
   const router = express.Router();
+  // Malformed path ids fall through to a 404 (lib/uuid-params).
+  uuidParams(router, "id", "diverId");
+  // Anything with scores in it (results, score sheets) follows the
+  // scoreboard's visibility rule, which needs to know who's asking. The
+  // program and the start list stay open to everyone.
+  const maybeAuth = optionalAuth || ((_req, _res, next) => next());
+
+  // Final standings by what the event ranks: the team in a team event,
+  // otherwise the diver (a synchro pair sits under its lead). One row per
+  // unit: unit_id, total, rank (WA Art 4.1.5 shared places), field_size.
+  // Same scores as the scoreboard (standingsScoreScope, in its UNION
+  // form). $1 = the event. results.csv and the score sheet read it; both
+  // used to rank team members against each other rather than rank the
+  // teams.
+  const UNIT_STANDINGS_SQL = `WITH ${standingsPerDiveCte({
+      select: ["s.competitor_id", "cdl.team_id", "s.event_id", "s.round_number"],
+    })},
+    units AS (
+      SELECT CASE WHEN ev.event_type = 'team' THEN pd.team_id ELSE pd.competitor_id END AS unit_id,
+             SUM(pd.dive_points) AS total
+        FROM per_dive pd
+        JOIN events ev ON ev.id = $1
+       WHERE ev.event_type <> 'team' OR pd.team_id IS NOT NULL
+       GROUP BY 1
+    )
+    SELECT unit_id, total::numeric(8,2) AS total,
+           RANK() OVER (ORDER BY total DESC)::int AS rank,
+           COUNT(*) OVER ()::int AS field_size
+      FROM units`;
 
   // ===============================================================
   // Meet program export options: parses the ?include= + ?seconds_per_dive
@@ -50,8 +97,7 @@ module.exports = function createPdfRouter({ pool }) {
   //   • timing       : estimated event duration. Pairs with
   //                    seconds_per_dive (30 / 45 / 60 default 45).
   //                    Computed as competitor_count * total_rounds *
-  //                    seconds_per_dive (synchro doubles the per-row
-  //                    pair into a single dive).
+  //                    seconds_per_dive (a synchro pair counts once).
   //
   // Unknown tokens are silently dropped, same posture as the rest
   // of the public read endpoints. The default (no include= param)
@@ -211,19 +257,16 @@ module.exports = function createPdfRouter({ pool }) {
   // performing one dive; for synchro a pair performs one combined
   // dive; for team events each team-member's per-round dive is
   // counted (their roster shape is one row per member per round).
+  // competitor_count already counts a synchro pair once (see
+  // loadProgram), so there's no halving here any more: most rosters
+  // store one row per pair, and halving those made a 20-dive event
+  // read as 10.
   // The result is { minutes, seconds, totalDives, label } so the
   // renderer can pick whichever format fits its line budget.
   function estimateEventDuration(event, secondsPerDive) {
     const competitors = event.competitor_count || 0;
     const rounds      = event.total_rounds || 0;
-    let totalDives = competitors * rounds;
-    if (event.event_type === "synchro_pair") {
-      // Synchro: each pair is 2 rows on the roster but performs
-      // one dive together. Halve the count to avoid double-billing
-      // the panel/diver time. round to nearest integer in case
-      // an odd row count slipped in (would mean an unpaired diver).
-      totalDives = Math.round(totalDives / 2);
-    }
+    const totalDives = competitors * rounds;
     const totalSeconds = totalDives * secondsPerDive;
     const minutes = Math.floor(totalSeconds / 60);
     const seconds = totalSeconds % 60;
@@ -261,10 +304,21 @@ module.exports = function createPdfRouter({ pool }) {
                 e.dd_limit_rounds, e.dd_limit_value, e.status,
                 COALESCE(stat.competitor_count, 0)::int AS competitor_count
          FROM events e
+         /* Who's diving: reserves and withdrawn rows aren't. A synchro
+            pair counts once whether the roster holds one row for it
+            (import, manual add: the lead with partner_id set) or one
+            each way round (the consent flow's mirror rows), keyed on
+            the pair's two ids in a fixed order. */
          LEFT JOIN LATERAL (
-           SELECT COUNT(DISTINCT cdl.competitor_id) AS competitor_count
+           SELECT COUNT(DISTINCT CASE
+                    WHEN e.event_type = 'synchro_pair' AND cdl.partner_id IS NOT NULL
+                      THEN LEAST(cdl.competitor_id::text, cdl.partner_id::text) || '+' ||
+                           GREATEST(cdl.competitor_id::text, cdl.partner_id::text)
+                    ELSE cdl.competitor_id::text
+                  END) AS competitor_count
            FROM competitor_dive_lists cdl
            WHERE cdl.event_id = e.id AND cdl.withdrawn_at IS NULL
+             AND cdl.is_reserve = FALSE
          ) stat ON true
          WHERE e.meet_id = $1
          ORDER BY
@@ -302,7 +356,7 @@ module.exports = function createPdfRouter({ pool }) {
       const enrichments = await loadProgramEnrichments(events, include);
 
       const slug = slugify(meet.name, "meet");
-      const doc = new PDFDocument({ margin: 50, size: "A4" });
+      const doc = createPdfDocument({ margin: 50, size: "A4" });
       res.setHeader("Content-Type", "application/pdf");
       res.setHeader("Content-Disposition", `attachment; filename="${slug}_program.pdf"`);
       doc.pipe(res);
@@ -353,7 +407,7 @@ module.exports = function createPdfRouter({ pool }) {
       // ---------- Schedule list ----------
       doc.font("Helvetica-Bold").fontSize(11)
         .fillColor("#06b6d4")
-        .text(serverTranslate(req, "pdf.program.header_event_schedule").toUpperCase(), { characterSpacing: 3 });
+        .text(pdfTranslate(req, "pdf.program.header_event_schedule").toUpperCase(), { characterSpacing: 3 });
       doc.moveDown(0.4);
       doc.lineWidth(0.5).strokeColor("#cbd5e1")
         .moveTo(50, doc.y).lineTo(545, doc.y).stroke();
@@ -399,7 +453,11 @@ module.exports = function createPdfRouter({ pool }) {
         const meta = [];
         meta.push(time);
         if (ev.competitor_count) {
-          meta.push(`${ev.competitor_count} ${ev.competitor_count === 1 ? "diver" : "divers"}`);
+          // A synchro event's count is pairs (see loadProgram).
+          const unit = ev.event_type === "synchro_pair"
+            ? (ev.competitor_count === 1 ? "pair" : "pairs")
+            : (ev.competitor_count === 1 ? "diver" : "divers");
+          meta.push(`${ev.competitor_count} ${unit}`);
         }
         meta.push(ev.status);
         // Timing estimate sits in the meta line so it reads next to
@@ -421,7 +479,7 @@ module.exports = function createPdfRouter({ pool }) {
         if (include.has("judges") && ext.judges && ext.judges.length) {
           doc.moveDown(0.5);
           doc.font("Helvetica-Bold").fontSize(9).fillColor("#06b6d4")
-            .text(serverTranslate(req, "pdf.program.header_judge_panel").toUpperCase(), { characterSpacing: 2 });
+            .text(pdfTranslate(req, "pdf.program.header_judge_panel").toUpperCase(), { characterSpacing: 2 });
           doc.font("Helvetica").fontSize(9).fillColor("#334155");
           for (const j of ext.judges) {
             if (doc.y > 760) doc.addPage();
@@ -438,14 +496,14 @@ module.exports = function createPdfRouter({ pool }) {
         if (include.has("dive_lists") && ext.diveLists && ext.diveLists.length) {
           doc.moveDown(0.5);
           doc.font("Helvetica-Bold").fontSize(9).fillColor("#06b6d4")
-            .text(serverTranslate(req, "pdf.program.header_dive_lists").toUpperCase(), { characterSpacing: 2 });
+            .text(pdfTranslate(req, "pdf.program.header_dive_lists").toUpperCase(), { characterSpacing: 2 });
           let inReserves = false;
           for (const diver of ext.diveLists) {
             if (doc.y > 740) doc.addPage();
             if (diver.is_reserve && !inReserves) {
               doc.moveDown(0.3);
               doc.font("Helvetica-Bold").fontSize(8).fillColor("#94a3b8")
-                .text(serverTranslate(req, "pdf.program.header_reserves").toUpperCase(), { characterSpacing: 2 });
+                .text(pdfTranslate(req, "pdf.program.header_reserves").toUpperCase(), { characterSpacing: 2 });
               inReserves = true;
             }
             doc.font("Helvetica-Bold").fontSize(10).fillColor("#0f172a");
@@ -669,6 +727,7 @@ module.exports = function createPdfRouter({ pool }) {
                   pu.full_name AS partner_name,
                   tm.name AS team_name,
                   cdl.round_number, cdl.display_order, cdl.withdrawn_at,
+                  cdl.is_reserve, cdl.reserve_position,
                   d.dive_code, d.position, d.dd
            FROM users u
            JOIN competitor_dive_lists cdl ON u.id = cdl.competitor_id
@@ -678,7 +737,8 @@ module.exports = function createPdfRouter({ pool }) {
            LEFT JOIN teams tm  ON tm.id = cdl.team_id
            LEFT JOIN dive_directory d ON d.id = cdl.dive_id
            WHERE cdl.event_id = $1
-           ORDER BY cdl.display_order ASC NULLS LAST,
+           ORDER BY cdl.is_reserve ASC, cdl.reserve_position ASC NULLS LAST,
+                    cdl.display_order ASC NULLS LAST,
                     u.full_name ASC, cdl.round_number ASC`,
           [req.params.id],
         ),
@@ -700,6 +760,8 @@ module.exports = function createPdfRouter({ pool }) {
             partner_name: r.partner_name,
             team_name: r.team_name,
             withdrawn: !!r.withdrawn_at,
+            is_reserve: !!r.is_reserve,
+            reserve_position: r.reserve_position,
             dives: Array.from({ length: event.total_rounds }, () => null),
           });
         }
@@ -715,7 +777,7 @@ module.exports = function createPdfRouter({ pool }) {
       const divers = [...byDiver.values()];
 
       const slug = slugify(event.name, "event");
-      const doc = new PDFDocument({ margin: 40, size: "A4", layout: "landscape" });
+      const doc = createPdfDocument({ margin: 40, size: "A4", layout: "landscape" });
       res.setHeader("Content-Type", "application/pdf");
       res.setHeader("Content-Disposition", `attachment; filename="${slug}_start_list.pdf"`);
       doc.pipe(res);
@@ -780,17 +842,30 @@ module.exports = function createPdfRouter({ pool }) {
       }
       drawTableHeader();
 
-      divers.forEach((d, idx) => {
+      // Reserves (WA 4.1.12) come last under their own header, labelled
+      // R1, R2… like the program PDF. They used to be numbered on as the
+      // next divers in the running order, as if they were competing.
+      let number = 0;
+      let inReserves = false;
+      divers.forEach((d) => {
         // Page break
         if (doc.y > 540) {
           doc.addPage({ size: "A4", layout: "landscape", margin: 40 });
           drawTableHeader();
         }
+        if (d.is_reserve && !inReserves) {
+          inReserves = true;
+          doc.moveDown(0.3);
+          doc.font("Helvetica-Bold").fontSize(8).fillColor("#94a3b8")
+            .text(pdfTranslate(req, "pdf.program.header_reserves").toUpperCase(), startX, doc.y, { characterSpacing: 2 });
+          doc.moveDown(0.3);
+        }
+        const label = d.is_reserve ? `R${d.reserve_position ?? ""}` : String(++number);
         const rowY = doc.y;
         let x = startX;
         // Number column
         doc.font("Helvetica").fontSize(10).fillColor(d.withdrawn ? "#cbd5e1" : "#0f172a");
-        doc.text(String(idx + 1), x, rowY, { width: numCol, align: "center" });
+        doc.text(label, x, rowY, { width: numCol, align: "center" });
         x += numCol;
         // Name + meta column
         doc.font("Helvetica-Bold").fontSize(10).fillColor(d.withdrawn ? "#cbd5e1" : "#0f172a");
@@ -842,12 +917,41 @@ module.exports = function createPdfRouter({ pool }) {
   // judge's raw score (with the dropped scores marked under World Aquatics
   // trim rules, the same way the live scoreboard renders them).
   // -------------------------------------------------------------
-  router.get("/api/events/:id/divers/:diverId/score-sheet.pdf", async (req, res) => {
+  router.get("/api/events/:id/divers/:diverId/score-sheet.pdf", maybeAuth, async (req, res) => {
     try {
       const eventId = req.params.id;
       const diverId = req.params.diverId;
+      if (!(await ensureEventVisible(pool, req, res, eventId))) return;
 
-      const [evRes, diverRes, divesRes, totalRes] = await Promise.all([
+      // Whose rows carry this diver's dives. Their own, unless they're the
+      // partner on a synchro pair stored once under the lead, where the
+      // scores sit under the lead's id (see diverDivesWhere in
+      // db/queries.js). The sheet used to say "No dives recorded" for the
+      // partner. partner_id is who to name alongside them.
+      const pair = (await pool.query(
+        `SELECT COALESCE(own.id, lead.competitor_id, $2::uuid) AS scored_as,
+                COALESCE(lead.competitor_id, mine.partner_id) AS partner_id
+           FROM (SELECT 1) one
+           LEFT JOIN LATERAL (
+             SELECT $2::uuid AS id WHERE EXISTS (
+               SELECT 1 FROM scores WHERE event_id = $1 AND competitor_id = $2)
+           ) own ON true
+           LEFT JOIN LATERAL (
+             SELECT l.competitor_id FROM competitor_dive_lists l
+              WHERE l.event_id = $1 AND l.partner_id = $2 AND own.id IS NULL
+                AND EXISTS (SELECT 1 FROM scores sc WHERE sc.event_id = $1 AND sc.competitor_id = l.competitor_id)
+              LIMIT 1
+           ) lead ON true
+           LEFT JOIN LATERAL (
+             SELECT m.partner_id FROM competitor_dive_lists m
+              WHERE m.event_id = $1 AND m.competitor_id = $2 AND m.partner_id IS NOT NULL
+              LIMIT 1
+           ) mine ON true`,
+        [eventId, diverId],
+      )).rows[0];
+      const scoredAs = pair.scored_as;
+
+      const [evRes, diverRes, divesRes, totalRes, partnerRes] = await Promise.all([
         pool.query(
           `SELECT e.id, e.name, e.gender, e.age_group, e.height,
                   e.total_rounds, e.number_of_judges, e.event_type,
@@ -889,68 +993,42 @@ module.exports = function createPdfRouter({ pool }) {
             ],
           })}
            ORDER BY s.round_number ASC`,
-          [eventId, diverId],
+          [eventId, scoredAs],
         ),
-        // Final placing: full-field rank query identical to the
-        // analytics rollup, kept inline since its a one-off here.
+        // Final placing, from the same standings as the scoreboard: a
+        // team member's headline is their team's total and place.
         pool.query(
-          `WITH ${perDivePointsCte({
-             select:      ["s.competitor_id"],
-             pointsAlias: "pts",
-             groupBy:     ["s.competitor_id", "s.round_number"],
-           })},
-           totals AS (
-             SELECT competitor_id, SUM(pts) AS total
-             FROM per_dive GROUP BY competitor_id
-           ),
-           ranked AS (
-             SELECT *, RANK() OVER (ORDER BY total DESC) AS rnk,
-                    COUNT(*) OVER ()::int AS field_size
-             FROM totals
-           )
-           SELECT total, rnk, field_size FROM ranked WHERE competitor_id = $2`,
-          [eventId, diverId],
+          `SELECT st.total, st.rank AS rnk, st.field_size
+             FROM (${UNIT_STANDINGS_SQL}) st
+            WHERE st.unit_id = COALESCE(
+                    (SELECT l.team_id FROM competitor_dive_lists l
+                      JOIN events ev ON ev.id = l.event_id AND ev.event_type = 'team'
+                     WHERE l.event_id = $1 AND l.competitor_id = $2 AND l.team_id IS NOT NULL
+                     LIMIT 1),
+                    $2)`,
+          [eventId, scoredAs],
         ),
+        pair.partner_id
+          ? pool.query("SELECT full_name FROM users WHERE id = $1", [pair.partner_id])
+          : Promise.resolve({ rows: [] }),
       ]);
       if (!evRes.rows.length)    return res.status(404).json({ error: "Event not found" });
       if (!diverRes.rows.length) return res.status(404).json({ error: "Diver not found" });
       const event = evRes.rows[0];
       const diver = diverRes.rows[0];
+      const partnerName = partnerRes.rows[0]?.full_name || null;
       const dives = divesRes.rows;
       const totals = totalRes.rows[0] || {};
 
-      // World Aquatics trim: apply the same algorithm the frontend uses
-      // (lib/score-trim semantics) so the dropped marks line up.
-      function trimCount(n) {
-        if (!n || n <= 3) return 0;
-        if (n === 5)  return 1;
-        if (n === 7)  return 2;
-        if (n === 9)  return 2;
-        if (n === 11) return 3;
-        return 0;
-      }
-      function annotateDrops(judges, n /*, eventType */) {
-        // For synchro 9/11 we'd need the sub-panel logic. For the
-        // score sheet we keep things simple: the canonical
-        // dive_total comes from the SQL function, and we just need
-        // the visual "what was dropped" markup. Falls back to
-        // individual trim for synchro panels we don't fully model
-        // here, hacky but it works.
-        const flagged = judges.map((j) => ({ ...j, dropped: false }));
-        const k = trimCount(n);
-        if (!k || flagged.length <= k * 2) return flagged;
-        const sorted = flagged
-          .map((j, i) => ({ idx: i, score: Number(j.score), jn: j.judge_number }))
-          .sort((a, b) => a.score - b.score || a.jn - b.jn);
-        for (let i = 0; i < k; i++) {
-          flagged[sorted[i].idx].dropped = true;
-          flagged[sorted[sorted.length - 1 - i].idx].dropped = true;
-        }
-        return flagged;
-      }
+      // World Aquatics trim marks, from the scoreboard's own helper (see
+      // loadScoreTrim) so a synchro panel is trimmed within its
+      // execution and sync sub-panels here too. The printed dive_total
+      // comes from calc_event_dive_points either way; this is only the
+      // brackets, and they used to disagree with both.
+      const { annotateJudgeRows } = await loadScoreTrim();
 
       const slug = slugify(diver.full_name, "diver");
-      const doc = new PDFDocument({ margin: 50, size: "A4" });
+      const doc = createPdfDocument({ margin: 50, size: "A4" });
       res.setHeader("Content-Type", "application/pdf");
       res.setHeader("Content-Disposition", `attachment; filename="${slug}_score_sheet.pdf"`);
       doc.pipe(res);
@@ -963,6 +1041,10 @@ module.exports = function createPdfRouter({ pool }) {
       doc.moveDown(0.3);
       doc.font("Helvetica-Bold").fontSize(20).fillColor("#0f172a")
         .text(diver.full_name + (diver.country_code ? `  ${diver.country_code}` : ""), { align: "center" });
+      if (partnerName) {
+        doc.font("Helvetica").fontSize(12).fillColor("#334155")
+          .text(`&  ${partnerName}`, { align: "center" });
+      }
       if (diver.club_name) {
         doc.font("Helvetica").fontSize(11).fillColor("#475569")
           .text(diver.club_name + (diver.club_code ? `  (${diver.club_code})` : ""), { align: "center" });
@@ -1023,7 +1105,7 @@ module.exports = function createPdfRouter({ pool }) {
         }
         doc.moveDown(0.2);
 
-        const annotated = annotateDrops(d.judges_json || [], d.number_of_judges, d.event_type);
+        const annotated = annotateJudgeRows(d.judges_json || [], d.number_of_judges, d.event_type);
         const lineParts = annotated.map((j) =>
           j.dropped
             ? `[${Number(j.score).toFixed(1)}]`     // brackets = dropped
@@ -1053,8 +1135,9 @@ module.exports = function createPdfRouter({ pool }) {
   // results PDF, formatted as a single CSV with one row per dive
   // so downstream pivot tables work cleanly.
   // -------------------------------------------------------------
-  router.get("/api/events/:id/results.csv", async (req, res) => {
+  router.get("/api/events/:id/results.csv", maybeAuth, async (req, res) => {
     try {
+      if (!(await ensureEventVisible(pool, req, res, req.params.id))) return;
       const [evRes, divesRes, totalsRes] = await Promise.all([
         pool.query(
           "SELECT e.name, e.gender, e.height, e.event_type, o.name AS org_name FROM events e JOIN organisations o ON o.id = e.org_id WHERE e.id = $1",
@@ -1068,7 +1151,7 @@ module.exports = function createPdfRouter({ pool }) {
               "u.id AS competitor_id", "u.full_name AS diver_name",
               "event_rep_code($1, u.id, o.country_code) AS country_code",
               "cl.name AS club_name", "cl.short_code AS club_code",
-              "pu.full_name AS partner_name", "tm.name AS team_name",
+              "pu.full_name AS partner_name", "cdl.team_id", "tm.name AS team_name",
               "s.round_number", "d.dive_code", "d.position", "d.dd",
             ],
             dd:          "d.dd",
@@ -1086,7 +1169,7 @@ module.exports = function createPdfRouter({ pool }) {
             where: "s.event_id = $1",
             groupBy: [
               "u.id", "u.full_name", "o.country_code", "cl.name", "cl.short_code",
-              "pu.full_name", "tm.name",
+              "pu.full_name", "cdl.team_id", "tm.name",
               "s.round_number", "d.dive_code", "d.position", "d.dd",
             ],
           })}
@@ -1094,27 +1177,10 @@ module.exports = function createPdfRouter({ pool }) {
           [req.params.id],
         ),
         // Final placings, fetched alongside so the CSV's per-dive rows
-        // can carry both the dive total and the diver's final rank.
-        // Keyed by competitor_id (not full_name) so two same-named
-        // divers don't collide. World Aquatics Art 4.1.5: equal totals
-        // share a place, so RANK() over total alone gives the placing.
-        pool.query(
-          `WITH ${perDivePointsCte({
-             select:      ["s.competitor_id"],
-             pointsAlias: "pts",
-             groupBy:     ["s.competitor_id", "s.round_number"],
-           })},
-           totals AS (
-             SELECT competitor_id, SUM(pts)::numeric(8,2) AS total
-             FROM per_dive GROUP BY competitor_id
-           )
-           SELECT u.id AS competitor_id, u.full_name AS diver_name,
-                  t.total,
-                  RANK() OVER (ORDER BY t.total DESC) AS final_rank
-           FROM totals t
-           JOIN users u ON u.id = t.competitor_id`,
-          [req.params.id],
-        ),
+        // can carry both the dive total and the final rank. Keyed by id
+        // (not name) so two same-named divers don't collide. A team
+        // member's rows carry their team's total and place.
+        pool.query(UNIT_STANDINGS_SQL, [req.params.id]),
       ]);
       if (!evRes.rows.length) return res.status(404).json({ error: "Event not found" });
       const event = evRes.rows[0];
@@ -1124,8 +1190,9 @@ module.exports = function createPdfRouter({ pool }) {
       res.setHeader("Content-Disposition", `attachment; filename="${slug}_results.csv"`);
 
       const placingById = new Map(
-        totalsRes.rows.map((r) => [r.competitor_id, { total: r.total, rank: r.final_rank }]),
+        totalsRes.rows.map((r) => [r.unit_id, { total: r.total, rank: r.rank }]),
       );
+      const isTeam = event.event_type === "team";
 
       res.write(csvRow([
         "diver_name", "country", "club_name", "club_code",
@@ -1135,7 +1202,7 @@ module.exports = function createPdfRouter({ pool }) {
         "final_total", "final_rank",
       ]));
       for (const r of divesRes.rows) {
-        const placing = placingById.get(r.competitor_id) || {};
+        const placing = placingById.get(isTeam ? r.team_id : r.competitor_id) || {};
         res.write(csvRow([
           r.diver_name, r.country_code,
           r.club_name, r.club_code,
@@ -1159,15 +1226,18 @@ module.exports = function createPdfRouter({ pool }) {
   // layout the audience saw. Team events rank and group by team,
   // same as the scoreboard and recap.
   // -------------------------------------------------------------
-  router.get("/api/events/:id/results.pdf", async (req, res) => {
+  router.get("/api/events/:id/results.pdf", maybeAuth, async (req, res) => {
     try {
+      if (!(await ensureEventVisible(pool, req, res, req.params.id))) return;
       const [ev, standings, dives] = await Promise.all([
         pool.query(
           "SELECT e.name, e.gender, e.height, e.total_rounds, e.number_of_judges, e.event_type, o.name AS org_name FROM events e JOIN organisations o ON e.org_id = o.id WHERE e.id = $1",
           [req.params.id],
         ),
         pool.query(
-          `WITH ${perDivePointsCte({ select: ["s.competitor_id", "cdl.team_id", "s.round_number"] })},
+          `WITH ${standingsPerDiveCte({
+             select: ["s.competitor_id", "cdl.team_id", "s.event_id", "s.round_number"],
+           })},
            /* Team events print one line per team, like the scoreboard:
               team name, the code its divers share, team short code
               underneath. This used to list every member separately. */
@@ -1238,7 +1308,7 @@ module.exports = function createPdfRouter({ pool }) {
       const event = ev.rows[0];
       const slug = event.name.replace(/[^a-z0-9]+/gi, "_").toLowerCase();
 
-      const doc = new PDFDocument({ margin: 50, size: "A4" });
+      const doc = createPdfDocument({ margin: 50, size: "A4" });
       res.setHeader("Content-Type", "application/pdf");
       res.setHeader("Content-Disposition", `attachment; filename="${slug}_results.pdf"`);
       doc.pipe(res);
