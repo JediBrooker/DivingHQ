@@ -7893,3 +7893,25 @@ test("deleting a club that has paid for things is a 409 club_has_payments, not a
     await teardownFixture(st);
   }
 });
+
+test("the judge picker leaves out judges who have moved to another federation", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const X = await setupFixture({ withEvent: false });
+  const Y = await setupFixture({ withEvent: false });
+  try {
+    const here = await insertUser({ orgId: X.orgId, role: "judge", username: `int-b3jh-${X.slug}`, fullName: "Judge Here" });
+    const gone = await insertUser({ orgId: Y.orgId, role: "judge", username: `int-b3jg-${X.slug}`, fullName: "Judge Gone" });
+    // What a transfer before the role fix left behind.
+    await pool.query("INSERT INTO user_org_roles (user_id, org_id, role) VALUES ($1, $2, 'judge')", [gone, X.orgId]);
+    const list = await fetchJson("GET", "/api/judges", { token: X.adminToken });
+    assert.equal(list.status, 200, JSON.stringify(list.body));
+    const ids = list.body.map((j) => j.id);
+    assert.ok(ids.includes(here));
+    assert.ok(!ids.includes(gone), "not someone who left");
+  } finally {
+    await pool.query("DELETE FROM users WHERE username = $1", [`int-b3jg-${X.slug}`]);
+    await teardownFixture(X);
+    await teardownFixture(Y);
+  }
+});

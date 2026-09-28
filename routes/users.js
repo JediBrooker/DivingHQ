@@ -1188,9 +1188,11 @@ module.exports = function createUsersRouter({
   router.get("/api/judges", requireMeetOrClubEditor || requireMeetEditor, async (req, res) => {
     try {
       const r = await pool.query(
+        // Members of the org only: a judge row left in an org someone has
+        // since transferred out of isn't a judge here.
         `SELECT u.id, u.full_name
          FROM users u
-         JOIN user_org_roles r ON u.id = r.user_id
+         JOIN user_org_roles r ON u.id = r.user_id AND r.org_id = u.org_id
          WHERE r.org_id = $1 AND r.role = 'judge'
            AND u.deleted_at IS NULL
          ORDER BY u.full_name ASC`,
