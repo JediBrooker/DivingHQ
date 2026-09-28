@@ -23,11 +23,12 @@
 //   POST /api/users/:id/reset-password       send a reset link
 //
 //   Guardians (migration 083):
-//   GET  /api/guardians/my-dependents
+//   GET  /api/guardians/my-dependents   (?include_pending=1 for the page)
+//   GET  /api/guardians/search       find someone in my org to link to
 //   POST /api/guardians/request
 //   GET  /api/guardian-requests      org admin's queue
 //   POST /api/guardian-requests/:id/review
-//   POST /api/guardians/:id/revoke
+//   POST /api/guardians/:id/revoke   end a link, or withdraw a request
 //
 // Both writes that change a user's privilege set call
 // bumpTokenVersion inside the same transaction, so a rollback rolls
@@ -1350,7 +1351,12 @@ module.exports = function createUsersRouter({
   // are org-scoped and need org_admin approval.
   // ===============================================================
 
+  // ?include_pending=1 adds the links still waiting for an admin, for the
+  // Dependents page, so a parent can see their request went in (and
+  // withdraw it). The "Paying for" picker calls it without, and only ever
+  // gets approved links.
   router.get("/api/guardians/my-dependents", verifyToken, async (req, res) => {
+    const statuses = req.query.include_pending === "1" ? ["approved", "pending"] : ["approved"];
     try {
       // Scoped to the caller's own federation. A guardian link belongs to
       // one org (guardians.org_id) and routes/payments.js won't act on a
@@ -1365,9 +1371,40 @@ module.exports = function createUsersRouter({
            JOIN users u ON u.id = g.dependent_user_id
           WHERE g.guardian_user_id = $1
             AND g.org_id = $2
-            AND g.status = 'approved'
-          ORDER BY u.full_name`,
-        [req.user.id, req.user.org_id],
+            AND g.status = ANY($3::text[])
+          ORDER BY g.status = 'pending', u.full_name`,
+        [req.user.id, req.user.org_id, statuses],
+      )).rows;
+      res.json(rows);
+    } catch (err) {
+      console.error("[Guardians]", err.message);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Finding the child to link to. The Dependents page used GET /api/users,
+  // which is the org admin's member list: a parent got a 403, and an admin
+  // got every member of the org (emails and birthdays too) on each
+  // keystroke with the search ignored. This is only what a link request
+  // can be made for, people in the caller's own federation, and only the
+  // name and club come back, the same as the diver search already shows
+  // anyone. It doesn't filter to minors on purpose: that would make it a
+  // "which members are children" lookup. The request itself checks age.
+  router.get("/api/guardians/search", verifyToken, async (req, res) => {
+    const q = typeof req.query.q === "string" ? req.query.q.trim().slice(0, 100) : "";
+    if (q.length < 2) return res.json([]);
+    // LIKE wildcards in a name are literal here.
+    const pattern = `%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
+    try {
+      const rows = (await pool.query(
+        `SELECT u.id, u.full_name, c.name AS club_name
+           FROM users u
+           LEFT JOIN clubs c ON c.id = u.club_id AND c.status = 'active'
+          WHERE u.org_id = $1 AND u.id <> $2 AND u.deleted_at IS NULL
+            AND u.full_name ILIKE $3
+          ORDER BY u.full_name
+          LIMIT 20`,
+        [req.user.org_id, req.user.id, pattern],
       )).rows;
       res.json(rows);
     } catch (err) {
@@ -1462,10 +1499,13 @@ module.exports = function createUsersRouter({
     }
   });
 
+  // Ends an approved link, or withdraws one still waiting for an admin
+  // (without that, a request made by mistake sat there for good and asking
+  // again was a 409).
   router.post("/api/guardians/:id/revoke", verifyToken, async (req, res) => {
     try {
       const g = (await pool.query(
-        "SELECT * FROM guardians WHERE id = $1 AND status = 'approved'",
+        "SELECT * FROM guardians WHERE id = $1 AND status IN ('approved', 'pending')",
         [req.params.id],
       )).rows[0];
       if (!g) return res.status(404).json({ error: "Guardian link not found" });
@@ -1473,8 +1513,9 @@ module.exports = function createUsersRouter({
       const isAdmin = isOrgAdminOf(req.user, g.org_id);
       if (!isGuardian && !isAdmin) return res.status(403).json({ error: "Forbidden" });
       await pool.query(
-        "UPDATE guardians SET status = 'revoked', reviewed_by = $1, reviewed_at = now() WHERE id = $2",
-        [req.user.id, req.params.id],
+        `UPDATE guardians SET status = 'revoked', reviewed_by = $1, reviewed_at = now()
+          WHERE id = $2 AND status IN ('approved', 'pending')`,
+        [req.user.id, g.id],
       );
       res.json({ message: "Guardian link revoked" });
     } catch (err) {

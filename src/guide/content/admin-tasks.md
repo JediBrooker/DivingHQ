@@ -84,10 +84,11 @@ A diver can have multiple coaches over time; a coach can mentor multiple divers.
 
 Divers initiate club changes from their own profile ("My club" card). Org admins action the resulting requests in **User Manager → Requests tab**.
 
-The Requests tab shows two sections:
+The Requests tab shows these sections:
 
 - **Role requests** — pending role grant requests, approve or deny each.
 - **Club change requests** — pending club or org moves, with type badges (`club change` or `transfer`).
+- **Guardian link requests** — a parent asking to pay on a child's behalf, with the child's age. Only shown while payments is switched on.
 
 For **same-org club changes** (diver moving from one club to another within your federation), a single org-admin approval completes the move.
 

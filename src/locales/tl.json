@@ -1077,7 +1077,9 @@
     "orgs_need_country_title": "Mga organisasyong walang bansa ({n})",
     "orgs_need_country_hint": "Hinahanap ng mga nagsa-sign up ang kanilang federation ayon sa bansa, kaya walang makakasali sa mga ito hangga't wala silang bansa.",
     "org_suspended": "Suspendido",
-    "orgs_show_all": "Ipakita lahat ({n})"
+    "orgs_show_all": "Ipakita lahat ({n})",
+    "guardian_requests_title": "Mga kahilingan sa pag-link ng guardian",
+    "guardian_request_by": "Humihiling si {name} na magbayad para sa kanya"
   },
   "setup": {
     "title": "Federation Setup",
@@ -1848,7 +1850,11 @@
     "search_placeholder": "Maghanap ayon sa pangalan...",
     "age_years": "{age} taong gulang",
     "paying_for": "Nagbabayad para kay",
-    "paying_for_self": "Sarili mo"
+    "paying_for_self": "Sarili mo",
+    "pending_badge": "Naghihintay ng pag-apruba",
+    "withdraw": "Bawiin ang kahilingan",
+    "withdraw_confirm": "Bawiin ang kahilingang ito sa pag-link?",
+    "no_results": "Walang tao na may ganyang pangalan sa inyong organisasyon."
   },
   "my_club": {
     "title": "Aking club",

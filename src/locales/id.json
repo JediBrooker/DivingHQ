@@ -1077,7 +1077,9 @@
     "orgs_need_country_title": "Organisasi tanpa negara ({n})",
     "orgs_need_country_hint": "Pendaftar menemukan federasi mereka berdasarkan negara, jadi tidak ada yang bisa bergabung dengan organisasi ini sampai negaranya ditetapkan.",
     "org_suspended": "Ditangguhkan",
-    "orgs_show_all": "Tampilkan semua {n}"
+    "orgs_show_all": "Tampilkan semua {n}",
+    "guardian_requests_title": "Permintaan tautan wali",
+    "guardian_request_by": "{name} meminta untuk membayar atas namanya"
   },
   "setup": {
     "title": "Penyiapan federasi",
@@ -1848,7 +1850,11 @@
     "search_placeholder": "Cari berdasarkan nama...",
     "age_years": "{age} tahun",
     "paying_for": "Membayar untuk",
-    "paying_for_self": "Diri Anda sendiri"
+    "paying_for_self": "Diri Anda sendiri",
+    "pending_badge": "Menunggu persetujuan",
+    "withdraw": "Tarik permintaan",
+    "withdraw_confirm": "Tarik permintaan tautan ini?",
+    "no_results": "Tidak ada orang dengan nama itu di organisasi Anda."
   },
   "my_club": {
     "title": "Klub saya",

@@ -1077,7 +1077,9 @@
     "orgs_need_country_title": "Organizaciones sin país ({n})",
     "orgs_need_country_hint": "Los registros encuentran su federación por país, así que nadie puede unirse a estas hasta que tengan uno.",
     "org_suspended": "Suspendida",
-    "orgs_show_all": "Ver las {n}"
+    "orgs_show_all": "Ver las {n}",
+    "guardian_requests_title": "Solicitudes de vínculo de tutor",
+    "guardian_request_by": "{name} pide pagar en su nombre"
   },
   "setup": {
     "title": "Configuración de la federación",
@@ -1848,7 +1850,11 @@
     "search_placeholder": "Buscar por nombre...",
     "age_years": "{age} años",
     "paying_for": "Pagando por",
-    "paying_for_self": "Ti mismo"
+    "paying_for_self": "Ti mismo",
+    "pending_badge": "Pendiente de aprobación",
+    "withdraw": "Retirar solicitud",
+    "withdraw_confirm": "¿Retirar esta solicitud de vínculo?",
+    "no_results": "No hay nadie con ese nombre en tu organización."
   },
   "my_club": {
     "title": "Mi club",

@@ -1077,7 +1077,9 @@
     "orgs_need_country_title": "منظمات بلا دولة ({n})",
     "orgs_need_country_hint": "يجد المسجّلون اتحادهم حسب الدولة، لذا لا يمكن لأحد الانضمام إلى هذه المنظمات حتى تُحدَّد دولتها.",
     "org_suspended": "معلّقة",
-    "orgs_show_all": "عرض الكل ({n})"
+    "orgs_show_all": "عرض الكل ({n})",
+    "guardian_requests_title": "طلبات ربط الأوصياء",
+    "guardian_request_by": "يطلب {name} الدفع نيابةً عنه"
   },
   "setup": {
     "title": "إعداد الاتحاد",
@@ -1848,7 +1850,11 @@
     "search_placeholder": "البحث بالاسم...",
     "age_years": "{age} سنة",
     "paying_for": "الدفع لصالح",
-    "paying_for_self": "نفسك"
+    "paying_for_self": "نفسك",
+    "pending_badge": "بانتظار الموافقة",
+    "withdraw": "سحب الطلب",
+    "withdraw_confirm": "سحب طلب الربط هذا؟",
+    "no_results": "لا يوجد أحد بهذا الاسم في مؤسستك."
   },
   "my_club": {
     "title": "ناديي",

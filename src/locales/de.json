@@ -1088,7 +1088,9 @@
     "orgs_need_country_title": "Organisationen ohne Land ({n})",
     "orgs_need_country_hint": "Bei der Registrierung wird der Verband über das Land gefunden, daher kann niemand diesen Organisationen beitreten, bevor ein Land festgelegt ist.",
     "org_suspended": "Gesperrt",
-    "orgs_show_all": "Alle {n} anzeigen"
+    "orgs_show_all": "Alle {n} anzeigen",
+    "guardian_requests_title": "Anfragen zur Verknüpfung von Erziehungsberechtigten",
+    "guardian_request_by": "{name} möchte im Namen dieser Person zahlen"
   },
   "setup": {
     "title": "Verbands-Einrichtung",
@@ -1848,7 +1850,11 @@
     "search_placeholder": "Nach Name suchen...",
     "age_years": "{age} Jahre alt",
     "paying_for": "Zahlung für",
-    "paying_for_self": "Sie selbst"
+    "paying_for_self": "Sie selbst",
+    "pending_badge": "Wartet auf Genehmigung",
+    "withdraw": "Anfrage zurückziehen",
+    "withdraw_confirm": "Möchten Sie diese Verknüpfungsanfrage zurückziehen?",
+    "no_results": "In Ihrer Organisation gibt es niemanden mit diesem Namen."
   },
   "my_club": {
     "title": "Mein Verein",

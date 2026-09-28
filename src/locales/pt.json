@@ -1088,7 +1088,9 @@
     "orgs_need_country_title": "Organizações sem país ({n})",
     "orgs_need_country_hint": "Os registos encontram a sua federação pelo país, por isso ninguém se pode juntar a estas enquanto não tiverem um.",
     "org_suspended": "Suspensa",
-    "orgs_show_all": "Mostrar todas ({n})"
+    "orgs_show_all": "Mostrar todas ({n})",
+    "guardian_requests_title": "Pedidos de associação de responsáveis",
+    "guardian_request_by": "{name} pede para pagar em seu nome"
   },
   "setup": {
     "title": "Configuração da Federação",
@@ -1848,7 +1850,11 @@
     "search_placeholder": "Pesquisar por nome...",
     "age_years": "{age} anos",
     "paying_for": "A pagar por",
-    "paying_for_self": "Si próprio"
+    "paying_for_self": "Si próprio",
+    "pending_badge": "A aguardar aprovação",
+    "withdraw": "Retirar pedido",
+    "withdraw_confirm": "Retirar este pedido de associação?",
+    "no_results": "Não existe ninguém com esse nome na sua organização."
   },
   "my_club": {
     "title": "O meu clube",

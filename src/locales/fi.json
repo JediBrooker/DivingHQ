@@ -1088,7 +1088,9 @@
     "orgs_need_country_title": "Organisaatiot ilman maata ({n})",
     "orgs_need_country_hint": "Rekisteröityjät löytävät liittonsa maan perusteella, joten kukaan ei voi liittyä näihin ennen kuin niille on asetettu maa.",
     "org_suspended": "Keskeytetty",
-    "orgs_show_all": "Näytä kaikki {n}"
+    "orgs_show_all": "Näytä kaikki {n}",
+    "guardian_requests_title": "Huoltajalinkityspyynnöt",
+    "guardian_request_by": "{name} pyytää saada maksaa tämän henkilön puolesta"
   },
   "setup": {
     "title": "Liiton käyttöönotto",
@@ -1848,7 +1850,11 @@
     "search_placeholder": "Hae nimellä...",
     "age_years": "{age} vuotta",
     "paying_for": "Maksaa puolesta",
-    "paying_for_self": "Itsesi"
+    "paying_for_self": "Itsesi",
+    "pending_badge": "Odottaa hyväksyntää",
+    "withdraw": "Peru pyyntö",
+    "withdraw_confirm": "Perutaanko tämä linkityspyyntö?",
+    "no_results": "Organisaatiossasi ei ole ketään tällä nimellä."
   },
   "my_club": {
     "title": "Oma seura",

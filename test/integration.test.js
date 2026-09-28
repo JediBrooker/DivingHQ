@@ -7450,3 +7450,46 @@ test("claiming an account that overlaps the new one on a live charge is a 409, n
     await teardownFixture(st);
   }
 });
+
+test("guardian linking works for a parent: scoped search, pending shown, withdraw, admin queue", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  const other = await setupFixture({ withEvent: false });
+  try {
+    const kid = await insertUser({ orgId: st.orgId, role: "diver", username: `int-b3kid-${st.slug}`, fullName: `Ivy Marsh ${st.slug}` });
+    await pool.query("UPDATE users SET date_of_birth = (CURRENT_DATE - interval '11 years')::date WHERE id = $1", [kid]);
+    await insertUser({ orgId: other.orgId, role: "diver", username: `int-b3far-${st.slug}`, fullName: `Ivy Marsh ${st.slug} Abroad` });
+    await insertUser({ orgId: st.orgId, role: "spectator", username: `int-b3par-${st.slug}`, fullName: "Rosa Marsh" });
+    const parent = await b3Login(`int-b3par-${st.slug}`);
+
+    // A parent can search (GET /api/users is the admin's member list and
+    // 403s for them), only in their own federation, and only names come back.
+    const found = await fetchJson("GET", `/api/guardians/search?q=${encodeURIComponent(`ivy marsh ${st.slug}`)}`, { token: parent });
+    assert.equal(found.status, 200, JSON.stringify(found.body));
+    assert.deepEqual(found.body.map((u) => u.id), [kid]);
+    assert.deepEqual(Object.keys(found.body[0]).sort(), ["club_name", "full_name", "id"]);
+    assert.deepEqual((await fetchJson("GET", "/api/guardians/search?q=i", { token: parent })).body, [], "two characters at least");
+
+    const asked = await fetchJson("POST", "/api/guardians/request", { token: parent, body: { dependent_user_id: kid } });
+    assert.equal(asked.status, 201, JSON.stringify(asked.body));
+    // The payment picker still only sees approved links; the page sees the wait.
+    assert.deepEqual((await fetchJson("GET", "/api/guardians/my-dependents", { token: parent })).body, []);
+    const mine = (await fetchJson("GET", "/api/guardians/my-dependents?include_pending=1", { token: parent })).body;
+    assert.deepEqual(mine.map((d) => [d.id, d.status]), [[kid, "pending"]]);
+
+    // Asked the wrong way? Withdraw it and ask again.
+    const withdrawn = await fetchJson("POST", `/api/guardians/${mine[0].guardian_link_id}/revoke`, { token: parent });
+    assert.equal(withdrawn.status, 200, JSON.stringify(withdrawn.body));
+    assert.equal((await fetchJson("POST", "/api/guardians/request", { token: parent, body: { dependent_user_id: kid } })).status, 201);
+
+    const queue = await fetchJson("GET", "/api/guardian-requests", { token: st.adminToken });
+    const rq = queue.body.find((g) => g.dependent_id === kid);
+    assert.ok(rq, "the org admin sees it");
+    assert.equal((await fetchJson("POST", `/api/guardian-requests/${rq.id}/review`, { token: st.adminToken, body: { decision: "approved" } })).status, 200);
+    assert.deepEqual((await fetchJson("GET", "/api/guardians/my-dependents", { token: parent })).body.map((d) => d.id), [kid]);
+  } finally {
+    await teardownFixture(st);
+    await teardownFixture(other);
+  }
+});

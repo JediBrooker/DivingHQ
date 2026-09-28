@@ -1077,7 +1077,9 @@
     "orgs_need_country_title": "Organisasi tanpa negara ({n})",
     "orgs_need_country_hint": "Pendaftar mencari persekutuan mereka mengikut negara, jadi tiada sesiapa boleh menyertai organisasi ini sehingga negaranya ditetapkan.",
     "org_suspended": "Digantung",
-    "orgs_show_all": "Tunjuk semua {n}"
+    "orgs_show_all": "Tunjuk semua {n}",
+    "guardian_requests_title": "Permintaan pautan penjaga",
+    "guardian_request_by": "{name} meminta untuk membayar bagi pihaknya"
   },
   "setup": {
     "title": "Penyediaan persekutuan",
@@ -1848,7 +1850,11 @@
     "search_placeholder": "Cari mengikut nama...",
     "age_years": "{age} tahun",
     "paying_for": "Membayar untuk",
-    "paying_for_self": "Diri sendiri"
+    "paying_for_self": "Diri sendiri",
+    "pending_badge": "Menunggu kelulusan",
+    "withdraw": "Tarik balik permintaan",
+    "withdraw_confirm": "Tarik balik permintaan pautan ini?",
+    "no_results": "Tiada sesiapa dengan nama itu dalam organisasi anda."
   },
   "my_club": {
     "title": "Kelab saya",

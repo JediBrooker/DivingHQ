@@ -870,6 +870,33 @@
  *   and joined when the claim went; empty for a region claim
  */
 
+// ---- guardians (migration 083) --------------------------------------
+
+/**
+ * @typedef {Object} GuardianSearchResult
+ * GET /api/guardians/search?q=. Live members of the caller's own
+ * federation, at least two characters of name, up to 20. Names and club
+ * only; the link request checks the age.
+ *
+ * @property {string}  id
+ * @property {string}  full_name
+ * @property {?string} club_name
+ */
+
+/**
+ * @typedef {Object} GuardianLink
+ * GET /api/guardians/my-dependents. Approved links only, unless
+ * ?include_pending=1, which the Dependents page passes (pending ones sort
+ * last). POST /api/guardians/:id/revoke ends either kind.
+ *
+ * @property {string}  guardian_link_id
+ * @property {'approved'|'pending'} status
+ * @property {string}  id               the dependent's user id
+ * @property {string}  username
+ * @property {string}  full_name
+ * @property {?string} date_of_birth
+ */
+
 // Force this file to be a module so import('@/types') works in
 // editors that need an export to consider it an importable module.
 export {}
