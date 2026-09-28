@@ -714,14 +714,24 @@ function blockStyleWithPreview(block, session) {
 // Click handler on the grid body. In edit mode an empty-cell
 // click → open the inline insert form pre-filled with the
 // half-hour slot under the cursor and the board column the click
-// landed in. We ignore clicks that land inside an existing block
-// (the block stops propagation in its pointerdown handler) and the
-// no-boards case (operator has no columns to fill in yet).
+// landed in. We ignore clicks that start or land on an existing block
+// and the no-boards case (operator has no columns to fill in yet).
+//
+// The block's pointerdown handler stops propagation, but that only
+// stops the pointerdown. The click that follows still bubbles up here,
+// so tapping a block, or letting go at the end of a drag, popped the
+// insert form open over it. A drag that ends off the block clicks the
+// grid body itself, hence remembering where the press began (capture
+// phase, so it runs before the block swallows the event).
+let pressBeganOnBlock = false
+function onGridPointerDown(e) {
+  pressBeganOnBlock = e.target instanceof Element && !!e.target.closest('.scheduler-block')
+}
 function onGridClick(e, session) {
   if (!editMode.value || !canEditSchedule.value) return
   if (!boards.value.length) return
-  // The block's pointerdown handler stops propagation, so a click
-  // that bubbles to the grid body is definitively on empty space.
+  if (pressBeganOnBlock) return
+  if (e.target instanceof Element && e.target.closest('.scheduler-block')) return
   const body = e.currentTarget
   const rect = body.getBoundingClientRect()
   const offsetMin = Math.max(0, (e.clientY - rect.top) / PIXELS_PER_MINUTE)
@@ -984,6 +994,7 @@ async function confirmDuplicate() {
             :class="{ 'is-edit-mode': editMode && canEditSchedule }"
             :data-session-body="session.id"
             :style="{ height: `${timelineHeight(session)}px` }"
+            @pointerdown.capture="onGridPointerDown"
             @click="onGridClick($event, session)"
           >
             <!-- Gridlines: one absolutely-positioned hairline per

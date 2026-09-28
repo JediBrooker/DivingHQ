@@ -623,6 +623,56 @@ test("A6-20 visiting Teams leaves no keydown listener behind", async ({ page, re
 });
 
 // ---------------------------------------------------------------------
+// Scheduler edit mode: a click on a block, or the release at the end of
+// dragging one, bubbled to the grid and opened the "add block" form on
+// top of it. Stopping pointerdown doesn't stop the click that follows.
+// ---------------------------------------------------------------------
+test("the scheduler's add-block form opens on empty grid only, not on a block", async ({ page, request }) => {
+  await withOrg(request, async (org) => {
+    const headers = { Authorization: `Bearer ${org.adminToken}` };
+    const meet = await (await request.post("/api/meets", {
+      headers,
+      data: { name: "B6 Schedule Meet", venue: "Test Pool", start_date: "2026-07-01", end_date: "2026-07-01" },
+    })).json();
+    await setup.createEvent(request, {
+      adminToken: org.adminToken, meet_id: meet.id, name: "B6 3m", event_type: "individual",
+      number_of_judges: 5, height: "3m", scheduled_at: "2026-07-01T09:00:00.000Z", total_rounds: 1,
+    });
+    // The first signed-in read seeds the sessions and their blocks.
+    expect((await request.get(`/api/meets/${meet.id}/sessions`, { headers })).status()).toBe(200);
+
+    await quiet(page);
+    await signIn(page, org.username);
+    await page.goto(`/meet/${meet.id}/schedule`);
+    await page.locator(".scheduler-edit-toggle input").check();
+    const first = page.locator(".scheduler-block").first();
+    await expect(first).toBeVisible();
+    const id = await first.getAttribute("data-block-id");
+    const block = page.locator(`.scheduler-block[data-block-id="${id}"]`);
+    const form = page.locator(".scheduler-insert-backdrop");
+
+    await block.click();
+    await page.waitForTimeout(300);
+    await expect(form).toHaveCount(0);
+
+    const box = await block.boundingBox();
+    const saved = page.waitForResponse((r) => r.request().method() === "PUT" && r.url().includes(`/api/blocks/${id}`));
+    await page.mouse.move(box.x + box.width / 2, box.y + 10);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2, box.y + 80, { steps: 8 });
+    await page.mouse.up();
+    await saved;
+    await page.waitForTimeout(300);
+    await expect(form).toHaveCount(0);
+
+    // Empty grid still offers the form.
+    const grid = await page.locator(".scheduler-grid-body").first().boundingBox();
+    await page.mouse.click(grid.x + grid.width - 8, grid.y + grid.height - 8);
+    await expect(form).toBeVisible();
+  });
+});
+
+// ---------------------------------------------------------------------
 // A6-26 + A6-27 + A6-34: payments screens (payments is forced on here).
 // ---------------------------------------------------------------------
 test("A6-26 a fee's price window keeps its dates across a save and reload", async ({ page, request }) => {
