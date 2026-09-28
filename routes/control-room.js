@@ -403,6 +403,11 @@ module.exports = function createControlRoomRouter({
          )
          SELECT cdl.id AS dive_list_id,
                 cdl.display_order, cdl.withdrawn_at,
+                /* Reserves ride along like withdrawn rows do. The Control
+                   Room and the draw both leave them out of the order, and
+                   without the flag they had to guess from a null
+                   round_order. */
+                cdl.is_reserve,
                 COALESCE(ordered.round_order, NULL) AS round_order,
                 u.id AS competitor_id, u.full_name,
                 o.id AS competitor_org_id,

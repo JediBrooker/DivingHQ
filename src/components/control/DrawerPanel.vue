@@ -14,7 +14,9 @@ import SponsorLogosManager from '@/components/manager/SponsorLogosManager.vue'
 import { showSuccess, showError } from '@/composables/useNotify'
 
 const props = defineProps({ event: { type: Object, default: null } })
-const emit = defineEmits(['close'])
+// roster-changed: a promotion moved someone into the start order, so the
+// Control Room re-reads that pool's queue.
+const emit = defineEmits(['close', 'roster-changed'])
 
 const auth = useAuthStore()
 const panelEl = ref(null)
@@ -67,6 +69,7 @@ async function promote(competitorId) {
         ? `Promoted to slot #${res.display_order}, replacing ${res.replaced_name}.`
         : `Promoted to slot #${res.display_order}.`,
     )
+    emit('roster-changed', props.event.id)
     await loadReserves()
   } catch (err) {
     showError(`Failed to promote: ${err.message}`)

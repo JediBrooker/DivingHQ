@@ -34,7 +34,7 @@ const DrawerPanel = defineAsyncComponent(loadDrawer)
 import EmptyState from '@/components/EmptyState.vue'
 import { useSocket } from '@/composables/useSocket'
 import { useSocketEvent } from '@/composables/useSocketEvent'
-import { useLivePools, selectDiver, rosterIndexForActive } from '@/composables/useLivePools'
+import { useLivePools, selectDiver, rosterIndexForActive, competingQueue, rebaseQueue } from '@/composables/useLivePools'
 import { annotateJudgeRows } from '@/composables/useScoreTrim'
 import { synchroJudgeGroups } from '@/composables/useScoreCategories'
 import { controlKeyIntent, isTypingTarget } from '@/composables/useControlKeymap'
@@ -72,7 +72,12 @@ useSocketEvent(socket, 'score_received', (data) => {
   // A completed dive changes that pool's history + standings, so refresh
   // its side-panel data (whichever pool, focused or not). Each card
   // watches its own pool to stop its clock and arm its own auto-advance.
-  if (res.allScoresIn) loadPoolPanels(data.event_id)
+  // The queue gets re-read too, so a withdrawal or a reserve promoted from
+  // the Manager lands before Next walks on.
+  if (res.allScoresIn) {
+    loadPoolPanels(data.event_id)
+    refreshPoolRoster(data.event_id)
+  }
 })
 useSocketEvent(socket, 'judge_signal', (data) => {
   routeSignal(data)
@@ -219,6 +224,17 @@ async function loadPoolPanels(eventId) {
       standingsByEvent[eventId] = Array.isArray(sb?.standings) ? sb.standings : []
     }).catch(() => { /* leave prior standings in place */ }),
   ])
+}
+
+// Re-read one pool's queue and keep the live diver where they are (see
+// rebaseQueue). A failed fetch leaves the old queue in place.
+async function refreshPoolRoster(eventId) {
+  const pool = pools[eventId]
+  if (!pool) return
+  try {
+    const roster = await auth.apiFetch(`/api/events/${eventId}/roster`)
+    if (Array.isArray(roster)) rebaseQueue(pool, roster)
+  } catch { /* keep the queue we have */ }
 }
 
 function fmtTotal(v) {
@@ -370,9 +386,10 @@ function onKeydown(e) {
 async function finalisePool(ev) {
   if (!ev) return
   const p = pools[ev.id]
+  // pool.roster is already just the divers who compete, so reserves and
+  // scratched divers don't pad the email count.
   const diverIds = new Set()
   for (const r of p?.roster || []) {
-    if (r.withdrawn_at) continue
     diverIds.add(r.competitor_id || r.diver_id || r.dive_list_id)
   }
   const n = diverIds.size
@@ -454,7 +471,8 @@ async function setupLivePool(ev) {
   const pool = poolFor(ev.id)
   try {
     const roster = await auth.apiFetch(`/api/events/${ev.id}/roster`)
-    pool.roster = Array.isArray(roster) ? roster : []
+    // Only the rows that dive: withdrawn and reserve rows come back too.
+    pool.roster = competingQueue(roster)
     // History + standings for the side columns (fire-and-forget; refreshed
     // again whenever this pool completes a dive).
     loadPoolPanels(ev.id)
@@ -765,7 +783,12 @@ function onBeforeUnload(e) {
     <!-- Secondary surfaces (broadcast / reserves / audit / sponsor) live
          in a closed-by-default drawer. v-if-gated so a resting Live canvas
          never mounts this markup, the #9 subtraction. -->
-    <DrawerPanel v-if="drawerOpen" :event="currentEvent" @close="drawerOpen = false" />
+    <DrawerPanel
+      v-if="drawerOpen"
+      :event="currentEvent"
+      @close="drawerOpen = false"
+      @roster-changed="(id) => refreshPoolRoster(id)"
+    />
 
     <!-- Score correction (#9): amend a judge score on a completed dive in
          the focused pool's History. Mounted per-open so its draft fields

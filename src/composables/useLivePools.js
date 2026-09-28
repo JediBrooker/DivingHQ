@@ -102,6 +102,46 @@ export function rosterIndexForActive(roster, active) {
   )
 }
 
+// The rows that actually dive, in queue order. /roster returns withdrawn
+// and reserve rows too (the Manager draws them as separate bands), and
+// stepping through those put a scratched diver or Reserve 1 up on every
+// judge's screen. round_order is null for both, which also covers a
+// server that predates the is_reserve column.
+export function competingQueue(roster) {
+  if (!Array.isArray(roster)) return []
+  return roster.filter((r) => r && !r.withdrawn_at && !r.is_reserve && r.round_order != null)
+}
+
+// Swap a pool onto a freshly fetched roster without losing its place.
+// Withdrawals, promotions and late entries change the queue mid-meet, and
+// the live diver has to stay live through that. If they're still in the
+// queue the cursor just follows them. If they were the one withdrawn, the
+// cursor sits just before whoever was next after them, so Next picks up
+// from the right spot. currentActive is left alone either way: the dive
+// on the blocks keeps its tiles and scores.
+export function rebaseQueue(pool, roster) {
+  if (!pool) return
+  const next = competingQueue(roster)
+  const prev = Array.isArray(pool.roster) ? pool.roster : []
+  const active = pool.currentActive
+  pool.roster = next
+  if (!active) return
+  const idx = rosterIndexForActive(next, active)
+  if (idx >= 0) {
+    pool.currentIndex = idx
+    return
+  }
+  const oldIdx = rosterIndexForActive(prev, active)
+  for (let i = oldIdx + 1; oldIdx >= 0 && i < prev.length; i++) {
+    const at = rosterIndexForActive(next, prev[i])
+    if (at >= 0) {
+      pool.currentIndex = at - 1
+      return
+    }
+  }
+  pool.currentIndex = next.length - 1
+}
+
 // Apply a score_received to ONE pool's state. Same matching the old
 // single-pool handler did, minus its focused-event short-circuit. Returns
 // { matched, allScoresIn } so the caller can run the DOM/event side

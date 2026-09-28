@@ -178,3 +178,57 @@ test('applyScore tile-matches by judge_number, then judge_id, then first unscore
   assert.equal(pool.judgeTiles[0].scored, true)
   assert.equal(pool.judgeTiles[0].judgeId, 'x')
 })
+
+// The live queue only walks divers who compete. Withdrawn and reserve rows
+// come back from /roster with a null round_order and used to be announced.
+test('competingQueue drops withdrawn and reserve rows, keeps queue order', async () => {
+  const { competingQueue } = await import('../src/composables/useLivePools.js')
+  const roster = [
+    { competitor_id: 'w', round_number: 1, round_order: null, withdrawn_at: '2026-01-01T00:00:00Z' },
+    { competitor_id: 'a', round_number: 1, round_order: 1 },
+    { competitor_id: 'b', round_number: 1, round_order: 2 },
+    { competitor_id: 'r', round_number: 1, round_order: null, is_reserve: true },
+    { competitor_id: 'a', round_number: 2, round_order: 1 },
+    // an older server with no is_reserve column still nulls round_order
+    { competitor_id: 'r2', round_number: 2, round_order: null },
+  ]
+  assert.deepEqual(competingQueue(roster).map((r) => `${r.competitor_id}${r.round_number}`), ['a1', 'b1', 'a2'])
+  assert.deepEqual(competingQueue(null), [])
+})
+
+test('rebaseQueue follows the live diver through a roster refresh', async () => {
+  const { rebaseQueue } = await import('../src/composables/useLivePools.js')
+  const row = (id, round, order) => ({ competitor_id: id, round_number: round, round_order: order })
+  const pool = makePoolState()
+  pool.roster = [row('a', 1, 1), row('b', 1, 2), row('c', 1, 3)]
+  pool.currentIndex = 1
+  pool.currentActive = pool.roster[1]
+  // a late entry lands in front of the live diver
+  rebaseQueue(pool, [row('z', 1, 1), row('a', 1, 2), row('b', 1, 3), row('c', 1, 4)])
+  assert.equal(pool.currentIndex, 2)
+  assert.equal(pool.roster[pool.currentIndex].competitor_id, 'b')
+  assert.equal(pool.currentActive.competitor_id, 'b')
+})
+
+test('rebaseQueue: the live diver withdrawn mid-dive leaves Next pointing at whoever was after them', async () => {
+  const { rebaseQueue } = await import('../src/composables/useLivePools.js')
+  const row = (id, round, order, extra = {}) => ({ competitor_id: id, round_number: round, round_order: order, ...extra })
+  const pool = makePoolState()
+  pool.roster = [row('a', 1, 1), row('b', 1, 2), row('c', 1, 3)]
+  pool.currentIndex = 1
+  pool.currentActive = pool.roster[1]
+  rebaseQueue(pool, [row('a', 1, 1), row('b', 1, null, { withdrawn_at: 'now' }), row('c', 1, 2)])
+  assert.equal(pool.roster.length, 2)
+  // currentIndex + 1 is what advancing selects, and that should be c
+  assert.equal(pool.roster[pool.currentIndex + 1].competitor_id, 'c')
+  // the dive on the blocks isn't yanked away
+  assert.equal(pool.currentActive.competitor_id, 'b')
+})
+
+test('rebaseQueue: nobody live yet just swaps the queue', async () => {
+  const { rebaseQueue } = await import('../src/composables/useLivePools.js')
+  const pool = makePoolState()
+  rebaseQueue(pool, [{ competitor_id: 'a', round_number: 1, round_order: 1 }])
+  assert.equal(pool.roster.length, 1)
+  assert.equal(pool.currentIndex, -1)
+})
