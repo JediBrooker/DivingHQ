@@ -195,6 +195,22 @@
  */
 
 /**
+ * @typedef {Object} LastOrgAdminRefusal
+ * The 409 body when a change would leave a claimed federation with no live
+ * org admin (lastOrgAdminRefusal in lib/admin-rows.js). Sent by POST
+ * /api/users/me/delete, PUT /api/users/:id/roles when org_admin is dropped,
+ * POST /api/users/:id/suspend, and by the club-change-requests create,
+ * review and confirm routes when an org transfer would finish. Never to the
+ * sysadmin. The SPA goes by `code` and shows its own translated text, the
+ * `error` string is only English.
+ *
+ * @property {'last_org_admin'} code
+ * @property {string} error      names the org and the support contact
+ * @property {?string} org_id    the federation that would be left without one
+ * @property {?string} org_name
+ */
+
+/**
  * @typedef {Object} RegionAdmins
  * GET /api/regions/:id/admins (the region's admins, or the org admin).
  *
