@@ -242,7 +242,11 @@ module.exports = function createCoachRouter({
            FROM totals
          )
          SELECT md.id AS diver_id, md.full_name, md.username,
-                md.country_code, md.club_name, md.club_code,
+                /* A card about an event shows the meet's representation
+                   code (migration 090), like the scoreboard does. */
+                CASE WHEN nd.event_id IS NULL THEN md.country_code
+                     ELSE event_rep_code(nd.event_id, md.id, md.country_code) END AS country_code,
+                md.club_name, md.club_code,
                 md.note,
                 nd.event_id, nd.event_name, nd.status AS event_status,
                 nd.event_type, nd.height,
@@ -386,7 +390,9 @@ module.exports = function createCoachRouter({
                   cdl.display_order,
                   ap.event_name, ap.event_type, ap.meet_id, ap.meet_name,
                   ap.active_round, ap.active_display_order, ap.slots_in_round,
-                  md.full_name, md.country_code, md.club_name, md.club_code,
+                  md.full_name,
+                  event_rep_code(cdl.event_id, cdl.competitor_id, md.country_code) AS country_code,
+                  md.club_name, md.club_code,
                   d.dive_code, d.position, d.dd, d.description
            FROM competitor_dive_lists cdl
            JOIN my_divers md ON md.id = cdl.competitor_id
@@ -677,7 +683,9 @@ module.exports = function createCoachRouter({
               WHERE cdl.event_id = $2
                 AND cdl.competitor_id IN (SELECT id FROM my_divers)
            )
-           SELECT md.id AS diver_id, md.full_name, md.country_code,
+           SELECT md.id AS diver_id, md.full_name,
+                  /* The meet's representation code (migration 090). */
+                  event_rep_code($2, md.id, md.country_code) AS country_code,
                   md.club_name, md.club_code, md.org_id,
                   md.coach_host_federation,
                   md.coach_invited_federation,

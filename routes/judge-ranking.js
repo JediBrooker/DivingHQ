@@ -254,7 +254,9 @@ async function buildAnalysis(pool, eventId) {
          SELECT NULL::uuid AS competitor_id,
                 t.team_id,
                 tm.name AS full_name,
-                NULL::char(3) AS country_code,
+                /* Same codes as the scoreboard beside it (migrations
+                   090 and 095): the meet's representation code. */
+                event_team_rep_code($1, t.team_id) AS country_code,
                 tm.short_code AS club_name,
                 NULL::uuid AS partner_id,
                 NULL::varchar AS partner_name,
@@ -276,7 +278,7 @@ async function buildAnalysis(pool, eventId) {
          SELECT u.id AS competitor_id,
                 NULL::uuid AS team_id,
                 u.full_name,
-                o.country_code,
+                event_rep_code($1, u.id, o.country_code) AS country_code,
                 cl.name AS club_name,
                 /* Synchro partner — first non-null partner_id across
                    the diver's rounds (constant for a given pair). */

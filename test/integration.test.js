@@ -7467,3 +7467,53 @@ test("a pending club's name stays off judge ranking, judge analytics and diver s
     await teardownFixture(st);
   }
 });
+
+// AGENTS.md / migration 090: a diver row in an event context prints the
+// meet's representation code. The judge ranking table and the coach's
+// per-event views printed the federation's country beside a scoreboard
+// showing the club.
+test("judge ranking and the coach's event views print the meet's representation code", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const club = await recordKit.club(st.orgId, "Rep Code Divers", "RPC");
+    const meet = (await pool.query(
+      "INSERT INTO meets (org_id, name, represent_as) VALUES ($1, 'Club Champs', 'club') RETURNING id", [st.orgId],
+    )).rows[0].id;
+    const dive = await recordKit.threeMetreDive();
+    const diver = await recordKit.diver(st.orgId, club, "female", "Rhea Rep");
+    const other = await recordKit.diver(st.orgId, null, "female", "Una Unattached");
+    const ev = await recordKit.event(st.orgId, { gender: "Female" });
+    await pool.query("UPDATE events SET meet_id = $1 WHERE id = $2", [meet, ev.id]);
+    await recordKit.dive(ev, diver, 1, dive, 7);
+    await recordKit.dive(ev, other, 1, dive, 6);
+    await pool.query(
+      "INSERT INTO competitor_dive_lists (event_id, competitor_id, dive_id, round_number) VALUES ($1, $2, $3, 2)",
+      [ev.id, diver, dive],
+    );
+
+    const sb = await fetchJson("GET", `/api/scoreboard/${ev.id}?cache=skip`);
+    assert.equal(sb.body.standings.find((r) => r.full_name === "Rhea Rep").country_code, "RPC");
+    const jra = await fetchJson("GET", `/api/events/${ev.id}/judge-ranking-analysis`);
+    assert.equal(jra.body.divers.find((d) => d.full_name === "Rhea Rep").country_code, "RPC");
+
+    const coachName = `int-rc-${crypto.randomBytes(3).toString("hex")}`;
+    const coach = await insertUser({ orgId: st.orgId, role: "coach", username: coachName, fullName: "Rep Coach" });
+    await pool.query("INSERT INTO coach_diver_links (coach_id, diver_id, org_id) VALUES ($1, $2, $3)", [coach, diver, st.orgId]);
+    const token = (await fetchJson("POST", "/api/auth/login", { body: { username: coachName, password: "not-used-here" } })).body.token;
+    const lists = await fetchJson("GET", `/api/coach/dive-lists/${ev.id}`, { token });
+    assert.equal(lists.status, 200, JSON.stringify(lists.body));
+    assert.equal(lists.body.divers.find((d) => d.diver_id === diver).country_code, "RPC");
+    const dash = await fetchJson("GET", "/api/coach/dashboard", { token });
+    assert.equal(dash.body.find((r) => r.diver_id === diver).country_code, "RPC");
+  } finally {
+    await pool.query("DELETE FROM coach_diver_links WHERE org_id = $1", [st.orgId]);
+    await recordKit.cleanup(st.orgId);
+    await pool.query("DELETE FROM events WHERE org_id = $1", [st.orgId]);
+    await pool.query("DELETE FROM meets WHERE org_id = $1", [st.orgId]);
+    await pool.query("UPDATE users SET club_id = NULL WHERE org_id = $1", [st.orgId]);
+    await pool.query("DELETE FROM clubs WHERE org_id = $1", [st.orgId]);
+    await teardownFixture(st);
+  }
+});
