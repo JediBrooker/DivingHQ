@@ -389,3 +389,24 @@ test("connecting doesn't replay other events' live state; get_active_diver does 
   await c.fire("get_active_diver", { event_id: VALID_ID });
   assert.deepEqual(c.emitted.filter((e) => e.name === "state_update").map((e) => e.payload.diverName), ["Mine"]);
 });
+
+// submit_score refuses anything but a Live event so finished results
+// can't move, but the referee actions never looked: any org referee could
+// zero or cap every score of a dive in a finalised event.
+test("referee actions only touch a Live event, and a cap of 0 is reported as 0", async () => {
+  const data = { event_id: VALID_ID, competitor_id: VALID_ID, round_number: 1 };
+  const done = scoringPool({ status: "Completed" });
+  const h = makeHarness({ canManage: () => true, deps: { pool: done } });
+  const c = await h.connect("198.51.100.37", token("ref-finished"));
+  for (const [ev, extra] of [["referee_failed_dive", {}], ["referee_cap_scores", { cap_value: 0 }], ["referee_redive", {}]]) {
+    assert.deepEqual(await c.ask(ev, { ...data, ...extra }), { ok: false, error: "event_not_live" }, ev);
+  }
+  assert.ok(!done.writes.some((sql) => /UPDATE scores/.test(sql)), "no score was touched");
+  assert.equal(h.broadcasts.length, 0);
+
+  const live = makeHarness({ canManage: () => true, deps: { pool: scoringPool({ status: "Live" }) } });
+  const r = await live.connect("198.51.100.38", token("ref-live"));
+  assert.deepEqual(await r.ask("referee_cap_scores", { ...data, cap_value: 0 }), { ok: true });
+  const corrected = live.broadcasts.find((b) => b.name === "score_corrected");
+  assert.equal(corrected.payload.reason, "referee:cap(0)");
+});

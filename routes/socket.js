@@ -970,8 +970,12 @@ module.exports = function attachSocket({
     // 'redive' → no score change (new dive overwrites via
     // submit_score on the same UNIQUE key).
     // -----------------------------------------------------------
+    // Resolves { ok: true, capValue } when the action landed, otherwise
+    // { ok: false, error } (and referee_action_rejected has gone to the
+    // socket where there's a reason worth telling it).
+    const REFEREE_FAILED = { ok: false, error: "action_failed" };
     async function applyRefereeAction(action, data, actorUserId) {
-      if (!data?.event_id || !data?.competitor_id) return;
+      if (!data?.event_id || !data?.competitor_id) return REFEREE_FAILED;
       // Validate round_number is a positive integer, matching the
       // submit_score / judge_signal paths. Previously only truthiness
       // was checked, so a malformed value reached the parameterized
@@ -981,7 +985,7 @@ module.exports = function attachSocket({
       const round = Number(data.round_number);
       if (!Number.isInteger(round) || round < 1) {
         socket.emit("referee_action_rejected", { reason: "bad_round" });
-        return;
+        return REFEREE_FAILED;
       }
       // Use the coerced integer downstream so a value like "3.0"
       // (passes the integer check but fails a Postgres int cast)
@@ -995,13 +999,26 @@ module.exports = function attachSocket({
             reason: "bad_cap_value",
             message: "cap_value must be between 0 and 10.",
           });
-          return;
+          return REFEREE_FAILED;
         }
         capValue = raw;
       }
       const client = await pool.connect();
       try {
         await client.query("BEGIN");
+        // Live events only, same as submit_score. Otherwise a referee
+        // could fail, cap or redive a dive in a finalised event and move
+        // the published results and record books after the fact. FOR
+        // SHARE holds the status still until this commits.
+        const ev = await client.query("SELECT status FROM events WHERE id = $1 FOR SHARE", [data.event_id]);
+        if (ev.rows[0]?.status !== "Live") {
+          await client.query("ROLLBACK");
+          socket.emit("referee_action_rejected", {
+            reason: "event_not_live",
+            message: "Referee actions only apply while the event is Live.",
+          });
+          return { ok: false, error: "event_not_live" };
+        }
         const auditReason = `referee:${action}` + (action === "cap" ? `(${capValue})` : "");
         if (action === "failed") {
           await client.query(
@@ -1100,10 +1117,10 @@ module.exports = function attachSocket({
         }
         await client.query("COMMIT");
       } catch (err) {
-        await client.query("ROLLBACK");
+        await client.query("ROLLBACK").catch(() => {});
         console.error("[Referee Action Failed]", err.message);
         socket.emit("referee_action_rejected", { reason: "server_error" });
-        return;
+        return REFEREE_FAILED;
       } finally {
         client.release();
       }
@@ -1120,13 +1137,14 @@ module.exports = function attachSocket({
           eventId: data.event_id, competitorId: data.competitor_id, roundNumber: data.round_number,
         });
       }
-      return true;
+      return { ok: true, capValue };
     }
 
     on("referee_failed_dive", async (data, ack) => {
       if (!(await guardControl(socket, data, ack, "referee_action"))) return;
-      if (!(await applyRefereeAction("failed", data, socket.userId))) {
-        ackWith(ack, { ok: false, error: "action_failed" });
+      const result = await applyRefereeAction("failed", data, socket.userId);
+      if (!result.ok) {
+        ackWith(ack, { ok: false, error: result.error });
         return;
       }
       io.to(`event:${data.event_id}`).emit("referee_action_failed", data);
@@ -1140,8 +1158,9 @@ module.exports = function attachSocket({
     });
     on("referee_cap_scores", async (data, ack) => {
       if (!(await guardControl(socket, data, ack, "referee_action"))) return;
-      if (!(await applyRefereeAction("cap", data, socket.userId))) {
-        ackWith(ack, { ok: false, error: "action_failed" });
+      const result = await applyRefereeAction("cap", data, socket.userId);
+      if (!result.ok) {
+        ackWith(ack, { ok: false, error: result.error });
         return;
       }
       io.to(`event:${data.event_id}`).emit("referee_action_cap", data);
@@ -1149,14 +1168,17 @@ module.exports = function attachSocket({
         event_id: data.event_id,
         competitor_id: data.competitor_id,
         round_number: data.round_number,
-        reason: `referee:cap(${data.cap_value || 2.0})`,
+        // The value actually applied. `data.cap_value || 2.0` read a cap
+        // of 0 as 2.
+        reason: `referee:cap(${result.capValue})`,
       });
       ackWith(ack, { ok: true });
     });
     on("referee_redive", async (data, ack) => {
       if (!(await guardControl(socket, data, ack, "referee_action"))) return;
-      if (!(await applyRefereeAction("redive", data, socket.userId))) {
-        ackWith(ack, { ok: false, error: "action_failed" });
+      const result = await applyRefereeAction("redive", data, socket.userId);
+      if (!result.ok) {
+        ackWith(ack, { ok: false, error: result.error });
         return;
       }
       io.to(`event:${data.event_id}`).emit("referee_action_redive", data);
