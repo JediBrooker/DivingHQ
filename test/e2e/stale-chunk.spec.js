@@ -37,3 +37,22 @@ test("the server answers a missing /assets file with a 404, not the app shell", 
   expect(r.status()).toBe(404);
   expect(r.headers()["content-type"] || "").not.toContain("text/html");
 });
+
+test("offline, a missing chunk leaves the user where they are instead of reloading", async ({ page }) => {
+  await page.goto("/privacy");
+  const link = page.locator('a[href="/guide"]').first();
+  await expect(link).toBeVisible();
+  await page.evaluate(() => { window.__stillHere = true; });
+  // Nothing answers: the chunk fails and so does the health probe.
+  await page.route(/\/assets\/GuideView-[^/]+\.js$/, (route) => route.abort("internetdisconnected"));
+  await page.route("**/api/health", (route) => route.abort("internetdisconnected"));
+
+  const probed = page.waitForEvent("requestfailed", (r) => r.url().includes("/api/health"));
+  await link.click();
+  await probed;
+  // The decision is made right after the probe fails; give a (wrong)
+  // reload a moment to start before checking it didn't.
+  await page.waitForTimeout(300);
+  await expect(page).toHaveURL(/\/privacy$/);
+  expect(await page.evaluate(() => window.__stillHere)).toBe(true);
+});

@@ -46,21 +46,39 @@ export function reloadOnce({ storage, now = Date.now(), go }) {
 }
 
 // Wires both hooks. vite:preloadError covers lazy components and CSS
-// that aren't routes; router.onError knows where the user was headed,
-// so it gets first go and the reload lands on the page they clicked.
+// that aren't routes; router.onError also knows where the user was
+// headed, so the reload lands on the page they clicked.
+//
+// Before reloading we check the server answers at all. Offline (a judge
+// on poolside wifi that's dropped) the chunk is "missing" only because
+// nothing is reachable, and a reload would trade the screen they're on
+// for an error page or a half-booted offline shell. Staying put is the
+// better failure there.
 export function installStaleChunkRecovery(router) {
   if (typeof window === 'undefined') return
   // Even reading the property throws in some locked-down embeds.
   let storage = null
   try { storage = window.sessionStorage } catch { /* reloadOnce says no */ }
+
+  let probing = false
+  let target = null
+  function recover(to) {
+    if (to) target = to
+    if (probing) return
+    probing = true
+    fetch('/api/health', { cache: 'no-store', credentials: 'same-origin' })
+      .then((r) => r.ok, () => false)
+      .then((up) => {
+        probing = false
+        const dest = target
+        target = null
+        if (!up) return
+        reloadOnce({ storage, go: () => (dest ? window.location.assign(dest) : window.location.reload()) })
+      })
+  }
+
   router.onError((err, to) => {
-    if (!isStaleChunkError(err)) return
-    const target = to?.fullPath
-    reloadOnce({ storage, go: () => (target ? window.location.assign(target) : window.location.reload()) })
+    if (isStaleChunkError(err)) recover(to?.fullPath)
   })
-  window.addEventListener('vite:preloadError', () => {
-    // Deferred so a route navigation's onError, which runs after this in
-    // the same rejection, can claim the reload with its target first.
-    setTimeout(() => reloadOnce({ storage, go: () => window.location.reload() }), 0)
-  })
+  window.addEventListener('vite:preloadError', () => recover(null))
 }
