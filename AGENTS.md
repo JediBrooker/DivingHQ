@@ -372,7 +372,8 @@ until the operator has switched maintenance mode on and passed
 | A diver's scored dives, a synchro pair stored under the lead included (WHERE fragment; `competing: true` drops reserve rows, for places) | `diverDivesWhere(param, { competing })` | `db/queries.js` |
 | Which scores make an event's standings (withdrawn divers keep theirs, reserves out, Super Final carry for divers in the stage) | `standingsScoreScope()`; as a per_dive CTE, `standingsPerDiveCte({ select })` (UNION form, keeps the event-id pushdown); over many events at once, `standingsPerDiveForEventsCte({ events })`; who's in a stage, `stageMembers()` | `lib/scoring-sql.js` |
 | May this caller see an event's scores? (Live/Completed public, else host or participating org) | `ensureEventVisible(pool, req, res, eventId)` | `lib/event-visibility.js` |
-| Malformed id in a path (404) or a filter (400), not a Postgres 500 | `uuidParams(router, ...names)` / `rejectBadUuidQuery(req, res, ...names)` | `lib/uuid-params.js` |
+| Is this id a UUID string? (the one test, sockets and gates included) | `isUuid(v)` / `router.param("id", requireUuidParam)` | `lib/uuid.js` |
+| Malformed id in a path (404) or a filter (400), not a Postgres 500 | `uuidParams(router, ...names)` / `rejectBadUuidQuery(req, res, ...names)` | `lib/uuid-params.js` (built on `lib/uuid.js`) |
 | A PDF export (Unicode font if configured, else WinAnsi folding) | `createPdfDocument()` / `pdfTranslate()` | `lib/pdf-document.js` |
 | The Control Room's live queue (competing rows only, swap in a fresh roster, next diver) | `competingQueue` / `rebaseQueue` / `nextQueueIndex` | `src/composables/useLivePools.js` |
 | Computed dive points (server) | `calc_event_dive_points(...)` SQL function | `init.sql` |
