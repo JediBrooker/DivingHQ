@@ -47,6 +47,14 @@ const assert = require("node:assert/strict");
 const http   = require("node:http");
 const crypto = require("node:crypto");
 
+// Before dotenv, which never overwrites a var that's already set (even to
+// ""). A dev .env usually has real VAPID keys and the test DB has real
+// browser subscriptions, so without this every fixture org that pinged
+// the sysadmins landed on someone's actual phone. Set here and not only
+// in scripts/run-tests.js, since `node --test` on this file skips that.
+process.env.VAPID_PUBLIC_KEY = "";
+process.env.VAPID_PRIVATE_KEY = "";
+
 require("dotenv").config();
 // Public signups are now a feature flag ('signups', migration 086), not an env
 // var. This suite drives register-org / register as the system under test, so
@@ -7102,4 +7110,17 @@ test("sitemap.xml lists the payments and classes guides only while they're switc
     await features.set("payments", saved.payments);
     await features.set("classes", saved.classes);
   }
+});
+
+// The suite registers orgs (which pushes "new federation pending" to every
+// sysadmin) and notifies seeded users. A local .env usually carries real
+// VAPID keys and the test DB carries real browser subscriptions, so those
+// were going out to real phones. Push has to be off for the whole run.
+test("web push is switched off for the test run", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const r = await fetchJson("GET", "/api/push/vapid-public-key");
+  assert.equal(r.status, 200);
+  assert.equal(r.body.enabled, false);
+  assert.equal(r.body.key, "");
 });

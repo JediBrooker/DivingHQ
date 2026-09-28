@@ -46,7 +46,9 @@ function main() {
   }
   const result = spawnSync(process.execPath, ["--test", ...files], {
     stdio: "inherit",
-    env: process.env,
+    // No web push from a test run, whatever keys .env has. dotenv leaves
+    // an existing empty var alone, so this wins over the file.
+    env: { ...process.env, VAPID_PUBLIC_KEY: "", VAPID_PRIVATE_KEY: "" },
   });
   process.exit(result.status === null ? 1 : result.status);
 }

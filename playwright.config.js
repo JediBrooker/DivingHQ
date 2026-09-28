@@ -210,6 +210,11 @@ module.exports = defineConfig({
       // them so lib/email drops into its documented no-op mode.
       CF_ACCOUNT_ID: "",
       CF_EMAIL_TOKEN: "",
+      // Same for web push. The test DB holds real browser subscriptions
+      // (the admin's own Chrome, for one) and fixture orgs ping every
+      // sysadmin, so a run with the .env VAPID keys buzzed real phones.
+      VAPID_PUBLIC_KEY: "",
+      VAPID_PRIVATE_KEY: "",
     },
   },
 });

@@ -64,3 +64,11 @@ test("tapping a system notification with the app open routes that tab", async ({
   });
   await expect(page).toHaveURL(/\/inbox$/);
 });
+
+// Fixture orgs ping every sysadmin, and the test DB holds real browser
+// subscriptions. playwright.config.js blanks the VAPID keys so none of
+// that reaches an actual phone.
+test("the e2e server runs with web push off", async ({ request }) => {
+  const r = await request.get("/api/push/vapid-public-key");
+  expect(await r.json()).toEqual({ key: "", enabled: false });
+});
