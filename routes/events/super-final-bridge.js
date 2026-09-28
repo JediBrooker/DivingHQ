@@ -32,6 +32,8 @@ const {
   loadSfCumulative,
 } = require("../../lib/super-final-helpers");
 const { perDivePointsCte } = require("../../lib/scoring-sql");
+// The rankings are public, so pending clubs stay out (lib/club-approvals.js).
+const { PUBLIC_CLUB_JOIN } = require("../../lib/club-approvals");
 const { insertDiveListRows } = require("./stage-helpers");
 
 // World Aquatics Art 4.1.5 / Diving World Cup §3.1.2: within a Super-
@@ -564,7 +566,7 @@ module.exports = function createSuperFinalBridgeRoutes({ pool, requireEventManag
              FROM competitor_dive_lists cdl
              JOIN users u ON u.id = cdl.competitor_id
              JOIN organisations o ON o.id = u.org_id
-             LEFT JOIN clubs cl ON cl.id = u.club_id
+             ${PUBLIC_CLUB_JOIN}
              LEFT JOIN per_competitor pc ON pc.competitor_id = cdl.competitor_id
             WHERE cdl.event_id = $1
               AND cdl.withdrawn_at IS NULL
@@ -624,7 +626,7 @@ module.exports = function createSuperFinalBridgeRoutes({ pool, requireEventManag
             `SELECT u.id, o.country_code, cl.name AS club_name
                FROM users u
                JOIN organisations o ON o.id = u.org_id
-               LEFT JOIN clubs cl ON cl.id = u.club_id
+               ${PUBLIC_CLUB_JOIN}
               WHERE u.id = ANY($1::uuid[])`,
             [loserIds],
           );

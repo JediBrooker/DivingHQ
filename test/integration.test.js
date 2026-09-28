@@ -7566,3 +7566,28 @@ test("a malformed id in the path is a 404, not a 500", async (t) => {
     await teardownFixture(st);
   }
 });
+
+// A club still waiting on its federation isn't public (migration 096),
+// and every public surface joins clubs through PUBLIC_CLUB_JOIN. The
+// judge-ranking analysis and the Super Final rankings joined them plain.
+test("judge-ranking analysis doesn't print a pending club's name", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const { ev } = await sweepKit.scoredDive(st.orgId, 6);
+    const club = await recordKit.club(st.orgId, "Unvetted Founder Club", "UFC");
+    await pool.query("UPDATE clubs SET status = 'pending' WHERE id = $1", [club]);
+    await pool.query("UPDATE users SET club_id = $2 WHERE id = ANY($1::uuid[])", [ev.judges, club]);
+    const json = await fetchJson("GET", `/api/events/${ev.id}/judge-ranking-analysis`);
+    assert.equal(json.status, 200, JSON.stringify(json.body).slice(0, 200));
+    assert.ok(!JSON.stringify(json.body).includes("Unvetted Founder Club"));
+    const csv = await fetchJson("GET", `/api/events/${ev.id}/judge-ranking-analysis.csv`);
+    assert.ok(!String(csv.body).includes("Unvetted Founder Club"));
+  } finally {
+    await pool.query("UPDATE users SET club_id = NULL WHERE org_id = $1", [st.orgId]);
+    await recordKit.cleanup(st.orgId);
+    await pool.query("DELETE FROM clubs WHERE org_id = $1", [st.orgId]);
+    await teardownFixture(st);
+  }
+});
