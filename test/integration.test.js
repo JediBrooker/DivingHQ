@@ -7654,3 +7654,26 @@ test("self-registration refuses an over-long email with a 400", async (t) => {
     await teardownFixture(st);
   }
 });
+
+// The sysadmin can add a coach link in any org (POST /api/orgs/:id/
+// coach-links) but the delete matched the caller's own org only, so a
+// wrong link in a federation with no admin of its own couldn't go.
+test("the sysadmin can remove a coach link in another org", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const coach = await insertUser({ orgId: st.orgId, role: "coach", username: `int-sw-co-${st.slug}`, fullName: "Link Coach" });
+    const diver = await insertUser({ orgId: st.orgId, role: "diver", username: `int-sw-di-${st.slug}`, fullName: "Link Diver" });
+    const link = (await pool.query(
+      "INSERT INTO coach_diver_links (coach_id, diver_id, org_id) VALUES ($1, $2, $3) RETURNING id",
+      [coach, diver, st.orgId],
+    )).rows[0].id;
+    const sys = await claimKit.login("admin", "admin");
+    const del = await fetchJson("DELETE", `/api/coach-links/${link}`, { token: sys.token });
+    assert.equal(del.status, 200, JSON.stringify(del.body));
+    assert.equal((await pool.query("SELECT 1 FROM coach_diver_links WHERE id = $1", [link])).rows.length, 0);
+  } finally {
+    await teardownFixture(st);
+  }
+});
