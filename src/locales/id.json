@@ -837,7 +837,11 @@
     "col_code": "Kode",
     "col_dd": "Tingkat kesulitan",
     "col_position": "Posisi",
-    "col_description": "Deskripsi"
+    "col_description": "Deskripsi",
+    "dd_range_hint": "Loncatan resmi dari {height} memiliki tingkat kesulitan {min} sampai {max}. Loncatan kustom harus tetap di dalam rentang itu.",
+    "dd_range_hint_all": "Tidak ada loncatan resmi dari {height}, jadi loncatan kustom dari ketinggian itu harus tetap di dalam rentang semua loncatan resmi: tingkat kesulitan {min} sampai {max}.",
+    "dd_out_of_range": "Tingkat kesulitan di luar rentang",
+    "dd_out_of_range_tip": "Tingkat kesulitannya di luar rentang loncatan resmi dari ketinggian ini, jadi tidak ada daftar loncatan yang akan menerimanya. Perbaiki tingkat kesulitannya atau tambahkan versi baru loncatan ini."
   },
   "judges_directory": {
     "title": "Direktori juri",

@@ -837,7 +837,11 @@
     "col_code": "コード",
     "col_dd": "難易度",
     "col_position": "姿勢",
-    "col_description": "説明"
+    "col_description": "説明",
+    "dd_range_hint": "{height}の公式演技の難易度は{min}〜{max}です。カスタム演技もこの範囲内に収める必要があります。",
+    "dd_range_hint_all": "{height}には公式演技がないため、この高さのカスタム演技はすべての公式演技の範囲内に収める必要があります（難易度{min}〜{max}）。",
+    "dd_out_of_range": "難易度が範囲外",
+    "dd_out_of_range_tip": "難易度がこの高さの公式演技の範囲外のため、どの演技リストにも登録できません。難易度を修正するか、この演技の新しいバージョンを追加してください。"
   },
   "judges_directory": {
     "title": "審判員ディレクトリ",

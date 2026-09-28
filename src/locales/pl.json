@@ -848,7 +848,11 @@
     "col_code": "Kod",
     "col_dd": "ST",
     "col_position": "Pozycja",
-    "col_description": "Opis"
+    "col_description": "Opis",
+    "dd_range_hint": "Oficjalne skoki z {height} mają ST od {min} do {max}. Własny skok musi mieścić się w tym zakresie.",
+    "dd_range_hint_all": "Z {height} nie ma oficjalnych skoków, więc własny skok z tej wysokości musi mieścić się w zakresie wszystkich oficjalnych skoków: ST od {min} do {max}.",
+    "dd_out_of_range": "ST poza zakresem",
+    "dd_out_of_range_tip": "Jego ST wykracza poza zakres oficjalnych skoków z tej wysokości, więc żadna lista skoków go nie przyjmie. Popraw ST albo dodaj nową wersję skoku."
   },
   "judges_directory": {
     "title": "Katalog sędziów",

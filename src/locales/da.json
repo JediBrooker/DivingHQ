@@ -848,7 +848,11 @@
     "col_code": "Kode",
     "col_dd": "Sværhedsgrad",
     "col_position": "Kropsstilling",
-    "col_description": "Beskrivelse"
+    "col_description": "Beskrivelse",
+    "dd_range_hint": "Officielle spring fra {height} har sværhedsgrad fra {min} til {max}. Et eget spring skal holde sig inden for det interval.",
+    "dd_range_hint_all": "Der er ingen officielle spring fra {height}, så et eget spring derfra skal holde sig inden for intervallet for alle officielle spring: sværhedsgrad {min} til {max}.",
+    "dd_out_of_range": "Sværhedsgrad uden for intervallet",
+    "dd_out_of_range_tip": "Sværhedsgraden ligger uden for intervallet for de officielle spring fra denne højde, så ingen springliste tager imod det. Ret sværhedsgraden, eller tilføj en ny version af springet."
   },
   "judges_directory": {
     "title": "Dommerkatalog",

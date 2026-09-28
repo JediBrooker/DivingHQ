@@ -848,7 +848,11 @@
     "col_code": "Kennung",
     "col_dd": "SG",
     "col_position": "Körperhaltung",
-    "col_description": "Beschreibung"
+    "col_description": "Beschreibung",
+    "dd_range_hint": "Offizielle Sprünge bei {height} haben einen SG von {min} bis {max}. Ein eigener Sprung muss in diesem Bereich bleiben.",
+    "dd_range_hint_all": "Bei {height} gibt es keine offiziellen Sprünge, daher muss ein eigener Sprung dort im Bereich aller offiziellen Sprünge bleiben: SG {min} bis {max}.",
+    "dd_out_of_range": "SG außerhalb des Bereichs",
+    "dd_out_of_range_tip": "Der SG liegt außerhalb des Bereichs der offiziellen Sprünge dieser Höhe, daher nimmt ihn keine Sprungliste an. Korrigieren Sie den SG oder legen Sie eine neue Variante des Sprungs an."
   },
   "judges_directory": {
     "title": "Kampfrichter-Verzeichnis",

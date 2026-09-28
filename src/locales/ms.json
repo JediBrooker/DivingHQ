@@ -837,7 +837,11 @@
     "col_code": "Kod",
     "col_dd": "Tahap kesukaran",
     "col_position": "Posisi",
-    "col_description": "Penerangan"
+    "col_description": "Penerangan",
+    "dd_range_hint": "Terjunan rasmi dari {height} mempunyai tahap kesukaran {min} hingga {max}. Terjunan tersuai mesti kekal dalam julat itu.",
+    "dd_range_hint_all": "Tiada terjunan rasmi dari {height}, jadi terjunan tersuai dari ketinggian itu mesti kekal dalam julat semua terjunan rasmi: tahap kesukaran {min} hingga {max}.",
+    "dd_out_of_range": "Tahap kesukaran di luar julat",
+    "dd_out_of_range_tip": "Tahap kesukarannya di luar julat terjunan rasmi dari ketinggian ini, jadi tiada senarai terjunan yang akan menerimanya. Betulkan tahap kesukaran atau tambah versi baharu terjunan ini."
   },
   "judges_directory": {
     "title": "Direktori hakim",

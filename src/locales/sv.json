@@ -848,7 +848,11 @@
     "col_code": "Kod",
     "col_dd": "Svårighet",
     "col_position": "Kroppsposition",
-    "col_description": "Beskrivning"
+    "col_description": "Beskrivning",
+    "dd_range_hint": "Officiella hopp från {height} har svårighetsgrad {min} till {max}. Ett eget hopp måste hålla sig inom det intervallet.",
+    "dd_range_hint_all": "Det finns inga officiella hopp från {height}, så ett eget hopp därifrån måste hålla sig inom intervallet för alla officiella hopp: svårighetsgrad {min} till {max}.",
+    "dd_out_of_range": "Svårighetsgrad utanför intervallet",
+    "dd_out_of_range_tip": "Svårighetsgraden ligger utanför intervallet för de officiella hoppen från den här höjden, så ingen hopplista tar emot det. Rätta svårighetsgraden eller lägg till en ny version av hoppet."
   },
   "judges_directory": {
     "title": "Domarkatalog",

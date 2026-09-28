@@ -39,6 +39,7 @@ const {
 } = require("./stage-helpers");
 const { canSeeEvent } = require("../../lib/event-visibility");
 const { scoreAuthoritySql } = require("../../lib/middleware");
+const { customDivesOutOfRange } = require("../../lib/custom-dive-dd");
 
 // Migration 039: shape-check operator-prescribed round_dives. We
 // only validate structure here (round numbering 1..N contiguous,
@@ -84,6 +85,19 @@ function validateRoundDivesShape(round_dives) {
     }
   }
   return { valid: true };
+}
+
+// A prescribed dive ends up on every entrant's list, so a custom one has
+// to carry a DD inside the official range for its height as well
+// (lib/custom-dive-dd.js). Checked when the event is saved, or the event
+// would take a dive no diver could then submit. Returns the 400 message
+// or null.
+async function prescribedDdError(db, roundDives) {
+  if (!Array.isArray(roundDives)) return null;
+  const [bad] = await customDivesOutOfRange(db, roundDives.map((slot) => slot?.dive_id));
+  if (!bad) return null;
+  const slot = roundDives.find((sl) => sl?.dive_id === bad.id);
+  return slot ? `round_dives round ${slot.round_number}: ${bad.message}` : bad.message;
 }
 
 function hasOwn(obj, key) {
@@ -422,6 +436,13 @@ module.exports = function createEventsRouter({
     if (!rdCheck.valid) {
       return res.status(400).json({ error: rdCheck.error });
     }
+    try {
+      const ddErr = await prescribedDdError(pool, round_dives);
+      if (ddErr) return res.status(400).json({ error: ddErr, code: "dd_out_of_range" });
+    } catch (err) {
+      console.error("[Create Event DD check]", err.message);
+      return res.status(500).json({ error: "Internal server error" });
+    }
     const effectiveTotalRounds =
       Array.isArray(round_dives) && round_dives.length
         ? round_dives.length
@@ -658,6 +679,13 @@ module.exports = function createEventsRouter({
     const rdShape = validateRoundDivesShape(round_dives);
     if (!rdShape.valid) {
       return res.status(400).json({ error: rdShape.error });
+    }
+    try {
+      const ddErr = await prescribedDdError(pool, round_dives);
+      if (ddErr) return res.status(400).json({ error: ddErr, code: "dd_out_of_range" });
+    } catch (err) {
+      console.error("[Update Event DD check]", err.message);
+      return res.status(500).json({ error: "Internal server error" });
     }
     const effectiveTotalRoundsForRules =
       Array.isArray(round_dives) && round_dives.length

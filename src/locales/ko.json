@@ -837,7 +837,11 @@
     "col_code": "코드",
     "col_dd": "난이도",
     "col_position": "자세",
-    "col_description": "설명"
+    "col_description": "설명",
+    "dd_range_hint": "{height} 공식 다이빙의 난이도는 {min}~{max}입니다. 사용자 지정 다이빙도 이 범위 안에 있어야 합니다.",
+    "dd_range_hint_all": "{height}에는 공식 다이빙이 없으므로 이 높이의 사용자 지정 다이빙은 전체 공식 다이빙의 범위 안에 있어야 합니다: 난이도 {min}~{max}.",
+    "dd_out_of_range": "난이도 범위 벗어남",
+    "dd_out_of_range_tip": "난이도가 이 높이 공식 다이빙의 범위를 벗어나 어떤 다이빙 목록에도 넣을 수 없습니다. 난이도를 고치거나 이 다이빙의 새 버전을 추가하세요."
   },
   "judges_directory": {
     "title": "심판 디렉터리",

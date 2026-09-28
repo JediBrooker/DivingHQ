@@ -837,7 +837,11 @@
     "col_code": "Code",
     "col_dd": "DD",
     "col_position": "Position",
-    "col_description": "Description"
+    "col_description": "Description",
+    "dd_range_hint": "Official dives at {height} run from DD {min} to {max}. A custom dive has to stay inside that range.",
+    "dd_range_hint_all": "There are no official dives at {height}, so a custom dive there has to stay inside the range every official dive uses: DD {min} to {max}.",
+    "dd_out_of_range": "DD out of range",
+    "dd_out_of_range_tip": "Its DD is outside the range the official dives at this height use, so no dive list will take it. Fix the DD, or add a new version of the dive."
   },
   "judges_directory": {
     "title": "Judge Directory",

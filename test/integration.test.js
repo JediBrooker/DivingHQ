@@ -11231,8 +11231,11 @@ test("a dive list can't use another org's custom dive, and the picker doesn't of
   try {
     const coach = await sweepKit.member(away.orgId, "coach");
     const made = await fetchJson("POST", "/api/dive-directory", {
-      // A DD no other run is using, since the directory is shared.
-      token: coach.token, body: { dive_code: "101", height: "3m", position: "B", dd: 5 + crypto.randomInt(49) / 10 },
+      // A DD no other run is using, since the directory is shared. It
+      // used to be 5.0 to 9.8; a custom dive now has to sit inside the
+      // official 3m range (decision A7-06), so it's 2.0 to 4.7, clear of
+      // the core 101B's own 1.5.
+      token: coach.token, body: { dive_code: "101", height: "3m", position: "B", dd: 2 + crypto.randomInt(28) / 10 },
     });
     assert.equal(made.status, 201, JSON.stringify(made.body));
     const diver = await sweepKit.member(home.orgId, "diver");
@@ -11970,5 +11973,156 @@ test("score authority: a dive-off's scores and winner are the host's to record",
     assert.deepEqual(stored, { winner_id: a.id, notes: "checked" });
   } finally {
     await hostKit.cleanup(w);
+  }
+});
+
+// =====================================================================
+// Custom dives keep to the official DD range (decision A7-06). A custom
+// row's DD has to fall between the lowest and highest DD the official
+// dives at its height use, read from the directory (lib/custom-dive-dd.js),
+// when it's made or edited and whenever a dive list takes it.
+// =====================================================================
+const ddKit = {
+  async range(height) {
+    const r = (await pool.query(
+      "SELECT MIN(dd)::float AS lo, MAX(dd)::float AS hi FROM dive_directory WHERE NOT is_custom AND height = $1",
+      [height])).rows[0];
+    return r.lo == null ? null : r;
+  },
+  async allRange() {
+    return (await pool.query(
+      "SELECT MIN(dd)::float AS lo, MAX(dd)::float AS hi FROM dive_directory WHERE NOT is_custom")).rows[0];
+  },
+  // A dive code nothing in the catalogue or another run uses.
+  code() {
+    return `9${crypto.randomInt(10000, 99999)}`;
+  },
+  fmt: (n) => Number(n).toFixed(1),
+  // n + d on the 0.1 grid, without the float tail (4.3 + 0.1 isn't 4.4).
+  step: (n, d) => Math.round((n + d) * 10) / 10,
+};
+
+test("custom dives: a DD outside the official range for the height is refused on create and edit", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const orgId = await hostKit.org("dd");
+  try {
+    const coach = await compKit.user(orgId, "SGS DD Coach", ["coach"]);
+    const three = await ddKit.range(3);
+    const one = await ddKit.range(1);
+    const all = await ddKit.allRange();
+    assert.ok(three && one && all.lo != null, "the catalogue is loaded");
+    assert.equal(await ddKit.range(0), null, "no official dives at 0m, which the fallback is for");
+    const post = (body) => fetchJson("POST", "/api/dive-directory", {
+      token: coach.token, body: { dive_code: ddKit.code(), position: "B", ...body },
+    });
+
+    // Above and below the 3m range: refused, and the message gives it.
+    const high = await post({ height: "3m", dd: ddKit.step(three.hi, 0.1) });
+    assert.equal(high.status, 400, JSON.stringify(high.body));
+    assert.equal(high.body.code, "dd_out_of_range");
+    assert.match(high.body.error, new RegExp(`between ${ddKit.fmt(three.lo)} to ${ddKit.fmt(three.hi)}`));
+    assert.match(high.body.error, /official World Aquatics dives at 3m/);
+    assert.equal((await post({ height: "3m", dd: ddKit.step(three.lo, -0.1) })).status, 400);
+    // The ends of the range are in it.
+    assert.equal((await post({ height: "3m", dd: three.lo })).status, 201);
+    assert.equal((await post({ height: "3m", dd: three.hi })).status, 201);
+
+    // 0m has no official dives, so the range across every height applies.
+    const drill = await post({ height: "0m", dd: ddKit.step(all.hi, 0.1) });
+    assert.equal(drill.status, 400);
+    assert.match(drill.body.error, /no official World Aquatics dives at 0m/);
+    assert.equal((await post({ height: "0m", dd: ddKit.step(all.lo, -0.1) })).status, 400, "the old 0.5 sit-dive goes too");
+    const okDrill = await post({ height: "0m", dd: all.lo });
+    assert.equal(okDrill.status, 201, JSON.stringify(okDrill.body));
+
+    // Edits are checked on the row as it would end up: a new DD, and a
+    // move to a height whose range doesn't cover the DD it already has.
+    const put = (id, body) => fetchJson("PUT", `/api/dive-directory/${id}`, { token: coach.token, body });
+    const badDd = await put(okDrill.body.id, { dd: ddKit.step(all.hi, 1) });
+    assert.equal(badDd.status, 400, JSON.stringify(badDd.body));
+    assert.equal(badDd.body.code, "dd_out_of_range");
+    const tall = ddKit.step(one.hi, 0.1);
+    assert.ok(tall <= three.hi, "a DD that fits 3m but not 1m");
+    const mover = await post({ height: "3m", dd: tall });
+    assert.equal(mover.status, 201, JSON.stringify(mover.body));
+    const moved = await put(mover.body.id, { height: "1m" });
+    assert.equal(moved.status, 400, JSON.stringify(moved.body));
+    assert.match(moved.body.error, /at 1m/);
+    assert.equal((await put(mover.body.id, { description: "still fine at 3m" })).status, 200);
+    const stored = (await pool.query("SELECT height::float AS h, dd::float AS dd FROM dive_directory WHERE id = $1",
+      [mover.body.id])).rows[0];
+    assert.deepEqual(stored, { h: 3, dd: tall });
+  } finally {
+    await compKit.cleanup(orgId);
+  }
+});
+
+test("custom dives: a dive list won't take one whose DD is outside the official range", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const orgId = await hostKit.org("ddlist");
+  try {
+    const admin = await compKit.user(orgId, "SGS DD Admin", ["org_admin"]);
+    const diver = await compKit.user(orgId, "SGS DD Diver", ["diver"]);
+    const three = await ddKit.range(3);
+    // Rows made before the rule, which the API won't make any more, so
+    // straight into the table: one too hard for 3m, one inside it.
+    const custom = async (dd) => (await pool.query(
+      `INSERT INTO dive_directory (dive_code, height, position, dd, is_custom, created_org_id)
+       VALUES ($1, 3, 'B', $2, TRUE, $3) RETURNING id`,
+      [ddKit.code(), dd, orgId])).rows[0].id;
+    const legacy = await custom(9.5);
+    const fine = await custom(three.lo);
+    const eventId = await compKit.event(orgId, { name: "SGS DD event", total_rounds: 1 });
+
+    // The diver's own submit (lib/dive-list-submit.js).
+    const submit = (diveId) => fetchJson("POST", "/api/competitor/submit-list", {
+      token: diver.token, body: { event_id: eventId, dives: [{ round_number: 1, dive_id: diveId }] },
+    });
+    const refused = await submit(legacy);
+    assert.equal(refused.status, 400, JSON.stringify(refused.body));
+    assert.match(refused.body.error, /DD 9\.5 for custom dive 9\d+B at 3m has to be between/);
+    assert.equal((await submit(fine)).status, 200);
+
+    // The operator's late-entry add.
+    const late = (diveId) => fetchJson("POST", `/api/events/${eventId}/roster`, {
+      token: admin.token, body: { competitor_id: diver.id, dive_id: diveId, round_number: 1 },
+    });
+    const lateNo = await late(legacy);
+    assert.equal(lateNo.status, 400, JSON.stringify(lateNo.body));
+    assert.equal(lateNo.body.code, "dd_out_of_range");
+    const kept = (await pool.query(
+      "SELECT dive_id FROM competitor_dive_lists WHERE event_id = $1 AND competitor_id = $2", [eventId, diver.id])).rows;
+    assert.deepEqual(kept.map((r) => r.dive_id), [fine], "the list still holds the in-range dive");
+
+    // The roster CSV import finds dives by code, so the legacy row is what
+    // its code resolves to; the row comes back as an error, not a write.
+    const code = (await pool.query("SELECT dive_code FROM dive_directory WHERE id = $1", [legacy])).rows[0].dive_code;
+    const username = (await pool.query("SELECT username FROM users WHERE id = $1", [diver.id])).rows[0].username;
+    const csv = await fetchJson("POST", `/api/events/${eventId}/roster/import`, {
+      token: admin.token, body: { csv: `username,round_1_code,round_1_pos\n${username},${code},B\n` },
+    });
+    assert.equal(csv.status, 200, JSON.stringify(csv.body));
+    assert.equal(csv.body.rounds_written, 0);
+    assert.match(csv.body.errors[0]?.error || "", /^Round 1: DD 9\.5 for custom dive/);
+
+    // An event's prescribed round dives, on create and on edit.
+    const create = await fetchJson("POST", "/api/events", {
+      token: admin.token,
+      body: {
+        name: "SGS prescribed", gender: "Mixed", height: "3m", number_of_judges: 5, event_type: "individual",
+        round_dives: [{ round_number: 1, dive_id: fine }, { round_number: 2, dive_id: legacy }],
+      },
+    });
+    assert.equal(create.status, 400, JSON.stringify(create.body));
+    assert.match(create.body.error, /round_dives round 2: DD 9\.5/);
+    const edit = await fetchJson("PUT", `/api/events/${eventId}`, {
+      token: admin.token, body: { round_dives: [{ round_number: 1, dive_id: legacy }] },
+    });
+    assert.equal(edit.status, 400, JSON.stringify(edit.body));
+    assert.equal((await pool.query("SELECT 1 FROM event_round_dives WHERE event_id = $1", [eventId])).rows.length, 0);
+  } finally {
+    await compKit.cleanup(orgId);
   }
 });

@@ -837,7 +837,11 @@
     "col_code": "Kod",
     "col_dd": "Zorluk derecesi",
     "col_position": "Pozisyon",
-    "col_description": "Açıklama"
+    "col_description": "Açıklama",
+    "dd_range_hint": "{height} yükseklikteki resmi atlamaların zorluk derecesi {min} ile {max} arasındadır. Özel bir atlama bu aralıkta kalmalıdır.",
+    "dd_range_hint_all": "{height} yükseklikte resmi atlama yok, bu yüzden oradaki özel bir atlama tüm resmi atlamaların aralığında kalmalıdır: zorluk derecesi {min} ile {max} arası.",
+    "dd_out_of_range": "Zorluk derecesi aralık dışında",
+    "dd_out_of_range_tip": "Zorluk derecesi bu yükseklikteki resmi atlamaların aralığının dışında, bu yüzden hiçbir atlama listesi onu kabul etmez. Zorluk derecesini düzeltin veya atlamanın yeni bir sürümünü ekleyin."
   },
   "judges_directory": {
     "title": "Hakem Dizini",

@@ -22,6 +22,7 @@
 const express = require("express");
 const { recordAudit, auditFromReq } = require("../lib/audit");
 const { legacyDdCapError } = require("../lib/dive-list-submit");
+const { customDivesOutOfRange } = require("../lib/custom-dive-dd");
 
 // Every route on an existing team checks it exists and belongs to the
 // caller's org (sysadmins anywhere) first. requireMeetEditor only
@@ -117,6 +118,12 @@ module.exports = function createTeamsRouter({
       if (!okMap.has(d.dive_id)) {
         throw httpErr(400, `dive_id ${d.dive_id} is not in the dive directory at this event's height`);
       }
+    }
+    // Custom dives only while their DD is inside the official range for
+    // their height, same as the individual submit.
+    const outOfRange = await customDivesOutOfRange(client, ids);
+    if (outOfRange.length) {
+      throw httpErr(400, outOfRange[0].message, outOfRange.map((row) => row.message));
     }
 
     const prescribed = await client.query(

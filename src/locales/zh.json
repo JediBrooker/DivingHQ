@@ -837,7 +837,11 @@
     "col_code": "代码",
     "col_dd": "难度系数",
     "col_position": "姿势",
-    "col_description": "描述"
+    "col_description": "描述",
+    "dd_range_hint": "{height}的官方动作难度系数为{min}至{max}。自定义动作必须在此范围内。",
+    "dd_range_hint_all": "{height}没有官方动作，因此该高度的自定义动作必须在所有官方动作的范围内：难度系数{min}至{max}。",
+    "dd_out_of_range": "难度系数超出范围",
+    "dd_out_of_range_tip": "其难度系数超出该高度官方动作的范围，因此任何动作列表都不会接受它。请修改难度系数，或添加该动作的新版本。"
   },
   "judges_directory": {
     "title": "裁判名录",
