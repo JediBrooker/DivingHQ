@@ -55,6 +55,29 @@ function includeBodyToken(req) {
   return !req.get("sec-fetch-site");
 }
 
+// Who a forgot-password request for this address should reach. Register
+// keeps the email as typed while the email change lower-cases it, so an
+// exact match missed "John.Smith@Example.com" asked for as
+// "john.smith@example.com", and the person got ok:true and no mail.
+// users.email isn't unique either (a parent's address on two children's
+// accounts is normal here), and rows[0] used to pick one of them at
+// random. Every live account on it gets its own link now, greeted by its
+// own name. Capped, so one address can't fan out without limit.
+const RESET_ACCOUNTS_MAX = 5;
+async function resetAccountsFor(db, email) {
+  if (typeof email !== "string") return [];
+  const addr = email.trim();
+  if (!addr || addr.length > 320) return [];
+  const r = await db.query(
+    `SELECT id, password, full_name, email FROM users
+      WHERE lower(email) = lower($1) AND deleted_at IS NULL
+      ORDER BY (email_verified_at IS NOT NULL) DESC, created_at DESC
+      LIMIT ${RESET_ACCOUNTS_MAX}`,
+    [addr],
+  );
+  return r.rows;
+}
+
 // Pre-computed dummy bcrypt hash used by the login flow to keep
 // the timing constant when the username doesn't exist. Without
 // this, an attacker can enumerate usernames by measuring the
@@ -1790,19 +1813,13 @@ module.exports = function createAuthRouter({
     // out-of-band (setImmediate) so the email-send latency doesn't
     // leak through the response time either.
     try {
-      let user = null;
-      if (typeof email === "string" && email.length <= 320) {
-        // Migration 053: deleted users have email = NULL, so they
-        // won't match here anyway, but we add an explicit
-        // deleted_at filter so the constant-time response shape
-        // doesn't depend on whether a tombstoned row exists.
-        const u = await pool.query(
-          "SELECT id, password, full_name, email FROM users WHERE email = $1 AND deleted_at IS NULL",
-          [email],
-        );
-        user = u.rows[0] || null;
-      }
-      if (user && user.email) {
+      // Migration 053: deleted users have email = NULL, so they won't
+      // match anyway, but resetAccountsFor filters deleted_at too so the
+      // constant-time response shape doesn't depend on whether a
+      // tombstoned row exists.
+      const users = await resetAccountsFor(pool, email);
+      for (const user of users) {
+        if (!user.email) continue;
         const fingerprint = mintResetToken(user.id, hashFingerprint(user.password));
         // Defer the mail API round-trip so the response time doesn't
         // depend on whether we found a user. The catch is swallowed
@@ -1882,4 +1899,5 @@ module.exports = function createAuthRouter({
 // Exposed for unit testing the response-token content-negotiation
 // (same pattern as lib/idempotency.js's helper export).
 module.exports.includeBodyToken = includeBodyToken;
+module.exports.resetAccountsFor = resetAccountsFor;
 module.exports.slugFromName = slugFromName;

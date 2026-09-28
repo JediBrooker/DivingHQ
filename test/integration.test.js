@@ -7305,3 +7305,32 @@ test("someone who left a federation isn't counted as its admin or told about its
     await claimKit.wipe(CODE);
   }
 });
+
+test("forgot-password finds an account whatever case its email was typed in, and every account on it", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const { resetAccountsFor } = require("../routes/auth");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const tag = crypto.randomBytes(3).toString("hex");
+    const typed = `John.Smith.${tag}@Example.test`;
+    const reg = await fetchJson("POST", "/api/auth/register", {
+      body: { username: `int-b3fp-${tag}`, password: TEST_PASSWORD, full_name: "John Smith", email: typed, org_id: st.orgId },
+    });
+    assert.equal(reg.status, 201, JSON.stringify(reg.body));
+    const found = await resetAccountsFor(pool, `  john.smith.${tag}@example.test `);
+    assert.deepEqual(found.map((u) => u.full_name), ["John Smith"]);
+
+    // A parent's address on two children's accounts: each gets a link.
+    const sibling = await insertUser({ orgId: st.orgId, role: "diver", username: `int-b3fp2-${tag}`, fullName: "Jane Smith" });
+    await pool.query("UPDATE users SET email = $2 WHERE id = $1", [sibling, typed.toLowerCase()]);
+    const both = await resetAccountsFor(pool, typed.toUpperCase());
+    assert.deepEqual(both.map((u) => u.full_name).sort(), ["Jane Smith", "John Smith"]);
+
+    const res = await fetchJson("POST", "/api/auth/forgot-password", { body: { email: typed.toLowerCase() } });
+    assert.equal(res.status, 200);
+    assert.equal(res.body.ok, true);
+  } finally {
+    await teardownFixture(st);
+  }
+});
