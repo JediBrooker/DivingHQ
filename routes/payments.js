@@ -28,7 +28,7 @@ const { recordAudit, auditFromReq } = require("../lib/audit");
 const ledger = require("../lib/payout-ledger");
 const { fromStripeAmount, toAlpha2 } = require("../lib/stripe");
 const {
-  retirePendingPayment, retireBlocked, resumeOrRetireCheckout, applyFullRefundSideEffects,
+  canReconcile, retirePendingPayment, retireBlocked, resumeOrRetireCheckout, applyFullRefundSideEffects,
 } = require("../lib/payment-lifecycle");
 
 const APP_BASE_URL =
@@ -2843,8 +2843,15 @@ module.exports = function createPaymentsRouter({
   // the Stripe call) so two concurrent refund requests can't both read the
   // same refunded_amount and pay the money out twice: the second waits,
   // re-reads, and is capped/refused against the updated row.
+  //
+  // Gated on Stripe being configured, not on the payments flag. A refund
+  // gives back money already taken (lib/stripe createRefund asserts only
+  // `configured` for the same reason), and an operator who switches
+  // payments off to stop new sales still has to be able to refund.
   router.post("/api/payments/:id/refund", verifyToken, async (req, res) => {
-    if (!ensurePayments(res)) return;
+    if (!canReconcile(payments)) {
+      return res.status(503).json({ error: "Payments are not configured on this server." });
+    }
     const paymentId = req.params.id;
     const client = await pool.connect();
     try {

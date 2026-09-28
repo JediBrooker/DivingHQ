@@ -380,3 +380,28 @@ test("membership, affiliation and accreditation reads flag the renewal window", 
   assert.equal(acc.active, true);
   assert.equal(acc.renewable, false, "months to go: not yet");
 });
+
+// B4-04: a refund gives back money already taken, so it runs on
+// `configured`. Switching the payments flag off must not block it.
+test("refunds still work with the payments flag switched off", async (t) => {
+  if (!ready) return t.skip();
+  const ev = await newEvent("Refund flag off");
+  await setEntryFee(ev);
+  acting = as(A);
+  const co = await api("POST", `/api/events/${ev}/checkout`, {});
+  assert.equal(co.status, 200, JSON.stringify(co.body));
+  await completeWebhook(co.body.payment_id);
+
+  flagOn = false;
+  try {
+    acting = admin;
+    const r = await api("POST", `/api/payments/${co.body.payment_id}/refund`, {});
+    assert.equal(r.status, 200, JSON.stringify(r.body));
+    assert.equal(r.body.status, "refunded");
+    // New money still stops at the flag.
+    acting = as(B);
+    assert.equal((await api("POST", `/api/events/${ev}/checkout`, {})).status, 503);
+  } finally {
+    flagOn = true;
+  }
+});
