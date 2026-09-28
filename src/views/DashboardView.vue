@@ -32,6 +32,7 @@ import { useRouter, RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useSocket } from '@/composables/useSocket'
+import { useDiverSearch } from '@/composables/useDiverSearch'
 import { contributesToDiverChip, rankAttentionChips } from '@/composables/useAttention'
 import AttentionLane from '@/components/dashboard/AttentionLane.vue'
 import { fmtCloses, fmtDate, fmtRelative } from '@/lib/format'
@@ -704,32 +705,21 @@ async function fetchDashboardBundle() {
 
 // ---- Find Diver typeahead (preserved) -----------------------
 const diverSearch    = ref('')
-const diverResults   = ref([])
-const diverSearching = ref(false)
 const diverDropdown  = ref(false)
-let   diverSearchT   = null
+const {
+  results: diverResults,
+  loading: diverSearching,
+  search: searchDivers,
+  clear: clearDiverSearch,
+} = useDiverSearch(auth)
 function onDiverSearchInput() {
   diverDropdown.value = true
-  if (diverSearchT) clearTimeout(diverSearchT)
-  const q = diverSearch.value.trim()
-  if (q.length < 2) { diverResults.value = []; return }
-  diverSearchT = setTimeout(async () => {
-    diverSearching.value = true
-    try {
-      diverResults.value = await auth.apiFetch(
-        `/api/divers/search?q=${encodeURIComponent(q)}`,
-      )
-    } catch {
-      diverResults.value = []
-    } finally {
-      diverSearching.value = false
-    }
-  }, 200)
+  searchDivers(diverSearch.value)
 }
 function openDiverProfile(id) {
   diverDropdown.value = false
   diverSearch.value = ''
-  diverResults.value = []
+  clearDiverSearch()
   router.push(`/profile/${id}`)
 }
 function onDiverSearchBlur() {

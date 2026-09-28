@@ -23,6 +23,7 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 import { onOpenCommandPalette, replayRoleTour } from '@/composables/useAppChannel'
+import { useDiverSearch } from '@/composables/useDiverSearch'
 
 const router = useRouter()
 const auth   = useAuthStore()
@@ -64,10 +65,15 @@ const STATIC_ENTRIES = [
 const events = ref([])
 const cachedAt = ref(0)
 
-// Diver search results (live keystroke).
-const divers = ref([])
-const diverLoading = ref(false)
-const diverAbort = ref(null)
+// Diver search results (live keystroke). The palette has always sent
+// the query untrimmed, a bit quicker than the other typeaheads, and
+// kept the last results up if a request fails.
+const {
+  results: divers,
+  search: searchDivers,
+  clear: clearDivers,
+  cancel: cancelDiverSearch,
+} = useDiverSearch(auth, { delay: 180, trim: false, keepOnError: true })
 
 // ----- Open / close --------------------------------------------
 async function openPalette() {
@@ -85,8 +91,7 @@ async function openPalette() {
 function closePalette() {
   open.value = false
   query.value = ''
-  diverAbort.value?.abort()
-  diverAbort.value = null
+  cancelDiverSearch()
 }
 
 // This used to pull the whole /api/dashboard bundle (a dozen queries)
@@ -205,32 +210,13 @@ const results = computed(() => {
   return out.slice(0, 20)
 })
 
-// Diver typeahead: debounced fetch as the user types.
-let diverDebounce = null
+// Diver typeahead: debounced fetch as the user types. It goes through
+// auth.apiFetch, so a stale session gets bounced to /login rather than
+// seeing a silently-empty palette.
 watch(query, (q) => {
   cursor.value = 0
-  clearTimeout(diverDebounce)
-  diverAbort.value?.abort()
-  diverAbort.value = null
-  if (!q || q.length < 2 || !auth.isLoggedIn) {
-    divers.value = []
-    return
-  }
-  diverDebounce = setTimeout(async () => {
-    diverLoading.value = true
-    const ctrl = new AbortController()
-    diverAbort.value = ctrl
-    try {
-      // auth.apiFetch routes through the central 401-handler so a
-      // stale-token user gets bounced to /login rather than seeing
-      // a silently-empty palette.
-      divers.value = await auth.apiFetch(
-        `/api/divers/search?q=${encodeURIComponent(q)}`,
-        { signal: ctrl.signal },
-      )
-    } catch { /* aborted, 401, or network, just ignore it */ }
-    diverLoading.value = false
-  }, 180)
+  if (!auth.isLoggedIn) { clearDivers(); return }
+  searchDivers(q)
 })
 
 function pick(entry) {
