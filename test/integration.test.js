@@ -7679,3 +7679,28 @@ test("the inbox pages newest-first without skipping or repeating, and bad paging
     await teardownFixture(st);
   }
 });
+
+test("the dashboard's recent activity keeps audit rows whose event or org has since been deleted", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const sys = await claimKit.login("admin", "admin");
+  // Dated ahead so they're the newest rows whatever else the test DB holds.
+  const score = (await pool.query(
+    `INSERT INTO score_audit_log (event_id, round_number, action, old_score, new_score, created_at)
+     VALUES (NULL, 1, 'update', 6.5, 7.0, now() + interval '1 hour') RETURNING id`,
+  )).rows[0].id;
+  const role = (await pool.query(
+    `INSERT INTO role_audit_log (org_id, role, action, created_at)
+     VALUES (NULL, 'judge', 'granted', now() + interval '1 hour') RETURNING id`,
+  )).rows[0].id;
+  try {
+    const dash = await fetchJson("GET", "/api/dashboard", { token: sys.token });
+    assert.equal(dash.status, 200, JSON.stringify(dash.body));
+    const ids = (dash.body.recent_activity || []).map((a) => `${a.kind}:${a.id}`);
+    assert.ok(ids.includes(`score:${score}`), "the score correction from a deleted event is listed");
+    assert.ok(ids.includes(`role:${role}`), "the role change from a deleted org is listed");
+  } finally {
+    await pool.query("DELETE FROM score_audit_log WHERE id = $1", [score]);
+    await pool.query("DELETE FROM role_audit_log WHERE id = $1", [role]);
+  }
+});
