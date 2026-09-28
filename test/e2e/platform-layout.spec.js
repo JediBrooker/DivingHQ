@@ -234,6 +234,23 @@ test("an installed iPhone app keeps the chrome clear of the notch and status bar
   expect((await header.boundingBox()).y).toBeGreaterThanOrEqual(47);
 });
 
+test("the judge directory can be scrolled sideways on a phone", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 740 });
+  await page.goto("/judges");
+  const open = page.locator(".judges-table a", { hasText: /Open analysis/ }).first();
+  await expect(open).toBeAttached({ timeout: 10_000 });
+  // A horizontal wheel over the table is what a trackpad swipe sends. A
+  // programmatic scrollIntoView would also move an overflow:hidden box,
+  // which is exactly the case a user can't scroll, so don't use that.
+  const table = await page.locator(".judges-table").boundingBox();
+  await page.mouse.move(Math.min(table.x + 150, 300), table.y + 60);
+  for (let i = 0; i < 4; i++) await page.mouse.wheel(200, 0);
+  await expect.poll(async () => {
+    const b = await open.boundingBox();
+    return b && b.x >= 0 && b.x + b.width <= 376;
+  }, { timeout: 3_000 }).toBe(true);
+});
+
 test("the dashboard's .panel frame doesn't leak into the Classes tabs", async ({ page, request }) => {
   const { orgId, username } = await setup.createOrgAndAdmin(request, { orgName: "Panel Leak Fed" });
   try {

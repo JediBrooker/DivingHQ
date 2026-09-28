@@ -107,7 +107,12 @@ onMounted(() => {
     <div v-if="loading && !rows.length" class="empty">Loading…</div>
     <div v-else-if="!visibleRows.length" class="empty">{{ $t('judges_directory.no_judges_match') }}</div>
 
-    <table v-else class="judges-table">
+    <!-- Own scroll box: six columns don't fit a phone, and the page
+         itself clips sideways overflow (html/body), so without this the
+         Club/Scores columns and every "Open analysis" link were out of
+         reach for anyone not signed in. -->
+    <div v-else class="judges-scroll">
+    <table class="judges-table">
       <thead>
         <tr>
           <th>Name</th>
@@ -139,6 +144,7 @@ onMounted(() => {
         </tr>
       </tbody>
     </table>
+    </div>
 
     <div v-if="total > rows.length" class="pager">
       <button class="btn btn-ghost btn-sm" :disabled="offset === 0" @click="prevPage">← Prev</button>
@@ -197,6 +203,11 @@ onMounted(() => {
   font-family: var(--font-mono); font-size: 13px;
 }
 
+.judges-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: var(--radius);
+}
 .judges-table {
   width: 100%;
   border-collapse: collapse;
