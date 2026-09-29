@@ -14,11 +14,17 @@
  * (closing clears it), so scoping the listener to this component
  * preserves the pre-extraction behaviour.
  *
+ * The socket message reaches us through our own user room (the
+ * event's room is only joined once the event is Live, and sign-off
+ * comes before that). While a request is pending we also ask the
+ * server where it stands every few seconds and on reconnect, so an
+ * answer that landed while the socket was down still closes this.
+ *
  * State boundary: everything about the in-flight sign-off is
  * OWNED here. A successful sign-off emits `signed-off` with the
  * event-row patch, and SetupStage merges it into the event.
  */
-import { ref, computed } from 'vue'
+import { ref, computed, watch, onUnmounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useSocket } from '@/composables/useSocket'
 import { useSocketEvent } from '@/composables/useSocketEvent'
@@ -58,6 +64,16 @@ function close() {
   signoffCode.value = null
   signoffError.value = ''
   emit('close')
+}
+
+// Drop the request we're waiting on without closing, so the operator
+// can try another way. Nothing to tell the server: a new request or
+// code supersedes this one, and if the referee answers it anyway the
+// order still gets signed off.
+function cancelPending() {
+  signoffWaiting.value = null
+  signoffCode.value = null
+  signoffError.value = ''
 }
 
 // Pull the referee list once when the modal opens (= mounts).
@@ -136,30 +152,70 @@ async function submitCredentialSignoff() {
   }
 }
 
+// The request (push or code) we're waiting on, if any. Only one is
+// active at a time per modal session.
+const pendingRequestId = computed(
+  () => signoffWaiting.value?.request_id || signoffCode.value?.request_id || null,
+)
+
+// One place for an answer to land, whichever way it came (socket or
+// the status check). The id check keeps a late or duplicate answer
+// from acting twice or on a request we've moved on from.
+function settle(requestId, status, { by = null, at = null } = {}) {
+  if (!requestId || requestId !== pendingRequestId.value) return
+  if (status === 'pending') return
+  const refereeName =
+    signoffWaiting.value?.referee_name || signoffCode.value?.referee_name || 'The referee'
+  if (status === 'approved') {
+    emit('signed-off', {
+      dive_order_signed_off_at: at || new Date().toISOString(),
+      dive_order_signed_off_by: by,
+    })
+    close()
+    return
+  }
+  signoffError.value = status === 'declined'
+    ? `${refereeName} declined the request.`
+    : `The request ran out before ${refereeName} answered. Send a new one.`
+  signoffWaiting.value = null
+  signoffCode.value = null
+}
+
 // Server broadcast when the referee taps Approve/Deny on their
 // device, AND when they type a Cut 3 handoff code on their own
 // /sign-off-codes page (server fires the same broadcast).
 function onRefereeSignoffResponse(data) {
-  // Match against either the push-waiting request OR the code-
-  // waiting request. Both store request_id and only one is
-  // active at a time per modal session.
-  const waitingId = signoffWaiting.value?.request_id || signoffCode.value?.request_id
-  if (!waitingId || data?.request_id !== waitingId) return
-  if (data.decision === 'approved') {
-    emit('signed-off', {
-      dive_order_signed_off_at: new Date().toISOString(),
-      dive_order_signed_off_by: data.by_user_id,
-    })
-    close()
-  } else {
-    const refereeName =
-      signoffWaiting.value?.referee_name || signoffCode.value?.referee_name || 'The referee'
-    signoffError.value = `${refereeName} declined the request.`
-    signoffWaiting.value = null
-    signoffCode.value = null
-  }
+  settle(data?.request_id, data?.decision, { by: data?.by_user_id })
 }
 useSocketEvent(socket, 'referee_signoff_response', onRefereeSignoffResponse)
+
+// The status check. Quiet on failure, the next tick tries again.
+async function checkPending() {
+  const id = pendingRequestId.value
+  if (!id || !props.event) return
+  try {
+    const r = await auth.apiFetch(
+      `/api/events/${props.event.id}/dive-order/sign-off/request/${id}`,
+    )
+    settle(r?.request_id, r?.status, {
+      by: r?.dive_order_signed_off_by, at: r?.dive_order_signed_off_at,
+    })
+  } catch { /* try again next tick */ }
+}
+
+const POLL_MS = 3000
+let pollTimer = null
+function stopPolling() {
+  if (pollTimer) clearInterval(pollTimer)
+  pollTimer = null
+}
+watch(pendingRequestId, (id) => {
+  stopPolling()
+  if (id) pollTimer = setInterval(checkPending, POLL_MS)
+})
+onUnmounted(stopPolling)
+// Back from a wifi drop: ask straight away rather than on the next tick.
+useSocketEvent(socket, 'connect', checkPending)
 
 // Cut 3: ask the server for a 6-digit handoff code for the
 // chosen referee. Display it; the referee types it on their own
@@ -307,7 +363,10 @@ async function managerAttestSignoff() {
           <div class="signoff-waiting-pulse">●</div>
           Waiting for {{ signoffWaiting.referee_name }} to approve…
           <div class="signoff-waiting-hint">
-            Or switch tabs and have them sign here on this device.
+            Not getting through? Cancel and try another way.
+          </div>
+          <div class="signoff-actions signoff-actions-center">
+            <button type="button" class="btn btn-ghost" @click="cancelPending">Cancel request</button>
           </div>
         </div>
       </div>
@@ -365,6 +424,9 @@ async function managerAttestSignoff() {
           <div class="signoff-code-hint">
             This panel updates the moment {{ signoffCode.referee_name }} confirms — by scan or
             by code.
+          </div>
+          <div class="signoff-actions signoff-actions-center">
+            <button type="button" class="btn btn-ghost" @click="cancelPending">Cancel code</button>
           </div>
         </div>
       </div>
@@ -465,6 +527,7 @@ async function managerAttestSignoff() {
 .signoff-pane .select { width: 100%; }
 .cred-fields { display: flex; flex-direction: column; gap: 0.7rem; margin-bottom: 1rem; }
 .signoff-actions { display: flex; justify-content: flex-end; margin-top: 1rem; }
+.signoff-actions-center { justify-content: center; }
 .signoff-waiting {
   text-align: center; padding: 2rem 1rem; color: var(--amber);
   font-family: var(--font-sans); font-size: 14px; font-style: normal;

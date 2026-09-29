@@ -3,6 +3,8 @@
 //
 //   GET  /api/events/:id/referees                        picker source
 //   POST /api/events/:id/dive-order/sign-off/request     push to a referee
+//   GET  /api/events/:id/dive-order/sign-off/request/:requestId
+//                                                         where a request stands
 //   POST /api/events/:id/dive-order/sign-off/respond     referee's answer
 //   POST /api/events/:id/dive-order/sign-off/credential  referee signs in
 //                                                         on the manager's laptop
@@ -22,6 +24,7 @@
 const express = require("express");
 const rateLimit = require("express-rate-limit");
 const QRCode  = require("qrcode");
+const { isUuid } = require("../lib/uuid");
 
 // The referee a sign-off request or handoff code is aimed at has to
 // exist, be in the event's org and actually hold the referee role, a
@@ -72,6 +75,22 @@ module.exports = function createSignoffRoutes({
     throw new Error("createSignoffRoutes requires { pool, requireOrgRole, ensureEventOrgGate, requireMeetController, loadUpcomingEvent }");
   }
   const router = express.Router();
+
+  // The referee answered (push, banner or code). The dialog waiting on
+  // it is on the laptop of whoever asked, and that laptop isn't in the
+  // event's room yet (the Control Room joins it at Live), so it goes to
+  // their own room as well. Best-effort: the dialog also asks
+  // GET .../request/:requestId while it waits, so a socket that was
+  // mid-reconnect still catches up. The referee's own room gets it too,
+  // so a dashboard they have open elsewhere drops the "Waiting for you"
+  // card straight away.
+  function announceAnswer(reqRow, decision, byUserId) {
+    try {
+      push?.emitEvent?.(reqRow.event_id, "referee_signoff_response", {
+        request_id: reqRow.id, decision, by_user_id: byUserId,
+      }, { users: [reqRow.requested_by, byUserId] });
+    } catch { /* silent */ }
+  }
 
   // -------------------------------------------------------------
   // CUT 2: REFEREE SIGN-OFF VIA PUSH + CREDENTIAL FALLBACK
@@ -199,6 +218,42 @@ module.exports = function createSignoffRoutes({
     }
   });
 
+  // GET /api/events/:id/dive-order/sign-off/request/:requestId
+  // Where one request stands, for the manager's dialog to check on while
+  // it waits. The socket message is the fast path, this is the one that
+  // can't be missed. A pending row past its expiry reads as expired
+  // (nothing flips it in the table until someone touches it).
+  router.get("/api/events/:id/dive-order/sign-off/request/:requestId",
+             requireMeetController, async (req, res) => {
+    if (!isUuid(req.params.requestId)) return res.status(404).json({ error: "Request not found" });
+    try {
+      if (!(await ensureEventOrgGate(req, res, "id"))) return;
+      const r = await pool.query(
+        `SELECT rsr.id, rsr.status, rsr.decision_method, rsr.responded_at,
+                rsr.expires_at, rsr.status = 'pending' AND rsr.expires_at < now() AS lapsed,
+                e.dive_order_signed_off_at, e.dive_order_signed_off_by
+           FROM referee_signoff_requests rsr
+           JOIN events e ON e.id = rsr.event_id
+          WHERE rsr.id = $1 AND rsr.event_id = $2`,
+        [req.params.requestId, req.params.id],
+      );
+      const row = r.rows[0];
+      if (!row) return res.status(404).json({ error: "Request not found" });
+      res.json({
+        request_id: row.id,
+        status: row.lapsed ? "expired" : row.status,
+        decision_method: row.decision_method,
+        responded_at: row.responded_at,
+        expires_at: row.expires_at,
+        dive_order_signed_off_at: row.dive_order_signed_off_at,
+        dive_order_signed_off_by: row.dive_order_signed_off_by,
+      });
+    } catch (err) {
+      console.error("[Sign-Off Status Error]", err.message);
+      res.status(500).json({ error: "Failed to load the request" });
+    }
+  });
+
   // POST /api/events/:id/dive-order/sign-off/respond
   //   Body: { request_id, decision: 'approve' | 'deny' }
   // Referee's SPA hits this from the in-app banner Approve/Deny
@@ -208,14 +263,14 @@ module.exports = function createSignoffRoutes({
   router.post("/api/events/:id/dive-order/sign-off/respond",
               requireMeetController, async (req, res) => {
     const { request_id, decision } = req.body || {};
-    if (!request_id || !["approve", "deny"].includes(decision)) {
+    if (!isUuid(request_id) || !["approve", "deny"].includes(decision)) {
       return res.status(400).json({ error: "request_id + decision (approve|deny) required" });
     }
     const client = await pool.connect();
     try {
       await client.query("BEGIN");
       const reqQ = await client.query(
-        `SELECT id, event_id, target_referee_id, status, expires_at
+        `SELECT id, event_id, requested_by, target_referee_id, status, expires_at
          FROM referee_signoff_requests
          WHERE id = $1 AND event_id = $2
          FOR UPDATE`,
@@ -267,23 +322,9 @@ module.exports = function createSignoffRoutes({
       }
       await client.query("COMMIT");
 
-      // Notify the manager + anyone else watching the event so
-      // their modal flips out of "waiting for referee" state.
-      // Doesn't go through the push engine, no need to OS-notify
-      // the manager since they're staring at the screen.
-      if (push) {
-        // Best-effort emit. We don't have a direct handle to the
-        // manager's user_id here, but the SPA listens for any
-        // referee_signoff_response on its event room.
-        try {
-          // event_id room is already joined by the Control Room
-          // (existing subscribe_event call), so that's where we
-          // emit.
-          push.emitEvent?.(reqRow.event_id, "referee_signoff_response", {
-            request_id, decision: newStatus, by_user_id: req.user.id,
-          });
-        } catch { /* silent */ }
-      }
+      // Tell the manager's open dialog so it leaves "waiting for
+      // referee". Not a notification, they're looking at the screen.
+      announceAnswer(reqRow, newStatus, req.user.id);
       res.json({ ok: true, status: newStatus });
     } catch (err) {
       await client.query("ROLLBACK").catch(() => {});
@@ -620,7 +661,7 @@ module.exports = function createSignoffRoutes({
     try {
       await client.query("BEGIN");
       const reqQ = await client.query(
-        `SELECT id, event_id, expires_at, status
+        `SELECT id, event_id, requested_by, expires_at, status
          FROM referee_signoff_requests
          WHERE target_referee_id = $1 AND handoff_code = $2
          ORDER BY created_at DESC LIMIT 1
@@ -659,14 +700,9 @@ module.exports = function createSignoffRoutes({
       );
       await client.query("COMMIT");
 
-      // Broadcast so the manager's open Control Room flips out
-      // of "waiting" state, same channel the push respond path
-      // uses.
-      try {
-        push?.emitEvent?.(reqRow.event_id, "referee_signoff_response", {
-          request_id: reqRow.id, decision: "approved", by_user_id: req.user.id,
-        });
-      } catch { /* silent */ }
+      // Same message the push respond path sends, so the manager's
+      // dialog stops showing the code.
+      announceAnswer(reqRow, "approved", req.user.id);
 
       res.json({ ok: true, event_id: reqRow.event_id });
     } catch (err) {

@@ -182,6 +182,38 @@ export function historyNewestFirst(rows, queue) {
   })
 }
 
+// Where a pool picks up when the server has nobody on the blocks. For an
+// event that hasn't had a dive yet that's the first diver, announced (the
+// Start Event case). But the server also drops its diver when an event is
+// finalised, so an undone finalise, or a Control Room opened after one,
+// landed here too and put round 1 diver 1 back up for everyone, on a dive
+// that already had its scores. So it goes by how far the meet got: the
+// furthest dive in queue order with any scores. Short of a full panel,
+// that dive was still going, put it back up. Full, the one after it goes
+// up. Full and nothing after it (every dive in), it stays on the board
+// and nothing is sent, so nobody's panel moves and Finalise is next.
+// Going by the furthest dive rather than the first gap means a dive the
+// operator deliberately moved past on a short panel doesn't come back.
+// `history` is /api/events/:id/history (judge_scores per dive).
+// Returns { index, announce }, index -1 for an empty queue.
+export function resumeIndex(roster, history, numberOfJudges) {
+  const first = nextQueueIndex(roster, -1)
+  const key = (r) => `${r?.competitor_id}:${Number(r?.round_number)}`
+  const judged = new Map()
+  for (const h of Array.isArray(history) ? history : []) {
+    judged.set(key(h), Array.isArray(h?.judge_scores) ? h.judge_scores.length : 0)
+  }
+  let furthest = -1
+  for (let i = first; i >= 0; i = nextQueueIndex(roster, i)) {
+    if (judged.has(key(roster[i]))) furthest = i
+  }
+  if (furthest < 0) return { index: first, announce: first >= 0 }
+  const panel = parseInt(numberOfJudges) || 0
+  if (panel > 0 && judged.get(key(roster[furthest])) < panel) return { index: furthest, announce: true }
+  const after = nextQueueIndex(roster, furthest)
+  return after >= 0 ? { index: after, announce: true } : { index: furthest, announce: false }
+}
+
 // Apply a score_received to ONE pool's state. Same matching the old
 // single-pool handler did, minus its focused-event short-circuit. Returns
 // { matched, allScoresIn } so the caller can run the DOM/event side

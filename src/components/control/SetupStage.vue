@@ -8,6 +8,7 @@
 import { ref, computed, watch, onMounted, defineAsyncComponent } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { orderWorkflowStateFor } from '@/composables/useControlStage'
+import { competingQueue } from '@/composables/useLivePools'
 import CheckInModal from '@/components/control/CheckInModal.vue'
 import RandomiseDrawModal from '@/components/control/RandomiseDrawModal.vue'
 
@@ -100,10 +101,14 @@ function onCheckInConfirmed(patch) {
   checkInOpen.value = false
   loadReadiness()
 }
-function onRandomised() {
+// The draw landed. Stamp the workflow and hand the dialog the fresh
+// roster, but leave it open: its last phase shows the drawn order with
+// Re-shuffle and "Confirm dive order", and closing it here meant nobody
+// ever saw the result. The dialog's own close (Confirm, X, Esc) shuts it.
+function onRandomised(fresh) {
+  if (Array.isArray(fresh)) roster.value = fresh
   props.event.dive_order_randomised_at = new Date().toISOString()
   props.event.dive_order_signed_off_at = null
-  randomiseOpen.value = false
   loadReadiness()
 }
 function onSignedOff(patch) {
@@ -114,6 +119,31 @@ function onSignedOff(patch) {
 }
 
 watch(() => props.event?.id, loadReadiness, { immediate: true })
+
+// Once the order's drawn it's what the referee is signing off, so list it
+// here too. The draw dialog showed it once, but after Confirm there was
+// nothing on this screen to point at. One row per diver (the order is the
+// same every round), withdrawn and reserve rows left out.
+const orderDrawn = computed(() => stage.value === 'sign-off' || stage.value === 'start')
+const startOrder = computed(() => {
+  const seen = new Set()
+  const rows = []
+  for (const r of competingQueue(roster.value)) {
+    if (seen.has(r.competitor_id)) continue
+    seen.add(r.competitor_id)
+    rows.push(r)
+  }
+  return rows.sort((a, b) => (a.display_order ?? Infinity) - (b.display_order ?? Infinity))
+})
+function entryName(r) {
+  if (r.team_name) return r.team_name
+  return r.partner_name ? `${r.full_name} / ${r.partner_name}` : r.full_name
+}
+watch(
+  () => [props.event?.id, orderDrawn.value],
+  ([id, drawn]) => { if (id && drawn) loadRoster() },
+  { immediate: true },
+)
 </script>
 
 <template>
@@ -136,6 +166,16 @@ watch(() => props.event?.id, loadReadiness, { immediate: true })
           <span v-if="!s.done && s.hint" class="setup-step-hint">{{ s.hint }}</span>
         </li>
       </ul>
+      <section v-if="orderDrawn && startOrder.length" class="setup-order" aria-labelledby="setup-order-title">
+        <h3 id="setup-order-title" class="setup-order-title">Start order</h3>
+        <ol class="setup-order-list">
+          <li v-for="(r, i) in startOrder" :key="r.competitor_id" class="setup-order-row">
+            <span class="setup-order-pos">{{ i + 1 }}</span>
+            <span class="setup-order-name">{{ entryName(r) }}</span>
+            <span v-if="r.country_code" class="setup-order-code">{{ r.country_code }}</span>
+          </li>
+        </ol>
+      </section>
     </template>
 
     <div v-if="stepLabel" class="setup-primary-slot">
@@ -185,6 +225,20 @@ watch(() => props.event?.id, loadReadiness, { immediate: true })
 .setup-step.done .setup-step-mark { color: var(--green); }
 .setup-step-label { flex: 1; }
 .setup-step-hint { font-size: 11px; color: var(--text-3); }
+.setup-order { margin-top: 1.25rem; }
+.setup-order-title {
+  margin: 0 0 0.5rem; font-family: var(--font-display); font-size: 11px; font-weight: 800;
+  letter-spacing: 0.12em; text-transform: uppercase; color: var(--fg-3);
+}
+.setup-order-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.25rem; }
+.setup-order-row {
+  display: flex; align-items: center; gap: 0.6rem;
+  padding: 0.4rem 0.85rem; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm);
+  font-size: 13px; color: var(--fg);
+}
+.setup-order-pos { min-width: 1.5rem; font-family: var(--font-mono); font-weight: 700; color: var(--fg-3); }
+.setup-order-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.setup-order-code { font-family: var(--font-mono); font-size: 11px; color: var(--fg-3); }
 .setup-msg { padding: 2rem; text-align: center; color: var(--text-3); font-family: var(--font-mono); }
 .setup-error { color: var(--red); }
 .setup-primary-slot { position: sticky; bottom: 0; margin-top: 1.5rem; padding-top: 1rem; background: linear-gradient(to top, var(--bg) 72%, transparent); }

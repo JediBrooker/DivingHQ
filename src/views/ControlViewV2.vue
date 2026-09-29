@@ -39,7 +39,7 @@ import { useSocket } from '@/composables/useSocket'
 import { useSocketEvent } from '@/composables/useSocketEvent'
 import {
   useLivePools, selectDiver, rosterIndexForActive, competingQueue, rebaseQueue, nextQueueIndex,
-  applyRedive, applyRefereeCall, historyNewestFirst,
+  applyRedive, applyRefereeCall, historyNewestFirst, resumeIndex,
 } from '@/composables/useLivePools'
 import { annotateJudgeRows } from '@/composables/useScoreTrim'
 import { synchroJudgeGroups } from '@/composables/useScoreCategories'
@@ -647,7 +647,14 @@ async function finalisePool(ev) {
           actionType: 'event_status_flip',
         })
         const back = events.value.find((e) => String(e.id) === String(evId))
-        if (back) back.status = 'Live'
+        if (back) {
+          back.status = 'Live'
+          // Finalising cleared the server's active diver, so judges and
+          // the scoreboard were left with nobody up. Put back the one this
+          // board still shows, same as before the finalise. It queues
+          // behind the status flip in the same outbox.
+          emitActiveDiver(back)
+        }
       },
     })
   } catch (err) {
@@ -728,22 +735,45 @@ async function setupLivePool(ev) {
     // that landed before the roster finished loading) snaps us to it.
     socket.emit('get_active_diver', { event_id: ev.id })
     seedPoolFromServer(ev.id)
-    // Fallback: the server never answered within the grace window -> this
-    // event is freshly Live with nobody up, so announce roster[0]. Guarded
-    // on pendingSeed (cleared once the server resolves it) plus a live
-    // socket check, so we never clobber an existing diver or announce
-    // blind while disconnected.
+    // Fallback: the server never answered within the grace window, so it
+    // has nobody up. Usually that's an event freshly Live, but not always
+    // (see resumeFromHistory). Guarded on pendingSeed (cleared once the
+    // server resolves it) plus a live socket check, so we never clobber an
+    // existing diver or announce blind while disconnected.
     const tid = setTimeout(() => {
       seedTimers.delete(tid)
       if (!unmounted && pendingSeed.has(ev.id) && socket.isConnected.value && pool.currentActive) {
-        pendingSeed.delete(ev.id)
-        emitActiveDiver(ev)
+        resumeFromHistory(ev, pool)
       }
     }, SEED_GRACE_MS)
     seedTimers.add(tid)
   } catch {
     pool.roster = []
   }
+}
+
+// The server has no active diver for a Live pool. Finalising drops it, so
+// this is also where an undone finalise ends up (or a Control Room opened
+// after one), and announcing roster[0] here put round 1 diver 1 back on
+// every judge's panel, over a dive that already had its scores. So look
+// at what's been judged and pick up from there (resumeIndex). If the
+// history can't be had, the copy loadPoolPanels fetched will do, and with
+// neither we treat it as a fresh event, which is what it nearly always is.
+async function resumeFromHistory(ev, pool) {
+  let history = null
+  try {
+    history = await auth.apiFetch(`/api/events/${ev.id}/history`)
+  } catch {
+    history = Array.isArray(histories[ev.id]) ? histories[ev.id] : null
+  }
+  // The server may have answered while we were asking, or we've gone.
+  if (unmounted || !pendingSeed.has(ev.id)) return
+  pendingSeed.delete(ev.id)
+  const { index, announce } = resumeIndex(pool.roster, history, numberOfJudgesFor(ev.id))
+  if (index >= 0 && index !== pool.currentIndex) {
+    selectDiver(pool, index, numberOfJudgesFor(ev.id), diveDescription)
+  }
+  if (announce && socket.isConnected.value) emitActiveDiver(ev)
 }
 
 async function selectEvent(id) {

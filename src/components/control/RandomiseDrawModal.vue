@@ -16,7 +16,9 @@
  * State boundary: stage + reel are owned here, the roster comes
  * in as a prop and is never mutated. A successful draw emits
  * `randomised` with the fresh roster; SetupStage stamps the
- * workflow (randomised, sign-off cleared) and ignores the roster.
+ * workflow (randomised, sign-off cleared) and passes that roster
+ * back in, so the 'done' phase lists the drawn order. The parent
+ * must not close us on `randomised`, only on `close`.
  */
 import { ref, computed, onUnmounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'

@@ -306,7 +306,7 @@ The same pattern works for **referees**, but a referee isn't on the panel — th
 Before flipping the event to Live, the Control Room enforces a four-step pre-meet workflow. It shows up as a **readiness checklist** with a single action button beneath it, and the button always offers the next step you can take:
 
 1. **✓ Check In Divers** — opens the check-in modal so the operator can mark who actually showed up.
-2. **🎲 Randomise Dive Order** — writes a random `display_order` per diver. The click opens a confirm modal listing what'll happen ("you can re-run randomise as many times as you like before sign-off").
+2. **🎲 Randomise Dive Order** — opens the draw. **Start the draw** runs a five-second reel, then the dialog shows the drawn order with **Re-shuffle** and **Confirm dive order**. Once confirmed, the start order stays listed under the checklist, since it's what the referee signs off.
 3. **📋 Referee Sign Off** — referee scans a QR on the manager's screen, taps a push notification, types a 6-digit handoff code, or enters credentials directly. All four paths confirm the panel is valid and write the same audit row.
 4. **▶ Start Event** — flips status Upcoming → Live and broadcasts to all judges' phones.
 

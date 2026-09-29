@@ -120,12 +120,21 @@ Seed refuses, and changes nothing, when:
    and opens `/judge`. Check each phone shows the right judge number.
 3. **Pre-meet steps** in the Control Room:
    - check in all four divers
-   - randomise the start order
+   - randomise the start order. After the five second draw the dialog shows
+     the drawn order with Re-shuffle and Confirm dive order; once confirmed,
+     the order stays listed under the Setup checklist for the referee to
+     check.
    - referee sign-off. It's enforced, so the operator can't just tick it.
      Either send the request to Rehearsal Referee (their phone gets a
-     notification with Approve, if push is set up), generate a handoff code
-     that the referee types at `/sign-off-codes` on their phone, or let the
-     referee sign in on the laptop. Try at least two of these.
+     notification with Approve, if push is set up, and the request shows on
+     their dashboard as a Sign off chip), generate a handoff code that the
+     referee types at `/sign-off-codes` on their phone, or let the referee
+     sign in on the laptop. The laptop's dialog closes by itself within a
+     few seconds of the referee answering, with no reload, and the button
+     moves on to Start Event. The first approval completes the step, so to
+     try a second way have the referee Deny the first request (the dialog
+     says so and lets you pick another way), or press Cancel request in the
+     dialog, then sign off another way.
 4. **Start the event.** The four "is live" emails should arrive
    (`you+rehearsal-diver1@...` to `diver4`). Judges who allowed notifications
    get "Judging panel is live".
@@ -172,6 +181,10 @@ there, how many scores and records, and whether cleanup would refuse.
   arrives.
 - **Reloads.** Refresh the Control Room laptop mid round. The live state should
   come back.
+- **Undo on finalise.** The "Finalised" message has an Undo for 12 seconds.
+  It puts the event back to Live with the last diver up again on the judges'
+  phones and the scoreboard, never round 1 diver 1, and a reload after it
+  keeps it there. Divers don't get a second "is live" email.
 - **Venue Wi-Fi.** Captive portals that expire, client isolation, a network
   that drops websockets. If a phone keeps reconnecting on Wi-Fi but is fine on
   mobile data, it's the network.

@@ -322,6 +322,10 @@ module.exports = function createDashboardRouter({ pool, verifyToken }) {
                JOIN users u ON u.id = rsr.requested_by
                WHERE rsr.target_referee_id = $1
                  AND rsr.status = 'pending'
+                 /* Nothing flips a request to expired when it runs out,
+                    so a stale one would sit here as "Waiting for you"
+                    and answer 409 when tapped. */
+                 AND rsr.expires_at > now()
                  AND ($2::boolean OR e.org_id = $3)
                ORDER BY rsr.created_at DESC
                LIMIT 10`,

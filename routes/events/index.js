@@ -1030,10 +1030,15 @@ module.exports = function createEventsRouter({
         // page mode.
         archiveCache.invalidate();
 
+        // "Is live, good luck" goes out when the event starts, not when a
+        // finalise is undone (Completed back to Live from the Control
+        // Room's Undo, or the Manager). That used to mail every diver
+        // "has just started" after they'd finished, and buzz the panel.
+        const starting = status === "Live" && previousStatus === "Upcoming";
         if (!event.is_rehearsal) {
-          if (status === "Live")      sendEventStartedEmails(event).catch(() => {});
+          if (starting)               sendEventStartedEmails(event).catch(() => {});
           if (status === "Completed") sendEventResultsEmails(event).catch(() => {});
-          if (status === "Live")      notifyEventLive(event).catch(() => {});
+          if (starting)               notifyEventLive(event).catch(() => {});
         }
 
         // Real-time push for the dashboard pulse strip, so a

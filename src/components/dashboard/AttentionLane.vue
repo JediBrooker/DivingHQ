@@ -142,6 +142,7 @@ const emit = defineEmits(['chip-click'])
 .pulse-diver    .pulse-num { color: var(--green); border-color: rgba(16,185,129,0.4);  background: rgba(16,185,129,0.08); }
 .pulse-judge    .pulse-num { color: var(--amber); border-color: rgba(245,158,11,0.4);  background: rgba(245,158,11,0.08); }
 .pulse-coach    .pulse-num { color: #f472b6;      border-color: rgba(244,114,182,0.4); background: rgba(244,114,182,0.08); }
+.pulse-referee  .pulse-num { color: var(--amber); border-color: rgba(245,158,11,0.4);  background: rgba(245,158,11,0.08); }
 
 /* Flash effect, one-shot ~1.4s when a count changes (the parent only adds
    the class on a real numeric delta, never at rest). */
