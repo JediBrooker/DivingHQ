@@ -1138,7 +1138,9 @@ module.exports = function attachSocket({
     // socket where there's a reason worth telling it).
     const REFEREE_FAILED = { ok: false, error: "action_failed" };
     async function applyRefereeAction(action, data, actorUserId) {
-      if (!data?.event_id || !data?.competitor_id) return REFEREE_FAILED;
+      // The ids go back out to the whole room once the call lands, so
+      // they have to be real ids (guardControl already checked event_id).
+      if (!isUuid(data?.event_id) || !isUuid(data?.competitor_id)) return REFEREE_FAILED;
       // Validate round_number is a positive integer, matching the
       // submit_score / judge_signal paths. Previously only truthiness
       // was checked, so a malformed value reached the parameterized
@@ -1331,6 +1333,18 @@ module.exports = function attachSocket({
       return { ok: true, capValue };
     }
 
+    // What the room hears about a call: the dive it was on, and for a cap
+    // the maximum actually applied. Built from the checked values, the
+    // way score_received is, rather than echoing whatever else the
+    // caller's object carried. The scoreboard, the Control Room and the
+    // judge screens hold the awards they're showing to it.
+    const refereeCallBody = (data, extra = {}) => ({
+      event_id: data.event_id,
+      competitor_id: data.competitor_id,
+      round_number: data.round_number,
+      ...extra,
+    });
+
     on("referee_failed_dive", async (data, ack) => {
       if (!(await guardControl(socket, data, ack, "referee_action"))) return;
       const result = await applyRefereeAction("failed", data, socket.userId);
@@ -1338,7 +1352,7 @@ module.exports = function attachSocket({
         ackWith(ack, { ok: false, error: result.error });
         return;
       }
-      io.to(`event:${data.event_id}`).emit("referee_action_failed", data);
+      io.to(`event:${data.event_id}`).emit("referee_action_failed", refereeCallBody(data));
       io.to(`event:${data.event_id}`).emit("score_corrected", {
         event_id: data.event_id,
         competitor_id: data.competitor_id,
@@ -1354,7 +1368,7 @@ module.exports = function attachSocket({
         ackWith(ack, { ok: false, error: result.error });
         return;
       }
-      io.to(`event:${data.event_id}`).emit("referee_action_cap", data);
+      io.to(`event:${data.event_id}`).emit("referee_action_cap", refereeCallBody(data, { cap_value: result.capValue }));
       io.to(`event:${data.event_id}`).emit("score_corrected", {
         event_id: data.event_id,
         competitor_id: data.competitor_id,
@@ -1372,7 +1386,7 @@ module.exports = function attachSocket({
         ackWith(ack, { ok: false, error: result.error });
         return;
       }
-      io.to(`event:${data.event_id}`).emit("referee_action_redive", data);
+      io.to(`event:${data.event_id}`).emit("referee_action_redive", refereeCallBody(data));
       ackWith(ack, { ok: true });
     });
 

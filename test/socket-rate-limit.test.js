@@ -449,9 +449,19 @@ test("referee actions only touch a Live event, and a cap of 0 is reported as 0",
 
   const live = makeHarness({ canManage: () => true, deps: { pool: scoringPool({ status: "Live" }) } });
   const r = await live.connect("198.51.100.38", token("ref-live"));
-  assert.deepEqual(await r.ask("referee_cap_scores", { ...data, cap_value: 0 }), { ok: true });
+  assert.deepEqual(await r.ask("referee_cap_scores", { ...data, cap_value: 0, junk: { deep: 1 } }), { ok: true });
   const corrected = live.broadcasts.find((b) => b.name === "score_corrected");
   assert.equal(corrected.payload.reason, "referee:cap(0)");
+  // The room hears the dive and the cap that was applied (the screens
+  // showing the old awards hold them to it), not an echo of the caller's
+  // object.
+  const cap = live.broadcasts.find((b) => b.name === "referee_action_cap");
+  assert.deepEqual(cap.payload, { event_id: VALID_ID, competitor_id: VALID_ID, round_number: 1, cap_value: 0 });
+  assert.deepEqual(await r.ask("referee_failed_dive", { ...data, round_number: "1", junk: 1 }), { ok: true });
+  const failed = live.broadcasts.find((b) => b.name === "referee_action_failed");
+  assert.deepEqual(failed.payload, { event_id: VALID_ID, competitor_id: VALID_ID, round_number: 1 });
+  assert.deepEqual(await r.ask("referee_failed_dive", { ...data, competitor_id: "not-an-id" }),
+    { ok: false, error: "action_failed" });
 });
 
 // The socket half of the blank-score bug: score:null used to be stored as

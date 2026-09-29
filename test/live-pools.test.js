@@ -259,6 +259,35 @@ test('applyRedive resets the live dive it names, and only that one', async () =>
   assert.equal(pool.rediveSeq, before + 1)
 })
 
+// A referee Failed or Cap after the panel scored used to leave the
+// operator looking at the old awards until the next diver, while History
+// and Standings already had the new ones.
+test('applyRefereeCall holds the live tiles to the call, for that dive only', async () => {
+  const { applyRefereeCall } = await import('../src/composables/useLivePools.js')
+  const pool = makePoolState()
+  pool.currentActive = { event_id: 'A', competitor_id: 'd', round_number: 2 }
+  pool.judgeTiles = initJudgeTiles(4)
+  const marks = [6, 1.5, 8.5]
+  marks.forEach((score, i) => {
+    applyScore(pool, { event_id: 'A', competitor_id: 'd', round_number: 2, judge_id: `j${i + 1}`, judge_number: i + 1, score }, 4)
+  })
+
+  // another dive: untouched
+  assert.equal(applyRefereeCall(pool, { event_id: 'A', competitor_id: 'd', round_number: 1 }, 'failed'), false)
+  assert.equal(pool.judgeTiles[0].score, '6.0')
+
+  // cap at 2: a 1.5 stays, the rest come down; the empty seat stays empty
+  assert.equal(applyRefereeCall(pool, { event_id: 'A', competitor_id: 'd', round_number: '2', cap_value: 2 }, 'cap'), true)
+  assert.deepEqual(pool.judgeTiles.map((t) => t.score), ['2.0', '1.5', '2.0', '—'])
+  assert.deepEqual(pool.scoresThisRound, { j1: 2, j2: 1.5, j3: 2 })
+
+  // failed: 0 across the board
+  applyRefereeCall(pool, { event_id: 'A', competitor_id: 'd', round_number: 2 }, 'failed')
+  assert.deepEqual(pool.judgeTiles.map((t) => t.score), ['0.0', '0.0', '0.0', '—'])
+  assert.deepEqual(pool.scoresThisRound, { j1: 0, j2: 0, j3: 0 })
+  assert.equal(pool.judgeTiles[3].scored, false)
+})
+
 // /history comes back round ASC, name ASC. Reversing it put the
 // reverse-alphabetical diver on top within a round, not the dive that had
 // just finished, so "amend the last dive" opened someone else's.

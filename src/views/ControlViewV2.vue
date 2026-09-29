@@ -39,7 +39,7 @@ import { useSocket } from '@/composables/useSocket'
 import { useSocketEvent } from '@/composables/useSocketEvent'
 import {
   useLivePools, selectDiver, rosterIndexForActive, competingQueue, rebaseQueue, nextQueueIndex,
-  applyRedive, historyNewestFirst,
+  applyRedive, applyRefereeCall, historyNewestFirst,
 } from '@/composables/useLivePools'
 import { annotateJudgeRows } from '@/composables/useScoreTrim'
 import { synchroJudgeGroups } from '@/composables/useScoreCategories'
@@ -108,6 +108,20 @@ useSocketEvent(socket, 'score_corrected', (data) => {
 useSocketEvent(socket, 'referee_action_redive', (data) => {
   const pool = data?.event_id != null ? pools[data.event_id] : null
   if (pool) applyRedive(pool, data, numberOfJudgesFor(data.event_id))
+})
+
+// A Failed or Cap call on the live dive (from any operator). The server
+// has rewritten the scores and score_corrected re-reads History and
+// Standings, but the pool's tiles kept the awards from before the call
+// until the next diver. applyRefereeCall holds them to it: 0 for a failed
+// dive, nothing above the declared maximum for a cap.
+useSocketEvent(socket, 'referee_action_failed', (data) => {
+  const pool = data?.event_id != null ? pools[data.event_id] : null
+  if (pool) applyRefereeCall(pool, data, 'failed')
+})
+useSocketEvent(socket, 'referee_action_cap', (data) => {
+  const pool = data?.event_id != null ? pools[data.event_id] : null
+  if (pool) applyRefereeCall(pool, data, 'cap')
 })
 
 // A coach withdrew a diver from an event that's live here (routes/coach.js

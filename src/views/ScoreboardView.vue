@@ -13,7 +13,7 @@ import {
   synchroJudgeGroups,
 } from '@/composables/useScoreCategories'
 import { diveDescription } from '@/composables/useDiveLabel'
-import { livePanel } from '@/composables/useScoreTrim'
+import { livePanel, heldAward } from '@/composables/useScoreTrim'
 import { sharedRanks, placeOf } from '@/lib/standings'
 import { normaliseActiveDiver } from '@/lib/activeDiver'
 import { cachedFetch, invalidateEventScores } from '@/lib/idbCache'
@@ -885,6 +885,23 @@ useSocketEvent(socket, 'referee_action_redive', (data) => {
   }
   scheduleRefresh()
 })
+
+// A Failed or Cap call changes awards the pills are already showing. The
+// server has rewritten the stored scores, holds any award still to come to
+// the call, and follows up with score_corrected for the standings, but
+// nothing re-sends the pills: they kept the old awards and dive total
+// until the next diver. Hold them to the call here, which puts the dive
+// total where the rules have it (0 for a failed dive, WA 8.6.6; nothing
+// above the declared maximum for a cap, WA 8.4.7).
+function applyRefereeCallToPills(data, call) {
+  if (!currentEventId.value || data?.event_id !== currentEventId.value) return
+  const a = activeDiver.value
+  if (!a || String(data.competitor_id) !== String(a.competitor_id)
+      || Number(data.round_number) !== Number(a.round_number)) return
+  liveJudgeScores.value = liveJudgeScores.value.map((s) => ({ ...s, value: heldAward(s.value, call, data.cap_value) }))
+}
+useSocketEvent(socket, 'referee_action_failed', (data) => applyRefereeCallToPills(data, 'failed'))
+useSocketEvent(socket, 'referee_action_cap', (data) => applyRefereeCallToPills(data, 'cap'))
 
 // Live -> Completed (or back) flips this page between the live board and
 // the recap. The server tells every socket, and the /api/archive list this

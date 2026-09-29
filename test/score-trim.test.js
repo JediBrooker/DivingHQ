@@ -283,3 +283,19 @@ test("correctionPreview: nothing to show for a bad score or index", async () => 
   assert.equal(correctionPreview({ ...base, idx: 0, newVal: 7.3 }), null);
   assert.equal(correctionPreview({ ...base, idx: 9, newVal: 7 }), null);
 });
+
+// WA 8.6.6 (failed: 0 points) and 8.4.7 (a declared maximum holds any
+// higher award to it), for screens already showing the awards.
+test("heldAward: a failed dive is 0, a cap only comes down to the cap", async () => {
+  const { heldAward } = await import("../src/composables/useScoreTrim.js");
+  assert.equal(heldAward(8.5, "failed"), 0);
+  assert.equal(heldAward("7", "failed"), 0);
+  assert.equal(heldAward(8.5, "cap", 2), 2);
+  assert.equal(heldAward(1.5, "cap", 2), 1.5);
+  assert.equal(heldAward(6, "cap", "4.5"), 4.5);
+  assert.equal(heldAward(6, "cap", 0), 0);
+  // no usable cap, or some other call: the award stands
+  assert.equal(heldAward(6, "cap"), 6);
+  assert.equal(heldAward(6, "cap", "x"), 6);
+  assert.equal(heldAward(6, "redive"), 6);
+});

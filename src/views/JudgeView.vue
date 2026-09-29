@@ -8,6 +8,7 @@ import { useSocketEvent } from '@/composables/useSocketEvent'
 import { diveDescription } from '@/composables/useDiveLabel'
 import { normaliseActiveDiver } from '@/lib/activeDiver'
 import { synchroRoleForJudge } from '@/composables/useScoreCategories'
+import { heldAward } from '@/composables/useScoreTrim'
 import { showInfo } from '@/composables/useNotify'
 import OfflineBanner from '@/components/OfflineBanner.vue'
 import SyncStatusBadge from '@/components/SyncStatusBadge.vue'
@@ -387,6 +388,23 @@ useSocketEvent(socket, 'referee_action_redive', (data) => {
   panelSignals.value = {}
   signaled.value = false
 })
+
+// A Failed or Cap call on the dive on screen. The server has rewritten
+// every judge's stored award, but the panel tiles kept the old ones, so a
+// judge couldn't see the call had landed. Hold them to it (heldAward: 0
+// for a failed dive, nothing above the declared maximum for a cap).
+function applyRefereeCallToPanel(data, call) {
+  const a = activeDiver.value
+  if (!a || !data) return
+  if (String(data.event_id) !== String(a.event_id)) return
+  if (String(data.competitor_id) !== String(a.competitor_id)) return
+  if (Number(data.round_number) !== Number(a.round_number)) return
+  const held = {}
+  for (const [n, v] of Object.entries(panelScores.value)) held[n] = heldAward(v, call, data.cap_value)
+  panelScores.value = held
+}
+useSocketEvent(socket, 'referee_action_failed', (data) => applyRefereeCallToPanel(data, 'failed'))
+useSocketEvent(socket, 'referee_action_cap', (data) => applyRefereeCallToPanel(data, 'cap'))
 
 // judge_signal broadcasts from other panel members. Mirror the
 // state into panelSignals so the panel tile turns red and a
