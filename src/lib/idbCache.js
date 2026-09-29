@@ -28,9 +28,8 @@
 //     network instead. Use for time-sensitive reads (active
 //     scoreboard) where stale data would mislead.
 //   * idbInvalidate(predicate): cursor-walk + delete every key whose
-//     URL matches the predicate. Wired to socket events
-//     (score_received → invalidate /api/scoreboard/:id; state_update
-//     → invalidate event metadata).
+//     URL matches the predicate. invalidateEventScores wraps it for
+//     the socket events that move an event's scores.
 
 const DB_NAME = 'dive-recorder-cache'
 const STORE   = 'api'
@@ -202,9 +201,10 @@ export async function cachedFetch(url, fetchOptions = {}, { onUpdate, maxAgeMs, 
 //     specific patterns when prefix matching isn't enough.
 //
 // Used by:
-//   * useSocket listeners: score_received → invalidate the
-//     event's /api/scoreboard cache; state_update → invalidate
-//     event metadata; meet_held → invalidate meet hold state.
+//   * invalidateEventScores below, which the scoreboard and the
+//     Control Room call off the socket (score_received,
+//     score_corrected, record_broken, referee calls).
+//   * The dive directory screens after a custom dive changes.
 //   * Logout: idbClear() is the heavier nuke when we want to
 //     drop the entire store.
 export async function idbInvalidate(predicate) {
@@ -236,4 +236,27 @@ export async function idbInvalidate(predicate) {
     tx.oncomplete = () => resolve(deleted)
     tx.onerror = () => resolve(deleted)
   })
+}
+
+// Is this cached URL one of the reads that carry an event's scores? The
+// live scoreboard and its leaderboard (/api/scoreboard/:id and anything
+// under it) and the recap (/api/archive/:id/results). Pure, so the test
+// suite can pin it without an IndexedDB.
+export function isEventScoresUrl(url, eventId) {
+  if (!eventId || typeof url !== 'string') return false
+  const board = `/api/scoreboard/${eventId}`
+  return url === board
+    || url.startsWith(`${board}/`)
+    || url.startsWith(`${board}?`)
+    || url.startsWith(`/api/archive/${eventId}/`)
+}
+
+// Drop every cached score read for one event. Call it when the socket
+// says the scores moved (a dive completed, a correction, a referee call):
+// until then the live board's copy counts as fresh for 5s and the recap's
+// for a day, so a refresh straight after would repaint the old numbers.
+// Never rejects, a cache that can't be cleared just means a slower read.
+export function invalidateEventScores(eventId) {
+  if (!eventId) return Promise.resolve(0)
+  return idbInvalidate((url) => isEventScoresUrl(url, eventId)).catch(() => 0)
 }

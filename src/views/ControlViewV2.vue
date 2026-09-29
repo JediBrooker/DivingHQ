@@ -45,7 +45,7 @@ import { annotateJudgeRows } from '@/composables/useScoreTrim'
 import { synchroJudgeGroups } from '@/composables/useScoreCategories'
 import { controlKeyIntent, hotkeyBlocked, spaceOwnerOf } from '@/composables/useControlKeymap'
 import { diveDescription } from '@/composables/useDiveLabel'
-import { idbInvalidate } from '@/lib/idbCache'
+import { invalidateEventScores } from '@/lib/idbCache'
 import { activeDiverPayload } from '@/lib/activeDiver'
 import { useMeetHold, MEET_HOLD_STORE } from '@/composables/useMeetHold'
 import { useHttpOutbox, waitForOutboxEntry } from '@/composables/useHttpOutbox'
@@ -73,7 +73,7 @@ const socket = useSocket()
 const { pools, poolFor, routeScore, routeSignal } = useLivePools()
 
 useSocketEvent(socket, 'score_received', (data) => {
-  if (data?.event_id) idbInvalidate(`/api/scoreboard/${data.event_id}`).catch(() => {})
+  if (data?.event_id) invalidateEventScores(data.event_id)
   const res = routeScore(data, numberOfJudgesFor)
   // A completed dive changes that pool's history + standings, so refresh
   // its side-panel data (whichever pool, focused or not). Each card
@@ -96,7 +96,7 @@ useSocketEvent(socket, 'judge_signal', (data) => {
 // queueing its PUT, which usually beat the PUT to the server.
 useSocketEvent(socket, 'score_corrected', (data) => {
   if (data?.event_id) {
-    idbInvalidate(`/api/scoreboard/${data.event_id}`).catch(() => {})
+    invalidateEventScores(data.event_id)
     loadPoolPanels(data.event_id)
   }
 })

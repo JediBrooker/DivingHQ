@@ -16,7 +16,7 @@ import { diveDescription } from '@/composables/useDiveLabel'
 import { livePanel } from '@/composables/useScoreTrim'
 import { sharedRanks, placeOf } from '@/lib/standings'
 import { normaliseActiveDiver } from '@/lib/activeDiver'
-import { cachedFetch, idbInvalidate } from '@/lib/idbCache'
+import { cachedFetch, invalidateEventScores } from '@/lib/idbCache'
 import { SCOREBOARD_LIVE_TTL_MS, SCOREBOARD_ARCHIVE_TTL_MS } from '@/lib/cache-policy'
 import { resolveOverlay, overlayClasses } from '@/lib/overlayParts'
 import { indexRecordMarks, marksForDive, isChipMark, withoutBook } from '@/lib/recordMarks'
@@ -647,7 +647,7 @@ watch(() => route.params.eventId, (newId) => {
 // view.
 watch(() => currentEvent.value?.status, (status, prev) => {
   if (!currentEventId.value) return
-  if (status && prev && status !== prev) refreshData()
+  if (status && prev && status !== prev) refreshData({ fresh: true })
 })
 
 // Stale-response guard for refreshData. Rapid event switching (or a
@@ -658,36 +658,71 @@ watch(() => currentEvent.value?.status, (status, prev) => {
 // newer call has already started.
 let refreshSeq = 0
 
-async function refreshData() {
+// The halves of a refresh, split out so a revalidation that lands later
+// (cachedFetch's onUpdate) goes on screen the same way the first answer
+// did. A null payload means the network didn't answer and nothing was
+// cached. That empties the panel, unless `keep` says there's already a
+// picture of this event on screen worth keeping.
+function applyLeaderboard(leaderboard, keep) {
+  if (!leaderboard && keep) return
+  leaderboardRounds.value = leaderboard?.rounds || []
+}
+function applyArchive(archive, keep) {
+  if (!archive && keep) return
+  const a = archive || {}
+  archiveResults.value = a
+  standings.value = a.standings || []
+  historyItems.value = []
+  // Panel comes from the archive payload for completed events.
+  eventPanel.value = a.panel || []
+  payloadRecords.value = a.records || []
+}
+function applyScoreboard(scoreboard, keep) {
+  if (!scoreboard && keep) return
+  const b = scoreboard || {}
+  historyItems.value = b.history || []
+  standings.value = b.standings || []
+  upcoming.value = b.upcoming || []
+  // Panel comes from the scoreboard payload for live events.
+  eventPanel.value = b.panel || []
+  payloadRecords.value = b.records || []
+}
+
+// `fresh` is for the socket handlers. Something just changed this event's
+// scores or its queue, so whatever the cache holds is from before that,
+// and the cache would still have served it as current: a live copy counts
+// as fresh for 5s, a recap for a day. A correction landing a couple of
+// seconds after the last refresh never showed, and on a recap it never
+// showed at all. So drop the cached copies and wait for the network, and
+// if the network doesn't answer keep what's on screen rather than blank
+// the board.
+//
+// Without `fresh` (picking an event, a reload) the cached copy paints
+// first and the network's answer replaces it when it lands, so a recap
+// opened from the cache still picks up a correction made while the page
+// was closed.
+async function refreshData({ fresh = false } = {}) {
   if (!currentEventId.value) return
+  const eventId = currentEventId.value
   const seq = ++refreshSeq
+  const current = () => seq === refreshSeq
   try {
+    if (fresh) await invalidateEventScores(eventId)
+    if (!current()) return
+    const get = (url, maxAgeMs, apply) => cachedFetch(url, { credentials: 'same-origin' }, {
+      maxAgeMs,
+      onUpdate: (data) => { if (current()) apply(data, true) },
+    })
     if (isCompleted.value) {
-      // Completed events: 24h SWR cache. The standings never change
-      // once Completed is final; socket events (score_corrected)
-      // invalidate on the rare admin-edit case.
+      // Completed events: 24h cache, the standings hardly ever move once
+      // final. A correction after the fact comes through score_corrected.
       const [archiveRes, leaderboardRes] = await Promise.all([
-        cachedFetch(
-          `/api/archive/${currentEventId.value}/results`,
-          { credentials: 'same-origin' },
-          { maxAgeMs: SCOREBOARD_ARCHIVE_TTL_MS },
-        ),
-        cachedFetch(
-          `/api/scoreboard/${currentEventId.value}/leaderboard`,
-          { credentials: 'same-origin' },
-          { maxAgeMs: SCOREBOARD_ARCHIVE_TTL_MS },
-        ),
+        get(`/api/archive/${eventId}/results`, SCOREBOARD_ARCHIVE_TTL_MS, applyArchive),
+        get(`/api/scoreboard/${eventId}/leaderboard`, SCOREBOARD_ARCHIVE_TTL_MS, applyLeaderboard),
       ])
-      if (seq !== refreshSeq) return
-      const archive = archiveRes.data || {}
-      const leaderboard = leaderboardRes.data || {}
-      archiveResults.value = archive
-      standings.value = archive.standings || []
-      historyItems.value = []
-      leaderboardRounds.value = leaderboard.rounds || []
-      // Panel comes from the archive payload for completed events.
-      eventPanel.value = archive.panel || []
-      payloadRecords.value = archive.records || []
+      if (!current()) return
+      applyArchive(archiveRes.data, fresh)
+      applyLeaderboard(leaderboardRes.data, fresh)
       // Eager-fetch the JRA payload so per-chip tooltips have rank
       // context on first hover. The section UI itself stays v-if'd
       // (lazy mount), the data lifecycle lives on the parent now so
@@ -702,31 +737,14 @@ async function refreshData() {
       judgeRankingExpanded.value = false
       // Live events: 5s hard TTL, matches the server-side cache so a
       // spectator that just hit reload never sees data older than the
-      // server would have served. Socket-driven invalidation
-      // (score_received) busts the entry the moment a new score
-      // commits, so real freshness comes from there.
+      // server would have served.
       const [scoreboardRes, leaderboardRes] = await Promise.all([
-        cachedFetch(
-          `/api/scoreboard/${currentEventId.value}`,
-          { credentials: 'same-origin' },
-          { maxAgeMs: SCOREBOARD_LIVE_TTL_MS },
-        ),
-        cachedFetch(
-          `/api/scoreboard/${currentEventId.value}/leaderboard`,
-          { credentials: 'same-origin' },
-          { maxAgeMs: SCOREBOARD_LIVE_TTL_MS },
-        ),
+        get(`/api/scoreboard/${eventId}`, SCOREBOARD_LIVE_TTL_MS, applyScoreboard),
+        get(`/api/scoreboard/${eventId}/leaderboard`, SCOREBOARD_LIVE_TTL_MS, applyLeaderboard),
       ])
-      if (seq !== refreshSeq) return
-      const scoreboard = scoreboardRes.data || {}
-      const leaderboard = leaderboardRes.data || {}
-      historyItems.value = scoreboard.history || []
-      standings.value = scoreboard.standings || []
-      upcoming.value = scoreboard.upcoming || []
-      leaderboardRounds.value = leaderboard.rounds || []
-      // Panel comes from the scoreboard payload for live events.
-      eventPanel.value = scoreboard.panel || []
-      payloadRecords.value = scoreboard.records || []
+      if (!current()) return
+      applyScoreboard(scoreboardRes.data, fresh)
+      applyLeaderboard(leaderboardRes.data, fresh)
     }
     if (expandedRound.value === null && leaderboardRounds.value.length) {
       expandedRound.value = leaderboardRounds.value[leaderboardRounds.value.length - 1].round_number
@@ -747,7 +765,7 @@ function scheduleRefresh(delayMs = 600) {
   if (refreshTimer) clearTimeout(refreshTimer)
   refreshTimer = setTimeout(() => {
     refreshTimer = null
-    refreshData()
+    refreshData({ fresh: true })
   }, delayMs)
 }
 onUnmounted(() => {
@@ -832,9 +850,7 @@ useSocketEvent(socket, 'score_received', data => {
   // moment a new score commits. Without this, the 5s SWR TTL would
   // let a freshly-reloaded spectator see standings that lag by up
   // to one scoreboard tick.
-  if (data?.event_id) {
-    idbInvalidate(`/api/scoreboard/${data.event_id}`).catch(() => {})
-  }
+  if (data?.event_id) invalidateEventScores(data.event_id)
   if (!currentEventId.value) return
   if (data.event_id !== currentEventId.value) return
   // A score for some other dive (no live diver known here, say, because
@@ -906,12 +922,15 @@ useSocketEvent(socket, 'meet_resumed', (data) => {
   holdReason.value = ''
 })
 
-// Score corrections fired by the Control Room: re-pull the
-// scoreboard so totals reflect the amendment. Cheap full-pull is
-// fine, score corrections are rare events.
+// Any change to scores already in (a correction from the Control Room,
+// a resolved conflict, a referee Failed or Cap) ends in score_corrected:
+// re-pull so totals reflect it. Fresh, or a correction made within a few
+// seconds of the last refresh (or at all, once the recap is showing) got
+// the cached numbers back.
 useSocketEvent(socket, 'score_corrected', (data) => {
-  if (data.event_id !== currentEventId.value) return
-  refreshData()
+  if (data?.event_id) invalidateEventScores(data.event_id)
+  if (data?.event_id !== currentEventId.value) return
+  refreshData({ fresh: true })
 })
 
 useSocketEvent(socket, 'final_score_announced', () => {
@@ -919,13 +938,13 @@ useSocketEvent(socket, 'final_score_announced', () => {
   // the dive total inline under the active-diver block (computed
   // from the score_received pills × DD), so just trigger a
   // standings refresh and let the inline UI carry the spotlight.
-  refreshData()
+  refreshData({ fresh: true })
 })
 
 useSocketEvent(socket, 'record_broken', (data) => {
   // The server dropped its cached payload when the record landed; drop
   // ours too so a reload in the next few seconds still shows the chip.
-  if (data?.event_id) idbInvalidate(`/api/scoreboard/${data.event_id}`).catch(() => {})
+  if (data?.event_id) invalidateEventScores(data.event_id)
   if (!currentEventId.value || data?.event_id !== currentEventId.value) return
   // Whoever held this book before doesn't any more, chip or not: take
   // their mark off both lists, not just add the new one.
