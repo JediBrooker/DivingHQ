@@ -179,8 +179,10 @@ organisation, club, accounts, roles, meet, event, dive lists, scores, check-in,
 sign-off requests, records and their history, notifications (including ones
 sent to people outside the rehearsal about the event, the sysadmin for
 instance), push subscriptions, idempotency keys and the audit rows for all of
-it. It only touches the rehearsal organisation and the `rehearsal-*` accounts
-in it. Running it again when there's nothing left is fine; it says so.
+it. It only touches the rehearsal organisation and the eleven accounts seed
+made in it, by exact username (anyone can sign up as `rehearsal-something`, so
+the prefix alone doesn't count). Running it again when there's nothing left is
+fine; it says so.
 
 It refuses, and deletes nothing, when:
 
@@ -189,6 +191,12 @@ It refuses, and deletes nothing, when:
   what to do with each (they're a real person), move or delete them by hand,
   then run cleanup again. A rehearsal account deleted through the app also
   shows up here, since deleting renames it, so don't delete them that way.
+- **the rehearsal reaches into something real.** A rehearsal account on another
+  event's panel or start list, with scores or dive-offs there, or on another
+  org's team; another org's event filed under the rehearsal meet; or somebody
+  else's open claim on the organisation. Deleting the account would cascade
+  that event's scores away, so it stops and lists what it found. Take the
+  rehearsal accounts off those events (or decide the claim) by hand first.
 - **there's a payment or payout on it.** That's money: refund or reconcile it in
   Stripe and remove the row by hand first. With payments switched off this
   can't happen.

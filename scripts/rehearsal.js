@@ -24,8 +24,9 @@
 // WHAT COUNTS AS THE REHEARSAL
 // ----------------------------
 // An organisation with slug 'rehearsal-<country>' and claim_state
-// 'unclaimed', plus the users in it whose username starts 'rehearsal-'.
-// Nothing else is ever touched. The country defaults to Western Sahara
+// 'unclaimed', plus the eleven accounts seed made in it (by exact
+// username, the prefix alone could be anyone's). Nothing else is ever
+// touched. The country defaults to Western Sahara
 // (ESH): lib/countries.json leaves the uninhabited territories out
 // (Antarctica, Bouvet, Heard Island), ESH is in the catalogue, has no
 // World Aquatics federation, and no test in test/ uses the code. It has to
@@ -52,10 +53,13 @@
 // CLEANUP
 // -------
 // One transaction, idempotent, prints what it removed. It refuses when the
-// org holds a user that isn't 'rehearsal-' (a stranger who signed up into
-// the country while it was open, say) or when any payment touches the
+// org holds a user seed didn't make (a stranger who signed up into the
+// country while it was open, say), when any payment touches the
 // rehearsal, since a payments row is somebody's money and the FKs are
-// RESTRICT on purpose. It also takes out what the rehearsal left in
+// RESTRICT on purpose, and when the rehearsal reaches into something real:
+// a seeded account on another event's panel or start list (deleting the
+// account would cascade that event's scores away), another org's event
+// filed under the rehearsal meet, a stranger's open claim on the org. It also takes out what the rehearsal left in
 // tables without a foreign key back to it: audit rows, notifications that
 // point at the event, record history, idempotency keys.
 //
@@ -103,6 +107,10 @@ const DIVERS = [
 const ADMIN = { key: "admin", username: `${USER_PREFIX}admin`, full_name: "Rehearsal Club Admin", role: "club_admin" };
 const REFEREE = { key: "referee", username: `${USER_PREFIX}referee`, full_name: "Rehearsal Referee", role: "referee" };
 const ACCOUNTS = [ADMIN, ...JUDGES, REFEREE, ...DIVERS];
+// Cleanup takes these exact names and nothing else. The prefix alone
+// isn't ours to trust: anyone can sign up as rehearsal-bob, and if they
+// picked Western Sahara they'd land in the rehearsal org.
+const ACCOUNT_USERNAMES = ACCOUNTS.map((a) => a.username);
 
 const EVENT = {
   name: EVENT_NAME, gender: "Mixed", height: "3m", board_height_m: 3.0,
@@ -511,8 +519,8 @@ async function seed(client, { country, email, start, bcrypt, password }) {
 async function collect(db, org) {
   const col = async (sql, params) => (await db.query(sql, params)).rows.map((r) => r.id);
   const users = await col(
-    `SELECT id FROM users WHERE org_id = $1 AND left(username, ${USER_PREFIX.length}) = $2`,
-    [org.id, USER_PREFIX],
+    "SELECT id FROM users WHERE org_id = $1 AND username = ANY($2::text[])",
+    [org.id, ACCOUNT_USERNAMES],
   );
   const clubs = await col("SELECT id FROM clubs WHERE org_id = $1", [org.id]);
   const regions = await col("SELECT id FROM regions WHERE org_id = $1", [org.id]);
@@ -521,16 +529,44 @@ async function collect(db, org) {
     "SELECT id FROM events WHERE org_id = $1 OR meet_id = ANY($2::uuid[])",
     [org.id, meets],
   );
-  // A user in the org without the prefix, or one from elsewhere sitting in
-  // our club. Soft-deleted accounts count: their row is still somebody's.
+  // A user in the org that seed didn't make, or one from elsewhere sitting
+  // in our club. Soft-deleted accounts count: their row is still somebody's.
   const foreign = (await db.query(
     `SELECT id, username, full_name, org_id, deleted_at, created_at
        FROM users
-      WHERE (org_id = $1 AND left(username, ${USER_PREFIX.length}) <> $2)
+      WHERE (org_id = $1 AND NOT username = ANY($2::text[]))
          OR (club_id = ANY($3::uuid[]) AND org_id <> $1)
       ORDER BY created_at`,
-    [org.id, USER_PREFIX, clubs],
+    [org.id, ACCOUNT_USERNAMES, clubs],
   )).rows;
+  // Places the rehearsal reaches into something real. users.id cascades
+  // into scores, dive lists and panels of every event, so one seeded judge
+  // lent to a real meet would take that meet's scores with it. Refuse
+  // instead and let a person look.
+  const elsewhere = (await db.query(
+    `SELECT 'scores in another event' AS what, count(*)::int AS n FROM scores
+      WHERE NOT event_id = ANY($3::uuid[]) AND (judge_id = ANY($2::uuid[]) OR competitor_id = ANY($2::uuid[]))
+     UNION ALL
+     SELECT 'dive list rows in another event', count(*)::int FROM competitor_dive_lists
+      WHERE NOT event_id = ANY($3::uuid[]) AND (competitor_id = ANY($2::uuid[]) OR partner_id = ANY($2::uuid[]))
+     UNION ALL
+     SELECT 'seats on another event''s panel', count(*)::int FROM event_judges
+      WHERE NOT event_id = ANY($3::uuid[]) AND judge_id = ANY($2::uuid[])
+     UNION ALL
+     SELECT 'dive-offs in another event', count(*)::int FROM tiebreak_dive_offs
+      WHERE NOT event_id = ANY($3::uuid[]) AND (competitor_a_id = ANY($2::uuid[]) OR competitor_b_id = ANY($2::uuid[]))
+     UNION ALL
+     SELECT 'places on another org''s team', count(*)::int FROM team_members tm JOIN teams t ON t.id = tm.team_id
+      WHERE tm.user_id = ANY($2::uuid[]) AND t.org_id <> $1
+     UNION ALL
+     SELECT 'events from another org in the rehearsal meet', count(*)::int FROM events
+      WHERE meet_id = ANY($4::uuid[]) AND org_id <> $1
+     UNION ALL
+     SELECT 'open claims on the org by someone else', count(*)::int FROM claims
+      WHERE (org_id = $1 OR target_id = $1) AND status IN ('open', 'escalated')
+        AND NOT claimant_id = ANY($2::uuid[])`,
+    [org.id, users, events, meets],
+  )).rows.filter((r) => r.n > 0);
   const payments = (await db.query(
     `SELECT id, status, subject_type, amount_cents, currency FROM payments
       WHERE org_id = $1 OR club_id = ANY($2::uuid[]) OR payer_club_id = ANY($2::uuid[])
@@ -547,7 +583,7 @@ async function collect(db, org) {
      SELECT 'club', stripe_account_id FROM clubs WHERE id = ANY($2::uuid[]) AND stripe_account_id IS NOT NULL`,
     [org.id, clubs],
   )).rows;
-  return { org, users, clubs, regions, meets, events, foreign, payments, stripe };
+  return { org, users, clubs, regions, meets, events, foreign, elsewhere, payments, stripe };
 }
 
 // The id sets the cleanup statements pick from. They say @users,
@@ -649,10 +685,13 @@ const CLEANUP_STEPS = [
 // a rehearsal diver or dive. Can't happen with the org as seeded (no
 // continent, every dive entered from the rehearsal club), but if it did,
 // deleting them leaves that book without its previous holder until the
-// books are replayed.
+// books are replayed. A real diver entered as a guest would leave a
+// personal best behind the same way.
 async function foreignRecordRows(db, ids) {
   const r = await db.query(...bind(
-    `SELECT (SELECT count(*) FROM records_club WHERE NOT club_id = ANY(@clubs)
+    `SELECT (SELECT count(*) FROM records_personal WHERE NOT user_id = ANY(@users)
+               AND event_id = ANY(@events))
+          + (SELECT count(*) FROM records_club WHERE NOT club_id = ANY(@clubs)
                AND (holder_id = ANY(@users) OR event_id = ANY(@events)))
           + (SELECT count(*) FROM records_region WHERE NOT region_id = ANY(@regions)
                AND (holder_id = ANY(@users) OR event_id = ANY(@events)))
@@ -675,6 +714,13 @@ async function cleanupOrg(client, org) {
         id: u.id, username: u.username, full_name: u.full_name,
         deleted: !!u.deleted_at, created_at: u.created_at,
       })) });
+  }
+  if (set.elsewhere.length) {
+    throw new RefusedError("used_elsewhere",
+      `${org.country_code}'s rehearsal reaches outside itself (${set.elsewhere.map((r) => `${r.n} ${r.what}`).join(", ")}). ` +
+      "Deleting it would take real data with it, so nothing was deleted. Take the rehearsal accounts off those events " +
+      "(or move the event, or decide the claim) by hand, then run cleanup again.",
+      { org_id: org.id, elsewhere: set.elsewhere });
   }
   if (set.payments.length) {
     throw new RefusedError("payments_exist",
@@ -764,6 +810,7 @@ async function status(db, { country = null } = {}) {
       urls: events[0] ? urlsFor({ eventId: events[0].id, meetId: events[0].meet_id || set.meets[0] }) : null,
       cleanup_blockers: {
         foreign_users: set.foreign.map((u) => ({ username: u.username, full_name: u.full_name, deleted: !!u.deleted_at })),
+        elsewhere: set.elsewhere,
         payments: set.payments.length,
       },
     });
@@ -864,6 +911,7 @@ function statusReport(res, target) {
     if (r.cleanup_blockers.foreign_users.length) {
       lines.push(`  Cleanup will refuse: accounts that aren't rehearsal ones: ${r.cleanup_blockers.foreign_users.map((u) => u.username).join(", ")}`);
     }
+    for (const e of r.cleanup_blockers.elsewhere) lines.push(`  Cleanup will refuse: ${e.n} ${e.what}`);
     if (r.cleanup_blockers.payments) lines.push(`  Cleanup will refuse: ${r.cleanup_blockers.payments} payment row(s)`);
   }
   const s = res.seed_check;
@@ -973,6 +1021,7 @@ async function main(argv = process.argv.slice(2)) {
           console.error(`  ${o.name} (${o.country_code || err.details.country || "?"}) [${o.status}, ${o.claim_state}${users}]`);
         }
         if (orgs.length > 10) console.error(`  ...and ${orgs.length - 10} more`);
+        for (const e of err.details?.elsewhere || []) console.error(`  ${e.n} ${e.what}`);
       }
       return 1;
     }
@@ -984,7 +1033,7 @@ async function main(argv = process.argv.slice(2)) {
 }
 
 module.exports = {
-  DEFAULT_COUNTRY, USER_PREFIX, ACCOUNTS, JUDGES, DIVERS, ADMIN, REFEREE, EVENT, CLUB_CODE,
+  DEFAULT_COUNTRY, USER_PREFIX, ACCOUNTS, ACCOUNT_USERNAMES, JUDGES, DIVERS, ADMIN, REFEREE, EVENT, CLUB_CODE,
   UsageError, RefusedError,
   parseArgs, resolveCountry, plusAddress, accountEmail, orgSlug, isRehearsalOrg,
   generatePassword, defaultStart, parseStart, localDate, splitDive, urlsFor, describeTarget,

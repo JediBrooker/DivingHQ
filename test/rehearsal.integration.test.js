@@ -10,8 +10,9 @@
 //   * a rehearsal's worth of side effects (status flips, scores, records,
 //     notifications, audit rows, idempotency keys, push subscriptions)
 //     all go on cleanup, including the rows with no FK back to it
-//   * cleanup refuses while a stranger is in the org, is idempotent, and
-//     --dry-run rolls back
+//   * cleanup refuses while a stranger is in the org (even one called
+//     rehearsal-something) or a seeded account sits on a real event's
+//     panel, is idempotent, and --dry-run rolls back
 //   * seed refuses a country that already has real users
 //
 // Skips when Postgres isn't reachable. The in-process server part also
@@ -352,16 +353,46 @@ test("seed, sign in, rehearse, status, clean up, clean up again", async (t) => {
   assert.equal(await n("SELECT count(*) AS n FROM users WHERE id = ANY($1::uuid[])", [userIds]), 11);
 
   // ---- cleanup refuses while a stranger is in the org -------------
+  // Named like one of ours on purpose: anyone can sign up as rehearsal-x,
+  // so only the usernames seed made count as the rehearsal's.
   const stranger = await one(
     `INSERT INTO users (username, password, full_name, org_id, email_verified_at)
      VALUES ($1, 'x', 'Somebody Real', $2, now()) RETURNING id`,
-    [`real-${crypto.randomBytes(4).toString("hex")}`, s.org_id]);
+    [`rehearsal-intruder-${crypto.randomBytes(4).toString("hex")}`, s.org_id]);
   const refused = cli(["cleanup"]);
   assert.equal(refused.status, 1);
   assert.equal(refused.json.code, "foreign_users");
   assert.equal(refused.json.details.users.length, 1);
+  assert.equal(refused.json.details.users[0].id, stranger.id);
   assert.equal(await n("SELECT count(*) AS n FROM users WHERE id = ANY($1::uuid[])", [userIds]), 11);
   await pool.query("DELETE FROM users WHERE id = $1", [stranger.id]);
+
+  // ---- and while a seeded account sits on a real event's panel ----
+  // Deleting the judge would cascade that event's panel seat (and any
+  // scores) away, so cleanup has to stop and say so.
+  const sfx = crypto.randomBytes(4).toString("hex");
+  const realOrg = await one(
+    `INSERT INTO organisations (name, country_code, slug, status, claim_state)
+     VALUES ('Real Host', 'TST', $1, 'active', 'claimed') RETURNING id`, [`real-host-${sfx}`]);
+  try {
+    const realEvent = await one(
+      `INSERT INTO events (org_id, name, gender, number_of_judges)
+       VALUES ($1, 'Real Event', 'Mixed', 5) RETURNING id`, [realOrg.id]);
+    await pool.query(
+      "INSERT INTO event_judges (event_id, judge_id, judge_number) VALUES ($1, $2, 1)",
+      [realEvent.id, byName[JUDGES[0].username].id]);
+    const lent = cli(["cleanup"]);
+    assert.equal(lent.status, 1, lent.stdout);
+    assert.equal(lent.json.code, "used_elsewhere");
+    assert.deepEqual(lent.json.details.elsewhere, [{ what: "seats on another event's panel", n: 1 }]);
+    const blocked = cli(["status"]);
+    assert.deepEqual(blocked.json.rehearsals[0].cleanup_blockers.elsewhere, lent.json.details.elsewhere);
+    assert.equal(await n("SELECT count(*) AS n FROM event_judges WHERE event_id = $1", [realEvent.id]), 1,
+      "the real event's panel is untouched");
+    assert.equal(await n("SELECT count(*) AS n FROM users WHERE id = ANY($1::uuid[])", [userIds]), 11);
+  } finally {
+    await pool.query("DELETE FROM organisations WHERE id = $1", [realOrg.id]);
+  }
 
   // ---- cleanup for real -------------------------------------------
   const clean = cli(["cleanup", "--country", DEFAULT_COUNTRY]);
