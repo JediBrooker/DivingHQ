@@ -90,8 +90,8 @@ Options: `--country XXX` for another catalogue country, `--start
 2026-10-04T10:00+11:00` if you seed the night before (the default is the next
 quarter hour at least 30 minutes out; it only sets what the schedule shows).
 `--start` has to carry the venue's UTC offset: the script would read a bare
-`10:00` in the box's own timezone (UTC on a stock container, `date` on the box
-tells you), not yours. Mind daylight saving: Sydney is +10:00 until the first
+`10:00` in the box's own timezone (the live box runs on Sydney time; `date`
+on the box tells you), not yours. Mind daylight saving: Sydney is +10:00 until the first
 Sunday in October and +11:00 from then. Without `--start`, the meet's date is
 the box's date, which can be yesterday for you if you seed early in the morning
 in Australia. Without `--email` the
@@ -129,22 +129,32 @@ Seed refuses, and changes nothing, when:
 4. **Start the event.** The four "is live" emails should arrive
    (`you+rehearsal-diver1@...` to `diver4`). Judges who allowed notifications
    get "Judging panel is live".
-5. **Run all three rounds.** Set the diver, judges score on their phones,
-   announce. In round 1, score whichever woman dives 105B second higher than
-   the first, same for the men's 107C.
+5. **Run all three rounds.** Start puts the first diver up by itself; judges
+   score on their phones, and **Next Diver** in the Control Room moves on
+   (at the end of the list it becomes Finalise, then the review screen).
+   Scores reach the scoreboard as soon as the panel is in, there's no
+   separate announce step; the Standings column's Announce button only
+   pushes the standings graphic. In round 1, score whichever woman dives
+   105B second higher than the first, same for the men's 107C.
 6. **Spectator phone** on `/scoreboard/<event>`: scores should land without a
-   refresh, standings reorder, and the second 105B and 107C get a record chip
-   (`RHSL`, and the `ESH` national book).
+   refresh, standings reorder, and the second 105B and 107C get a record chip.
+   The chip reads "ESH record" (the national book) and is marked Unofficial;
+   hover or long-press it for the `RHSL` club record and the previous mark.
+   Chips show on the spectator scoreboard only, not on the broadcast view.
 7. **Broadcast view** on the TV: `/scoreboard/<event>/broadcast`.
 8. Try the awkward bits while you're here: a referee call (failed dive or
-   redive), a score correction from the Control Room, a judge who reloads mid
-   dive.
+   redive), a score correction (click the dive in the Control Room's History
+   column), a judge who reloads mid dive. Correct one of the middle scores,
+   not the highest or lowest: those are dropped, so changing one may not move
+   the total at all.
 9. **Finish the event.** The four results emails should arrive.
 10. **Results PDF**: `/api/events/<event>/results.pdf`. 陈美玲 should print in
     Chinese and Иван Петров in Cyrillic. `?` or "Ivan Petrov" means the Noto
     fonts aren't on the box.
-11. **Records**: `/records` and pick DivingHQ Rehearsal, the club and national
-    books should have the new marks.
+11. **Records**: `/records`, pick "DivingHQ Rehearsal · ESH" in the country
+    picker. The national book opens on Women (the 105B mark); switch to Men
+    for the 107C. For the club book use the Club tab and pick DivingHQ
+    Rehearsal Club.
 12. Optional: a diver phone signed in as `rehearsal-diver1` at
     `/me/meet/<event>`.
 
