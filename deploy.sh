@@ -28,6 +28,9 @@
 #   * Health check at the end fails the deploy script (non-zero
 #     exit) if the service didn't actually come back up. CI / cron
 #     wrappers will see the failure.
+#   * Once the pull has landed, how the run ended goes into
+#     OPS_STATE_DIR/deploy.json (ok + commit) for GET /api/ops/status,
+#     so the outside monitor sees a failed deploy too. See "Ops state".
 #
 # No-new-commits behaviour:
 #   When `git pull` is a no-op (HEAD didn't move), the install /
@@ -99,6 +102,53 @@ run()  {
 # can tell whether a leftover dist.next/ matches what it's restarting.
 record_build_sha() { git rev-parse HEAD > dist.next/.build-sha; }
 
+# ---- Ops state ------------------------------------------------
+# GET /api/ops/status (routes/ops-status.js) reports the last deploy
+# from OPS_STATE_DIR/deploy.json, and the EXIT trap below writes it:
+# ok true with the commit when the run reaches the end, ok false (still
+# naming the commit it tried) when anything after the pull stops it,
+# Ctrl-C included. Nothing is recorded before the pull lands, on a
+# --no-restart-if-noop exit, or ever in --dry mode. A state dir we can't
+# write to is a warning, it never fails a deploy or changes its exit code.
+#
+# OPS_STATE_DIR comes from the shell or .env like the ops scripts read it,
+# /var/lib/divinghq otherwise. Only that one line of .env is read here.
+env_file_value() {
+  [[ -f .env ]] || return 0
+  sed -n "s/^[[:space:]]*$1[[:space:]]*=[[:space:]]*//p" .env | tail -n 1 \
+    | sed 's/[[:space:]]#.*$//; s/[[:space:]]*$//' | tr -d "\"'\r"
+}
+OPS_STATE_DIR="${OPS_STATE_DIR:-$(env_file_value OPS_STATE_DIR || true)}"
+OPS_STATE_DIR="${OPS_STATE_DIR:-/var/lib/divinghq}"
+DEPLOY_SHA=""   # the commit this run is deploying, set once the pull lands
+HEALTH_TMP=""   # the health check's temp file, cleaned up on the way out
+write_deploy_state() {
+  local ok="$1" tmp=""
+  if mkdir -p "$OPS_STATE_DIR" 2>/dev/null \
+    && tmp="$(mktemp "$OPS_STATE_DIR/.deploy.json.XXXXXX" 2>/dev/null)" \
+    && printf '{"last_at":"%s","ok":%s,"sha":"%s"}\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$ok" "$DEPLOY_SHA" > "$tmp" \
+    && chmod 0644 "$tmp" \
+    && mv -f "$tmp" "$OPS_STATE_DIR/deploy.json"; then
+    return 0
+  fi
+  [[ -n "$tmp" ]] && rm -f "$tmp"
+  echo "[deploy] warning: couldn't write ${OPS_STATE_DIR}/deploy.json, the status page won't show this deploy"
+  return 0
+}
+on_exit() {
+  local rc=$?
+  set +e
+  [[ -n "$HEALTH_TMP" ]] && rm -f "$HEALTH_TMP"
+  if [[ $DRY_RUN -eq 0 && -n "$DEPLOY_SHA" ]]; then
+    if [[ $rc -eq 0 ]]; then write_deploy_state true; else write_deploy_state false; fi
+  fi
+  exit "$rc"
+}
+trap on_exit EXIT
+# Without these a Ctrl-C or a kill mid-deploy wouldn't be recorded.
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
 # ---- Preflight ------------------------------------------------
 # Capture the current commit so a rollback is one git command.
 # Prints to stdout for the deploy log.
@@ -149,6 +199,8 @@ if [[ $DRY_RUN -eq 0 && "$PREV_SHA" == "$NEW_SHA" ]]; then
 else
   step "advancing ${PREV_SHA} → ${NEW_SHA}"
 fi
+# From here on the run is recorded in deploy.json, whichever way it ends.
+if [[ $DRY_RUN -eq 0 ]]; then DEPLOY_SHA="$(git rev-parse HEAD)"; fi
 
 # Steps 2-5 only run when there are NEW commits. With no new
 # commits the on-disk bundle, dependency tree, schema, and tests
@@ -309,13 +361,13 @@ fi
 
 # Hardened temp file: a fixed path under /tmp is a symlink-race
 # target for any local user on the deploy box. mktemp gives us a
-# fresh O_EXCL-style path each run, and the trap cleans up on
-# both the happy path and an aborted exit.
+# fresh O_EXCL-style path each run, and on_exit (the EXIT trap up top,
+# which also writes deploy.json) cleans up on both the happy path and an
+# aborted exit.
 HEALTH_TMP="$(mktemp -t deploy-health.XXXXXX)" || {
   echo "[deploy] FAILED — mktemp could not allocate a temp file"
   exit 1
 }
-trap 'rm -f "$HEALTH_TMP"' EXIT
 
 deadline=$(( $(date +%s) + HEALTH_TIMEOUT_S ))
 HEALTHY=0
