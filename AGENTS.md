@@ -259,8 +259,9 @@ Control Room events pass it (`guardControl`) and then `socketCanManageEvent`,
 and `notification:ack` (no role needed) calls it directly. Every mutating socket event has to reach that
 check and not roll its own. `MaintenanceBanner.vue` shows the notice, suppressed in the chromeless
 broadcast/overlay modes. `bootChecks()` loads flags before `listen()`, so a
-test that `require()`s `server.js` (only `integration.test.js` does) must call
-`features.load()` itself, everything reads fail-closed until it does.
+test that `require()`s `server.js` (`integration.test.js` and
+`rehearsal.integration.test.js` do) must call `features.load()` itself,
+everything reads fail-closed until it does.
 
 ### Club-first orgs (migration 087)
 
