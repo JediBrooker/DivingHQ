@@ -87,8 +87,8 @@ The button beneath the checklist always offers the one action that unblocks you 
 | Button | What it does |
 |---|---|
 | **✓ Check In Divers** | Opens the check-in modal. Tick everyone present, click Continue. Uncheck anyone who didn't show up — they're hidden from the start list. |
-| **🎲 Randomise Dive Order** | Writes a random `display_order` per diver. Click opens a confirm modal listing what'll happen ("you can re-run randomise as many times as you like before sign-off"). |
-| **📋 Referee Sign Off** | Opens the sign-off modal. The referee can authorise via push notification, scan a QR code on the manager's screen with their phone (auto-submits when they land), type a 6-digit handoff code into `/sign-off-codes` on their own device, or — fallback — type their credentials directly into the manager's laptop. All paths write the same audit row. |
+| **🎲 Randomise Dive Order** | Opens the draw. **Start the draw** runs a five-second reel, then shows the drawn order with **Re-shuffle** and **Confirm dive order**. After that the start order is listed under the checklist. |
+| **📋 Referee Sign Off** | Opens the sign-off modal. The referee can authorise via push notification, scan a QR code on the manager's screen with their phone (auto-submits when they land), type a 6-digit handoff code into `/sign-off-codes` on their own device, or — fallback — type their credentials directly into the manager's laptop. All paths write the same audit row. The modal closes by itself once the referee approves, and says so if they decline or the request runs out (after 5 minutes). |
 | **▶ Start Event** | Flips status Upcoming → Live and broadcasts `state_update` to every judge's phone. The spectator scoreboards start showing the event immediately. |
 
 Each click is **idempotent** — re-clicking just re-runs the step. You can re-check in divers (a late arrival) and re-randomise as many times as you want, until the event goes Live.
