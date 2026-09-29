@@ -6976,7 +6976,178 @@ test("records: a changed dive's books are replayed, down as well as up", async (
   }
 });
 
-// scores reference competitor_dive_lists(event, competitor, round) with no
+// WA 8.6.6: a failed dive gets 0 points, and 0 points isn't anybody's
+// record. A first go at a dive that the referee failed used to land in the
+// personal, club and national books as 0.00, either from the last held
+// award (checkAndApplyRecords only asked whether it beat something) or from
+// the replay after the call, which also swapped a mark the dive had just
+// set for its own 0.00.
+test("records: a dive worth 0 points never sets or keeps a record", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const lib = recordKit.lib();
+    const club = await recordKit.club(st.orgId, "Zero Divers", "ZRD");
+    const failed = await recordKit.diver(st.orgId, club, "female", "Ada Failed");
+    const early = await recordKit.diver(st.orgId, club, "female", "Bea Early");
+    const star = await recordKit.diver(st.orgId, club, "female", "Cat Star");
+    const dive = await recordKit.threeMetreDive();
+    const women = await recordKit.event(st.orgId, { gender: "Female" });
+    const at = (who) => ({ eventId: women.id, competitorId: who, roundNumber: 1 });
+    const personal = async (who) => (await pool.query(
+      "SELECT score::float FROM records_personal WHERE user_id = $1", [who],
+    )).rows;
+    const book = async (tbl, col, id) => (await pool.query(
+      `SELECT holder_id, score::float, prev_score::float, set_at FROM ${tbl} WHERE ${col} = $1`, [id],
+    )).rows;
+
+    // Failed before the panel scored, so every award was held to 0.
+    await recordKit.dive(women, failed, 1, dive, 0);
+    assert.deepEqual(await lib.checkAndApplyRecords(at(failed)), []);
+    assert.deepEqual(await lib.recomputeRecordKeys(at(failed)), { broken: [], changed: false });
+    assert.deepEqual(await personal(failed), []);
+    assert.deepEqual(await book("records_club", "club_id", club), []);
+
+    // The next real dive is a first mark, not a record that beat 0.00.
+    // Its scores are backdated so the replay below can show it keeps the
+    // dive's own date when it comes back.
+    await recordKit.dive(women, early, 1, dive, 6);
+    await pool.query(
+      "UPDATE scores SET created_at = '2026-01-02T10:00:00Z' WHERE event_id = $1 AND competitor_id = $2",
+      [women.id, early],
+    );
+    const first = await lib.checkAndApplyRecords(at(early));
+    assert.equal(first.find((b) => b.scope === "club")?.prev_score, null, JSON.stringify(first));
+    const earlyMark = (await book("records_club", "club_id", club))[0].score;
+    await recordKit.dive(women, star, 1, dive, 7);
+    await lib.checkAndApplyRecords(at(star));
+    assert.equal((await book("records_club", "club_id", club))[0].holder_id, star);
+
+    // The referee fails the record holder's dive after it was scored: the
+    // book goes back to the mark it beat, dated when that dive was scored,
+    // and the failed dive keeps no personal best either.
+    await pool.query("UPDATE scores SET score = 0 WHERE event_id = $1 AND competitor_id = $2", [women.id, star]);
+    let out = await lib.recomputeRecordKeys(at(star));
+    assert.deepEqual(out.broken, []);
+    assert.equal(out.changed, true);
+    for (const [tbl, col, id] of [["records_club", "club_id", club], ["records_federation", "org_id", st.orgId]]) {
+      const rows = await book(tbl, col, id);
+      assert.equal(rows.length, 1, tbl);
+      assert.equal(rows[0].holder_id, early, tbl);
+      assert.equal(rows[0].score, earlyMark, tbl);
+      assert.equal(rows[0].prev_score, null, tbl);
+      assert.equal(rows[0].set_at.toISOString(), "2026-01-02T10:00:00.000Z", `${tbl} keeps the dive's date`);
+    }
+    assert.deepEqual(await personal(star), []);
+
+    // And with nobody else left in the book, failing that dive empties it.
+    // The rows go to history, same as any replaced record.
+    await pool.query("UPDATE scores SET score = 0 WHERE event_id = $1 AND competitor_id = $2", [women.id, early]);
+    out = await lib.recomputeRecordKeys(at(early));
+    assert.equal(out.changed, true);
+    assert.deepEqual(await book("records_club", "club_id", club), []);
+    assert.deepEqual(await book("records_federation", "org_id", st.orgId), []);
+    assert.deepEqual(await personal(early), []);
+    const archived = (await pool.query(
+      "SELECT holder_id FROM records_club_history WHERE club_id = $1 ORDER BY score", [club],
+    )).rows.map((r) => r.holder_id);
+    assert.ok(archived.includes(early) && archived.includes(star), JSON.stringify(archived));
+  } finally {
+    await recordKit.cleanup(st.orgId);
+    await teardownFixture(st);
+  }
+});
+
+// Production may still hold 0.00 marks from failed dives, written before
+// the live path learned to skip them. rebuild-records is the repair: the
+// dry run lists them, --apply takes them out (history keeps a copy) and
+// clears the prev_score of any record that "beat" one.
+test("records: rebuild-records reports 0.00 marks from failed dives and --apply clears them", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const { rebuildRecords, report } = require("../scripts/rebuild-records");
+  const { spawnSync } = require("node:child_process");
+  const path = require("node:path");
+  const st = await setupFixture({ withEvent: false });
+  const client = await pool.connect();
+  try {
+    const lib = recordKit.lib();
+    const club = await recordKit.club(st.orgId, "Leftover Divers", "LOD");
+    const her = await recordKit.diver(st.orgId, club, "female", "Dot Leftover");
+    const [d1, d2] = (await pool.query(
+      "SELECT id FROM dive_directory WHERE height = 3 AND is_custom = FALSE ORDER BY dive_code, position LIMIT 2",
+    )).rows.map((r) => r.id);
+    const women = await recordKit.event(st.orgId, { gender: "Female" });
+    // What the old code left behind. d1: a failed first go, filed as 0.00
+    // in every book. d2: the same, and then a real dive that "beat" it, so
+    // that record carries prev_score 0.
+    const zeroMarks = async (diveId) => {
+      const params = [her, women.id, diveId];
+      await pool.query(
+        `INSERT INTO records_personal (user_id, gender, height, dive_code, position, score, event_id)
+         SELECT $1, 'Female', '3m', dive_code, position, 0, $2 FROM dive_directory WHERE id = $3`, params);
+      await pool.query(
+        `INSERT INTO records_club (club_id, holder_id, gender, height, dive_code, position, score, event_id)
+         SELECT $4, $1, 'Female', '3m', dive_code, position, 0, $2 FROM dive_directory WHERE id = $3`, [...params, club]);
+      await pool.query(
+        `INSERT INTO records_federation (org_id, holder_id, gender, height, dive_code, position, score, event_id)
+         SELECT $4, $1, 'Female', '3m', dive_code, position, 0, $2 FROM dive_directory WHERE id = $3`, [...params, st.orgId]);
+    };
+    await recordKit.dive(women, her, 1, d1, 0);
+    await zeroMarks(d1);
+    await recordKit.dive(women, her, 2, d2, 0);
+    await zeroMarks(d2);
+    await recordKit.dive(women, her, 3, d2, 6);
+    await lib.checkAndApplyRecords({ eventId: women.id, competitorId: her, roundNumber: 3 });
+    const snapshot = async () => (await pool.query(
+      `SELECT 'club' AS book, score::float, prev_score::float FROM records_club WHERE club_id = $1
+       UNION ALL SELECT 'national', score::float, prev_score::float FROM records_federation WHERE org_id = $2
+       UNION ALL SELECT 'personal', score::float, prev_score::float FROM records_personal WHERE user_id = $3
+       ORDER BY 1, 2`, [club, st.orgId, her])).rows;
+    const before = await snapshot();
+    assert.equal(before.filter((r) => r.score === 0).length, 3, JSON.stringify(before));
+    assert.equal(before.filter((r) => r.prev_score === 0).length, 3, JSON.stringify(before));
+
+    const dry = await rebuildRecords(client, { orgId: st.orgId });
+    for (const scope of ["personal", "club", "federation"]) {
+      const c = dry.find((r) => r.scope === scope).counts;
+      assert.equal(c.removed, 1, `${scope}: ${JSON.stringify(c)}`);
+      assert.equal(c.prev, 1, `${scope}: ${JSON.stringify(c)}`);
+      assert.equal(c.added + c.changed, 0, `${scope}: ${JSON.stringify(c)}`);
+    }
+    assert.deepEqual(await snapshot(), before, "a dry run writes nothing");
+    assert.match(report(dry, { apply: false, verbose: true }), /removed .* was 0(\.00)?\b/);
+
+    // The command the operator runs, same database through the same env.
+    const cli = spawnSync(process.execPath,
+      [path.join(__dirname, "..", "scripts", "rebuild-records.js"), "--org", st.orgId, "--verbose"],
+      { env: { ...process.env }, encoding: "utf8", timeout: 60_000 });
+    assert.equal(cli.status, 0, cli.stderr);
+    assert.match(cli.stdout, /DRY RUN/);
+    assert.match(cli.stdout, /removed .* was 0(\.00)?\b/);
+    assert.deepEqual(await snapshot(), before, "the CLI dry run writes nothing either");
+
+    await rebuildRecords(client, { orgId: st.orgId, apply: true });
+    const after = await snapshot();
+    assert.deepEqual(after.map((r) => r.book), ["club", "national", "personal"], JSON.stringify(after));
+    assert.ok(after.every((r) => r.score > 0 && r.prev_score === null), JSON.stringify(after));
+    const kept = (await pool.query(
+      "SELECT count(*)::int AS n FROM records_club_history WHERE club_id = $1 AND score = 0", [club],
+    )).rows[0].n;
+    assert.equal(kept, 2, "both 0.00 club rows are in history");
+
+    const again = await rebuildRecords(client, { orgId: st.orgId });
+    for (const r of again) {
+      const c = r.counts;
+      assert.equal(c.changed + c.added + c.removed + c.prev, 0, `${r.scope}: ${JSON.stringify(c)}`);
+    }
+  } finally {
+    client.release();
+    await recordKit.cleanup(st.orgId);
+    await teardownFixture(st);
+  }
+});
 // ON UPDATE, so moving the dive lists and the scores in two statements
 // failed the whole claim for anyone who had ever been scored.
 test("claiming a past account with scored dives moves them", async (t) => {
@@ -8223,6 +8394,74 @@ test("referee calls hold the awards that land after them (WA 8.6.6, 8.4.7)", asy
     assert.deepEqual(await stored(3), { [j1.id]: 7 });
   } finally {
     socks.forEach((s) => s.close());
+    await compKit.cleanup(orgId);
+  }
+});
+
+// The same thing through the sockets a meet actually uses. The rehearsal
+// found "403C 0.00" in the national, club and personal books after a
+// Failed call. A dive that holds a book has to lose it the moment the call
+// lands, and one failed before the panel scored can't get into one.
+test("records: a referee Failed call takes a dive's record away and never sets one", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const orgId = await compKit.org("zero");
+  const socks = [];
+  try {
+    const referee = await compKit.user(orgId, "Zero Referee", ["referee"]);
+    const judges = [];
+    for (let i = 1; i <= 5; i++) judges.push(await compKit.user(orgId, `Zero Judge ${i}`, ["judge"]));
+    const ada = await compKit.user(orgId, "Zero Ada", ["diver"]);
+    const bea = await compKit.user(orgId, "Zero Bea", ["diver"]);
+    const cat = await compKit.user(orgId, "Zero Cat", ["diver"]);
+    const eventId = await compKit.event(orgId, { status: "Live", gender: "Female", total_rounds: 1 });
+    const dives = await compKit.dives(1);
+    for (const d of [ada, bea, cat]) await compKit.enter(eventId, d.id, dives);
+    await compKit.panel(eventId, judges);
+    const rs = await compKit.socket(referee.token);
+    socks.push(rs);
+    const js = await Promise.all(judges.map((j) => compKit.socket(j.token)));
+    socks.push(...js);
+    const dive = (who) => ({ event_id: eventId, competitor_id: who.id, round_number: 1 });
+    const scoreAll = async (who, score) => {
+      for (const j of js) assert.equal((await compKit.ask(j, "submit_score", { ...dive(who), score })).ok, true);
+    };
+    const national = async () => (await pool.query(
+      "SELECT holder_id, prev_score::float FROM records_federation WHERE org_id = $1", [orgId],
+    )).rows;
+    const personal = async (who) => (await pool.query(
+      "SELECT score::float FROM records_personal WHERE user_id = $1", [who.id],
+    )).rows;
+    // The records check runs after the ack, not before it.
+    const settle = async (ok) => {
+      for (let i = 0; i < 60; i++) {
+        if (await ok()) return true;
+        await new Promise((r) => setTimeout(r, 50));
+      }
+      return false;
+    };
+
+    await scoreAll(ada, 6);
+    assert.ok(await settle(async () => (await national())[0]?.holder_id === ada.id), "Ada sets the first mark");
+    await scoreAll(bea, 7);
+    assert.ok(await settle(async () => (await national())[0]?.holder_id === bea.id), "Bea beats it");
+
+    // Failed after the panel scored: the book goes back to Ada, and Bea
+    // doesn't keep a 0.00 personal best.
+    assert.deepEqual(await compKit.ask(rs, "referee_failed_dive", dive(bea)), { ok: true });
+    assert.ok(await settle(async () => (await national())[0]?.holder_id === ada.id), JSON.stringify(await national()));
+    assert.deepEqual(await national(), [{ holder_id: ada.id, prev_score: null }]);
+    assert.ok(await settle(async () => (await personal(bea)).length === 0), JSON.stringify(await personal(bea)));
+
+    // Failed before anyone scored: the held awards come to nothing.
+    assert.deepEqual(await compKit.ask(rs, "referee_failed_dive", dive(cat)), { ok: true });
+    await scoreAll(cat, 9);
+    await new Promise((r) => setTimeout(r, 400));
+    assert.deepEqual(await personal(cat), []);
+    assert.deepEqual(await national(), [{ holder_id: ada.id, prev_score: null }]);
+  } finally {
+    socks.forEach((s) => s.close());
+    await recordKit.cleanup(orgId);
     await compKit.cleanup(orgId);
   }
 });

@@ -772,9 +772,9 @@
  * @property {string}  height       board_height, e.g. '3m'
  * @property {string}  dive_code
  * @property {string}  position     A / B / C / D
- * @property {string}  score        numeric, arrives as text
+ * @property {string}  score        numeric, arrives as text; always above 0 (a failed dive never sets one)
  * @property {string|null} prev_score  what this record beat; null for a first mark
- * @property {string}  set_at
+ * @property {string}  set_at       when the dive that set it was scored
  * @property {string|null} holder_id
  * @property {string|null} holder_name
  * @property {string|null} holder_country_code  the holder's federation country

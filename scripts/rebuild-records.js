@@ -32,9 +32,16 @@
 //   changed       a different record should stand here
 //   added         a record the table is missing
 //   removed       a row the scores don't support (e.g. from a synchro
-//                 event, or an unresolved gender left NULL by 094)
+//                 event, an unresolved gender left NULL by 094, or a
+//                 0.00 mark from a failed dive)
 //   unverifiable  the row's event has been deleted, so its scores are
-//                 gone. Left alone unless the replay beats it.
+//                 gone. Left alone unless the replay beats it (a 0.00
+//                 row goes regardless, it was never a real mark).
+//
+// A dive worth 0 points (failed by the referee, WA 8.6.6) never counts.
+// Before that rule reached the live path a failed first go at a dive
+// went into the books as 0.00, and a later dive "beat" it with
+// prev_score 0. The first shows up here as removed, the second as prev.
 //
 // --apply copies every changed, removed or beaten row into the matching
 // *_history table before replacing it, so nothing is thrown away, and
@@ -123,7 +130,7 @@ async function rebuildScope(client, scope, { orgId, apply }) {
             COALESCE(x.dive_code, n.dive_code) || COALESCE(x.position, n.position)::text AS book_dive,
             CASE
               WHEN x.id IS NULL THEN 'added'
-              WHEN n.scope_id IS NULL AND x.event_id IS NULL THEN 'unverifiable'
+              WHEN n.scope_id IS NULL AND x.event_id IS NULL AND x.score > 0 THEN 'unverifiable'
               WHEN n.scope_id IS NULL THEN 'removed'
               WHEN x.event_id IS NULL AND n.score <= x.score THEN 'unverifiable'
               WHEN x.holder_id = n.holder_id AND x.score = n.score AND x.event_id = n.event_id
