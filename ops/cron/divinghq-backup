@@ -2,14 +2,16 @@
 # the DivingHQ repo. ops/backups/README.md has the install steps; don't edit
 # the copy in /etc by hand, change the repo and reinstall.
 #
-# The times are UTC and cron reads them in the box's own time zone, so the
-# box has to be on UTC (`date +%Z` prints UTC). If it isn't, move the hours
-# rather than the clock. 16:30 UTC is 02:30 in Sydney in winter (AEST) and
-# 03:30 in summer (AEDT), both well outside meet hours.
+# Cron reads the times in the box's own time zone, and the live box runs on
+# Australia/Sydney (`date +%Z` prints AEST or AEDT). 03:30 and 04:30 are
+# local times, well outside meet hours, and clear of the 02:00-03:00 hour
+# that daylight saving skips or repeats, so neither job runs twice or not at
+# all on the changeover night. On a box kept on UTC, move the hours rather
+# than the clock.
 #
-#   nightly  16:30 UTC  backup-db.sh     dump, keep 14, encrypted copy to R2
-#   Sundays  17:30 UTC  restore-check.sh restore the newest dump into a
-#                                        scratch database and compare
+#   nightly  03:30  backup-db.sh     dump, keep 14, encrypted copy to R2
+#   Sundays  04:30  restore-check.sh restore the newest dump into a
+#                                    scratch database and compare
 #
 # Both append to /var/log/divinghq-backup.log (rotated by
 # /etc/logrotate.d/divinghq-backup). Their outcome also lands in
@@ -21,5 +23,5 @@ SHELL=/bin/bash
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 DIVINGHQ_DIR=/root/DiveRecorder
 
-30 16 * * *  root  "$DIVINGHQ_DIR/scripts/ops/backup-db.sh" >> /var/log/divinghq-backup.log 2>&1
-30 17 * * 0  root  "$DIVINGHQ_DIR/scripts/ops/restore-check.sh" >> /var/log/divinghq-backup.log 2>&1
+30 3 * * *   root  "$DIVINGHQ_DIR/scripts/ops/backup-db.sh" >> /var/log/divinghq-backup.log 2>&1
+30 4 * * 0   root  "$DIVINGHQ_DIR/scripts/ops/restore-check.sh" >> /var/log/divinghq-backup.log 2>&1

@@ -7,14 +7,16 @@ status endpoint that tells the outside monitor how all of that is going.
 Everything here runs on the app's box, as root, from cron. Nothing needs the
 app to be up.
 
-| What | When (UTC) | Script | Leaves behind |
+| What | When (box time, Sydney) | Script | Leaves behind |
 |---|---|---|---|
-| Backup | nightly 16:30 | `scripts/ops/backup-db.sh` | `/var/backups/divinghq/divinghq-<stamp>.dump`, the newest 14 kept; `divinghq/<stamp>.dump.enc` in R2; `/var/lib/divinghq/backup.json` |
-| Restore check | Sundays 17:30 | `scripts/ops/restore-check.sh` | `/var/lib/divinghq/restore-check.json` |
+| Backup | nightly 03:30 | `scripts/ops/backup-db.sh` | `/var/backups/divinghq/divinghq-<stamp>.dump`, the newest 14 kept; `divinghq/<stamp>.dump.enc` in R2; `/var/lib/divinghq/backup.json` |
+| Restore check | Sundays 04:30 | `scripts/ops/restore-check.sh` | `/var/lib/divinghq/restore-check.json` |
 | Deploy | whenever you run it | `deploy.sh` | `/var/lib/divinghq/deploy.json` |
 
-16:30 UTC is 02:30 in Sydney in winter and 03:30 in summer. Both scripts log
-to `/var/log/divinghq-backup.log`.
+The times are the box's local time (the live box runs on Australia/Sydney),
+picked to stay clear of the 02:00-03:00 hour daylight saving skips or
+repeats. The backup's file names and the status fields are in UTC. Both
+scripts log to `/var/log/divinghq-backup.log`.
 
 Don't deploy while the nightly dump is running (`pgrep -a pg_dump` shows
 it). `pg_dump` holds a share lock on every table until it finishes. A
@@ -85,17 +87,18 @@ if it doesn't, change the path here and `DIVINGHQ_DIR` in the cron file.
 
 1. **Check the tools and the clock.** `pg_dump` must be at least the server's
    major version (Debian's `postgresql-client` from the same install is), and
-   the cron times assume the box runs on UTC.
+   the cron times are read in the box's own time zone.
 
    ```bash
    pg_dump --version && psql --version && openssl version
    curl --help all | grep -q aws-sigv4 && echo "curl can sign for R2"
-   date +%Z                                # should print UTC
+   date +%Z                                # AEST or AEDT on the live box
    systemctl is-active cron || apt install -y cron
    ```
 
-   If `date +%Z` isn't UTC, either move the box to UTC or change the two hour
-   fields in the cron file you install in step 6.
+   The cron file's times (03:30 nightly, 04:30 Sundays) are meant as Sydney
+   time. On a box in another zone, change the two hour fields in the cron
+   file you install in step 6 rather than the box's clock.
 
 2. **Directories.**
 
