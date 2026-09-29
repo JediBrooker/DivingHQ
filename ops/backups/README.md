@@ -50,7 +50,8 @@ database: `schema_meta.version` must match, and the row counts of `users`,
 rows, or between half and double). The scratch database is dropped again
 whatever happened, and `restore-check.json` gets `{ last_run_at, ok }`. It
 refuses to run if the scratch name is the live database's name, or doesn't
-contain `restore_check`.
+contain `restore_check`. While it runs, the scratch copy takes about as much
+disk as the live database does, so keep that much free.
 
 **deploy.sh** writes `deploy.json` once its `git pull` has landed: `ok: true`
 and the commit when it gets to the end, `ok: false` and the commit it was
