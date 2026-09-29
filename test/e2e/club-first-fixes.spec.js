@@ -85,6 +85,10 @@ test("a club admin sees members' requests on the dashboard, and can step down cl
   // The founder has no dashboard tab of their own, but gets the chip, and
   // it goes straight to the page where they approve.
   await signIn(page, A.username);
+  // No org role in a country with no federation, but they run the club:
+  // the sidebar used to call them "Spectator".
+  const roleLine = page.locator(".sb-user .rl");
+  await expect(roleLine).toHaveText("Club Admin");
   const chip = page.locator(".pulse-chip", { hasText: /pending/i });
   await expect(chip).toBeVisible();
   await expect(chip).toContainText("1");
@@ -127,6 +131,7 @@ test("a club admin sees members' requests on the dashboard, and can step down cl
   await expect(page.getByText(/no longer an admin of Adamstown Divers/)).toBeVisible();
   const nav = page.getByRole("navigation", { name: "Primary" });
   await expect(nav.getByRole("link", { name: /My club/ })).toHaveCount(0);
+  await expect(roleLine).toHaveText("Spectator");
   const left = await setup.pool.query("SELECT 1 FROM club_admins WHERE user_id = $1", [A.id]);
   expect(left.rows).toHaveLength(0);
 });

@@ -767,7 +767,7 @@ function onDiverSearchBlur() {
 
 // ---- Static data ------------------------------------------
 const welcomeName = computed(() => auth.user?.full_name?.toUpperCase() || '—')
-const roleLine    = computed(() => auth.formatRoles(auth.user?.org_roles || []))
+const roleLine    = computed(() => auth.roleLine)
 
 // Org-admin's "what needs your attention" cards, preserved
 // from the old action-strip but now scoped inside the org_admin

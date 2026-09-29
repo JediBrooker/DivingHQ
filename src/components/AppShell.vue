@@ -180,7 +180,7 @@ const initials = computed(() =>
 )
 const roleLabel = computed(() => {
   if (auth.user?.is_system_admin) return 'System admin'
-  return auth.formatRoles(auth.user?.org_roles || []) || 'Member'
+  return auth.roleLine || 'Member'
 })
 
 // User menu popover

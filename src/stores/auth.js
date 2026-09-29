@@ -2,7 +2,8 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { idbClear, cachedFetch } from '@/lib/idbCache'
 import { fingerprintFromUser } from '@/lib/userFingerprint'
-import { setLocale, currentLocale } from '@/i18n'
+import i18n, { setLocale, currentLocale } from '@/i18n'
+import { roleLabels } from '@/lib/roleLabels'
 
 export const useAuthStore = defineStore('auth', () => {
   // The session credential (the JWT) lives in an httpOnly cookie now,
@@ -307,10 +308,10 @@ export const useAuthStore = defineStore('auth', () => {
     return result
   }
 
-  function formatRoles(roles = []) {
-    const LABELS = { org_admin:'Org Admin', meet_manager:'Meet Manager', referee:'Referee', judge:'Judge', diver:'Diver', spectator:'Spectator' }
-    return roles.map(r => LABELS[r] ?? r).join(' · ')
-  }
+  // "Referee", "Club Admin", "Org Admin · Diver": what this person does
+  // here, in their language. See src/lib/roleLabels.js for why it isn't
+  // just org_roles. Follows a locale switch, since t reads the locale.
+  const roleLine = computed(() => roleLabels(user.value, i18n.global.t).join(' · '))
 
   return {
     user, isLoggedIn, fingerprint, hasDependents, clubAdminOf, isClubAdmin,
@@ -319,6 +320,6 @@ export const useAuthStore = defineStore('auth', () => {
     saveLocale, adoptAccountLocale, notePickedLocale,
     hasRole, hasAnyRole, getHeaders,
     apiFetch, cachedApiFetch,
-    formatRoles,
+    roleLine,
   }
 })
