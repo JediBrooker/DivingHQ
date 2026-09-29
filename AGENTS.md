@@ -93,6 +93,7 @@ ship code (or docs) that misrepresents the rule.
 | `src/composables/`    | Vue composables. **ESM** (sub-package.json `type: module`). Pure logic ones (`useScoreTrim`, `useScoreCategories`) are unit-tested in `test/score-trim.test.js`. |
 | `docs/design-system.md` | Frontend token/component conventions. Read before adding new view CSS, shared UI classes, or reusable components. |
 | `docs/socket-events.md` | Socket.IO event registry — every event the server listens for or emits, the role gate, and the payload shape. **Update this in the same commit when you add or change an event.** |
+| `ops/`                | Operator bits that run beside the app: the observability stack, the replica runbook, and `ops/watch/`, the Cloudflare Worker that checks `/api/health` + `/api/ops/status` from outside and emails alerts (its own `wrangler.toml`, no npm deps, deployed by hand). |
 | `test/`               | `node:test` suites. `syntax`, `calc`, `score-trim` run without a DB; `integration` skips when DB unreachable. |
 
 ---
@@ -522,6 +523,7 @@ A non-exhaustive checklist:
 | `KNOWN_WIDGETS` (diver) | `WIDGET_CATALOG` in `src/views/DiverProfileView.vue` |
 | `KNOWN_WIDGETS` in `routes/judge-analytics.js` | `JUDGE_WIDGET_CATALOG` in `src/views/JudgeProfileView.vue` |
 | Record scopes, record columns, or who sets a record | `lib/records.js` (`RECORD_TABLES`, `checkAndApplyRecords`, the `GET /api/records` UNION, `eventRecordMarks`), `record_gender()` (migration 094), `scripts/rebuild-records.js` (replays with the same rules), `src/views/RecordsView.vue`, the scoreboard chip (`src/lib/recordMarks.js`, `RecordChip.vue`), `record_broken` in `docs/socket-events.md`, `src/types.js` (`RecordRow`, `ScoreboardRecordMark`), and the Records section of `src/guide/content/admin-tasks.md` |
+| The `/api/ops/status` response shape | `ops/watch/src/evaluate.js`: the external watcher reads every field (its `OpsStatus` typedef mirrors the contract), so a renamed field turns into a silent blind spot. `test/watch-evaluate.test.js` builds the body it expects. |
 | A socket event | its gate (`guardControl` / `socketCanManageEvent`, or an explicit check), every consumer (`socket.on('eventName')` grep), `docs/socket-events.md` (`test/socket-events-doc.test.js` fails if it's missing) |
 | Anything in `src/composables/` | The handful of consumers, since composables aren't auto-typed |
 | The `<head>` of `index.html` (canonical, `og:*`, `twitter:*`) | `lib/spa-shell.js` rewrites the canonical link and `og:url` per request by matching those tags as written; `test/spa-shell.test.js` pins it |

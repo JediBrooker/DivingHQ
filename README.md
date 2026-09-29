@@ -486,6 +486,8 @@ Flags:
 
 `GET /api/health` returns `{ ok: true, schema_version }` on success or `503 { ok: false }` if the DB pool can't issue a trivial query. No auth — point any uptime monitor (UptimeRobot, BetterStack, etc.) at `https://your-domain/api/health` on a 60s interval.
 
+divinghq.app is watched by a small Cloudflare Worker in [`ops/watch/`](ops/watch/README.md). Every 2 minutes it checks `/api/health` and `/api/ops/status` from outside and emails the operator when the site or its database is down, a backup or restore check has failed or gone stale, a deploy failed, or the 5xx rate spikes. Its README covers deploying it, changing the recipient and pausing it.
+
 ### Rolling back a bad deploy
 
 If `deploy.sh` fails the health check it prints the exact rollback command:
