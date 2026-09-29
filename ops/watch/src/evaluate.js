@@ -115,9 +115,11 @@ function freshState() {
     last: null,
     down: { fails: 0, since: null, alerted: false, lastAlertAt: null },
     db: { fails: 0, since: null, alerted: false, lastAlertAt: null },
-    backup: { failing: false, since: null, alerted: false, lastAlertAt: null, noneSince: null },
+    // baseline: the last success (backup) or last run (restore) on record
+    // when the trouble started. Only something newer counts as a recovery.
+    backup: { failing: false, since: null, alerted: false, lastAlertAt: null, noneSince: null, baseline: null },
     offsite: { failedSince: null, failedAlerted: false, failedLastAlertAt: null, unconfiguredLastAlertAt: null },
-    restore: { failing: false, since: null, alerted: false, lastAlertAt: null, noneSince: null },
+    restore: { failing: false, since: null, alerted: false, lastAlertAt: null, noneSince: null, baseline: null },
     deploy: { lastAlertedKey: null },
     errors: { lastAlertAt: null },
     blind: { since: null, lastAlertAt: null },
@@ -354,22 +356,35 @@ function checkBackup(s, st, ctx) {
   } else if (now - successMs > LIMITS.BACKUP_MAX_AGE_MS) problem = "stale";
 
   if (!problem) {
-    if (sec.alerted) {
-      fire(ctx, "backup.recovered", "backups OK again", "Backups are working again", [
-        `Last successful backup: ${ctx.ago(successMs)}.`,
-        count(b.size_bytes) !== null ? `Size: ${formatBytes(b.size_bytes)}.` : null,
-      ]);
+    // The rule clearing isn't proof a backup worked. backup.json going
+    // unreadable (every field null, so "never" with a fresh grace period)
+    // clears it too, and so would last_ok dropping to null while a run is
+    // in flight. Telling someone "working again, last success: never" is
+    // worse than saying nothing, so only a success newer than the one on
+    // record when this started ends it. Anything else holds still.
+    if (sec.failing) {
+      const base = toMs(sec.baseline);
+      const fresh = successMs !== null && (base === null || successMs > base);
+      if (!fresh && sec.alerted) return;
+      if (fresh && sec.alerted) {
+        fire(ctx, "backup.recovered", "backups OK again", "Backups are working again", [
+          `Last successful backup: ${ctx.ago(successMs)}.`,
+          count(b.size_bytes) !== null ? `Size: ${formatBytes(b.size_bytes)}.` : null,
+        ]);
+      }
     }
     sec.failing = false;
     sec.since = null;
     sec.alerted = false;
     sec.lastAlertAt = null;
+    sec.baseline = null;
     return;
   }
 
   if (!sec.failing) {
     sec.failing = true;
     sec.since = toIso(now);
+    sec.baseline = toIso(successMs);
   }
   if (sec.alerted && !isDue(sec.lastAlertAt, LIMITS.BACKUP_REMIND_MS, now)) return;
 
@@ -478,21 +493,31 @@ function checkRestore(s, st, ctx) {
   } else if (now - runMs > LIMITS.RESTORE_MAX_AGE_MS) problem = "stale";
 
   if (!problem) {
-    if (sec.alerted) {
-      fire(ctx, "restore.recovered", "restore check OK again", "The restore check passes again", [
-        `Last restore check: ${ctx.ago(runMs)}, and it restored cleanly.`,
-      ]);
+    // Same idea as backups: the note says it restored cleanly, so it needs
+    // a newer run that actually said ok: true, not a file that went
+    // missing or an ok that's null.
+    if (sec.failing) {
+      const base = toMs(sec.baseline);
+      const fresh = r.ok === true && runMs !== null && (base === null || runMs > base);
+      if (!fresh && sec.alerted) return;
+      if (fresh && sec.alerted) {
+        fire(ctx, "restore.recovered", "restore check OK again", "The restore check passes again", [
+          `Last restore check: ${ctx.ago(runMs)}, and it restored cleanly.`,
+        ]);
+      }
     }
     sec.failing = false;
     sec.since = null;
     sec.alerted = false;
     sec.lastAlertAt = null;
+    sec.baseline = null;
     return;
   }
 
   if (!sec.failing) {
     sec.failing = true;
     sec.since = toIso(now);
+    sec.baseline = toIso(runMs);
   }
   if (sec.alerted && !isDue(sec.lastAlertAt, LIMITS.RESTORE_REMIND_MS, now)) return;
 

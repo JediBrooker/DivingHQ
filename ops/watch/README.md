@@ -61,6 +61,10 @@ A few behaviours worth knowing:
 * **KV writes stay low.** State is only written when something that
   matters changes, plus a heartbeat every 30 minutes. A quiet day is about
   50 writes, well under the free plan's 1,000.
+* **Recovery notes need proof.** "Backups OK again" waits for a success
+  newer than the one on record when the trouble started, and "restore
+  check OK again" for a newer run that said `ok: true`. A state file that
+  goes missing clears nothing.
 
 Subjects are short so they read on a lock screen: `[DivingHQ] DOWN`,
 `[DivingHQ] still DOWN (1 h 2 min)`, `[DivingHQ] back up after 12 min`,

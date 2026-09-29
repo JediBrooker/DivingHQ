@@ -350,6 +350,70 @@ describe("BACKUP", () => {
     const ahead = withBackup((now) => ({ ...statusBody(now).backup, last_success_at: iso(now + 5 * MIN) }));
     assert.deepEqual(ids(watcher().run(ahead)), []);
   });
+
+  // Fixed timestamps from here on, the way a real backup.json holds still
+  // between runs.
+  const lastGood = iso(T0 - 20 * HOUR);
+  const fixedFail = withBackup(() => ({
+    last_attempt_at: iso(T0 - 10 * MIN),
+    last_success_at: lastGood,
+    last_ok: false,
+    offsite: "ok",
+    size_bytes: null,
+  }));
+  const unreadable = withBackup(() => ({
+    last_attempt_at: null,
+    last_success_at: null,
+    last_ok: null,
+    offsite: null,
+    size_bytes: null,
+  }));
+
+  test("backup.json going unreadable after a failure isn't a recovery", () => {
+    const w = watcher();
+    assert.deepEqual(ids(w.run(fixedFail)), ["backup.failed"]);
+    // Every field null clears the rule on paper (no failure, "never" still
+    // inside its grace), but nothing worked, so no "working again".
+    for (let i = 0; i < 5; i++) assert.deepEqual(ids(w.tick(unreadable)), []);
+    assert.equal(w.state.backup.alerted, true);
+    // Still nothing a day on: the "none" alert is due (26 h since first
+    // seen null, 12 h since the last email) and says so.
+    assert.deepEqual(ids(w.run(unreadable, { at: T0 + 27 * HOUR })), ["backup.none"]);
+    // A real success after all that is the recovery.
+    const back = w.tick(allOk);
+    assert.deepEqual(ids(back), ["backup.recovered"]);
+    assert.doesNotMatch(back[0].lines.join("\n"), /never/);
+  });
+
+  test("last_ok dropping to null over the same old success isn't a recovery either", () => {
+    const w = watcher();
+    w.run(fixedFail);
+    const inFlight = withBackup(() => ({
+      last_attempt_at: iso(T0 + HOUR),
+      last_success_at: lastGood,
+      last_ok: null,
+      offsite: "ok",
+      size_bytes: null,
+    }));
+    assert.deepEqual(ids(w.run(inFlight, { at: T0 + HOUR })), []);
+    // And failing again inside the 12 hours stays throttled, no fresh alert.
+    assert.deepEqual(ids(w.run(fixedFail, { at: T0 + 2 * HOUR })), []);
+    assert.deepEqual(ids(w.run(fixedFail, { at: T0 + 12 * HOUR })), ["backup.failed"]);
+  });
+
+  test("a newer success ends it even when the old one was never", () => {
+    const w = watcher();
+    const neverOk = withBackup(() => ({
+      last_attempt_at: iso(T0),
+      last_success_at: null,
+      last_ok: false,
+      offsite: null,
+      size_bytes: null,
+    }));
+    assert.deepEqual(ids(w.run(neverOk)), ["backup.failed"]);
+    assert.deepEqual(ids(w.tick(allOk)), ["backup.recovered"]);
+    assert.equal(w.state.backup.baseline, null);
+  });
 });
 
 // ---- OFFSITE --------------------------------------------------------------
@@ -423,6 +487,21 @@ describe("RESTORE CHECK", () => {
     assert.deepEqual(ids(w.run(never)), []);
     assert.deepEqual(ids(w.run(never, { at: T0 + 8 * DAY })), []);
     assert.deepEqual(ids(w.run(never, { at: T0 + 8 * DAY + RUN })), ["restore.never"]);
+  });
+
+  test("'restored cleanly' needs a newer run that said ok: true", () => {
+    const w = watcher();
+    const failedRun = iso(T0 - HOUR);
+    assert.deepEqual(ids(w.run(restore(() => ({ last_run_at: failedRun, ok: false })))), ["restore.failed"]);
+    // restore-check.json unreadable: not a pass.
+    assert.deepEqual(ids(w.tick(restore(() => ({ last_run_at: null, ok: null })))), []);
+    // A newer run that hasn't said how it went: not a pass either.
+    assert.deepEqual(ids(w.tick(restore((now) => ({ last_run_at: iso(now), ok: null })))), []);
+    assert.equal(w.state.restore.alerted, true);
+    const back = w.tick(restore((now) => ({ last_run_at: iso(now), ok: true })));
+    assert.deepEqual(ids(back), ["restore.recovered"]);
+    assert.match(back[0].lines.join("\n"), /restored cleanly/);
+    assert.deepEqual(ids(w.tick(allOk)), []);
   });
 });
 
