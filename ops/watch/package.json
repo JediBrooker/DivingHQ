@@ -1,0 +1,6 @@
+{
+  "name": "divinghq-watch",
+  "private": true,
+  "type": "module",
+  "_comment": "Only here so Node (the tests in test/watch-*.test.js) treats src/*.js as ESM, same trick as src/package.json. The Worker has no npm dependencies and must stay that way; wrangler bundles src/index.js as is."
+}

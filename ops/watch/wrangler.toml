@@ -1,0 +1,46 @@
+# divinghq-watch: external uptime and ops alerts for divinghq.app.
+# Deploy from this folder with `npx wrangler@4 deploy`; README.md has the
+# one-time steps (the KV namespace below needs its id filled in first).
+
+name = "divinghq-watch"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+
+# The workers.dev URL is how you reach GET / (current state) and
+# GET /test-alert. Nothing else needs it; set this to false to hide the
+# Worker from the internet entirely, the cron keeps running either way.
+workers_dev = true
+preview_urls = false
+
+[triggers]
+crons = ["*/2 * * * *"]
+
+[vars]
+# Base URL it checks: $TARGET/api/health and $TARGET/api/ops/status.
+TARGET = "https://divinghq.app"
+# ALERT_TO (who gets the emails) is a secret, not a var, so the address
+# stays out of this public repo: `npx wrangler@4 secret put ALERT_TO`.
+ALERT_FROM = "alerts@divinghq.app"
+ALERT_FROM_NAME = "DivingHQ watch"
+# Times in the emails are shown in this zone first, then UTC.
+TIME_ZONE = "Australia/Sydney"
+
+# All of the Worker's memory: one JSON value under the key "state".
+# Create it with `npx wrangler@4 kv namespace create WATCH_STATE` and paste
+# the id it prints here.
+[[kv_namespaces]]
+binding = "WATCH_STATE"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"
+
+# Email Routing send binding. Left unrestricted, it can send to any
+# verified Email Routing destination address on the account and nothing
+# else, which is the real guard. The From address has to be on a zone with
+# Email Routing on (divinghq.app).
+[[send_email]]
+name = "ALERT_EMAIL"
+
+[observability]
+enabled = true
+
+# TEST_KEY is a secret, not a var: `npx wrangler@4 secret put TEST_KEY`.
+# Without it GET /test-alert is a 404.

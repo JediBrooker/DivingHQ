@@ -491,6 +491,8 @@ Flags:
 
 `/metrics` (Prometheus) answers direct scrapes on the box and a plain 404 to anything that came through Cloudflare, unless it carries the `METRICS_TOKEN` bearer. See [ops/observability/README.md](ops/observability/README.md#security-notes).
 
+divinghq.app is watched by a small Cloudflare Worker in [`ops/watch/`](ops/watch/README.md). Every 2 minutes it checks `/api/health` and `/api/ops/status` from outside and emails the operator when the site or its database is down, a backup or restore check has failed or gone stale, a deploy failed, or the 5xx rate spikes. Its README covers deploying it, changing the recipient and pausing it.
+
 ### Backups
 
 A nightly `pg_dump` (14 kept on the box), an encrypted copy to Cloudflare R2, and a weekly restore of the newest one into a scratch database to prove it works, all from cron. [ops/backups/README.md](ops/backups/README.md) covers the install, the R2 setup and the restore runbook.
