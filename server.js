@@ -751,15 +751,17 @@ app.get("/api/health", async (_req, res) => {
 // requestWindow above. Public like /api/health, but it reads three files
 // on every call, so it gets a limiter. 60 a minute per IP is plenty for
 // anything polling it once a minute. See routes/ops-status.js.
-const opsStatusLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  limit: 60,
-  standardHeaders: "draft-7",
-  legacyHeaders: false,
-  message: { error: "Too many requests, please try again shortly." },
-  skip: skipWhenDisabled,
-});
-app.use(limitRoutes(opsStatusLimiter, require("./routes/ops-status")({ pool, requestWindow, logger })));
+function createStatusLimiter() {
+  return rateLimit({
+    windowMs: 60 * 1000,
+    limit: 60,
+    standardHeaders: "draft-7",
+    legacyHeaders: false,
+    message: { error: "Too many requests, please try again shortly." },
+    skip: skipWhenDisabled,
+  });
+}
+app.use(limitRoutes(createStatusLimiter(), require("./routes/ops-status")({ pool, requestWindow, logger })));
 
 // Public deployment settings for the signed-out SPA (the support address
 // in the home / login / legal footers). See routes/public-config.js.
