@@ -6,10 +6,11 @@
 //     again, so it sat on "Waiting" until someone reloaded.
 //   * The "Judging panel is live" banner parked itself over Submit and
 //     Signal Referee (bottom right, above everything) for an hour.
+//   * On an iPhone 13 sized screen the keypad keys were 18px tall.
 //
 // Phone sizes are set per context (Chromium with a mobile viewport), the
 // chromium project itself runs with no viewport. Set E2E_SHOT_DIR to keep
-// a screenshot of what the phone showed.
+// a screenshot of each phone size.
 const path = require("node:path");
 const { test, expect } = require("@playwright/test");
 const setup = require("./_setup");
@@ -81,7 +82,7 @@ test("a judge waiting on /judge picks up the first diver when the event starts",
     // panel-live notice both reach the socket straight away.
     await expect(page).toHaveURL(new RegExp(`/judge\\?event=${event.id}$`), { timeout: 5_000 });
     await expect(page.locator(".diver-name")).toContainText("AAA Early", { timeout: 5_000 });
-    await expect(page.locator(".judge-id")).toContainText("J1");
+    await expect(page.locator(".judge-id")).toContainText("— J1");
     await expect(page.locator(".submit-btn")).toBeEnabled();
     // The banner would only have brought them here, so it's cleared.
     await expect(page.locator(".notif-card")).toHaveCount(0);
@@ -162,6 +163,79 @@ test("banners on the judge screen stay clear of the keypad, Submit and Signal Re
     await expect(page).toHaveURL(new RegExp(`/judge\\?event=${Y.id}$`));
   } finally {
     await ctx.close();
+    await setup.deleteOrg(orgId);
+  }
+});
+
+// Real phone sizes. The two iPhones are the smallest the judges use and
+// have to fit the whole pad with no scrolling; the original SE is the
+// floor and may scroll, but its keys still meet the 44px minimum.
+const PHONES = [
+  { name: "iPhone 13", width: 390, height: 664, fits: true },
+  { name: "iPhone SE 3rd gen", width: 375, height: 667, fits: true },
+  { name: "Pixel 7", width: 412, height: 839, fits: true },
+  { name: "iPhone SE 1st gen", width: 320, height: 568, fits: false },
+];
+
+test("the keypad keeps thumb-sized keys on small phones", async ({ browser, request, baseURL }) => {
+  test.setTimeout(120_000);
+  const { orgId, adminToken } = await setup.createOrgAndAdmin(request, { countryCode: "AUS", orgName: "Judge Keypad" });
+  const solo = await liveEvent(request, { orgId, adminToken, name: "Keypad Solo", diverNames: ["DDD Keypad"] });
+  expect(await emitAck(baseURL, adminToken, "set_active_diver", activeDiver(solo.event, solo.divers[0], "DDD Keypad")))
+    .toMatchObject({ ok: true });
+  // Synchro is the tallest header: two names and the "You are scoring" line.
+  const sync = await liveEvent(request, {
+    orgId, adminToken, name: "Keypad Synchro", diverNames: ["EEE Synchro"], judges: 7, eventType: "synchro_pair",
+  });
+  expect(await emitAck(baseURL, adminToken, "set_active_diver", activeDiver(sync.event, sync.divers[0], "EEE Synchro", {
+    number_of_judges: 7, event_type: "synchro_pair", partner_name: "FFF Partner",
+  }))).toMatchObject({ ok: true });
+
+  const cases = [
+    ...PHONES.map((p) => ({ ...p, ev: solo, diver: "DDD Keypad" })),
+    { ...PHONES[1], name: "iPhone SE 3rd gen synchro", ev: sync, diver: "EEE Synchro" },
+  ];
+  try {
+    for (const c of cases) {
+      const { ctx, page } = await phone(browser, c.width, c.height);
+      try {
+        await signIn(page, c.ev.judges[0].username);
+        await page.goto(`/judge?event=${c.ev.event.id}`);
+        await expect(page.locator(".diver-name")).toContainText(c.diver, { timeout: 8_000 });
+        await expect(page.locator(".judge-id")).toContainText("— J1", { timeout: 6_000 });
+        await shot(page, `judge-keypad-${c.width}x${c.height}${c.ev === sync ? "-synchro" : ""}`);
+
+        const keys = await page.locator(".keypad .key").evaluateAll((els) =>
+          els.map((e) => e.getBoundingClientRect().height));
+        expect(keys).toHaveLength(12);
+        expect(Math.min(...keys), `${c.name}: key height`).toBeGreaterThanOrEqual(44);
+
+        for (const sel of [".submit-btn", ".signal-btn"]) {
+          const el = page.locator(sel);
+          if (!c.fits) await el.scrollIntoViewIfNeeded();
+          const box = await el.boundingBox();
+          expect(box.height, `${c.name}: ${sel} height`).toBeGreaterThanOrEqual(44);
+          expect(box.y + box.height, `${c.name}: ${sel} is on screen`).toBeLessThanOrEqual(c.height + 0.5);
+          expect(box.y, `${c.name}: ${sel} is on screen`).toBeGreaterThanOrEqual(0);
+        }
+        if (c.fits) {
+          // Everything on one screen: nothing to scroll.
+          const overflow = await page.evaluate(() => {
+            const el = document.querySelector(".judge-layout");
+            return el.scrollHeight - el.clientHeight;
+          });
+          expect(overflow, `${c.name}: the pad fits`).toBeLessThanOrEqual(1);
+        }
+        // The header links are still there and still tappable.
+        for (const link of ["Analysis", "Dashboard"]) {
+          const box = await page.locator(".btn-back-judge", { hasText: link }).boundingBox();
+          expect(box.height, `${c.name}: ${link} link`).toBeGreaterThanOrEqual(32);
+        }
+      } finally {
+        await ctx.close();
+      }
+    }
+  } finally {
     await setup.deleteOrg(orgId);
   }
 });
