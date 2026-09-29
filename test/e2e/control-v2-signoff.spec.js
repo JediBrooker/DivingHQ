@@ -1,0 +1,161 @@
+// Referee sign-off from the Control Room's Setup stage. Sign-off happens
+// while the event is still Upcoming, and the Control Room only joins an
+// event's socket room once it's Live, so the answer used to go to a room
+// the laptop wasn't in. The dialog sat on "Waiting for ..." (or kept
+// showing the code) until someone closed it and reloaded. These drive the
+// referee's half over the API and check the laptop moves on by itself.
+const { test, expect } = require("@playwright/test");
+const setup = require("./_setup");
+const { signIn } = require("./_meetday");
+
+test.describe.configure({ mode: "serial" });
+
+const world = {};
+
+test.beforeAll(async ({ request }) => {
+  const { orgId, username, adminToken } = await setup.createOrgAndAdmin(request, {
+    countryCode: "AUS", orgName: "V2 Signoff Diving",
+  });
+  Object.assign(world, { orgId, username, adminToken });
+  const referee = await setup.insertUser({ orgId, role: "referee", fullName: "Rhea Referee" });
+  const login = await setup.loginAs(request, referee.username);
+  world.referee = { ...referee, token: login.token };
+});
+
+test.afterAll(async () => {
+  if (world.orgId) await setup.deleteOrg(world.orgId);
+});
+
+// An Upcoming event parked on the sign-off step: checked in and drawn.
+async function eventAtSignoff(request, name) {
+  const event = await setup.createEvent(request, {
+    adminToken: world.adminToken, name, total_rounds: 1, number_of_judges: 3, height: "3m",
+  });
+  const diveId = await setup.pickDiveId({ height: 3.0, dive_code: "101", position: "B" });
+  const diver = await setup.insertUser({ orgId: world.orgId, role: "diver", fullName: `${name} Diver` });
+  await setup.insertDiveList({ eventId: event.id, competitorId: diver.userId, dives: [{ round_number: 1, dive_id: diveId }] });
+  await setup.pool.query(
+    "UPDATE events SET check_in_done_at = now(), dive_order_randomised_at = now() WHERE id = $1",
+    [event.id],
+  );
+  return event;
+}
+
+async function openSignoff(page, event) {
+  await signIn(page, world.username);
+  await page.goto(`/control?event=${event.id}`);
+  const primary = page.locator(".setup-primary");
+  await expect(primary).toContainText(/Referee Sign Off/i, { timeout: 10_000 });
+  await primary.click();
+  const dialog = page.locator('.lb-modal[role="dialog"]');
+  await expect(dialog).toBeVisible();
+  // The referee list loads after the dialog mounts.
+  await expect(dialog.locator("select.select option", { hasText: "Rhea Referee" })).toHaveCount(1, { timeout: 5_000 });
+  return { primary, dialog };
+}
+
+function asReferee() {
+  return { Authorization: `Bearer ${world.referee.token}` };
+}
+
+test("push: the dialog closes by itself once the referee approves", async ({ page, request }) => {
+  test.setTimeout(90_000);
+  const event = await eventAtSignoff(request, "Signoff Push");
+  const { primary, dialog } = await openSignoff(page, event);
+
+  await dialog.locator("select.select").selectOption({ label: "Rhea Referee" });
+  const sent = page.waitForResponse((r) => r.url().includes("/dive-order/sign-off/request") && r.request().method() === "POST");
+  await dialog.getByRole("button", { name: /Send sign-off request/ }).click();
+  const { request_id } = await (await sent).json();
+  await expect(dialog.locator(".signoff-waiting")).toContainText("Rhea Referee");
+
+  const res = await request.post(`/api/events/${event.id}/dive-order/sign-off/respond`, {
+    headers: asReferee(), data: { request_id, decision: "approve" },
+  });
+  expect(res.status()).toBe(200);
+
+  await expect(dialog).toBeHidden({ timeout: 6_000 });
+  await expect(primary).toContainText(/Start Event/i);
+});
+
+test("push: a refusal shows in the dialog instead of waiting forever", async ({ page, request }) => {
+  test.setTimeout(90_000);
+  const event = await eventAtSignoff(request, "Signoff Deny");
+  const { primary, dialog } = await openSignoff(page, event);
+
+  await dialog.locator("select.select").selectOption({ label: "Rhea Referee" });
+  const sent = page.waitForResponse((r) => r.url().includes("/dive-order/sign-off/request") && r.request().method() === "POST");
+  await dialog.getByRole("button", { name: /Send sign-off request/ }).click();
+  const { request_id } = await (await sent).json();
+
+  const res = await request.post(`/api/events/${event.id}/dive-order/sign-off/respond`, {
+    headers: asReferee(), data: { request_id, decision: "deny" },
+  });
+  expect(res.status()).toBe(200);
+
+  await expect(dialog.locator(".msg-error")).toContainText(/declined/i, { timeout: 6_000 });
+  await expect(dialog.locator(".signoff-waiting")).toHaveCount(0);
+  await expect(primary).toContainText(/Referee Sign Off/i);
+});
+
+test("code: the dialog closes by itself once the referee enters the code", async ({ page, request }) => {
+  test.setTimeout(90_000);
+  const event = await eventAtSignoff(request, "Signoff Code");
+  const { primary, dialog } = await openSignoff(page, event);
+
+  // The e2e server has no APP_BASE_URL, and the code endpoint refuses
+  // without one (the QR link would otherwise trust the Host header). So
+  // the code row goes in by hand, exactly what the endpoint would have
+  // written, and the dialog's POST gets that row back. Everything after
+  // (the referee typing it in, the answer reaching the laptop) is real.
+  const code = String(100000 + Math.floor(Math.random() * 900000));
+  const ins = await setup.pool.query(
+    `INSERT INTO referee_signoff_requests (event_id, requested_by, target_referee_id, handoff_code)
+     SELECT $1, id, $3, $4 FROM users WHERE username = $2
+     RETURNING id, expires_at`,
+    [event.id, world.username, world.referee.userId, code],
+  );
+  await page.route("**/dive-order/sign-off/code", (route) => route.fulfill({
+    status: 201,
+    contentType: "application/json",
+    body: JSON.stringify({ ok: true, request_id: ins.rows[0].id, code, expires_at: ins.rows[0].expires_at }),
+  }));
+
+  await dialog.getByRole("button", { name: /Code on referee/ }).click();
+  await dialog.locator("select.select").selectOption({ label: "Rhea Referee" });
+  await dialog.getByRole("button", { name: /Generate code/ }).click();
+  await expect(dialog.locator(".signoff-code-value")).toHaveText(code);
+
+  const res = await request.post("/api/sign-off/code/verify", { headers: asReferee(), data: { code } });
+  expect(res.status()).toBe(200);
+
+  await expect(dialog).toBeHidden({ timeout: 6_000 });
+  await expect(primary).toContainText(/Start Event/i);
+});
+
+test("a missed socket message still lands: the dialog checks on the request itself", async ({ page, request }) => {
+  test.setTimeout(90_000);
+  const event = await eventAtSignoff(request, "Signoff Poll");
+  const { primary, dialog } = await openSignoff(page, event);
+
+  await dialog.locator("select.select").selectOption({ label: "Rhea Referee" });
+  const sent = page.waitForResponse((r) => r.url().includes("/dive-order/sign-off/request") && r.request().method() === "POST");
+  await dialog.getByRole("button", { name: /Send sign-off request/ }).click();
+  const { request_id } = await (await sent).json();
+
+  // Approve straight in the database, so no socket message goes out at
+  // all. Same end state as an answer that arrived while the laptop's
+  // socket was reconnecting.
+  await setup.pool.query(
+    `UPDATE referee_signoff_requests SET status = 'approved', decision_method = 'push', responded_at = now()
+      WHERE id = $1`,
+    [request_id],
+  );
+  await setup.pool.query(
+    "UPDATE events SET dive_order_signed_off_at = now(), dive_order_signed_off_by = $1 WHERE id = $2",
+    [world.referee.userId, event.id],
+  );
+
+  await expect(dialog).toBeHidden({ timeout: 10_000 });
+  await expect(primary).toContainText(/Start Event/i);
+});
