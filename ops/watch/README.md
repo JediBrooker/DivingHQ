@@ -104,8 +104,11 @@ npx wrangler@4 kv namespace create WATCH_STATE
 #    REPLACE_WITH_KV_NAMESPACE_ID and commit that change (the id isn't
 #    a secret, and later deploys need it).
 
-# 3. Deploy.
+# 3. Deploy, then tell it who to email. The address is a secret rather
+#    than a var so it isn't in the public repo; it has to be a verified
+#    Email Routing destination address on the account.
 npx wrangler@4 deploy
+npx wrangler@4 secret put ALERT_TO
 ```
 
 The email side needs no setup beyond what's there already: Email Routing
@@ -141,10 +144,8 @@ If the test email lands in spam, add a Gmail filter for
 1. Add the new address in the dashboard under Email Service, Email
    Routing, Destination addresses, and click the link in the
    verification email. Cloudflare refuses to send to unverified addresses.
-2. In `wrangler.toml`, change **both** `destination_address` (under
-   `[[send_email]]`, the one Cloudflare enforces) and `ALERT_TO` (the To:
-   header). A test checks they match.
-3. `npx wrangler@4 deploy`.
+2. `npx wrangler@4 secret put ALERT_TO` and paste the new address. A
+   secret takes effect straight away, no deploy needed.
 
 To watch a different site (a staging box, say), change `TARGET`.
 
@@ -179,5 +180,5 @@ To watch a different site (a staging box, say), change `TARGET`.
   user agent `divinghq-watch/1`; a Bot Fight Mode or WAF rule may be
   challenging the Worker. A skip rule for `/api/health` and
   `/api/ops/status` fixes it.
-* One recipient. For more, switch the binding to
-  `allowed_destination_addresses` and send one message per address.
+* One recipient. For more, split `ALERT_TO` on commas in `watch.js` and
+  send one message per address; each has to be a verified destination.

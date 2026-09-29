@@ -381,13 +381,14 @@ describe("the Worker package", () => {
     assert.ok(fs.existsSync(path.join(WATCH_DIR, value("main"))), "main points at a real file");
     assert.match(toml, /^crons = \["\*\/2 \* \* \* \*"\]$/m);
     assert.match(toml, /\[\[kv_namespaces\]\]\s*\nbinding = "WATCH_STATE"/);
-    assert.match(toml, /\[\[send_email\]\]\s*\nname = "ALERT_EMAIL"\s*\ndestination_address = "[^"]+"/);
+    assert.match(toml, /\[\[send_email\]\]\s*\nname = "ALERT_EMAIL"/);
     assert.equal(value("TARGET"), "https://divinghq.app");
     assert.equal(value("ALERT_FROM"), "alerts@divinghq.app");
-    // The To: header and the binding's enforced destination have to agree.
-    assert.equal(value("ALERT_TO"), value("destination_address"));
-    // TEST_KEY is a secret; a var would put it in the repo.
+    // TEST_KEY and ALERT_TO are secrets. The repo is public, a var would
+    // publish the key and the owner's inbox.
     assert.equal(value("TEST_KEY"), null);
+    assert.equal(value("ALERT_TO"), null);
+    assert.doesNotMatch(toml, /^[^#]*@(?!divinghq\.app")[^\s"]+"/m, "no personal address in wrangler.toml");
   });
 
   test("the entry point is the only file that touches the runtime module", () => {

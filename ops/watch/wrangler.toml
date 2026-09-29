@@ -18,9 +18,8 @@ crons = ["*/2 * * * *"]
 [vars]
 # Base URL it checks: $TARGET/api/health and $TARGET/api/ops/status.
 TARGET = "https://divinghq.app"
-# The To: header. Must match destination_address below, which is what
-# Cloudflare actually enforces.
-ALERT_TO = "christianbrooker@gmail.com"
+# ALERT_TO (who gets the emails) is a secret, not a var, so the address
+# stays out of this public repo: `npx wrangler@4 secret put ALERT_TO`.
 ALERT_FROM = "alerts@divinghq.app"
 ALERT_FROM_NAME = "DivingHQ watch"
 # Times in the emails are shown in this zone first, then UTC.
@@ -33,12 +32,12 @@ TIME_ZONE = "Australia/Sydney"
 binding = "WATCH_STATE"
 id = "REPLACE_WITH_KV_NAMESPACE_ID"
 
-# Email Routing send binding. The destination has to be a verified
-# Email Routing destination address on the account, and the From address
-# has to be on a zone with Email Routing on (divinghq.app).
+# Email Routing send binding. Left unrestricted, it can send to any
+# verified Email Routing destination address on the account and nothing
+# else, which is the real guard. The From address has to be on a zone with
+# Email Routing on (divinghq.app).
 [[send_email]]
 name = "ALERT_EMAIL"
-destination_address = "christianbrooker@gmail.com"
 
 [observability]
 enabled = true
