@@ -220,6 +220,17 @@ fi
 mkdir -p "$BACKUP_DIR"
 ops_lock "$BACKUP_DIR/.divinghq-ops.lock" "${OPS_LOCK_WAIT:-1800}"
 
+# A run that was killed outright (the OOM killer, a reboot mid-dump) never
+# got to its EXIT trap, so its half-written dump, encrypted copy or curl
+# header file is still here. Retention only looks at finished dump names,
+# so nothing else would ever delete them, and a few of those a month add
+# up. Only ones more than 6 hours old go: without flock (macOS) that keeps
+# us off a file another run is still writing.
+while IFS= read -r f; do
+  rm -f -- "$f" && ops_log "removed $(basename "$f"), left over from a run that didn't finish"
+done < <(find "$BACKUP_DIR" -maxdepth 1 -type f -mmin +360 \
+  \( -name '.divinghq-*.dump.partial' -o -name 'divinghq-*.dump.enc' -o -name '.r2-headers.*' \))
+
 # ---- 1. dump and verify ----------------------------------------------
 ops_log "dumping database $PGDATABASE to $FINAL"
 PARTIAL="$BACKUP_DIR/.${NAME}.partial"

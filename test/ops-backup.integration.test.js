@@ -228,6 +228,16 @@ test("retention keeps the newest BACKUP_KEEP_LOCAL dumps and nothing else is tou
   const old = ["divinghq-20250101T163000Z.dump", "divinghq-20250102T163000Z.dump", "divinghq-20250103T163000Z.dump"];
   for (const f of old) fs.writeFileSync(path.join(d.backupDir, f), "old");
   for (const f of ["divinghq-manual.dump", "notes.txt"]) fs.writeFileSync(path.join(d.backupDir, f), "keep me");
+  // What a run killed with SIGKILL leaves: its temp files, never cleaned
+  // by its own trap. Old ones go, a fresh one might be another run's.
+  const stale = [".divinghq-20250104T163000Z.dump.partial", "divinghq-20250103T163000Z.dump.enc", ".r2-headers.AbC123"];
+  const sevenHoursAgo = new Date(Date.now() - 7 * 3600 * 1000);
+  for (const f of stale) {
+    fs.writeFileSync(path.join(d.backupDir, f), "half");
+    fs.utimesSync(path.join(d.backupDir, f), sevenHoursAgo, sevenHoursAgo);
+  }
+  const fresh = ".divinghq-20250105T163000Z.dump.partial";
+  fs.writeFileSync(path.join(d.backupDir, fresh), "someone else's");
 
   const r = await runScript(BACKUP, { ...d.env, BACKUP_KEEP_LOCAL: "2" });
   assert.equal(r.code, 0, r.log);
@@ -238,6 +248,9 @@ test("retention keeps the newest BACKUP_KEEP_LOCAL dumps and nothing else is tou
   assert.ok(fs.existsSync(path.join(d.backupDir, "divinghq-manual.dump")));
   assert.ok(fs.existsSync(path.join(d.backupDir, "notes.txt")));
   assert.match(r.log, /removed old dump divinghq-20250101T163000Z\.dump/);
+  for (const f of stale) assert.ok(!fs.existsSync(path.join(d.backupDir, f)), `${f} cleared`);
+  assert.match(r.log, /removed \.divinghq-20250104T163000Z\.dump\.partial, left over/);
+  assert.ok(fs.existsSync(path.join(d.backupDir, fresh)), "a temp file that's still young is left alone");
 
   const bad = await runScript(BACKUP, { ...d.env, BACKUP_KEEP_LOCAL: "0" });
   assert.notEqual(bad.code, 0);
