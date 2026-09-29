@@ -100,10 +100,14 @@ function onCheckInConfirmed(patch) {
   checkInOpen.value = false
   loadReadiness()
 }
-function onRandomised() {
+// The draw landed. Stamp the workflow and hand the dialog the fresh
+// roster, but leave it open: its last phase shows the drawn order with
+// Re-shuffle and "Confirm dive order", and closing it here meant nobody
+// ever saw the result. The dialog's own close (Confirm, X, Esc) shuts it.
+function onRandomised(fresh) {
+  if (Array.isArray(fresh)) roster.value = fresh
   props.event.dive_order_randomised_at = new Date().toISOString()
   props.event.dive_order_signed_off_at = null
-  randomiseOpen.value = false
   loadReadiness()
 }
 function onSignedOff(patch) {
