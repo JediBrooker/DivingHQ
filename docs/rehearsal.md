@@ -132,7 +132,10 @@ Seed refuses, and changes nothing, when:
      referee sign in on the laptop. Try at least two of these.
 4. **Start the event.** The four "is live" emails should arrive
    (`you+rehearsal-diver1@...` to `diver4`). Judges who allowed notifications
-   get "Judging panel is live".
+   get "Judging panel is live" as a phone notification. A phone that already
+   has `/judge` open moves to the first diver instead and shows no banner in
+   the app for it; any other banner on the judge screen appears at the top,
+   never over the keypad or Submit.
 5. **Run all three rounds.** Start puts the first diver up by itself; judges
    score on their phones, and **Next Diver** in the Control Room moves on
    (at the end of the list it becomes Finalise, then the review screen).

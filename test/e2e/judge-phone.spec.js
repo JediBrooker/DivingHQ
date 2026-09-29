@@ -4,9 +4,13 @@
 //   * A judge who opened /judge before Start Event never got the first
 //     diver. The page looked for a Live panel once, on mount, and never
 //     again, so it sat on "Waiting" until someone reloaded.
+//   * The "Judging panel is live" banner parked itself over Submit and
+//     Signal Referee (bottom right, above everything) for an hour.
 //
 // Phone sizes are set per context (Chromium with a mobile viewport), the
-// chromium project itself runs with no viewport.
+// chromium project itself runs with no viewport. Set E2E_SHOT_DIR to keep
+// a screenshot of what the phone showed.
+const path = require("node:path");
 const { test, expect } = require("@playwright/test");
 const setup = require("./_setup");
 const { signIn, liveEvent, emitAck } = require("./_meetday");
@@ -36,6 +40,24 @@ function activeDiver(event, diver, name, extra = {}) {
   };
 }
 
+function overlaps(a, b) {
+  return !(a.x + a.width <= b.x || b.x + b.width <= a.x || a.y + a.height <= b.y || b.y + b.height <= a.y);
+}
+
+async function shot(page, name) {
+  if (!process.env.E2E_SHOT_DIR) return;
+  await page.screenshot({ path: path.join(process.env.E2E_SHOT_DIR, `${name}.png`), animations: "disabled" });
+}
+
+async function eventLiveRows(userId, eventId) {
+  const r = await setup.pool.query(
+    `SELECT status FROM notifications
+      WHERE user_id = $1 AND category = 'event_live' AND data->>'event_id' = $2`,
+    [userId, eventId],
+  );
+  return r.rows.map((x) => x.status);
+}
+
 test("a judge waiting on /judge picks up the first diver when the event starts", async ({ browser, request, baseURL }) => {
   test.setTimeout(90_000);
   const { orgId, adminToken } = await setup.createOrgAndAdmin(request, { countryCode: "AUS", orgName: "Judge Waits" });
@@ -61,6 +83,10 @@ test("a judge waiting on /judge picks up the first diver when the event starts",
     await expect(page.locator(".diver-name")).toContainText("AAA Early", { timeout: 5_000 });
     await expect(page.locator(".judge-id")).toContainText("J1");
     await expect(page.locator(".submit-btn")).toBeEnabled();
+    // The banner would only have brought them here, so it's cleared.
+    await expect(page.locator(".notif-card")).toHaveCount(0);
+    await expect.poll(() => eventLiveRows(judges[0].userId, event.id), { timeout: 5_000 })
+      .toEqual(["acknowledged"]);
   } finally {
     await ctx.close();
     await setup.deleteOrg(orgId);
@@ -86,6 +112,54 @@ test("a waiting judge who hears nothing still finds the Live panel on the poll",
       .toMatchObject({ ok: true });
     await expect(page.locator(".diver-name")).toContainText("BBB Quiet", { timeout: 20_000 });
     await expect(page).toHaveURL(new RegExp(`/judge\\?event=${event.id}$`));
+  } finally {
+    await ctx.close();
+    await setup.deleteOrg(orgId);
+  }
+});
+
+test("banners on the judge screen stay clear of the keypad, Submit and Signal Referee", async ({ browser, request, baseURL }) => {
+  test.setTimeout(90_000);
+  const { orgId, adminToken } = await setup.createOrgAndAdmin(request, { countryCode: "AUS", orgName: "Judge Banner" });
+  const X = await liveEvent(request, {
+    orgId, adminToken, name: "Banner Own", diverNames: ["CCC Own"], status: "Upcoming",
+  });
+  // A second panel the same judge sits on, starting while they score X.
+  const Y = await setup.createEvent(request, { adminToken, name: "Banner Next", total_rounds: 1, number_of_judges: 5, height: "3m" });
+  await setup.assignJudges(request, { adminToken, eventId: Y.id, judgeIds: X.judges.map((j) => j.userId) });
+
+  const { ctx, page } = await phone(browser, 390, 664);
+  try {
+    await signIn(page, X.judges[0].username);
+    // Opened from the dashboard card, so the URL already names the event.
+    await page.goto(`/judge?event=${X.event.id}`);
+    await setup.setEventStatus(request, { adminToken, eventId: X.event.id, status: "Live" });
+    expect(await emitAck(baseURL, adminToken, "set_active_diver", activeDiver(X.event, X.divers[0], "CCC Own")))
+      .toMatchObject({ ok: true });
+    await expect(page.locator(".diver-name")).toContainText("CCC Own", { timeout: 6_000 });
+    // Their own event's "panel is live" is acknowledged, never drawn.
+    await expect.poll(() => eventLiveRows(X.judges[0].userId, X.event.id), { timeout: 5_000 })
+      .toEqual(["acknowledged"]);
+    await expect(page.locator(".notif-card")).toHaveCount(0);
+
+    await setup.setEventStatus(request, { adminToken, eventId: Y.id, status: "Live" });
+    const card = page.locator(".notif-card", { hasText: "Banner Next" });
+    await expect(card).toBeVisible({ timeout: 6_000 });
+    await shot(page, "judge-banner-390x664");
+
+    const cardBox = await card.boundingBox();
+    for (const sel of [".keypad", ".submit-btn", ".signal-btn", ".score-number"]) {
+      const box = await page.locator(sel).boundingBox();
+      expect(overlaps(cardBox, box), `${sel} is covered by the banner`).toBe(false);
+    }
+    // And the keypad still takes the tap, with the banner up.
+    await page.locator(".keypad .key", { hasText: /^8$/ }).click();
+    await page.locator(".submit-btn").click();
+    await expect(page.locator(".judge-panel-tile.mine .judge-panel-tile-score")).toHaveText("8.0", { timeout: 6_000 });
+    await expect(card).toBeVisible();
+    // It still goes where it always went.
+    await card.locator(".notif-title").click();
+    await expect(page).toHaveURL(new RegExp(`/judge\\?event=${Y.id}$`));
   } finally {
     await ctx.close();
     await setup.deleteOrg(orgId);

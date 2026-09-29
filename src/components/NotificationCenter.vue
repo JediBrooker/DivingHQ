@@ -75,7 +75,37 @@ onUnmounted(() => {
 
 // Newest 3 in the floating banner stack, anything older lives
 // in the inbox the user can open from the nav (future feature).
-const visible = computed(() => notifications.value.slice(0, 3))
+// A screen whose buttons live at the bottom (the judge's keypad, route
+// meta bannersOnTop) gets them at the top instead, and only the newest,
+// so no stack can grow down over Submit. The dry run had "Judging panel
+// is live" sitting on a judge's Submit for an hour.
+const onTop = computed(() => route.meta?.bannersOnTop === true)
+const visible = computed(() => notifications.value.slice(0, onTop.value ? 1 : 3))
+
+// An "is live" banner whose link is the page already open has nothing
+// left to do. A judge on /judge?event=X, or one the judge screen just
+// moved there by itself, doesn't need a banner saying X is live that
+// only takes them to X, so it's acknowledged instead of drawn. Only
+// event_live: other notices can point at /dashboard and still need
+// reading, and anything with buttons (a sign-off) needs an answer.
+function pointsHere(n) {
+  const url = n?.action_url
+  if (typeof url !== 'string' || !url.startsWith('/')) return false
+  let target
+  try { target = router.resolve(url) } catch { return false }
+  if (target.path !== route.path) return false
+  return Object.entries(target.query).every(([k, v]) => String(route.query[k] ?? '') === String(v))
+}
+watch(
+  [() => notifications.value.map((n) => n.id).join(','), () => route.fullPath],
+  () => {
+    for (const n of notifications.value) {
+      if (n.category !== 'event_live' || n.data?.actions?.length) continue
+      if (pointsHere(n)) ack(n.id)
+    }
+  },
+  { immediate: true },
+)
 
 async function onActionClick(n, action) {
   // Approve / Deny on a referee sign-off banner. The endpoint is
@@ -113,7 +143,7 @@ async function onDismiss(n, ev) {
 
 <template>
   <Teleport to="body">
-    <div v-if="visible.length" class="notif-stack">
+    <div v-if="visible.length" :class="['notif-stack', { 'notif-stack-top': onTop }]">
       <div v-for="n in visible" :key="n.id"
            :class="['notif-card', `notif-${n.category}`]"
            @click="onBannerClick(n)">
@@ -146,6 +176,28 @@ async function onDismiss(n, ev) {
   display: flex; flex-direction: column; gap: 0.6rem;
   z-index: 9999; max-width: 360px;
   pointer-events: none;
+}
+/* Top of the screen (route meta bannersOnTop, the judge keypad). Clear of
+   the status bar on an installed iPhone, full width on a phone and
+   centred on anything wider. Two lines each for title and body keeps the
+   card inside the header, well above the keypad. It drops in from above,
+   since sliding in from the side starts it past the edge of the screen. */
+.notif-stack-top {
+  top: max(0.5rem, calc(env(safe-area-inset-top, 0px) + 0.5rem));
+  bottom: auto;
+  inset-inline-start: max(0.75rem, env(safe-area-inset-left, 0px));
+  inset-inline-end: max(0.75rem, env(safe-area-inset-right, 0px));
+  max-width: 420px;
+  margin-inline: auto;
+}
+.notif-stack-top .notif-card { animation-name: notif-drop-in; }
+.notif-stack-top .notif-title,
+.notif-stack-top .notif-body {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
 }
 .notif-card {
   pointer-events: auto;
@@ -207,5 +259,9 @@ async function onDismiss(n, ev) {
 @keyframes notif-slide-in {
   from { opacity: 0; transform: translateX(20px); }
   to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes notif-drop-in {
+  from { opacity: 0; transform: translateY(-12px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 </style>
