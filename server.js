@@ -19,7 +19,7 @@
 //   [SECTION: MAINTENANCE GATE]       read-only lockdown for non-sysadmins
 //   [SECTION: LIVE STATE]             activeDivers / meetHolds (lib/live-state)
 //   [SECTION: TOKEN PAYLOAD]          buildTokenPayload (JWT shape)
-//   [SECTION: ROUTES: HEALTH]         /api/health, /metrics
+//   [SECTION: ROUTES: HEALTH]         /api/health, /api/ops/status, /metrics
 //   [SECTION: ROUTES: AUTH]           routes/auth.js
 //   [SECTION: ROUTES: ORGANISATIONS]  /api/orgs/*, /api/clubs/*
 //   [SECTION: ROUTES: PAYMENTS]       fees, checkout, refunds, payouts, webhook
@@ -94,6 +94,11 @@ const app = express();
 // Time every request and emit a Prometheus histogram + counter.
 // Mounted FIRST so it captures even helmet/cors short-circuits.
 app.use(metrics.httpMetricsMiddleware);
+// Rolling 15-minute tally of responses and 5xx for GET /api/ops/status.
+// Up here next to the metrics timer for the same reason, so a request
+// that helmet, cors or the body parser turns away still counts.
+const requestWindow = require("./lib/request-window").createRequestWindow({ minutes: 15 });
+app.use(requestWindow.middleware);
 
 // Trust the immediate reverse proxy (Cloudflare / Nginx / etc).
 // Without this:
@@ -741,6 +746,23 @@ app.get("/api/health", async (_req, res) => {
   }
 });
 
+// The monitor's view: health plus the backup, restore-check and deploy
+// state the ops scripts leave in OPS_STATE_DIR, and the 5xx count from
+// requestWindow above. Public like /api/health, but it reads three files
+// on every call, so it gets a limiter. 60 a minute per IP is plenty for
+// anything polling it once a minute. See routes/ops-status.js.
+function createStatusLimiter() {
+  return rateLimit({
+    windowMs: 60 * 1000,
+    limit: 60,
+    standardHeaders: "draft-7",
+    legacyHeaders: false,
+    message: { error: "Too many requests, please try again shortly." },
+    skip: skipWhenDisabled,
+  });
+}
+app.use(limitRoutes(createStatusLimiter(), require("./routes/ops-status")({ pool, requestWindow, logger })));
+
 // Public deployment settings for the signed-out SPA (the support address
 // in the home / login / legal footers). See routes/public-config.js.
 app.use(require("./routes/public-config")());
@@ -748,59 +770,12 @@ app.use(require("./routes/public-config")());
 // =============================================================
 // METRICS: Prometheus scrape target
 // =============================================================
-// `text/plain; version=0.0.4` (the prom-client default) is the
-// content-type Prometheus expects. The payload contains operational
-// counters only (no PII), but route names and request volume are
-// still operational intel worth not handing out anonymously.
-//
-// Auth model:
-//   * METRICS_TOKEN set: requires `Authorization: Bearer <token>`.
-//     Comparison is constant-time via crypto.timingSafeEqual so
-//     a probing client can't binary-search the token.
-//   * METRICS_TOKEN unset, NODE_ENV !== "production" (or METRICS_PUBLIC
-//     === "true"): no auth gate. Suitable for dev and single-node
-//     setups where Prometheus scrapes localhost behind a firewall /
-//     reverse-proxy ACL.
-//   * METRICS_TOKEN unset in production WITHOUT METRICS_PUBLIC=true:
-//     fail closed (401). Prevents a forgotten token + missing network
-//     ACL from silently exposing /metrics to the public internet.
-//
-// lib/metrics.js documents the cardinality discipline each metric
-// follows.
-const METRICS_TOKEN = process.env.METRICS_TOKEN || null;
-const METRICS_PUBLIC = process.env.METRICS_PUBLIC === "true";
-function metricsAuthOk(req) {
-  if (!METRICS_TOKEN) {
-    // Fail closed in production unless explicitly opted public, so a
-    // missing token doesn't quietly expose the scrape endpoint.
-    if (process.env.NODE_ENV === "production" && !METRICS_PUBLIC) return false;
-    return true;
-  }
-  const header = req.headers["authorization"];
-  if (typeof header !== "string" || !header.startsWith("Bearer ")) return false;
-  const presented = header.slice(7);
-  const a = Buffer.from(presented);
-  const b = Buffer.from(METRICS_TOKEN);
-  // timingSafeEqual requires equal-length buffers; the length
-  // check itself is fine to leak (it's the expected token's length
-  // and an attacker who controls METRICS_TOKEN already knows it).
-  if (a.length !== b.length) return false;
-  return require("node:crypto").timingSafeEqual(a, b);
-}
-app.get("/metrics", async (req, res) => {
-  if (!metricsAuthOk(req)) {
-    res.set("WWW-Authenticate", 'Bearer realm="metrics"');
-    return res.status(401).end();
-  }
-  try {
-    metrics.collectPoolStats(pool);
-    res.set("Content-Type", metrics.registry.contentType);
-    res.end(await metrics.registry.metrics());
-  } catch (err) {
-    logger.error({ err }, "metrics scrape failed");
-    res.status(500).end();
-  }
-});
+// GET /metrics, see routes/metrics.js. Prometheus scrapes it directly on
+// the box. Anything that arrives through the Cloudflare tunnel gets a 404
+// unless it carries the METRICS_TOKEN bearer (lib/metrics-access.js),
+// because the tunnel forwards every path here and there's no firewall
+// in between to lean on.
+app.use(require("./routes/metrics")({ pool, metrics, logger }));
 
 // =============================================================
 // AUTH ROUTES

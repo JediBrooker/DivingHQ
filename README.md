@@ -473,6 +473,7 @@ The script:
 5. `npm run migrate -- --dry`, then real migrate
 6. `pm2 restart dive-recorder`
 7. Polls `/api/health` for up to 10s; fails the script if the service didn't come back up, and prints the rollback command (`git reset --hard <prev-sha> && pm2 restart dive-recorder`)
+8. Records how it went (ok or not, and the commit) in `/var/lib/divinghq/deploy.json` for `/api/ops/status`
 
 Flags:
 
@@ -485,6 +486,14 @@ Flags:
 ### Health checks + monitoring
 
 `GET /api/health` returns `{ ok: true, schema_version }` on success or `503 { ok: false }` if the DB pool can't issue a trivial query. No auth — point any uptime monitor (UptimeRobot, BetterStack, etc.) at `https://your-domain/api/health` on a 60s interval.
+
+`GET /api/ops/status` is the fuller picture for a monitor that reads JSON: always a 200 (`ok: false` when the database is down), with the last backup, the last restore check, the last deploy and the 5xx count over the past 15 minutes. It's public and holds nothing sensitive. [ops/backups/README.md](ops/backups/README.md#get-apiopsstatus) has the shape.
+
+`/metrics` (Prometheus) answers direct scrapes on the box and a plain 404 to anything that came through Cloudflare, unless it carries the `METRICS_TOKEN` bearer. See [ops/observability/README.md](ops/observability/README.md#security-notes).
+
+### Backups
+
+A nightly `pg_dump` (14 kept on the box), an encrypted copy to Cloudflare R2, and a weekly restore of the newest one into a scratch database to prove it works, all from cron. [ops/backups/README.md](ops/backups/README.md) covers the install, the R2 setup and the restore runbook.
 
 ### Rolling back a bad deploy
 
@@ -626,6 +635,12 @@ Arabic and Hebrew names are shaped and read right to left, with numbers and brac
 │                                   # npm test → npm run build → npm run migrate →
 │                                   # pm2 restart → /api/health probe. Fails the
 │                                   # script (with rollback hint) on any step.
+├── scripts/ops/                    # backup-db.sh (nightly pg_dump + encrypted
+│                                   # copy to R2), restore-check.sh (weekly
+│                                   # scratch restore). See ops/backups/README.md
+├── ops/                            # cron + logrotate files, the observability
+│                                   # stack (Prometheus, Loki, Grafana), backup
+│                                   # and read-replica docs
 ├── ecosystem.config.js             # PM2 config — single fork process, 512MB
 │                                   # memory ceiling, restart-on-crash. Notes
 │                                   # why we don't cluster (Socket.IO + in-memory
@@ -888,7 +903,7 @@ It excludes only the documentation screenshot generator
 
 | Spec | What it exercises |
 |---|---|
-| `smoke.spec.js` | Health endpoint, SPA boots, `/metrics`, public diver profile fall-through, OG-tagged HTML for crawler UAs |
+| `smoke.spec.js` | Health endpoint, SPA boots, `/metrics` (and its 404 through Cloudflare), `/api/ops/status`, public diver profile fall-through, OG-tagged HTML for crawler UAs |
 | `scoring.spec.js` | Five judges submit scores via `socket.io-client`; `/api/scoreboard` reflects the trimmed total. Catches regressions in the socket layer, the trim algorithm, and the standings query |
 | `admin.spec.js` | Org admin creates an event, late-adds a diver to the roster, flips Upcoming → Live → Completed |
 | `competitor.spec.js` | Diver self-registers, login is blocked with `code: "email_not_verified"`, verify-then-login works, diver submits a 2-round dive list |

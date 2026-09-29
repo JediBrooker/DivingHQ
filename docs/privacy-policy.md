@@ -40,7 +40,7 @@ A summary of every kind of data DivingHQ stores. Detail follows in §4 and §6.
 | Audit log of privileged actions | The server, on every privileged action | Admins of the organisation concerned | **30 days**, then purged |
 | Security logs (IP address, user agent, sign-in attempts) | The server | DivingHQ operations | 30 days |
 
-**Where DivingHQ runs.** The application and its database run on servers operated by DivingHQ. Every request to divinghq.app reaches them through Cloudflare, which handles the encrypted connection and protects the service from abuse (see §6). We keep database backups so we can recover from a failure. They're access-restricted and used for nothing else. Data you delete can remain in a backup until that backup is replaced.
+**Where DivingHQ runs.** The application and its database run on servers operated by DivingHQ. Every request to divinghq.app reaches them through Cloudflare, which handles the encrypted connection and protects the service from abuse (see §6). We keep database backups so we can recover from a failure: a nightly copy on our own servers, kept for two weeks, and an encrypted copy of it stored with Cloudflare R2, kept for about five weeks. The off-site copies are encrypted before they leave our servers, and Cloudflare is never given the key, so it can't read them. Backups are access-restricted and used for nothing else. Data you delete can remain in a backup until that backup expires, at most about five weeks later.
 
 ## 4. What we collect in detail
 
@@ -163,6 +163,7 @@ These providers process data for us, only to run the service:
 |---|---|---|
 | Cloudflare | Every request to divinghq.app passes through Cloudflare (encrypted connection, abuse protection) | Your IP address, browser details and the pages you request |
 | Cloudflare Email Sending | Delivering our service emails | Your name, email address and the email's content |
+| Cloudflare R2 | Storing encrypted copies of our database backups | Nothing it can read: the backups are encrypted before upload and Cloudflare doesn't have the key |
 | Google Fonts | The typefaces the pages use (IBM Plex Sans, DM Mono), loaded from Google's servers | Your IP address and browser details when your browser fetches the fonts |
 | Your browser's push service (Google, Mozilla or Apple) | Delivering push notifications you turned on | An encrypted payload it can't read |
 | Stripe (only once payments are switched on) | Taking payments | What you enter on Stripe's payment page |

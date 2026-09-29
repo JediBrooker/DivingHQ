@@ -1015,6 +1015,36 @@
  * @property {?string} [dependent_dob]  org admins and the sysadmin only
  */
 
+// ---- ops --------------------------------------------------------
+
+/**
+ * @typedef {Object} OpsStatus
+ * GET /api/ops/status (routes/ops-status.js). Public, no-store, always a
+ * 200: `ok` goes false when the database doesn't answer. The backup,
+ * restore_check and deploy blocks come from the JSON files the ops
+ * scripts write to OPS_STATE_DIR (lib/ops-state.js), and every field in
+ * them is null when its file is missing or unreadable. The shape is shared
+ * with the external monitor, so change it there too.
+ *
+ * @property {boolean} ok               process up and a trivial DB query worked
+ * @property {?number} schema_version
+ * @property {string}  time             ISO, the server's now
+ * @property {{
+ *   last_attempt_at: ?string,
+ *   last_success_at: ?string,
+ *   last_ok: ?boolean,
+ *   offsite: 'ok'|'failed'|'not_configured'|null,
+ *   size_bytes: ?number,
+ * }} backup                           scripts/ops/backup-db.sh, the newest local dump
+ * @property {{ last_run_at: ?string, ok: ?boolean }} restore_check
+ *   scripts/ops/restore-check.sh, the weekly scratch restore
+ * @property {{ last_at: ?string, ok: ?boolean, sha: ?string }} deploy
+ *   deploy.sh, sha is the 7-character short commit it deployed (or tried to)
+ * @property {{ window_minutes: number, server_errors: number, requests: number }} errors
+ *   5xx and total responses from this process over the last 15 minutes,
+ *   from zero again after a restart (lib/request-window.js)
+ */
+
 // Force this file to be a module so import('@/types') works in
 // editors that need an export to consider it an importable module.
 export {}

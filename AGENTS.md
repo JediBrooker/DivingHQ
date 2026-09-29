@@ -94,6 +94,7 @@ ship code (or docs) that misrepresents the rule.
 | `docs/design-system.md` | Frontend token/component conventions. Read before adding new view CSS, shared UI classes, or reusable components. |
 | `docs/socket-events.md` | Socket.IO event registry — every event the server listens for or emits, the role gate, and the payload shape. **Update this in the same commit when you add or change an event.** |
 | `test/`               | `node:test` suites. `syntax`, `calc`, `score-trim` run without a DB; `integration` skips when DB unreachable. |
+| `scripts/ops/`, `ops/` | Box operations: `backup-db.sh` (nightly dump + encrypted R2 copy), `restore-check.sh` (weekly scratch restore), their cron / logrotate files in `ops/cron/`, the Prometheus / Loki / Grafana stack in `ops/observability/`. **[ops/backups/README.md](./ops/backups/README.md)** is the install guide and restore runbook. Tests for anything that runs a script there must point `OPS_STATE_DIR` / `BACKUP_DIR` at a temp dir: `deploy.sh` runs `test:safe` on the live box. |
 
 ---
 
@@ -392,6 +393,8 @@ until the operator has switched maintenance mode on and passed
 | Validate a score from the wire (0–10, half-points) | `isValidScore(s)` / `scoreBodyError(v, label)` | `lib/score-audit.js` (re-exported by `lib/middleware.js`) |
 | Parse `?from_date=&to_date=` query params | `parseDateRange(query)` | `lib/middleware.js` |
 | Rate-limit one router's routes (never `app.use(limiter, router)`, that counts every later request too) | `limitRoutes(limiter, router)` | `lib/scoped-limiter.js` |
+| Public health + backup / restore-check / deploy state for the outside monitor (shape shared with it, change both) | `GET /api/ops/status`, state files read by `readOpsState()`, 5xx window `createRequestWindow()` | `routes/ops-status.js`, `lib/ops-state.js`, `lib/request-window.js` |
+| Who may read `/metrics` (anything through Cloudflare is a 404 without the token) | `createMetricsGate()` / `cameThroughCloudflare(headers)` | `lib/metrics-access.js` |
 | Per-query catch-and-log (analytics) | `runQuery(label, sql, params)` | inline in `/api/divers/:id/analytics` |
 | Standard analytics CTE for per-dive rows | `PER_DIVE` | `db/queries.js` |
 | Standard analytics CTE for full-field ranking (the standings' scope, so a team event ranks the team, reserves stay out and a Super Final semi keeps its carry; `latest: n` ranks only the n newest events by event date) | `FULL_FIELD_RANKING` / `fullFieldRanking({ latest })` | `db/queries.js` |
@@ -505,6 +508,12 @@ know X":
 7. **The IndexedDB cache is keyed per-user.** Don't write a frontend that
    bypasses `cachedFetch` for a sensitive endpoint without thinking about
    the leak window between user A logout and user B login.
+8. **"Port 3000 isn't public" protects nothing on the live box.** The
+   Cloudflare Tunnel forwards every path of divinghq.app to the app, so
+   an endpoint meant for the box only (like `/metrics`, which was public
+   for a while because of this) has to tell tunnel traffic apart itself.
+   Cloudflare stamps `cf-ray` / `cf-connecting-ip` on everything it
+   forwards; `lib/metrics-access.js` shows the pattern.
 
 ---
 
@@ -522,6 +531,7 @@ A non-exhaustive checklist:
 | `KNOWN_WIDGETS` (diver) | `WIDGET_CATALOG` in `src/views/DiverProfileView.vue` |
 | `KNOWN_WIDGETS` in `routes/judge-analytics.js` | `JUDGE_WIDGET_CATALOG` in `src/views/JudgeProfileView.vue` |
 | Record scopes, record columns, or who sets a record | `lib/records.js` (`RECORD_TABLES`, `checkAndApplyRecords`, the `GET /api/records` UNION, `eventRecordMarks`), `record_gender()` (migration 094), `scripts/rebuild-records.js` (replays with the same rules), `src/views/RecordsView.vue`, the scoreboard chip (`src/lib/recordMarks.js`, `RecordChip.vue`), `record_broken` in `docs/socket-events.md`, `src/types.js` (`RecordRow`, `ScoreboardRecordMark`), and the Records section of `src/guide/content/admin-tasks.md` |
+| The `GET /api/ops/status` shape, or the state files behind it | the external monitor reads it (the contract in `routes/ops-status.js`), `src/types.js` (`OpsStatus`), `lib/ops-state.js`, the writers (`scripts/ops/*.sh`, `deploy.sh`), `ops/backups/README.md` |
 | A socket event | its gate (`guardControl` / `socketCanManageEvent`, or an explicit check), every consumer (`socket.on('eventName')` grep), `docs/socket-events.md` (`test/socket-events-doc.test.js` fails if it's missing) |
 | Anything in `src/composables/` | The handful of consumers, since composables aren't auto-typed |
 | The `<head>` of `index.html` (canonical, `og:*`, `twitter:*`) | `lib/spa-shell.js` rewrites the canonical link and `og:url` per request by matching those tags as written; `test/spa-shell.test.js` pins it |

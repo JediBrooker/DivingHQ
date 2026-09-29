@@ -172,11 +172,45 @@ ever extend either retention window.
 
 ## Security notes
 
-* `/metrics` on the app is unauthenticated. Prometheus reaches it
-  via `host.docker.internal:3000` from the same box, so the public
-  internet doesn't see it as long as your firewall blocks port
-  3000 from outside (which it should already — Cloudflare hits the
-  app via 80/443).
+* `/metrics` on the app. Prometheus reaches it directly via
+  `host.docker.internal:3000` from the same box. A firewall on port
+  3000 does **not** keep the internet out on its own: a Cloudflare
+  Tunnel forwards every path of the public hostname to the app,
+  `/metrics` included. So the app refuses, with a plain 404, any
+  `/metrics` request that came through Cloudflare (it carries
+  `cf-ray` or `cf-connecting-ip`) unless it has the
+  `METRICS_TOKEN` bearer. Direct scrapes carry no Cloudflare
+  headers, so the tokenless setup (`METRICS_PUBLIC=true` in
+  production) keeps working. See `lib/metrics-access.js`.
+
+  Check it from anywhere off the box:
+
+  ```bash
+  curl -s -o /dev/null -w '%{http_code}\n' https://divinghq.app/metrics   # 404
+  ```
+
+  and on the box (still 200 for Prometheus):
+
+  ```bash
+  curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:3000/metrics  # 200
+  ```
+
+  To also lock the direct path (anything on the LAN that can reach
+  port 3000), set `METRICS_TOKEN` in the app's `.env`, drop
+  `METRICS_PUBLIC`, restart the app, and give Prometheus the token:
+  put it in a file next to `prometheus.yml`, mount it read-only
+  into the container (e.g. `./prometheus/metrics-token:/etc/prometheus/metrics-token:ro`
+  under the prometheus service's `volumes`), and add this to the
+  `dive_recorder` job:
+
+  ```yaml
+      authorization:
+        type: Bearer
+        credentials_file: /etc/prometheus/metrics-token
+  ```
+
+  then `docker compose up -d prometheus`. Keep the token file out
+  of git.
 * Grafana's admin password is read from `.env` next to this
   compose file (or defaults to `change-me-on-first-login`). Don't
   commit `.env`.

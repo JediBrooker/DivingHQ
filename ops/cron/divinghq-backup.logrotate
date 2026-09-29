@@ -1,0 +1,13 @@
+# /etc/logrotate.d/divinghq-backup, installed from
+# ops/cron/divinghq-backup.logrotate (see ops/backups/README.md).
+# One line a step, a handful of runs a week, so monthly is plenty. A
+# year of history is still under a megabyte.
+/var/log/divinghq-backup.log {
+    monthly
+    rotate 12
+    compress
+    delaycompress
+    missingok
+    notifempty
+    create 0640 root adm
+}
