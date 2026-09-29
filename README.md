@@ -483,6 +483,10 @@ Flags:
 | `--dry` | preview every step without writing |
 | `--skip-tests` | emergency hotfix path; tests skipped but build + health check still gate |
 
+### Rehearsing a meet on the live site
+
+Before trusting a real meet to the box, run one: `scripts/rehearsal.js` seeds a throwaway country (Western Sahara by default) with a club, a club admin, five judges, a referee, four divers and a 3-round event, prints one shared password, and removes every trace of it afterwards. It runs on the box against the app's own `.env`, refuses a country that already has real users, and refuses to clean up while anyone who isn't a rehearsal account is in the org. The checklist (devices, seed command, what to try, what to watch, cleanup) is [`docs/rehearsal.md`](./docs/rehearsal.md).
+
 ### Health checks + monitoring
 
 `GET /api/health` returns `{ ok: true, schema_version }` on success or `503 { ok: false }` if the DB pool can't issue a trivial query. No auth — point any uptime monitor (UptimeRobot, BetterStack, etc.) at `https://your-domain/api/health` on a 60s interval.
@@ -881,6 +885,7 @@ If you're a paying customer or running a production federation, urgent issues ca
 | `npm run test:e2e:visual` | Run only the Playwright visual regression snapshots |
 | `npm run test:e2e:profile` | Run Playwright with the JSON reporter at `/tmp/divinghq-playwright-profile.json` |
 | `npm run venue:daktronics` | Run the Daktronics RTD/ERTD venue bridge CLI |
+| `node scripts/rehearsal.js seed \| status \| cleanup` | Seed a throwaway country, club, meet and event for a rehearsal on the live site, then remove it. See [`docs/rehearsal.md`](./docs/rehearsal.md) |
 
 ---
 

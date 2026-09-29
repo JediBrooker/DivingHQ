@@ -261,8 +261,9 @@ Control Room events pass it (`guardControl`) and then `socketCanManageEvent`,
 and `notification:ack` (no role needed) calls it directly. Every mutating socket event has to reach that
 check and not roll its own. `MaintenanceBanner.vue` shows the notice, suppressed in the chromeless
 broadcast/overlay modes. `bootChecks()` loads flags before `listen()`, so a
-test that `require()`s `server.js` (only `integration.test.js` does) must call
-`features.load()` itself, everything reads fail-closed until it does.
+test that `require()`s `server.js` (`integration.test.js` and
+`rehearsal.integration.test.js` do) must call `features.load()` itself,
+everything reads fail-closed until it does.
 
 ### Club-first orgs (migration 087)
 
@@ -529,6 +530,7 @@ A non-exhaustive checklist:
 | The JWT payload shape | Every `req.user.X` reference in `server.js` (grep), `src/stores/auth.js`'s `user` computed |
 | A `/api/...` response shape | `src/types.js`, every consumer view (grep for the URL) |
 | A SQL function | `init.sql`, all migrations that touch it, `test/calc.test.js` if there's a closed-form test |
+| A new table that points at users, orgs, clubs, meets or events (above all with `ON DELETE RESTRICT`, or with no FK at all, like the audit and record history tables) | `CLEANUP_STEPS` in `scripts/rehearsal.js`, the production rehearsal kit (`docs/rehearsal.md`). Its cleanup deletes one throwaway org and the accounts it seeded on the live database, so a RESTRICT it doesn't know about makes it fail, and a FK-less column it doesn't know about leaves rows behind. A table that puts a user into somebody else's event or team (cascading off `users`) also belongs in the `elsewhere` check in `collect()`, or cleanup would cascade real results away. `test/rehearsal.integration.test.js` checks what's left |
 | `KNOWN_WIDGETS` (diver) | `WIDGET_CATALOG` in `src/views/DiverProfileView.vue` |
 | `KNOWN_WIDGETS` in `routes/judge-analytics.js` | `JUDGE_WIDGET_CATALOG` in `src/views/JudgeProfileView.vue` |
 | Record scopes, record columns, or who sets a record | `lib/records.js` (`RECORD_TABLES`, `checkAndApplyRecords`, the `GET /api/records` UNION, `eventRecordMarks`), `record_gender()` (migration 094), `scripts/rebuild-records.js` (replays with the same rules), `src/views/RecordsView.vue`, the scoreboard chip (`src/lib/recordMarks.js`, `RecordChip.vue`), `record_broken` in `docs/socket-events.md`, `src/types.js` (`RecordRow`, `ScoreboardRecordMark`), and the Records section of `src/guide/content/admin-tasks.md` |
