@@ -62,6 +62,17 @@ public live list like any other meet.
   ```
 
   It should end with `Seed in ESH: free to go.`
+- [ ] Back up the database. Seed and cleanup write straight to the live one, so
+      take a dump inside the container first (and again right before cleanup):
+
+  ```bash
+  ssh root@jedibrooker "pct exec 117 -- bash -lc 'mkdir -p ~/backups && su postgres -c \"pg_dump -Fc diving_app\" > ~/backups/pre-rehearsal-\$(date -u +%Y%m%dT%H%M%SZ).dump && ls -lh ~/backups | tail -3'"
+  ```
+
+  The newest file shouldn't be tiny; `df -h ~` on the box shows the room left,
+  and old dumps can go once the rehearsal is cleaned up. A restore is the last
+  resort: it rewinds every org on the site to that moment, not just the
+  rehearsal.
 
 ## Seed
 
@@ -168,7 +179,8 @@ there, how many scores and records, and whether cleanup would refuse.
 
 ## Cleanup
 
-Look first, then do it, then check:
+Take the second dump first (the backup command under Before). Then look, then
+do it, then check:
 
 ```bash
 ssh root@jedibrooker "pct exec 117 -- bash -lc 'cd ~/DiveRecorder && node scripts/rehearsal.js cleanup --dry-run'"
