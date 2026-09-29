@@ -1,21 +1,21 @@
 {
   "generated": "P0 baseline",
   "measured": {
-    "entry": 96259,
-    "vendor-vue": 107167,
+    "entry": 104527,
+    "vendor-vue": 107422,
     "vendor-i18n": 31974,
     "vendor-socket": 41576,
-    "locale-en": 148387,
-    "control": 53744,
-    "guide": 6537
+    "locale-en": 153436,
+    "control": 62664,
+    "guide": 6574
   },
   "ceilings": {
-    "entry": 111616,
+    "entry": 120832,
     "vendor-vue": 123904,
     "vendor-i18n": 36864,
     "vendor-socket": 48128,
-    "locale-en": 171008,
-    "control": 62464,
+    "locale-en": 177152,
+    "control": 72704,
     "guide": 8192
   }
 }
