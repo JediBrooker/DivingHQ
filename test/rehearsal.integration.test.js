@@ -40,7 +40,12 @@ const { DEFAULT_COUNTRY, DIVERS, JUDGES, ADMIN, REFEREE } = require("../scripts/
 const TAKEN_COUNTRY = "URY";
 
 let pool;
-let dbReachable = true;
+// Starts false and only goes true once the test-DB guard and SELECT 1 have
+// both passed. node:test still runs after() when before() throws, and
+// after() runs cleanup: with this defaulting to true, the guard refusing
+// the box's .env (node --test on this file directly skips run-tests.js)
+// would have been followed by a cleanup against the live database anyway.
+let dbReachable = false;
 let httpServer;
 let baseUrl = null;
 
@@ -58,10 +63,10 @@ before(async () => {
   try {
     await pool.query("SELECT 1");
   } catch (err) {
-    dbReachable = false;
     console.warn(`[skip] Postgres not reachable: ${err.message}`);
     return;
   }
+  dbReachable = true;
   // A run that died half way leaves its rehearsal behind. Clear it so the
   // seed below starts from nothing (cleanup is idempotent).
   const pre = cli(["cleanup"]);
@@ -81,11 +86,13 @@ before(async () => {
 
 after(async () => {
   if (dbReachable) cli(["cleanup"]);
-  if (httpServer) await new Promise((resolve) => httpServer.close(resolve));
-  try {
+  // Only when before() booted it: require()ing server.js here otherwise
+  // boots the whole app against whatever database the guard just refused.
+  if (httpServer) {
+    await new Promise((resolve) => httpServer.close(resolve));
     const { io } = require("../server.js");
     if (io && typeof io.close === "function") io.close();
-  } catch { /* server never booted */ }
+  }
   if (pool) await pool.end();
 });
 
