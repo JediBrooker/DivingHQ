@@ -258,8 +258,18 @@ describe("runCheck", () => {
 
 describe("probe", () => {
   test("a hung request comes back as a timeout", async () => {
+    // On Node 22 AbortSignal.timeout's timer doesn't hold the process open,
+    // so with nothing else pending the runner gave up on this test before
+    // the abort fired (Node 24 and workerd don't mind). Keep our own timer
+    // going until it does.
     const hang = (_url, init) =>
-      new Promise((_, reject) => init.signal.addEventListener("abort", () => reject(init.signal.reason)));
+      new Promise((_, reject) => {
+        const keepAlive = setTimeout(() => {}, 5000);
+        init.signal.addEventListener("abort", () => {
+          clearTimeout(keepAlive);
+          reject(init.signal.reason);
+        });
+      });
     const r = await watch.probe("https://x.test/api/health", hang, 30);
     assert.deepEqual(r, { httpStatus: null, body: null, error: "timed out after 30 ms" });
     const r2 = await watch.probe("https://x.test/api/health", hang, 1000);
