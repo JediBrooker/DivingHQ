@@ -98,11 +98,12 @@ cd ops/watch
 # 1. Sign in (opens a browser). Skip if CLOUDFLARE_API_TOKEN is set.
 npx wrangler@4 login
 
-# 2. Create the KV namespace that holds the watcher's state.
+# 2. Only on a fresh account: create the KV namespace that holds the
+#    watcher's state. (Done for divinghq.app; its id is in wrangler.toml.)
 npx wrangler@4 kv namespace create WATCH_STATE
-#    It prints an id. Paste it into wrangler.toml in place of
-#    REPLACE_WITH_KV_NAMESPACE_ID and commit that change (the id isn't
-#    a secret, and later deploys need it).
+#    It prints an id. Paste it into wrangler.toml's [[kv_namespaces]] id
+#    and commit that change (the id isn't a secret, and later deploys
+#    need it).
 
 # 3. Deploy, then tell it who to email. The address is a secret rather
 #    than a var so it isn't in the public repo; it has to be a verified

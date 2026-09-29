@@ -30,7 +30,7 @@ TIME_ZONE = "Australia/Sydney"
 # the id it prints here.
 [[kv_namespaces]]
 binding = "WATCH_STATE"
-id = "REPLACE_WITH_KV_NAMESPACE_ID"
+id = "3f6bc95a9f3a4e6c84e04f6539359775"
 
 # Email Routing send binding. Left unrestricted, it can send to any
 # verified Email Routing destination address on the account and nothing
