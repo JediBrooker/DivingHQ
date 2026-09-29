@@ -160,7 +160,7 @@ test("restore-check refuses to use the live database, or anything not named rest
       encoding: "utf8",
       env: cleanEnv({
         DIVINGHQ_ENV_FILE: envFile,
-        DB_DATABASE: "diving_app",
+        DB_DATABASE: "not_a_real_live_db",
         RESTORE_CHECK_DB: scratch,
         BACKUP_DIR: path.join(dir, "backups"),
         OPS_STATE_DIR: path.join(dir, "state"),
@@ -168,21 +168,21 @@ test("restore-check refuses to use the live database, or anything not named rest
     });
     const state = () => JSON.parse(fs.readFileSync(path.join(dir, "state", "restore-check.json"), "utf8"));
 
-    let r = run("diving_app");
+    let r = run("not_a_real_live_db");
     assert.notEqual(r.status, 0);
     assert.match(r.stderr, /is the live database, refusing/);
     assert.equal(state().ok, false);
     assert.match(state().last_run_at, /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$/);
 
-    r = run("DIVING_APP");
-    assert.notEqual(r.status, 0, "Postgres folds case, so this is the same database");
+    r = run("NOT_A_REAL_LIVE_DB");
+    assert.notEqual(r.status, 0, "the live name in other case is refused too, unquoted it is the same database");
     assert.match(r.stderr, /is the live database/);
 
-    r = run("diving_app_copy");
+    r = run("not_a_real_live_db_copy");
     assert.notEqual(r.status, 0);
     assert.match(r.stderr, /containing restore_check/);
 
-    r = run('x_restore_check"; DROP DATABASE diving_app; --');
+    r = run('x_restore_check"; DROP DATABASE not_a_real_live_db; --');
     assert.notEqual(r.status, 0);
     assert.match(r.stderr, /plain lowercase name/);
   } finally {
