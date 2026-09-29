@@ -105,6 +105,11 @@ test("ops_resolve_db: DATABASE_URL, else DB_*, else PG*", () => {
   r = sh(show, { PGHOST: "ci-host", PGUSER: "ci", PGDATABASE: "divinghq_test" });
   assert.equal(r.out, "ci-host||ci||divinghq_test||");
 
+  // No host at all: TCP to localhost like node-pg, not libpq's unix
+  // socket (peer auth as root, which fails on the box).
+  r = sh(show, { PGHOST: "", DB_USER: "diver", DB_PASSWORD: "pw", DB_DATABASE: "diving_app" });
+  assert.equal(r.out, "localhost||diver|pw|diving_app||");
+
   r = sh(show, { DATABASE_URL: "mysql://nope" });
   assert.notEqual(r.status, 0);
   r = sh(show, {});

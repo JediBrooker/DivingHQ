@@ -128,7 +128,12 @@ ops_resolve_db() {
   if [[ -n "${DATABASE_URL:-}" ]]; then
     ops_parse_database_url "$DATABASE_URL" || { ops_error "DATABASE_URL isn't a postgres:// URL"; return 1; }
   else
-    [[ -n "${DB_HOST:-}" ]] && export PGHOST="$DB_HOST"
+    # No host anywhere means TCP to localhost for the app (that's node-pg's
+    # default, and what reset-db-keep-archive.sh assumes too), but libpq
+    # would go for the unix socket instead, which on Debian is peer auth:
+    # root isn't a database role, so every cron run would fail while the
+    # app is fine. Follow the app.
+    export PGHOST="${DB_HOST:-${PGHOST:-localhost}}"
     [[ -n "${DB_PORT:-}" ]] && export PGPORT="$DB_PORT"
     [[ -n "${DB_USER:-}" ]] && export PGUSER="$DB_USER"
     [[ -n "${DB_PASSWORD:-}" ]] && export PGPASSWORD="$DB_PASSWORD"
