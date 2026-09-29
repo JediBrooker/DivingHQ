@@ -103,6 +103,19 @@ test("default start is the next quarter hour at least half an hour out", () => {
   assert.equal(r.parseStart("2026-10-04T10:00:00Z").toISOString(), "2026-10-04T10:00:00.000Z");
 });
 
+test("--start needs its offset, and the meet keeps the day as written", () => {
+  // A bare time gets read in the box's zone (UTC on a stock container),
+  // which lands the event hours away from where the owner meant it.
+  for (const bare of ["2026-10-04T10:00", "2026-10-04", "2026-10-04 10:00+10:00", "2026-13-04T10:00Z"]) {
+    assert.throws(() => r.parseStart(bare), r.UsageError, bare);
+  }
+  const early = "2026-10-04T08:00+10:00";
+  assert.equal(r.parseStart(early).toISOString(), "2026-10-03T22:00:00.000Z");
+  assert.equal(r.meetDate(early, r.parseStart(early)), "2026-10-04", "the venue's day, not UTC's");
+  assert.equal(r.parseStart("2026-10-04T10:00:00.000-03:00").toISOString(), "2026-10-04T13:00:00.000Z");
+  assert.equal(r.meetDate(null, new Date(2026, 9, 4, 12)), "2026-10-04");
+});
+
 test("accounts: prefixed, unique, the right cast", () => {
   const names = r.ACCOUNTS.map((a) => a.username);
   assert.equal(new Set(names).size, names.length);

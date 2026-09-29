@@ -76,10 +76,15 @@ Or interactively: `ssh root@jedibrooker`, `pct enter 117`,
 `cd ~/DiveRecorder`, `node scripts/rehearsal.js seed --email you@example.com`.
 
 Options: `--country XXX` for another catalogue country, `--start
-2026-10-04T10:00` if you seed the night before (the default is the next
+2026-10-04T10:00+11:00` if you seed the night before (the default is the next
 quarter hour at least 30 minutes out; it only sets what the schedule shows).
-Without `--email` the accounts get `@example.invalid` addresses and no email
-arrives anywhere.
+`--start` has to carry the venue's UTC offset: the script would read a bare
+`10:00` in the box's own timezone (UTC on a stock container, `date` on the box
+tells you), not yours. Mind daylight saving: Sydney is +10:00 until the first
+Sunday in October and +11:00 from then. Without `--start`, the meet's date is
+the box's date, which can be yesterday for you if you seed early in the morning
+in Australia. Without `--email` the
+accounts get `@example.invalid` addresses and no email arrives anywhere.
 
 It prints the password **once**, then every username with its role, the dive
 lists, and the URLs. Write the password where the judges can see it (it's

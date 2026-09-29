@@ -5,7 +5,7 @@
 // real meet on the live site with real phones as judges, and then takes
 // every trace of it out again.
 //
-//   node scripts/rehearsal.js seed    [--country ESH] [--email you@example.com] [--start 2026-10-04T10:00]
+//   node scripts/rehearsal.js seed    [--country ESH] [--email you@example.com] [--start 2026-10-04T10:00+10:00]
 //   node scripts/rehearsal.js status  [--country ESH]
 //   node scripts/rehearsal.js cleanup [--country ESH] [--dry-run]
 //
@@ -228,17 +228,32 @@ function defaultStart(now = new Date()) {
   return new Date(Math.ceil((now.getTime() + 30 * 60 * 1000) / quarter) * quarter);
 }
 
+// --start has to say its offset. The script runs on the box, and Node
+// reads a bare 2026-10-04T10:00 in the box's zone, which is UTC on a stock
+// container: for someone in Sydney that's the event listed at 9pm.
+// Refusing is kinder than a schedule that's quietly ten hours out.
+const START_FORMAT = /^(\d{4}-\d{2}-\d{2})T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2})$/i;
+
 function parseStart(raw) {
   if (raw == null) return defaultStart();
-  const d = new Date(raw);
-  if (Number.isNaN(d.getTime())) throw new UsageError(`--start ${raw} isn't a date and time (try 2026-10-04T10:00)`);
+  const text = String(raw).trim();
+  const d = new Date(text);
+  if (!START_FORMAT.test(text) || Number.isNaN(d.getTime())) {
+    throw new UsageError(`--start ${raw} needs a date, a time and the venue's UTC offset, like 2026-10-04T10:00+10:00 (or Z for UTC)`);
+  }
   return d;
 }
 
-// The meet's date as the box sees it, not UTC.
+// The meet's date as the box sees it.
 function localDate(d) {
   const pad = (n) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+// The day on the meet: the one written in --start (the venue's day, which
+// the box's UTC clock can put a day early), else the box's own date.
+function meetDate(raw, start) {
+  return raw == null ? localDate(start) : START_FORMAT.exec(String(raw).trim())[1];
 }
 
 function splitDive(code) {
@@ -354,7 +369,7 @@ async function resolveDives(db) {
   return byCode;
 }
 
-async function seed(client, { country, email, start, bcrypt, password }) {
+async function seed(client, { country, email, start, day = null, bcrypt, password }) {
   await begin(client);
   try {
     const existing = await rehearsalOrgs(client);
@@ -449,11 +464,11 @@ async function seed(client, { country, email, start, bcrypt, password }) {
     for (const d of DIVERS) await grant(ids[d.key], "diver", ids.admin);
     await grant(ids.referee, "referee", sysadmin.id);
 
-    const meetDate = localDate(start);
+    const meetDay = day || localDate(start);
     const meet = await one(
       `INSERT INTO meets (org_id, name, venue, start_date, end_date, description, host_club_id, represent_as)
        VALUES ($1, $2, $3, $4, $4, $5, $6, 'club') RETURNING id`,
-      [org.id, MEET_NAME, "Rehearsal pool", meetDate,
+      [org.id, MEET_NAME, "Rehearsal pool", meetDay,
        "A throwaway meet for rehearsing on the live site. It is deleted afterwards by scripts/rehearsal.js cleanup.",
        club.id],
     );
@@ -501,7 +516,7 @@ async function seed(client, { country, email, start, bcrypt, password }) {
     return {
       country: { a3: country.a3, name: country.name },
       org_id: org.id, club_id: club.id, meet_id: meet.id, event_id: event.id,
-      meet_date: meetDate, scheduled_at: start.toISOString(),
+      meet_date: meetDay, scheduled_at: start.toISOString(),
       sysadmin_for_referee: sysadmin.username,
       password,
       accounts,
@@ -865,6 +880,7 @@ function seedReport(res, target) {
   }
   const lists = res.dive_lists.map((d) => `  ${d.username.padEnd(18)} ${d.dives.join("  ")}`).join("\n");
   return `Rehearsal seeded in ${res.country.name} (${res.country.a3}) on ${target}.
+Meet day ${res.meet_date}, event scheduled for ${res.scheduled_at} (UTC).
 
 Password for every account below. It is shown once and stored nowhere:
 
@@ -937,7 +953,7 @@ function cleanupReport(res, target) {
 }
 
 const USAGE = `Usage:
-  node scripts/rehearsal.js seed    [--country ESH] [--email you@example.com] [--start 2026-10-04T10:00]
+  node scripts/rehearsal.js seed    [--country ESH] [--email you@example.com] [--start 2026-10-04T10:00+10:00]
   node scripts/rehearsal.js status  [--country ESH]
   node scripts/rehearsal.js cleanup [--country ESH] [--dry-run]
 
@@ -945,7 +961,9 @@ const USAGE = `Usage:
   --email    your address; every account gets a plus-addressed copy of it
              (you+rehearsal-judge1@...) so the live and results emails reach you.
              Without it they get @example.invalid addresses.
-  --start    when the event is scheduled (default: the next quarter hour, 30+ minutes out)
+  --start    when the event is scheduled, with the venue's UTC offset (a bare time
+             would be read in the box's zone). Default: the next quarter hour,
+             30+ minutes out
   --dry-run  cleanup reports what it would delete and rolls back
   --json     one JSON object on stdout instead of the report
 
@@ -995,7 +1013,8 @@ async function main(argv = process.argv.slice(2)) {
     if (opts.command === "seed") {
       const country = resolveCountry(opts.country || DEFAULT_COUNTRY);
       const res = await seed(client, {
-        country, email: opts.email, start, bcrypt: require("bcrypt"), password: generatePassword(),
+        country, email: opts.email, start, day: meetDate(opts.start, start),
+        bcrypt: require("bcrypt"), password: generatePassword(),
       });
       emit({ ok: true, database: target, ...res }, seedReport(res, target));
     } else if (opts.command === "status") {
@@ -1036,7 +1055,7 @@ module.exports = {
   DEFAULT_COUNTRY, USER_PREFIX, ACCOUNTS, ACCOUNT_USERNAMES, JUDGES, DIVERS, ADMIN, REFEREE, EVENT, CLUB_CODE,
   UsageError, RefusedError,
   parseArgs, resolveCountry, plusAddress, accountEmail, orgSlug, isRehearsalOrg,
-  generatePassword, defaultStart, parseStart, localDate, splitDive, urlsFor, describeTarget,
+  generatePassword, defaultStart, parseStart, localDate, meetDate, splitDive, urlsFor, describeTarget,
   bind, seed, cleanup, status,
 };
 
