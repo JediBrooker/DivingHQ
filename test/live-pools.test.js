@@ -336,3 +336,57 @@ test('roster_changed mid-dive: the stage stays on the withdrawn diver, Next goes
   assert.equal(idle.currentIndex, -1)
   assert.equal(idle.roster.length, 1)
 })
+
+// Where a pool picks up when the server has no active diver. Finalising
+// drops it, so an undone finalise used to land in the "nobody started this
+// yet" path and put round 1 diver 1 back up (rehearsal dry run, 10c).
+test('resumeIndex: no dives yet puts the first diver up', async () => {
+  const { resumeIndex } = await import('../src/composables/useLivePools.js')
+  const roster = [
+    { competitor_id: 'a', round_number: 1 }, { competitor_id: 'b', round_number: 1 },
+  ]
+  assert.deepEqual(resumeIndex(roster, [], 5), { index: 0, announce: true })
+  assert.deepEqual(resumeIndex(roster, null, 5), { index: 0, announce: true })
+  assert.deepEqual(resumeIndex([], [], 5), { index: -1, announce: false })
+  // Withdrawn and reserve rows never go up, first or otherwise.
+  const withGaps = [{ competitor_id: 'w', round_number: 1, withdrawn_at: 'x' }, ...roster]
+  assert.deepEqual(resumeIndex(withGaps, [], 5), { index: 1, announce: true })
+})
+
+test('resumeIndex: every dive in keeps the last one on the board and sends nothing', async () => {
+  const { resumeIndex } = await import('../src/composables/useLivePools.js')
+  const roster = [
+    { competitor_id: 'a', round_number: 1 }, { competitor_id: 'b', round_number: 1 },
+    { competitor_id: 'a', round_number: 2 }, { competitor_id: 'b', round_number: 2 },
+  ]
+  const full = [1, 2, 3]
+  const history = roster.map((r) => ({ ...r, judge_scores: full }))
+  assert.deepEqual(resumeIndex(roster, history, 3), { index: 3, announce: false })
+})
+
+test('resumeIndex: part way through, the dive after the furthest one judged goes up', async () => {
+  const { resumeIndex } = await import('../src/composables/useLivePools.js')
+  const roster = [
+    { competitor_id: 'a', round_number: 1 }, { competitor_id: 'b', round_number: 1 },
+    { competitor_id: 'a', round_number: 2 }, { competitor_id: 'b', round_number: 2 },
+  ]
+  const history = [
+    { competitor_id: 'a', round_number: 1, judge_scores: [7, 7, 7] },
+    // a short panel the operator moved past on purpose: not revisited
+    { competitor_id: 'b', round_number: 1, judge_scores: [6, 6] },
+    { competitor_id: 'a', round_number: 2, judge_scores: [8, 8, 8] },
+  ]
+  assert.deepEqual(resumeIndex(roster, history, 3), { index: 3, announce: true })
+})
+
+test('resumeIndex: the furthest dive only part judged was still going, so it goes back up', async () => {
+  const { resumeIndex } = await import('../src/composables/useLivePools.js')
+  const roster = [
+    { competitor_id: 'a', round_number: 1 }, { competitor_id: 'b', round_number: 1 },
+  ]
+  const history = [
+    { competitor_id: 'a', round_number: 1, judge_scores: [7, 7, 7] },
+    { competitor_id: 'b', round_number: 1, judge_scores: [6] },
+  ]
+  assert.deepEqual(resumeIndex(roster, history, 3), { index: 1, announce: true })
+})
