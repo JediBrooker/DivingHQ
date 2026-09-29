@@ -99,5 +99,9 @@ test("randomise: the drawn order stays up until the operator confirms it", async
   await confirm.click();
   await expect(dialog).toBeHidden();
   await expect(primary).toContainText(/Referee Sign Off/i);
+  // ...and Setup keeps showing it, since that's what the referee signs off.
+  await expect(page.locator(".setup-order-name")).toHaveText(drawn);
+  await page.reload();
+  await expect(page.locator(".setup-order-name")).toHaveText(drawn, { timeout: 10_000 });
   await setup.deleteOrg(orgId);
 });
