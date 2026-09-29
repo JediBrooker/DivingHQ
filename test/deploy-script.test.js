@@ -130,10 +130,14 @@ function deployRepo() {
   // A healthy service: the health check gets its 200 straight away.
   fs.writeFileSync(path.join(bin, "curl"), "#!/bin/sh\necho '{\"ok\":true,\"schema_version\":104}'\n", { mode: 0o755 });
   const deploy = (args = [], env = {}) => {
+    // An OPS_STATE_DIR exported in whoever's shell runs the suite would win
+    // over the temp .env below and send these fake deploys to the real one.
+    const base = { ...process.env };
+    delete base.OPS_STATE_DIR;
     try {
       const out = execFileSync("bash", [path.join(dir, "deploy.sh"), ...args], {
         cwd: dir, encoding: "utf8", stdio: "pipe",
-        env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, HEALTH_TIMEOUT_S: "1", ...env },
+        env: { ...base, PATH: `${bin}:${process.env.PATH}`, HEALTH_TIMEOUT_S: "1", ...env },
       });
       return { code: 0, out };
     } catch (err) {
