@@ -5,8 +5,10 @@
 //     backup.json the status page reads
 //   * a failed backup keeps the last success on record
 //   * the off-site path against a fake R2 (R2_ENDPOINT) that records the
-//     PUT: SigV4 signed for region "auto" / service "s3", the body opens
-//     with the runbook's openssl command, and no secret reaches the log
+//     PUT: SigV4 signed for region "auto" / service "s3", no secret in the
+//     log, and then the restore runbook in ops/backups/README.md command
+//     for command (curl download, openssl decrypt, pg_restore into a new
+//     database)
 //   * the refusals: no passphrase file, half the R2 settings, a rejected
 //     upload, an ETag that doesn't match
 //   * the restore check: restores into a scratch database, compares, drops
@@ -97,13 +99,16 @@ function scratchName() {
 // in this process). The repo's .env is never read: DIVINGHQ_ENV_FILE is
 // empty and the connection comes from this process's environment.
 function runScript(script, env) {
+  return runBash([script], env);
+}
+function runBash(args, env) {
   const base = {};
   for (const [k, v] of Object.entries(process.env)) {
     if (/^(R2_|BACKUP_|OPS_STATE_DIR|RESTORE_CHECK_)/.test(k)) continue;
     base[k] = v;
   }
   return new Promise((resolve) => {
-    const child = spawn("bash", [script], {
+    const child = spawn("bash", args, {
       env: { ...base, DIVINGHQ_ENV_FILE: emptyEnvFile, ...env },
     });
     let stdout = "";
@@ -122,10 +127,12 @@ function dirs(name) {
 const readState = (stateDir, file) => JSON.parse(fs.readFileSync(path.join(stateDir, file), "utf8"));
 const dumpsIn = (dir) => fs.readdirSync(dir).filter((f) => DUMP_RE.test(f)).sort();
 
-// A stand-in for R2: records every request, stores PUT bodies, answers
-// with the MD5 ETag R2 gives a single PUT. `respond` can override.
+// A stand-in for R2: records every request, keeps what's PUT and hands it
+// back on a GET (for the runbook's download), and answers a PUT with the
+// MD5 ETag R2 gives a single upload. `respond` can override.
 async function fakeR2(respond) {
   const requests = [];
+  const objects = new Map();
   const server = http.createServer((req, res) => {
     const chunks = [];
     req.on("data", (c) => chunks.push(c));
@@ -133,6 +140,13 @@ async function fakeR2(respond) {
       const body = Buffer.concat(chunks);
       requests.push({ method: req.method, url: req.url, headers: req.headers, body });
       if (respond && respond(req, res, body)) return;
+      if (req.method === "GET") {
+        const obj = objects.get(req.url);
+        res.statusCode = obj && req.headers.authorization ? 200 : 404;
+        res.end(obj || "");
+        return;
+      }
+      objects.set(req.url, body);
       res.setHeader("ETag", `"${crypto.createHash("md5").update(body).digest("hex")}"`);
       res.end();
     });
@@ -251,7 +265,7 @@ test("a failed backup says so and keeps the last success on record", async (t) =
   assert.deepEqual(fs.readdirSync(d.backupDir).filter((f) => f.includes("partial")), []);
 });
 
-test("off-site: encrypted, SigV4-signed PUT to R2, and the runbook's openssl opens it", async (t) => {
+test("off-site: encrypted, SigV4-signed PUT to R2, and the restore runbook gets it back", async (t) => {
   if (skipReason) return t.skip(skipReason);
   const d = dirs("r2");
   const r2 = await fakeR2();
@@ -297,6 +311,39 @@ test("off-site: encrypted, SigV4-signed PUT to R2, and the runbook's openssl ope
 
     for (const secret of [R2.R2_SECRET_ACCESS_KEY, PASSPHRASE]) {
       assert.ok(!r.log.includes(secret), "no secret in the log");
+    }
+
+    // The rest of the restore runbook (ops/backups/README.md), command for
+    // command: download with curl, decrypt, restore into a new database as
+    // the app's role, check it.
+    const cfg = path.join(work, "r2.curl");
+    fs.writeFileSync(cfg, `user = "${R2.R2_ACCESS_KEY_ID}:${R2.R2_SECRET_ACCESS_KEY}"\n`, { mode: 0o600 });
+    const fetched = path.join(work, "fetched.dump.enc");
+    const dl = await runBash(["-c",
+      `curl --fail --silent --show-error --config "${cfg}" --aws-sigv4 "aws:amz:auto:s3" \\
+        -o "${fetched}" "${r2.endpoint}/${R2.R2_BUCKET}/divinghq/${dump}.enc"`], {});
+    assert.equal(dl.code, 0, dl.log);
+    assert.ok(fs.readFileSync(fetched).equals(put.body), "downloads what was uploaded");
+    const get = r2.requests.find((q) => q.method === "GET");
+    assert.equal(expectedSignature(get, R2.R2_SECRET_ACCESS_KEY).signature,
+      expectedSignature(get, R2.R2_SECRET_ACCESS_KEY).expected, "the download is signed too");
+
+    const restoredDb = `${liveDb}_runbook_restore`;
+    const plain = path.join(work, "runbook.dump");
+    const steps = await runBash(["-c", `set -euo pipefail
+      openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -in "${fetched}" -out "${plain}" -pass "file:${passphraseFile}"
+      pg_restore --list "${plain}" > /dev/null
+      source "${path.join(ROOT, "scripts", "ops", "common.sh")}" && ops_load_env "${emptyEnvFile}" && ops_resolve_db
+      dropdb --if-exists "${restoredDb}"
+      createdb "${restoredDb}"
+      pg_restore --no-owner --no-privileges --single-transaction --exit-on-error -d "${restoredDb}" "${plain}"
+      psql -X -tA -d "${restoredDb}" -c "SELECT version FROM schema_meta"`], {});
+    try {
+      assert.equal(steps.code, 0, steps.log);
+      const live = await pool.query("SELECT version FROM public.schema_meta WHERE id = 1");
+      assert.equal(steps.stdout.trim(), String(live.rows[0].version));
+    } finally {
+      await pool.query(`DROP DATABASE IF EXISTS "${restoredDb}" WITH (FORCE)`);
     }
     assert.deepEqual(fs.readdirSync(d.backupDir).filter((f) => f.endsWith(".enc") || f.startsWith(".r2-")), [],
       "the encrypted copy and curl's headers are cleaned up");

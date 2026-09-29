@@ -1,0 +1,25 @@
+# /etc/cron.d/divinghq-backup, installed from ops/cron/divinghq-backup in
+# the DivingHQ repo. ops/backups/README.md has the install steps; don't edit
+# the copy in /etc by hand, change the repo and reinstall.
+#
+# The times are UTC and cron reads them in the box's own time zone, so the
+# box has to be on UTC (`date +%Z` prints UTC). If it isn't, move the hours
+# rather than the clock. 16:30 UTC is 02:30 in Sydney in winter (AEST) and
+# 03:30 in summer (AEDT), both well outside meet hours.
+#
+#   nightly  16:30 UTC  backup-db.sh     dump, keep 14, encrypted copy to R2
+#   Sundays  17:30 UTC  restore-check.sh restore the newest dump into a
+#                                        scratch database and compare
+#
+# Both append to /var/log/divinghq-backup.log (rotated by
+# /etc/logrotate.d/divinghq-backup). Their outcome also lands in
+# /var/lib/divinghq/*.json, which GET /api/ops/status reports.
+#
+# DIVINGHQ_DIR is where the app is checked out (where deploy.sh lives).
+
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+DIVINGHQ_DIR=/root/DiveRecorder
+
+30 16 * * *  root  "$DIVINGHQ_DIR/scripts/ops/backup-db.sh" >> /var/log/divinghq-backup.log 2>&1
+30 17 * * 0  root  "$DIVINGHQ_DIR/scripts/ops/restore-check.sh" >> /var/log/divinghq-backup.log 2>&1
