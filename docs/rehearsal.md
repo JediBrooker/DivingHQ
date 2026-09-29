@@ -117,7 +117,11 @@ Seed refuses, and changes nothing, when:
 1. **Laptop**: sign in as `rehearsal-admin`, open the Control Room URL the seed
    printed (`/control?event=...`).
 2. **Judges**: each phone signs in as `rehearsal-judge1` to `rehearsal-judge5`
-   and opens `/judge`. Check each phone shows the right judge number.
+   and opens `/judge`. Before the start it says it's waiting and shows only
+   the judge's name; leave it there. When the event starts the phone picks it
+   up by itself (a few seconds at most, no reload or tap), and the judge
+   number shows next to the name with the first diver. Check each phone shows
+   the right one then.
 3. **Pre-meet steps** in the Control Room:
    - check in all four divers
    - randomise the start order. After the five second draw the dialog shows
@@ -137,7 +141,10 @@ Seed refuses, and changes nothing, when:
      dialog, then sign off another way.
 4. **Start the event.** The four "is live" emails should arrive
    (`you+rehearsal-diver1@...` to `diver4`). Judges who allowed notifications
-   get "Judging panel is live".
+   get "Judging panel is live" as a phone notification. A phone that already
+   has `/judge` open moves to the first diver instead and shows no banner in
+   the app for it; any other banner on the judge screen appears at the top,
+   never over the keypad or Submit.
 5. **Run all three rounds.** Start puts the first diver up by itself; judges
    score on their phones, and **Next Diver** in the Control Room moves on
    (at the end of the list it becomes Finalise, then the review screen).
@@ -155,7 +162,9 @@ Seed refuses, and changes nothing, when:
    redive), a score correction (click the dive in the Control Room's History
    column), a judge who reloads mid dive. Correct one of the middle scores,
    not the highest or lowest: those are dropped, so changing one may not move
-   the total at all.
+   the total at all. A judge who reloads after scoring should come back to
+   their score on screen, their tile filled and the keypad shut, the same as
+   right after Submit.
 9. **Finish the event.** The four results emails should arrive.
 10. **Results PDF**: `/api/events/<event>/results.pdf`. 陈美玲 should print in
     Chinese and Иван Петров in Cyrillic. `?` or "Ivan Petrov" means the Noto

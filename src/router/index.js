@@ -193,7 +193,10 @@ const routes = [
   {
     path: '/judge',
     component: () => import('@/views/JudgeView.vue'),
-    meta: { requiresAuth: true, requiresRole: ['judge'] },
+    // bannersOnTop: the keypad, Submit and Signal Referee fill the bottom
+    // of a judge's phone, so NotificationCenter shows its banners at the
+    // top there, one at a time.
+    meta: { requiresAuth: true, requiresRole: ['judge'], bannersOnTop: true },
   },
   {
     // Judge Analysis: public transparency dashboard for any judge in

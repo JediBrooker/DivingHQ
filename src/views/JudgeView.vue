@@ -40,7 +40,11 @@ async function acquireWakeLock() {
   } catch { /* permission denied or unsupported */ }
 }
 function onVisibilityChange() {
-  if (document.visibilityState === 'visible' && !wakeLock.value) acquireWakeLock()
+  if (document.visibilityState !== 'visible') return
+  if (!wakeLock.value) acquireWakeLock()
+  // A phone that slept through the start: go and look (see
+  // adoptOwnLiveEvent further down, a no-op once there's an event).
+  adoptOwnLiveEvent()
 }
 function buzz(pattern) {
   // pattern can be a single number (ms) or an array of on/off
@@ -254,16 +258,43 @@ function joinEventRoom() {
 // meet. Take the judge's own Live panel instead: the newest one, since
 // my-events comes back newest first. No Live panel just leaves it
 // waiting, same as before.
+//
+// Waiting isn't the end of it though. Judges open this before Start
+// Event, and with no event there's no room to hear the first diver in,
+// so the look has to happen again once the panel goes live: on the
+// status change and the "panel is live" notice (both come to this
+// socket), on a reconnect or the phone waking up, and on a slow poll for
+// a judge none of those reach. Only ever while the URL names no event.
+// A call that lands mid-lookup runs once more afterwards, since that
+// lookup may have read the list just before the event flipped.
+let adopting = false
+let adoptAgain = false
 async function adoptOwnLiveEvent() {
   if (eventIdFromUrl.value) return
+  if (adopting) { adoptAgain = true; return }
+  adopting = true
   try {
     const mine = await auth.apiFetch('/api/judge/my-events')
     const live = Array.isArray(mine) ? mine.find((e) => e.status === 'Live') : null
     if (live && !eventIdFromUrl.value) {
       router.replace({ query: { ...route.query, event: live.id } })
     }
-  } catch { /* stays on the waiting screen */ }
+  } catch { /* stays on the waiting screen */ } finally {
+    adopting = false
+    if (adoptAgain) {
+      adoptAgain = false
+      adoptOwnLiveEvent()
+    }
+  }
 }
+const ADOPT_POLL_MS = 10_000
+let adoptPoll = null
+useSocketEvent(socket, 'event_status_changed', (d) => {
+  if (d?.to === 'Live') adoptOwnLiveEvent()
+})
+useSocketEvent(socket, 'notification', (n) => {
+  if (n?.category === 'event_live' && n.data?.role === 'judge') adoptOwnLiveEvent()
+})
 // The URL picking up an event (the adopt above, or a link while this
 // view is open) has to join that room. On a later reconnect the
 // connect handler below does it. A diver that came in for some other
@@ -282,6 +313,7 @@ watch(eventIdFromUrl, (id) => {
 useSocketEvent(socket, 'connect', () => {
   drainOutbox()
   joinEventRoom()
+  adoptOwnLiveEvent()
 })
 
 const { isOffline, unsyncedCount } = outboxState
@@ -304,6 +336,9 @@ onBeforeRouteLeave(() => {
 onMounted(() => {
   if (socket.connected) joinEventRoom()
   adoptOwnLiveEvent()
+  adoptPoll = setInterval(() => {
+    if (!eventIdFromUrl.value && document.visibilityState === 'visible') adoptOwnLiveEvent()
+  }, ADOPT_POLL_MS)
   acquireWakeLock()
   document.addEventListener('visibilitychange', onVisibilityChange)
   window.addEventListener('beforeunload', onJudgeBeforeUnload)
@@ -311,6 +346,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  clearInterval(adoptPoll)
   offQueuedEntries?.()
   document.removeEventListener('visibilitychange', onVisibilityChange)
   window.removeEventListener('beforeunload', onJudgeBeforeUnload)
@@ -345,18 +381,122 @@ useSocketEvent(socket, 'meet_resumed', (data) => {
   holdReason.value = ''
 })
 
+// One dive: this diver, this round, this event.
+function diveKey(d) {
+  return d ? `${d.event_id}|${d.competitor_id}|${d.round_number}` : ''
+}
+
+// Bumped by anything that changes what this judge has done on the dive
+// on screen (a submit, a new diver, a re-dive), so a restore that went
+// out before it can't land on top of it.
+let diveSeq = 0
+// Judge numbers whose score_received landed while a restore was out.
+// Those are newer than whatever the restore read, so they're kept.
+let arrivedDuringRestore = null
+// The last Failed or Cap call heard for a dive, and a count of them, so a
+// restore that read the scores before the call can still hold its tiles
+// to it (see applyRefereeCallToPanel).
+let lastRefereeCall = null
+let refereeCallSeq = 0
+
+// A score this judge queued for the dive that the server's answer can't
+// have included: waiting in the outbox, mid-send, failed and waiting on a
+// Retry, or sent only after the restore asked (`since`). Right after a
+// submit the keypad stays shut for all of those, so it does here too. A
+// conflict is left out; the server's value (the operator's manual entry)
+// is the one that stands there.
+async function queuedScoreFor(dive, since) {
+  if (!outboxInstance) return null
+  try {
+    const entries = await outboxInstance.list({ action_type: 'submit_score' })
+    const mine = entries.filter((e) =>
+      (['pending', 'inflight', 'failed'].includes(e.status)
+        || (e.status === 'synced' && Date.parse(e.synced_at) >= since))
+      && String(e.payload?.judge_id) === String(user?.id)
+      && diveKey(e.payload) === diveKey(dive))
+    const last = mine[mine.length - 1]
+    return last ? Number(last.payload.score) : null
+  } catch { return null }
+}
+
+// Show a score as sent, the way the page looks right after Submit:
+// the number up, the keypad shut, Submit reading "Score submitted".
+function showSubmitted(score) {
+  const whole = Math.floor(score)
+  currentScore.value = whole
+  isHalf.value = score - whole === 0.5
+  submitted.value = true
+  lastSubmittedScore.value = score
+}
+
+// What the server already has for the dive on screen. A reload forgets
+// everything, and a reconnect replays the diver, so a judge who had
+// scored came back to an open keypad and an empty tile, with nothing to
+// say their score was in (one tap would have sent a second, different
+// one over it). This puts the panel's tiles back and, when this judge's
+// score is in or still queued, shows it and shuts the keypad. When
+// there's neither but the keypad is shut, the dive was re-dived while
+// this phone wasn't listening, so it opens again. A judge who has
+// flagged the referee is correcting their score, so their keypad is
+// left alone.
+async function restoreDiveScores(dive) {
+  if (!dive?.event_id || !dive.competitor_id || !dive.round_number) return
+  const seq = diveSeq
+  const callSeq = refereeCallSeq
+  const since = Date.now()
+  const arrived = new Set()
+  arrivedDuringRestore = arrived
+  let body
+  try {
+    const q = new URLSearchParams({ competitor_id: dive.competitor_id, round_number: String(dive.round_number) })
+    body = await auth.apiFetch(`/api/events/${dive.event_id}/dive-scores?${q}`)
+  } catch {
+    return
+  } finally {
+    if (arrivedDuringRestore === arrived) arrivedDuringRestore = null
+  }
+  const stale = () => seq !== diveSeq || diveKey(activeDiver.value) !== diveKey(dive)
+  if (stale() || !Array.isArray(body?.scores)) return
+  const tiles = {}
+  for (const s of body.scores) tiles[s.judge_number] = Number(s.score)
+  for (const n of arrived) {
+    if (panelScores.value[n] != null) tiles[n] = panelScores.value[n]
+  }
+  if (callSeq !== refereeCallSeq && lastRefereeCall?.key === diveKey(dive)) {
+    const { call, cap } = lastRefereeCall
+    for (const n of Object.keys(tiles)) tiles[n] = heldAward(tiles[n], call, cap)
+  }
+  panelScores.value = tiles
+
+  const queued = await queuedScoreFor(dive, since)
+  if (stale() || signaled.value) return
+  const score = queued ?? tiles[body.judge_number]
+  if (score != null) showSubmitted(score)
+  else if (submitted.value) resetScore()
+}
+
 useSocketEvent(socket, 'state_update', async (data) => {
   if (!data || !isMyEvent(data.event_id)) return
+  // The same dive again is a replay (the reconnect, get_active_diver on
+  // a rejoin), not a new diver. Wiping the keypad on it reopened it for
+  // a judge who had already scored, so only a different dive resets.
+  const sameDive = diveKey(activeDiver.value) === diveKey(data)
+  const keepNumber = String(activeDiver.value?.event_id) === String(data.event_id)
+    ? activeDiver.value?.judge_number : undefined
   // Replayed payloads from before the Control Room sent diverName /
   // diveCode still need to render, so fill them from the raw row.
-  activeDiver.value = normaliseActiveDiver(data)
-  resetScore()
-  // New diver / round: previous panel + referee signal are both
-  // irrelevant now. The signal would otherwise carry over to the
-  // next diver and confuse the referee.
-  panelScores.value = {}
-  panelSignals.value = {}
-  signaled.value = false
+  activeDiver.value = { ...normaliseActiveDiver(data), ...(keepNumber ? { judge_number: keepNumber } : {}) }
+  if (!sameDive) {
+    diveSeq++
+    resetScore()
+    // New diver / round: previous panel + referee signal are both
+    // irrelevant now. The signal would otherwise carry over to the
+    // next diver and confuse the referee.
+    panelScores.value = {}
+    panelSignals.value = {}
+    signaled.value = false
+  }
+  restoreDiveScores(activeDiver.value)
 
   if (data.event_id) {
     try {
@@ -383,6 +523,7 @@ useSocketEvent(socket, 'referee_action_redive', (data) => {
   if (String(data.event_id) !== String(a.event_id)) return
   if (String(data.competitor_id) !== String(a.competitor_id)) return
   if (Number(data.round_number) !== Number(a.round_number)) return
+  diveSeq++
   resetScore()
   panelScores.value = {}
   panelSignals.value = {}
@@ -399,6 +540,8 @@ function applyRefereeCallToPanel(data, call) {
   if (String(data.event_id) !== String(a.event_id)) return
   if (String(data.competitor_id) !== String(a.competitor_id)) return
   if (Number(data.round_number) !== Number(a.round_number)) return
+  lastRefereeCall = { key: diveKey(a), call, cap: data.cap_value }
+  refereeCallSeq++
   const held = {}
   for (const [n, v] of Object.entries(panelScores.value)) held[n] = heldAward(v, call, data.cap_value)
   panelScores.value = held
@@ -433,6 +576,7 @@ useSocketEvent(socket, 'score_received', (data) => {
   if (data.competitor_id !== activeDiver.value.competitor_id) return
   if (Number(data.round_number) !== Number(activeDiver.value.round_number)) return
   if (data.judge_number == null) return
+  arrivedDuringRestore?.add(data.judge_number)
   panelScores.value = {
     ...panelScores.value,
     [data.judge_number]: Number(data.score),
@@ -478,6 +622,7 @@ async function submitScore() {
   // Fires the same in both outbox and legacy paths because the
   // judge's intent is captured the moment they tap.
   buzz([20, 60, 30])
+  diveSeq++
   submitted.value = true
   // Stash for the big-display fallback (P5). Visible behind a
   // "Show big" button below the keypad; the judge taps it when
@@ -580,41 +725,44 @@ const submitLabel = computed(() => {
     </div>
     <!-- Header -->
     <div class="judge-header">
-      <div class="header-top">
-        <div>
-          <div class="event-name">{{ activeDiver?.eventName || '—' }}</div>
-          <div class="diver-name">
-            <template v-if="activeDiver?.partner_name">
-              {{ activeDiver.diverName }}<span v-if="activeDiver?.country_code" class="diver-country">{{ activeDiver.country_code }}</span>
-              <span class="diver-amp">&amp;</span>
-              {{ activeDiver.partner_name }}<span v-if="activeDiver?.partner_country" class="diver-country">{{ activeDiver.partner_country }}</span>
-            </template>
-            <template v-else>
-              {{ activeDiver?.diverName || $t('judge.waiting') }}<span v-if="activeDiver?.country_code" class="diver-country">{{ activeDiver.country_code }}</span>
-            </template>
-          </div>
-          <div v-if="activeDiver?.team_name" class="judge-team-line">
-            Team: <strong>{{ activeDiver.team_name }}</strong>
-          </div>
-          <div v-if="synchroRole" :class="['synchro-role', `role-${synchroRole.tone}`]">
-            You are scoring: <strong>{{ synchroRole.label }}</strong>
-          </div>
+      <!-- One slim row for who's judging and the two ways out. They used
+           to stack down the right-hand side, and on a phone that wrapped
+           under the diver's name and took ~100px from the keypad. The
+           name can shorten, the J-number never does. -->
+      <div class="judge-topbar">
+        <div class="judge-id">
+          <span class="status-dot" :class="{ connected: socket.isConnected.value }"></span>
+          <span class="judge-id-name">{{ user?.full_name || 'Judge' }}</span>
+          <span v-if="judgeNumber" class="judge-id-num">— J{{ judgeNumber }}</span>
         </div>
-        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:0.5rem">
-          <div class="judge-id">
-            <span class="status-dot" :class="{ connected: socket.isConnected.value }"></span>
-            <span>{{ judgeLabel }}</span>
-          </div>
+        <div class="judge-links">
           <RouterLink to="/judge-profile" class="btn-back-judge"
                       v-tip="'See how your scoring tracks against the panel-kept mean'">Analysis</RouterLink>
           <RouterLink to="/dashboard" class="btn-back-judge">← Dashboard</RouterLink>
         </div>
       </div>
+      <div class="event-name">{{ activeDiver?.eventName || '—' }}</div>
+      <div class="diver-name">
+        <template v-if="activeDiver?.partner_name">
+          {{ activeDiver.diverName }}<span v-if="activeDiver?.country_code" class="diver-country">{{ activeDiver.country_code }}</span>
+          <span class="diver-amp">&amp;</span>
+          {{ activeDiver.partner_name }}<span v-if="activeDiver?.partner_country" class="diver-country">{{ activeDiver.partner_country }}</span>
+        </template>
+        <template v-else>
+          {{ activeDiver?.diverName || $t('judge.waiting') }}<span v-if="activeDiver?.country_code" class="diver-country">{{ activeDiver.country_code }}</span>
+        </template>
+      </div>
+      <div v-if="activeDiver?.team_name" class="judge-team-line">
+        Team: <strong>{{ activeDiver.team_name }}</strong>
+      </div>
+      <div v-if="synchroRole" :class="['synchro-role', `role-${synchroRole.tone}`]">
+        You are scoring: <strong>{{ synchroRole.label }}</strong>
+      </div>
       <div class="dive-info-row">
         <span class="dive-pill code">{{ activeDiver?.diveCode || '—' }}</span>
         <span class="dive-pill dd">{{ activeDiver?.dd ? `DD ${activeDiver.dd}` : 'DD —' }}</span>
+        <span class="dive-desc">{{ activeDiver ? (diveDescription(activeDiver) || '—') : '—' }}</span>
       </div>
-      <div class="dive-desc">{{ activeDiver ? (diveDescription(activeDiver) || '—') : '—' }}</div>
 
       <!-- Live panel: every judge's tile fills as their
            score_received broadcast lands. Highlights this
@@ -800,20 +948,19 @@ const submitLabel = computed(() => {
 
 
 .judge-layout {
-  /* Natural document flow, page scrolls if content exceeds
-     the viewport. No 100dvh / overflow:hidden lock; resizing
-     the window resizes the page like any other. The keypad +
-     submit footer flow naturally below the diver header.
-     vh fallback first for browsers older than ~Q4-2022. */
-  /* Fill the viewport exactly and never scroll, the whole pad
-     (header, diver, keypad, submit/clear, signal) fits one screen.
-     position:fixed escapes any global body styling the public auth
-     views inject. The keypad flexes to absorb leftover space. */
+  /* Fills the viewport, and on a phone the whole pad (header, diver,
+     keypad, submit/clear, signal) fits one screen. position:fixed
+     escapes any global body styling the public auth views inject. The
+     keypad flexes to take the leftover space, but only down to its
+     floor (see .keypad); past that this scrolls rather than squash the
+     keys, which is how an iPhone 13 ended up with 18px keys. */
   position: fixed;
   inset: 0;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   touch-action: manipulation;
   user-select: none;
   /* Installed on an iPhone the pad runs up under the status bar and,
@@ -833,20 +980,28 @@ const submitLabel = computed(() => {
   color: var(--text-3);
   text-decoration: none;
   transition: color 0.15s;
+  /* Small type, but a full-height target in the top row. */
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 0.5rem;
+  white-space: nowrap;
 }
 .btn-back-judge:hover { color: var(--text); }
+.judge-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin: -0.25rem -0.5rem 0.25rem 0;
+}
+.judge-links { display: flex; align-items: center; flex-shrink: 0; }
 
 .judge-header {
   background: var(--bg-2);
   border-bottom: 1px solid var(--border);
   padding: 0.875rem 1.25rem;
   flex-shrink: 0;
-}
-.header-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 0.625rem;
 }
 .event-name {
   font-family: var(--font-sans);
@@ -859,7 +1014,7 @@ const submitLabel = computed(() => {
 }
 .diver-name {
   font-family: var(--font-sans);
-  font-size: clamp(18px, 4vw, 26px);
+  font-size: 26px;
   font-weight: 600;
   font-style: normal;
   letter-spacing: -0.01em;
@@ -914,13 +1069,16 @@ const submitLabel = computed(() => {
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  flex-shrink: 0;
+  min-width: 0;
 }
+.judge-id-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.judge-id-num { flex-shrink: 0; white-space: nowrap; }
 .dive-info-row {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.35rem 0.75rem;
   flex-wrap: wrap;
+  margin-top: 0.625rem;
 }
 .dive-pill {
   font-family: var(--font-mono);
@@ -933,7 +1091,7 @@ const submitLabel = computed(() => {
 }
 .dive-pill.code { color: var(--text); font-weight: 500; font-size: 13px; }
 .dive-pill.dd { color: var(--cyan); border-color: rgba(6,182,212,0.3); background: var(--cyan-dim); }
-.dive-desc { font-size: 11px; color: var(--text-3); margin-top: 0.35rem; font-family: var(--font-mono); }
+.dive-desc { font-size: 11px; color: var(--text-3); font-family: var(--font-mono); }
 
 /* Live panel display: every judge's tile fills as their score
    lands. The current judge's own tile gets a cyan ring so they
@@ -1036,7 +1194,7 @@ const submitLabel = computed(() => {
 }
 .score-number {
   font-family: var(--font-display);
-  font-size: clamp(72px, 20vw, 110px);
+  font-size: 110px;
   font-weight: 900;
   line-height: 1;
   color: var(--text);
@@ -1060,13 +1218,16 @@ const submitLabel = computed(() => {
      at a sensible width and height so the layout stays balanced
      against the dive header above. */
   flex: 1 1 auto;
-  min-height: 0;
+  /* The floor: four rows of 56px keys plus the gaps and padding. The
+     rows used to be minmax(0, ...) with min-height 0, so a tall header
+     squashed them to nothing. */
+  min-height: calc(4 * 56px + 3 * 0.5rem + 1rem);
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   /* Cap key height so they don't balloon on tall screens, and
      centre them in the leftover space (footers stay pinned to
-     the bottom). minmax(0,…) lets them shrink to fit short screens. */
-  grid-template-rows: repeat(4, minmax(0, 84px));
+     the bottom). */
+  grid-template-rows: repeat(4, minmax(56px, 84px));
   align-content: center;
   gap: 0.5rem;
   padding: 0.5rem 0.75rem;
@@ -1080,7 +1241,7 @@ const submitLabel = computed(() => {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   font-family: var(--font-sans);
-  font-size: clamp(18px, 5vw, 26px);
+  font-size: 26px;
   font-weight: 600;
   color: var(--fg);
   cursor: pointer;
@@ -1120,17 +1281,17 @@ const submitLabel = computed(() => {
    ~20px, so without an env(safe-area-inset-bottom) gutter the
    button edges land inside the system swipe-gesture zone and
    mis-register as "swipe up" instead of a tap. Tested with a
-   wet thumb at the deck, since that's the real condition poolside, tbh. */
-@supports (padding: env(safe-area-inset-bottom)) {
-  .signal-footer { padding-bottom: env(safe-area-inset-bottom); }
-}
+   wet thumb at the deck, since that's the real condition poolside, tbh.
+   Where there's no inset it still gets a little gap, it used to sit
+   flush on the bottom edge. */
+.signal-footer { padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px)); }
 .signal-btn {
   width: 100%;
   display: flex; align-items: center; justify-content: center; gap: 0.5rem;
   background: var(--danger-bg);
   color: var(--danger-fg);
   font-family: var(--font-sans);
-  font-size: clamp(13px, 3vw, 15px);
+  font-size: 15px;
   font-weight: 600;
   letter-spacing: 0;
   text-transform: none;
@@ -1212,7 +1373,7 @@ const submitLabel = computed(() => {
   background: var(--accent);
   color: var(--fg-on-accent);
   font-family: var(--font-sans);
-  font-size: clamp(15px, 4vw, 18px);
+  font-size: 18px;
   font-weight: 600;
   letter-spacing: 0;
   text-transform: none;
@@ -1248,48 +1409,50 @@ const submitLabel = computed(() => {
 
 /* =========================================================
    Phone-deck ergonomics. Judges work poolside on phones held
-   one-handed; bump the keypad keys, signal, and submit to
-   meet the WCAG 2.5.5 44×44 minimum and give them more room
-   so a wet thumb doesn't mash two keys at once. The header
-   compresses so the keypad stays above the fold on a 5-inch
-   screen.
+   one-handed. The keys stay at least 48px tall (over Apple's 44pt
+   and WCAG 2.5.5's 44px) so a wet thumb doesn't mash two at once,
+   and the header, score and footers tighten so that the whole pad
+   fits an iPhone SE or iPhone 13 screen without scrolling. The
+   budget on a 664px screen is roughly: header 205 (240 for a
+   synchro pair in a team event, the tallest), score 83, keypad
+   222 at the floor, submit 63, signal 56. Whatever's left grows
+   the keys. Anything smaller than that scrolls.
    ========================================================= */
 @media (max-width: 600px) {
-  .judge-header { padding: 0.6rem 0.85rem; }
-  .header-top {
-    margin-bottom: 0.4rem;
-    /* Wrap so the right-side links (Analysis / Dashboard /
-       judge-id) drop below the diver banner on narrow phones
-       instead of squeezing the diver name to a 2-char column. */
-    flex-wrap: wrap;
-    gap: 0.5rem;
-  }
+  .judge-header { padding: 0.5rem 0.85rem; }
+  .judge-topbar { margin-bottom: 0.15rem; }
+  .diver-name { font-size: 20px; }
+  .dive-info-row { margin-top: 0.4rem; }
+  /* Tighter tracking so a team event's two tags share one line. */
+  .synchro-role, .judge-team-line { margin-top: 0.35rem; padding: 0.2rem 0.5rem; letter-spacing: 0.06em; }
+  .judge-panel { margin-top: 0.45rem; padding-top: 0.45rem; }
+  .judge-panel-label { margin-bottom: 0.3rem; }
+  /* Share the row rather than a fixed 52px each, so a 7-judge panel
+     stays on one line on a phone. Still a fixed size for a given
+     panel, so nothing moves as the scores come in. */
+  .judge-panel-tile { flex: 1 1 0; width: auto; min-width: 40px; max-width: 56px; padding: 0.25rem 0.2rem; }
+  .score-zone { padding: 0.35rem 1rem; }
+  .score-number { font-size: 64px; }
+  .score-hint { margin-top: 0.1rem; }
   .keypad {
-    grid-template-rows: repeat(4, minmax(0, 72px));
-    align-content: center;
+    grid-template-rows: repeat(4, minmax(48px, 76px));
+    min-height: calc(4 * 48px + 3 * 0.4rem + 0.7rem);
     max-width: none;
-    padding: 0.5rem;
-    gap: 0.5rem;
+    padding: 0.35rem 0.6rem;
+    gap: 0.4rem;
   }
-  .key-half { font-size: clamp(16px, 4.5vw, 20px); }
-  .signal-footer { max-width: none; padding: 0 0.6rem; }
-  .signal-btn { padding: 0.95rem 0.75rem; font-size: 14px; }
-  .submit-footer { padding: 0.5rem 0.6rem; }
-  .submit-btn { padding: 1rem; font-size: 17px; }
-  /* Touch-target lift for the small ghost links at the top
-     right. At WCAG 2.5.5's 44px floor a wet thumb still
-     lands them reliably. */
-  .btn-back-judge {
-    min-height: 32px;
-    display: inline-flex;
-    align-items: center;
-    padding: 0.3rem 0.5rem;
-  }
+  .key { font-size: 22px; }
+  .key-half { font-size: 18px; }
+  .submit-footer { padding: 0.4rem 0.6rem; max-width: none; }
+  .submit-btn { padding: 0.8rem; font-size: 17px; min-height: 50px; }
+  .signal-footer { max-width: none; padding-inline: 0.6rem; }
+  .signal-btn { padding: 0.8rem 0.75rem; font-size: 14px; min-height: 48px; }
+  .big-mode-footer { max-width: none; padding-inline: 0.6rem; }
 }
 
-/* Small-phone safety net, covers the 320px-wide screens that
-   still show up on field tablets and old iPhones. */
-@media (max-width: 360px) {
-  .keypad { grid-template-rows: repeat(4, minmax(0, 60px)); gap: 0.4rem; }
+/* Short phones (an iPhone SE or 13 in Safari, a phone in landscape):
+   a smaller score number buys the keys their room. */
+@media (max-height: 700px) {
+  .score-number { font-size: 56px; }
 }
 </style>

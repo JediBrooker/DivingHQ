@@ -534,6 +534,21 @@
  * @property {number}      number_of_judges
  */
 
+// ---- /api/events/:eventId/dive-scores ----------------------------
+
+/**
+ * @typedef {Object} JudgeDiveScores
+ * GET /api/events/:eventId/dive-scores?competitor_id=&round_number=
+ * (routes/event-staff.js). The scores already in for one dive, for the
+ * judge screen to restore after a reload or reconnect. Panel judges only
+ * (404 otherwise). Rows a re-dive set aside (status 'redive') are left out.
+ *
+ * @property {number} judge_number  the caller's seat on the panel
+ * @property {Array<{ judge_number: number, score: number }>} scores
+ *   one per judge who has scored, by judge_number; the value stored,
+ *   after any referee call
+ */
+
 /**
  * @typedef {Object} RosterImportRoundPreview
  * @property {number} round_number
