@@ -1,6 +1,6 @@
 # DivingHQ Terms of Service
 
-Last updated: 27 September 2026
+Last updated: 29 September 2026
 
 These terms cover your use of DivingHQ, the diving competition service at [divinghq.app](https://divinghq.app), operated by **DivingHQ (divinghq.app)**. They sit alongside our [Privacy Policy](/privacy), which explains what we do with your data.
 
@@ -64,6 +64,10 @@ We provide DivingHQ with reasonable care and skill, but otherwise as it is, to t
 
 We may update these terms. If a change is material, we'll email account holders before it takes effect. The date at the top shows the latest change. Carrying on using DivingHQ after a change takes effect means you accept the updated terms.
 
-## 11. Contact
+## 11. Governing law
+
+These terms are governed by the laws of Australia, and any dispute about them goes to the courts of Australia. If you use DivingHQ as a consumer somewhere else, this doesn't take away any protection the law where you live gives you, or your right to bring a claim there.
+
+## 12. Contact
 
 Questions about these terms: [support@divinghq.app](mailto:support@divinghq.app).
