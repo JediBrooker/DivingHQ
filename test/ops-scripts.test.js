@@ -210,7 +210,7 @@ test("restore-check refuses to use the live database, or anything not named rest
 // ops/cron/divinghq-backup goes into /etc/cron.d as it is. cron skips a
 // file there whose name has a dot in it and ignores a last line with no
 // newline, both silently, so pin those along with the schedule.
-test("the cron file runs both scripts at the agreed UTC times", () => {
+test("the cron file runs both scripts at the agreed (Sydney) times", () => {
   const cronPath = path.join(ROOT, "ops", "cron", "divinghq-backup");
   assert.doesNotMatch(path.basename(cronPath), /\./);
   const text = fs.readFileSync(cronPath, "utf8");
@@ -218,9 +218,9 @@ test("the cron file runs both scripts at the agreed UTC times", () => {
   const jobs = text.split("\n").filter((l) => /^\d/.test(l)).map((l) => l.split(/\s+/));
   assert.equal(jobs.length, 2);
   const [backup, restore] = jobs;
-  assert.deepEqual(backup.slice(0, 6), ["30", "16", "*", "*", "*", "root"]);
+  assert.deepEqual(backup.slice(0, 6), ["30", "3", "*", "*", "*", "root"]);
   assert.match(backup.join(" "), /scripts\/ops\/backup-db\.sh" >> \/var\/log\/divinghq-backup\.log 2>&1$/);
-  assert.deepEqual(restore.slice(0, 6), ["30", "17", "*", "*", "0", "root"]);
+  assert.deepEqual(restore.slice(0, 6), ["30", "4", "*", "*", "0", "root"]);
   assert.match(restore.join(" "), /scripts\/ops\/restore-check\.sh" >> \/var\/log\/divinghq-backup\.log 2>&1$/);
   for (const script of ["backup-db.sh", "restore-check.sh"]) {
     const mode = fs.statSync(path.join(ROOT, "scripts", "ops", script)).mode;
