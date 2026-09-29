@@ -85,7 +85,9 @@ after(async () => {
   if (pool) {
     // The restore check drops its scratch database itself; this is for a
     // run that died half way.
-    try { await pool.query(`DROP DATABASE IF EXISTS "${scratchName()}" WITH (FORCE)`); } catch { /* not ours to worry about */ }
+    for (const db of [scratchName(), frozenName()]) {
+      try { await pool.query(`DROP DATABASE IF EXISTS "${db}" WITH (FORCE)`); } catch { /* not ours to worry about */ }
+    }
     await pool.end();
   }
   if (work) fs.rmSync(work, { recursive: true, force: true });
@@ -93,6 +95,10 @@ after(async () => {
 
 function scratchName() {
   return `${liveDb}_restore_check`.toLowerCase().replace(/[^a-z0-9_]/g, "_");
+}
+// The still copy the restore check test compares against.
+function frozenName() {
+  return `${liveDb}_restore_src`.toLowerCase().replace(/[^a-z0-9_]/g, "_");
 }
 
 // Runs a script without blocking the event loop (the fake R2 server lives
@@ -440,19 +446,39 @@ test("off-site refusals: no passphrase, half the settings, a rejected PUT, a bad
 
 test("restore check: restores the newest dump into a scratch database and drops it", async (t) => {
   if (skipReason) return t.skip(skipReason);
-  const d = dirs("restore");
-  const b = await runScript(BACKUP, d.env);
-  assert.equal(b.code, 0, b.log);
-  // An older dump alongside, garbage, to prove only the newest is used.
-  fs.writeFileSync(path.join(d.backupDir, "divinghq-20200101T000000Z.dump"), "not a dump");
+  // The test database is shared with every other test file running at the
+  // same time, so its row counts can move between the dump and the
+  // comparison and fail the check for nothing (CI did, scores 20 vs 0).
+  // Freeze a copy first and point both scripts at that.
+  const frozen = frozenName();
+  const seed = dirs("restore-seed");
+  const s = await runScript(BACKUP, seed.env);
+  assert.equal(s.code, 0, s.log);
+  const mk = await runBash(["-c", `set -euo pipefail
+    source "${path.join(ROOT, "scripts", "ops", "common.sh")}" && ops_load_env "${emptyEnvFile}" && ops_resolve_db
+    dropdb --if-exists "${frozen}"
+    createdb "${frozen}"
+    pg_restore --no-owner --no-privileges --single-transaction --exit-on-error -d "${frozen}" "${path.join(seed.backupDir, dumpsIn(seed.backupDir)[0])}"`], {});
+  assert.equal(mk.code, 0, mk.log);
+  const onFrozen = { DATABASE_URL: "", DB_DATABASE: frozen, PGDATABASE: "" };
 
-  const r = await runScript(RESTORE_CHECK, { ...d.env, RESTORE_CHECK_DB: scratchName() });
-  assert.equal(r.code, 0, r.log);
-  assert.match(r.log, /schema version \d+ matches/);
-  assert.match(r.log, /users: live \d+, restored \d+/);
-  const state = readState(d.stateDir, "restore-check.json");
-  assert.equal(state.ok, true);
-  assert.match(state.last_run_at, /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$/);
+  try {
+    const d = dirs("restore");
+    const b = await runScript(BACKUP, { ...d.env, ...onFrozen });
+    assert.equal(b.code, 0, b.log);
+    // An older dump alongside, garbage, to prove only the newest is used.
+    fs.writeFileSync(path.join(d.backupDir, "divinghq-20200101T000000Z.dump"), "not a dump");
+
+    const r = await runScript(RESTORE_CHECK, { ...d.env, ...onFrozen, RESTORE_CHECK_DB: scratchName() });
+    assert.equal(r.code, 0, r.log);
+    assert.match(r.log, /schema version \d+ matches/);
+    assert.match(r.log, /users: live \d+, restored \d+/);
+    const state = readState(d.stateDir, "restore-check.json");
+    assert.equal(state.ok, true);
+    assert.match(state.last_run_at, /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$/);
+  } finally {
+    await pool.query(`DROP DATABASE IF EXISTS "${frozen}" WITH (FORCE)`);
+  }
 
   const gone = await pool.query("SELECT 1 FROM pg_database WHERE datname = $1", [scratchName()]);
   assert.equal(gone.rowCount, 0, "the scratch database is dropped");
