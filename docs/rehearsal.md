@@ -153,7 +153,9 @@ Seed refuses, and changes nothing, when:
    redive), a score correction (click the dive in the Control Room's History
    column), a judge who reloads mid dive. Correct one of the middle scores,
    not the highest or lowest: those are dropped, so changing one may not move
-   the total at all.
+   the total at all. A judge who reloads after scoring should come back to
+   their score on screen, their tile filled and the keypad shut, the same as
+   right after Submit.
 9. **Finish the event.** The four results emails should arrive.
 10. **Results PDF**: `/api/events/<event>/results.pdf`. 陈美玲 should print in
     Chinese and Иван Петров in Cyrillic. `?` or "Ivan Petrov" means the Noto

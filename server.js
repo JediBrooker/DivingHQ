@@ -1081,8 +1081,8 @@ app.use(require("./routes/events")({
 // EVENT STAFF (managers + judges + per-judge views)
 // [SECTION: ROUTES: EVENT STAFF]
 // /api/events/:id/managers (CRUD), /api/events/:id/judges (panel
-// CRUD), /api/events/:eventId/my-judge-number, /api/judge/my-events
-// extracted into routes/event-staff.js.
+// CRUD), /api/events/:eventId/my-judge-number, /api/events/:eventId/
+// dive-scores, /api/judge/my-events extracted into routes/event-staff.js.
 // =============================================================
 app.use(require("./routes/event-staff")({
   pool,

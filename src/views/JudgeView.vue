@@ -381,18 +381,122 @@ useSocketEvent(socket, 'meet_resumed', (data) => {
   holdReason.value = ''
 })
 
+// One dive: this diver, this round, this event.
+function diveKey(d) {
+  return d ? `${d.event_id}|${d.competitor_id}|${d.round_number}` : ''
+}
+
+// Bumped by anything that changes what this judge has done on the dive
+// on screen (a submit, a new diver, a re-dive), so a restore that went
+// out before it can't land on top of it.
+let diveSeq = 0
+// Judge numbers whose score_received landed while a restore was out.
+// Those are newer than whatever the restore read, so they're kept.
+let arrivedDuringRestore = null
+// The last Failed or Cap call heard for a dive, and a count of them, so a
+// restore that read the scores before the call can still hold its tiles
+// to it (see applyRefereeCallToPanel).
+let lastRefereeCall = null
+let refereeCallSeq = 0
+
+// A score this judge queued for the dive that the server's answer can't
+// have included: waiting in the outbox, mid-send, failed and waiting on a
+// Retry, or sent only after the restore asked (`since`). Right after a
+// submit the keypad stays shut for all of those, so it does here too. A
+// conflict is left out; the server's value (the operator's manual entry)
+// is the one that stands there.
+async function queuedScoreFor(dive, since) {
+  if (!outboxInstance) return null
+  try {
+    const entries = await outboxInstance.list({ action_type: 'submit_score' })
+    const mine = entries.filter((e) =>
+      (['pending', 'inflight', 'failed'].includes(e.status)
+        || (e.status === 'synced' && Date.parse(e.synced_at) >= since))
+      && String(e.payload?.judge_id) === String(user?.id)
+      && diveKey(e.payload) === diveKey(dive))
+    const last = mine[mine.length - 1]
+    return last ? Number(last.payload.score) : null
+  } catch { return null }
+}
+
+// Show a score as sent, the way the page looks right after Submit:
+// the number up, the keypad shut, Submit reading "Score submitted".
+function showSubmitted(score) {
+  const whole = Math.floor(score)
+  currentScore.value = whole
+  isHalf.value = score - whole === 0.5
+  submitted.value = true
+  lastSubmittedScore.value = score
+}
+
+// What the server already has for the dive on screen. A reload forgets
+// everything, and a reconnect replays the diver, so a judge who had
+// scored came back to an open keypad and an empty tile, with nothing to
+// say their score was in (one tap would have sent a second, different
+// one over it). This puts the panel's tiles back and, when this judge's
+// score is in or still queued, shows it and shuts the keypad. When
+// there's neither but the keypad is shut, the dive was re-dived while
+// this phone wasn't listening, so it opens again. A judge who has
+// flagged the referee is correcting their score, so their keypad is
+// left alone.
+async function restoreDiveScores(dive) {
+  if (!dive?.event_id || !dive.competitor_id || !dive.round_number) return
+  const seq = diveSeq
+  const callSeq = refereeCallSeq
+  const since = Date.now()
+  const arrived = new Set()
+  arrivedDuringRestore = arrived
+  let body
+  try {
+    const q = new URLSearchParams({ competitor_id: dive.competitor_id, round_number: String(dive.round_number) })
+    body = await auth.apiFetch(`/api/events/${dive.event_id}/dive-scores?${q}`)
+  } catch {
+    return
+  } finally {
+    if (arrivedDuringRestore === arrived) arrivedDuringRestore = null
+  }
+  const stale = () => seq !== diveSeq || diveKey(activeDiver.value) !== diveKey(dive)
+  if (stale() || !Array.isArray(body?.scores)) return
+  const tiles = {}
+  for (const s of body.scores) tiles[s.judge_number] = Number(s.score)
+  for (const n of arrived) {
+    if (panelScores.value[n] != null) tiles[n] = panelScores.value[n]
+  }
+  if (callSeq !== refereeCallSeq && lastRefereeCall?.key === diveKey(dive)) {
+    const { call, cap } = lastRefereeCall
+    for (const n of Object.keys(tiles)) tiles[n] = heldAward(tiles[n], call, cap)
+  }
+  panelScores.value = tiles
+
+  const queued = await queuedScoreFor(dive, since)
+  if (stale() || signaled.value) return
+  const score = queued ?? tiles[body.judge_number]
+  if (score != null) showSubmitted(score)
+  else if (submitted.value) resetScore()
+}
+
 useSocketEvent(socket, 'state_update', async (data) => {
   if (!data || !isMyEvent(data.event_id)) return
+  // The same dive again is a replay (the reconnect, get_active_diver on
+  // a rejoin), not a new diver. Wiping the keypad on it reopened it for
+  // a judge who had already scored, so only a different dive resets.
+  const sameDive = diveKey(activeDiver.value) === diveKey(data)
+  const keepNumber = String(activeDiver.value?.event_id) === String(data.event_id)
+    ? activeDiver.value?.judge_number : undefined
   // Replayed payloads from before the Control Room sent diverName /
   // diveCode still need to render, so fill them from the raw row.
-  activeDiver.value = normaliseActiveDiver(data)
-  resetScore()
-  // New diver / round: previous panel + referee signal are both
-  // irrelevant now. The signal would otherwise carry over to the
-  // next diver and confuse the referee.
-  panelScores.value = {}
-  panelSignals.value = {}
-  signaled.value = false
+  activeDiver.value = { ...normaliseActiveDiver(data), ...(keepNumber ? { judge_number: keepNumber } : {}) }
+  if (!sameDive) {
+    diveSeq++
+    resetScore()
+    // New diver / round: previous panel + referee signal are both
+    // irrelevant now. The signal would otherwise carry over to the
+    // next diver and confuse the referee.
+    panelScores.value = {}
+    panelSignals.value = {}
+    signaled.value = false
+  }
+  restoreDiveScores(activeDiver.value)
 
   if (data.event_id) {
     try {
@@ -419,6 +523,7 @@ useSocketEvent(socket, 'referee_action_redive', (data) => {
   if (String(data.event_id) !== String(a.event_id)) return
   if (String(data.competitor_id) !== String(a.competitor_id)) return
   if (Number(data.round_number) !== Number(a.round_number)) return
+  diveSeq++
   resetScore()
   panelScores.value = {}
   panelSignals.value = {}
@@ -435,6 +540,8 @@ function applyRefereeCallToPanel(data, call) {
   if (String(data.event_id) !== String(a.event_id)) return
   if (String(data.competitor_id) !== String(a.competitor_id)) return
   if (Number(data.round_number) !== Number(a.round_number)) return
+  lastRefereeCall = { key: diveKey(a), call, cap: data.cap_value }
+  refereeCallSeq++
   const held = {}
   for (const [n, v] of Object.entries(panelScores.value)) held[n] = heldAward(v, call, data.cap_value)
   panelScores.value = held
@@ -469,6 +576,7 @@ useSocketEvent(socket, 'score_received', (data) => {
   if (data.competitor_id !== activeDiver.value.competitor_id) return
   if (Number(data.round_number) !== Number(activeDiver.value.round_number)) return
   if (data.judge_number == null) return
+  arrivedDuringRestore?.add(data.judge_number)
   panelScores.value = {
     ...panelScores.value,
     [data.judge_number]: Number(data.score),
@@ -514,6 +622,7 @@ async function submitScore() {
   // Fires the same in both outbox and legacy paths because the
   // judge's intent is captured the moment they tap.
   buzz([20, 60, 30])
+  diveSeq++
   submitted.value = true
   // Stash for the big-display fallback (P5). Visible behind a
   // "Show big" button below the keypad; the judge taps it when

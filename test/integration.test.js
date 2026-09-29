@@ -13539,3 +13539,68 @@ test("/metrics answers a direct scrape and hides from the tunnel", async (t) => 
     assert.equal(await viaTunnel.text(), "Not found");
   }
 });
+
+// The judge screen reads a dive's scores back after a reload or a
+// reconnect (GET /api/events/:eventId/dive-scores), so a judge who had
+// scored sees their mark and a shut keypad instead of an open one. Only
+// a judge with a seat on the panel gets an answer, and a score a re-dive
+// set aside isn't in it.
+test("dive-scores: a panel judge reads back the dive's scores, nobody else does", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const orgId = await compKit.org("dives");
+  const otherOrg = await compKit.org("divesx");
+  try {
+    const j1 = await compKit.user(orgId, "DS Judge One", ["judge"]);
+    const j2 = await compKit.user(orgId, "DS Judge Two", ["judge"]);
+    const offPanel = await compKit.user(orgId, "DS Off Panel", ["judge"]);
+    const diverRole = await compKit.user(orgId, "DS Diver Role", ["diver"]);
+    const outsider = await compKit.user(otherOrg, "DS Outsider", ["judge"]);
+    const sys = await compKit.user(otherOrg, "DS Sysadmin", [], { sysadmin: true });
+    const competitor = await compKit.user(orgId, "DS Competitor", ["diver"]);
+    const eventId = await compKit.event(orgId, { status: "Live" });
+    await compKit.enter(eventId, competitor.id, await compKit.dives(2));
+    await compKit.panel(eventId, [j1, j2]);
+    await compKit.score(eventId, competitor.id, 1, j1, 8.5);
+    await compKit.score(eventId, competitor.id, 1, j2, 7);
+    await compKit.score(eventId, competitor.id, 2, j1, 6);
+    const url = (q) => `/api/events/${eventId}/dive-scores?${q}`;
+    const round1 = `competitor_id=${competitor.id}&round_number=1`;
+
+    const both = await fetchJson("GET", url(round1), { token: j2.token });
+    assert.equal(both.status, 200);
+    assert.deepEqual(both.body, {
+      judge_number: 2,
+      scores: [{ judge_number: 1, score: 8.5 }, { judge_number: 2, score: 7 }],
+    });
+    const round2 = await fetchJson("GET", url(`competitor_id=${competitor.id}&round_number=2`), { token: j1.token });
+    assert.deepEqual(round2.body, { judge_number: 1, scores: [{ judge_number: 1, score: 6 }] });
+
+    // A re-dive marks the old rows until each judge scores again.
+    await pool.query(
+      "UPDATE scores SET status = 'redive' WHERE event_id = $1 AND round_number = 1 AND judge_id = $2",
+      [eventId, j2.id],
+    );
+    const afterRedive = await fetchJson("GET", url(round1), { token: j1.token });
+    assert.deepEqual(afterRedive.body.scores, [{ judge_number: 1, score: 8.5 }]);
+
+    // No seat, no scores: another judge in the org, one from elsewhere,
+    // a sysadmin who isn't on the panel.
+    for (const u of [offPanel, outsider, sys]) {
+      assert.equal((await fetchJson("GET", url(round1), { token: u.token })).status, 404, u.full_name);
+    }
+    // Not a judge at all, or not signed in (verifyToken answers a missing
+    // token with a 403).
+    assert.equal((await fetchJson("GET", url(round1), { token: diverRole.token })).status, 403);
+    assert.equal((await fetchJson("GET", url(round1))).status, 403);
+    // Junk in the query is a 400, and a junk event id a 404, never a
+    // Postgres 500.
+    for (const q of ["competitor_id=nope&round_number=1", `competitor_id=${competitor.id}&round_number=0`,
+      `competitor_id=${competitor.id}&round_number=1.5`, `competitor_id=${competitor.id}`, ""]) {
+      assert.equal((await fetchJson("GET", url(q), { token: j1.token })).status, 400, q);
+    }
+    assert.equal((await fetchJson("GET", `/api/events/not-a-uuid/dive-scores?${round1}`, { token: j1.token })).status, 404);
+  } finally {
+    await compKit.cleanup(orgId, otherOrg);
+  }
+});

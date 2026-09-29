@@ -8,12 +8,14 @@
 //   GET    /api/events/:eventId/judges          panel for this event
 //   POST   /api/events/:id/judges               replace panel (ordered)
 //   GET    /api/events/:eventId/my-judge-number this judge's panel position
+//   GET    /api/events/:eventId/dive-scores     scores already in for one dive
 //   GET    /api/judge/my-events                 events this judge sits on
 //
 // Mounted via:
 //   app.use(require('./routes/event-staff')({ … }))
 
 const express = require("express");
+const { isUuid } = require("../lib/uuid");
 
 module.exports = function createEventStaffRouter({
   pool,
@@ -199,6 +201,47 @@ module.exports = function createEventStaffRouter({
         return res.status(404).json({ error: "Not assigned to this event" });
       res.json({ judge_number: r.rows[0].judge_number });
     } catch (err) {
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // The scores already in for one dive, for the judge screen to put
+  // back after a reload or a reconnect. Without it a judge who'd scored
+  // came back to an open keypad and an empty tile, and one tap sent a
+  // second, different score over the first. Only a judge with a seat on
+  // this panel gets an answer (a sysadmin too, same as submit_score). The
+  // event room's score_received broadcasts carry these same numbers live,
+  // so nothing new leaves here. A score set aside by a re-dive (status
+  // 'redive') isn't in: that judge still has to score again.
+  router.get("/api/events/:eventId/dive-scores", requireOrgRole(["judge"]), async (req, res) => {
+    const { eventId } = req.params;
+    const competitorId = req.query.competitor_id;
+    const round = Number(req.query.round_number);
+    if (!isUuid(eventId)) return res.status(404).json({ error: "Not assigned to this event" });
+    if (!isUuid(competitorId) || !Number.isInteger(round) || round < 1) {
+      return res.status(400).json({ error: "competitor_id and round_number are required" });
+    }
+    try {
+      const seat = await pool.query(
+        "SELECT judge_number FROM event_judges WHERE event_id = $1 AND judge_id = $2",
+        [eventId, req.user.id],
+      );
+      if (!seat.rows.length) return res.status(404).json({ error: "Not assigned to this event" });
+      const r = await pool.query(
+        `SELECT ej.judge_number, s.score
+           FROM scores s
+           JOIN event_judges ej ON ej.event_id = s.event_id AND ej.judge_id = s.judge_id
+          WHERE s.event_id = $1 AND s.competitor_id = $2 AND s.round_number = $3
+            AND s.status IS DISTINCT FROM 'redive'
+          ORDER BY ej.judge_number`,
+        [eventId, competitorId, round],
+      );
+      res.json({
+        judge_number: seat.rows[0].judge_number,
+        scores: r.rows.map((row) => ({ judge_number: row.judge_number, score: Number(row.score) })),
+      });
+    } catch (err) {
+      console.error("[Dive Scores Error]", err.message);
       res.status(500).json({ error: "Internal server error" });
     }
   });

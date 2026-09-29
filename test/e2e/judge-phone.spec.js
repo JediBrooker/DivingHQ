@@ -1,5 +1,6 @@
 // The judge screen on a phone, the way the rehearsal dry run used it:
-// five phones opened /judge before the start, then scored a meet.
+// five phones opened /judge before the start, then scored a meet. Four
+// things went wrong there and each has a test here.
 //
 //   * A judge who opened /judge before Start Event never got the first
 //     diver. The page looked for a Live panel once, on mount, and never
@@ -7,6 +8,8 @@
 //   * The "Judging panel is live" banner parked itself over Submit and
 //     Signal Referee (bottom right, above everything) for an hour.
 //   * On an iPhone 13 sized screen the keypad keys were 18px tall.
+//   * A judge who reloaded after scoring got an open keypad and an empty
+//     tile, nothing to say their score was already in.
 //
 // Phone sizes are set per context (Chromium with a mobile viewport), the
 // chromium project itself runs with no viewport. Set E2E_SHOT_DIR to keep
@@ -14,7 +17,7 @@
 const path = require("node:path");
 const { test, expect } = require("@playwright/test");
 const setup = require("./_setup");
-const { signIn, liveEvent, emitAck } = require("./_meetday");
+const { signIn, liveEvent, emitAck, roomWatcher } = require("./_meetday");
 
 test.describe.configure({ mode: "serial" });
 
@@ -236,6 +239,98 @@ test("the keypad keeps thumb-sized keys on small phones", async ({ browser, requ
       }
     }
   } finally {
+    await setup.deleteOrg(orgId);
+  }
+});
+
+test("a judge who reloads after scoring sees their score, and the keypad stays shut", async ({ browser, request, baseURL }) => {
+  test.setTimeout(120_000);
+  const { orgId, adminToken } = await setup.createOrgAndAdmin(request, { countryCode: "AUS", orgName: "Judge Reload" });
+  const { event, divers, diveId, judges } = await liveEvent(request, {
+    orgId, adminToken, name: "Reload Event", diverNames: ["GGG Reload"],
+  });
+  expect(await emitAck(baseURL, adminToken, "set_active_diver", activeDiver(event, divers[0], "GGG Reload")))
+    .toMatchObject({ ok: true });
+  const room = await roomWatcher(baseURL, event.id);
+
+  const { ctx, page } = await phone(browser, 390, 664);
+  const links = [];
+  await page.routeWebSocket(/\/socket\.io\//, (ws) => {
+    links.push({ ws, server: ws.connectToServer() });
+  });
+  const locked = async (value, tile = value) => {
+    await expect(page.locator(".score-number")).toHaveText(value, { timeout: 8_000 });
+    await expect(page.locator(".submit-btn")).toBeDisabled();
+    await expect(page.locator(".submit-btn")).toContainText(value);
+    await expect(page.locator(".keypad .key", { hasText: /^8$/ })).toBeDisabled();
+    await expect(page.locator(".judge-panel-tile.mine .judge-panel-tile-score")).toHaveText(tile);
+  };
+  try {
+    await signIn(page, judges[0].username);
+    await page.goto(`/judge?event=${event.id}`);
+    await expect(page.locator(".diver-name")).toContainText("GGG Reload", { timeout: 8_000 });
+    await page.locator(".keypad .key", { hasText: /^8$/ }).click();
+    await page.locator(".keypad .key-half").click();
+    await page.locator(".submit-btn").click();
+    await locked("8.5");
+    // J2 scores from their own phone.
+    await setup.submitPanelScores({
+      baseURL, judges: [judges[1]], eventId: event.id, competitorId: divers[0].userId,
+      roundNumber: 1, diveId, scores: [7],
+    });
+    await expect(page.locator(".judge-panel-tile").nth(1).locator(".judge-panel-tile-score")).toHaveText("7.0");
+
+    // A wifi blip: the reconnect replays the same diver, which used to
+    // wipe the keypad back open.
+    await expect.poll(() => links.length, { timeout: 8_000 }).toBeGreaterThan(0);
+    for (const { ws, server } of links.splice(0)) {
+      await server.close().catch(() => {});
+      await ws.close().catch(() => {});
+    }
+    await expect.poll(() => links.length, { timeout: 15_000 }).toBeGreaterThan(0);
+    await page.waitForTimeout(1500);
+    await locked("8.5");
+
+    // A reload.
+    await page.reload();
+    await expect(page.locator(".diver-name")).toContainText("GGG Reload", { timeout: 8_000 });
+    await locked("8.5");
+    await expect(page.locator(".judge-panel-tile").nth(1).locator(".judge-panel-tile-score")).toHaveText("7.0");
+    await expect(page.locator(".judge-panel-label")).toContainText("2 / 5");
+    await shot(page, "judge-reloaded-after-scoring-390x664");
+    // Nothing was sent again.
+    const rows = await setup.pool.query(
+      "SELECT score FROM scores WHERE event_id = $1 AND judge_id = $2", [event.id, judges[0].userId]);
+    expect(rows.rows.map((r) => Number(r.score))).toEqual([8.5]);
+
+    // A re-dive puts the old marks aside, so a reload after one has an
+    // open keypad and an empty panel again.
+    expect(await emitAck(baseURL, adminToken, "referee_redive", {
+      event_id: event.id, competitor_id: divers[0].userId, round_number: 1,
+    })).toMatchObject({ ok: true });
+    await expect.poll(() => room.seen.redive.length, { timeout: 6_000 }).toBeGreaterThan(0);
+    await page.reload();
+    await expect(page.locator(".diver-name")).toContainText("GGG Reload", { timeout: 8_000 });
+    await page.waitForTimeout(1000);
+    await expect(page.locator(".submit-btn")).toBeEnabled();
+    await expect(page.locator(".keypad .key", { hasText: /^8$/ })).toBeEnabled();
+    await expect(page.locator(".judge-panel-tile.in")).toHaveCount(0);
+
+    // Scored again, then the referee fails the dive: what comes back
+    // after a reload is the stored 0, not the 8 that was typed.
+    await page.locator(".keypad .key", { hasText: /^8$/ }).click();
+    await page.locator(".submit-btn").click();
+    await locked("8", "8.0");
+    expect(await emitAck(baseURL, adminToken, "referee_failed_dive", {
+      event_id: event.id, competitor_id: divers[0].userId, round_number: 1,
+    })).toMatchObject({ ok: true });
+    await expect(page.locator(".judge-panel-tile.mine .judge-panel-tile-score")).toHaveText("0.0", { timeout: 6_000 });
+    await page.reload();
+    await expect(page.locator(".diver-name")).toContainText("GGG Reload", { timeout: 8_000 });
+    await locked("0", "0.0");
+  } finally {
+    room.close();
+    await ctx.close();
     await setup.deleteOrg(orgId);
   }
 });
