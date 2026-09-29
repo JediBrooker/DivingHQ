@@ -13279,3 +13279,24 @@ test("ops status answers on the real server", async (t) => {
   assert.ok(body.errors.requests >= 1, "the /api/health call above was counted");
   for (const block of ["backup", "restore_check", "deploy"]) assert.equal(typeof body[block], "object");
 });
+
+// /metrics on the real server: a direct scrape (Prometheus on the box)
+// still works, a request that came through the Cloudflare tunnel is a
+// 404. The suite runs outside production with no METRICS_TOKEN, so the
+// direct path is open here. test/metrics-access.test.js covers the live
+// box's production settings and the token.
+test("/metrics answers a direct scrape and hides from the tunnel", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  if (process.env.METRICS_TOKEN || process.env.NODE_ENV === "production") {
+    return t.skip("needs the default dev metrics settings");
+  }
+  const direct = await fetch(`${baseUrl}/metrics`);
+  assert.equal(direct.status, 200);
+  assert.match(await direct.text(), /dive_recorder_http_requests_total/);
+  for (const headers of [{ "cf-ray": "8c1f0d2e3a4b5c6d-SYD" }, { "cf-connecting-ip": "203.0.113.9" }]) {
+    const viaTunnel = await fetch(`${baseUrl}/metrics`, { headers });
+    assert.equal(viaTunnel.status, 404, JSON.stringify(headers));
+    assert.equal(await viaTunnel.text(), "Not found");
+  }
+});

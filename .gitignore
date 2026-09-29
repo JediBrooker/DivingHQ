@@ -39,6 +39,9 @@ playwright/.cache/
 
 # Observability stack — local secrets (Grafana password, etc.)
 ops/observability/.env
+# Prometheus's copy of METRICS_TOKEN, if you lock the direct scrape too
+# (ops/observability/README.md). Untracked it would also trip deploy.sh.
+ops/observability/prometheus/metrics-token
 
 # Local agent / tooling artifacts — never want these in the repo
 .agents/

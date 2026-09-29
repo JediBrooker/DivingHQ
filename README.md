@@ -888,7 +888,7 @@ It excludes only the documentation screenshot generator
 
 | Spec | What it exercises |
 |---|---|
-| `smoke.spec.js` | Health endpoint, SPA boots, `/metrics`, public diver profile fall-through, OG-tagged HTML for crawler UAs |
+| `smoke.spec.js` | Health endpoint, SPA boots, `/metrics` (and its 404 through Cloudflare), `/api/ops/status`, public diver profile fall-through, OG-tagged HTML for crawler UAs |
 | `scoring.spec.js` | Five judges submit scores via `socket.io-client`; `/api/scoreboard` reflects the trimmed total. Catches regressions in the socket layer, the trim algorithm, and the standings query |
 | `admin.spec.js` | Org admin creates an event, late-adds a diver to the roster, flips Upcoming → Live → Completed |
 | `competitor.spec.js` | Diver self-registers, login is blocked with `code: "email_not_verified"`, verify-then-login works, diver submits a 2-round dive list |

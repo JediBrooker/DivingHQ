@@ -9,7 +9,9 @@
 //   2. SPA boot      → / loads, the Home view renders
 //   3. /metrics      → Prometheus scrape works (proves the
 //                      Pino + prom-client integration didn't
-//                      break the request pipeline)
+//                      break the request pipeline), and a request
+//                      with Cloudflare's headers gets a 404
+//   3b. /api/ops/status, the monitor's view, no-store
 //   4. Crawler OG    → /diver/<slug> with a Twitterbot UA
 //                      returns OG-tagged HTML, not the SPA shell
 //   5. Browser SPA   → /diver/<slug> with a Mozilla UA falls
@@ -56,6 +58,21 @@ test("metrics endpoint exposes Prometheus payload", async ({ request: req }) => 
   expect(body).toContain("dive_recorder_http_requests_total");
   // default Node.js metric should appear too
   expect(body).toContain("dive_recorder_process_resident_memory_bytes");
+
+  // The same path through the Cloudflare tunnel is hidden (lib/metrics-access.js).
+  const viaTunnel = await req.get("/metrics", { headers: { "cf-ray": "8c1f0d2e3a4b5c6d-SYD" } });
+  expect(viaTunnel.status()).toBe(404);
+});
+
+test("ops status answers for the outside monitor", async ({ request: req }) => {
+  const r = await req.get("/api/ops/status");
+  expect(r.status()).toBe(200);
+  expect(r.headers()["cache-control"]).toBe("no-store");
+  const body = await r.json();
+  expect(body.ok).toBe(true);
+  expect(typeof body.schema_version).toBe("number");
+  expect(Object.keys(body.backup).sort()).toEqual(["last_attempt_at", "last_ok", "last_success_at", "offsite", "size_bytes"]);
+  expect(body.errors.window_minutes).toBe(15);
 });
 
 test("public diver profile: crawler gets OG tags, browser gets SPA", async ({ request: req, page }) => {
