@@ -112,10 +112,12 @@ record_build_sha() { git rev-parse HEAD > dist.next/.build-sha; }
 # write to is a warning, it never fails a deploy or changes its exit code.
 #
 # OPS_STATE_DIR comes from the shell or .env like the ops scripts read it,
-# /var/lib/divinghq otherwise. Only that one line of .env is read here.
+# /var/lib/divinghq otherwise. Only that one line of .env is read here,
+# last copy wins and `export ` in front is fine, both as dotenv has it,
+# or this would write deploy.json somewhere the app never looks.
 env_file_value() {
   [[ -f .env ]] || return 0
-  sed -n "s/^[[:space:]]*$1[[:space:]]*=[[:space:]]*//p" .env | tail -n 1 \
+  sed -n "s/^[[:space:]]*\(export[[:space:]][[:space:]]*\)\{0,1\}$1[[:space:]]*=[[:space:]]*//p" .env | tail -n 1 \
     | sed 's/[[:space:]]#.*$//; s/[[:space:]]*$//' | tr -d "\"'\r"
 }
 OPS_STATE_DIR="${OPS_STATE_DIR:-$(env_file_value OPS_STATE_DIR || true)}"

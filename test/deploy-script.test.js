@@ -159,10 +159,15 @@ test("a deploy that gets to the end records ok and the commit it deployed", () =
     assert.ok(!fs.existsSync(path.join(state, "deploy.json")));
 
     // A plain restart that comes back healthy. OPS_STATE_DIR from .env
-    // this time, the way the box would have it.
-    fs.writeFileSync(path.join(r.dir, ".env"), `DB_DATABASE=nothing_here\nOPS_STATE_DIR="${state}"\n`);
+    // this time, the way the box would have it, and read the way the app
+    // (dotenv) reads it: the last copy wins, `export ` in front or not.
+    const stale = path.join(r.bin, "old-state");
+    const envText = `DB_DATABASE=nothing_here\nOPS_STATE_DIR=${stale}\nexport OPS_STATE_DIR="${state}"\n`;
+    fs.writeFileSync(path.join(r.dir, ".env"), envText);
+    assert.equal(require("dotenv").parse(envText).OPS_STATE_DIR, state, "where the app will look");
     run = r.deploy();
     assert.equal(run.code, 0, run.out);
+    assert.ok(!fs.existsSync(stale), "not the line the app ignores");
     const file = path.join(state, "deploy.json");
     const recorded = JSON.parse(fs.readFileSync(file, "utf8"));
     assert.deepEqual(Object.keys(recorded).sort(), ["last_at", "ok", "sha"]);
