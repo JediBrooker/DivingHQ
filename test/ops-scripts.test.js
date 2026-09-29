@@ -55,18 +55,30 @@ test("ops_load_env reads a .env the way dotenv does, and the shell wins", () => 
       "R2_ACCOUNT_ID='abc123'",
       "DB_PORT=5433   # trailing comment",
       "DB_PASSWORD=p#ss=word",
+      'QUOTED_HASH="p#ss word"',
       "DB_DATABASE=from_file\r",
       "  SPACED = yes ",
       "ALREADY_EMPTY=from_file",
       "not a line",
+      // Appended after a restore instead of editing the line above: the
+      // app (dotenv) takes the last one, so the backup has to as well.
+      "DB_USER=restored_role",
+      "DB_DATABASE=also_from_file",
       "LAST=no-newline",
     ].join("\n"));
     const r = sh(
-      `ops_load_env "${file}"; printf '%s|' "$DB_USER" "$DB_HOST" "$R2_BUCKET" "$R2_ACCOUNT_ID" "$DB_PORT" "$DB_PASSWORD" "$DB_DATABASE" "$SPACED" "$ALREADY_EMPTY" "$LAST"`,
+      `ops_load_env "${file}"; printf '%s|' "$DB_USER" "$DB_HOST" "$R2_BUCKET" "$R2_ACCOUNT_ID" "$DB_PORT" "$DB_PASSWORD" "$QUOTED_HASH" "$DB_DATABASE" "$SPACED" "$ALREADY_EMPTY" "$LAST"`,
       { DB_DATABASE: "from_shell", ALREADY_EMPTY: "" },
     );
     assert.equal(r.status, 0, r.err);
-    assert.equal(r.out, "diver|db.internal|divinghq-backups|abc123|5433|p#ss=word|from_shell|yes||no-newline|");
+    assert.equal(r.out, "restored_role|db.internal|divinghq-backups|abc123|5433|p|p#ss word|from_shell|yes||no-newline|");
+
+    // And the same answers as the app's own reader, key for key, for
+    // everything the shell didn't already set.
+    const dotenv = require("dotenv").parse(fs.readFileSync(file));
+    const names = ["DB_USER", "DB_HOST", "R2_BUCKET", "R2_ACCOUNT_ID", "DB_PORT", "DB_PASSWORD", "QUOTED_HASH", "DB_DATABASE", "SPACED", "LAST"];
+    const mine = sh(`ops_load_env "${file}"; printf '%s|' ${names.map((n) => `"$${n}"`).join(" ")}`).out.split("|").slice(0, -1);
+    assert.deepEqual(Object.fromEntries(names.map((n, i) => [n, mine[i]])), Object.fromEntries(names.map((n) => [n, dotenv[n]])));
     // A missing file is fine, it just loads nothing.
     assert.equal(sh(`ops_load_env "${dir}/nope"; echo ok`).out.trim(), "ok");
   } finally {

@@ -21,13 +21,18 @@ ops_stamp_to_iso() {
 ops_log() { echo "[${OPS_TAG:-ops}] $(ops_now) $*"; }
 ops_error() { echo "[${OPS_TAG:-ops}] $(ops_now) ERROR: $*" >&2; }
 
-# Load KEY=value lines from an env file, dotenv style: a variable that's
-# already set (even to "") wins, which is what lets a test or an operator
-# point one run somewhere else (DB_DATABASE=... scripts/ops/backup-db.sh).
-# Handles `export KEY=`, quotes, trailing " # comments", CRLF and a last
-# line with no newline. No variable expansion, same as dotenv.
+# Load KEY=value lines from an env file the way dotenv (so the app) reads
+# it. A variable that's already set in the environment (even to "") wins,
+# which is what lets a test or an operator point one run somewhere else
+# (DB_DATABASE=... scripts/ops/backup-db.sh). Inside the file the LAST copy
+# of a key wins, like dotenv: someone who appends DB_DATABASE=restored
+# after a restore instead of editing the old line has moved the app, and
+# the backup has to follow it rather than quietly keep dumping the old
+# database. Handles `export KEY=`, quotes, `#` comments (an unquoted value
+# stops at the first #, as in dotenv), CRLF and a last line with no
+# newline. No variable expansion, same as dotenv.
 ops_load_env() {
-  local file="$1" line k v q
+  local file="$1" line k v q ours=" "
   [[ -f "$file" && -r "$file" ]] || return 0
   while IFS= read -r line || [[ -n "$line" ]]; do
     line="${line%$'\r'}"
@@ -41,7 +46,13 @@ ops_load_env() {
     k="${line%%=*}"
     k="${k%"${k##*[![:space:]]}"}"
     [[ "$k" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] || continue
-    [[ -n "${!k+x}" ]] && continue
+    # First sighting decides: set already means the environment had it,
+    # so leave it alone every time. Otherwise it's ours from here on and a
+    # later line in the file overwrites it.
+    if [[ "$ours" != *" $k "* ]]; then
+      [[ -n "${!k+x}" ]] && continue
+      ours="$ours$k "
+    fi
     v="${line#*=}"
     v="${v#"${v%%[![:space:]]*}"}"
     if [[ "$v" == \"* || "$v" == \'* ]]; then
@@ -49,7 +60,7 @@ ops_load_env() {
       v="${v:1}"
       v="${v%%"$q"*}"
     else
-      v="${v%%[[:space:]]#*}"
+      v="${v%%#*}"
       v="${v%"${v##*[![:space:]]}"}"
     fi
     export "$k=$v"
