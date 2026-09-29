@@ -59,9 +59,10 @@
 // RESTRICT on purpose, and when the rehearsal reaches into something real:
 // a seeded account on another event's panel or start list (deleting the
 // account would cascade that event's scores away), another org's event
-// filed under the rehearsal meet, a stranger's open claim on the org. It also takes out what the rehearsal left in
-// tables without a foreign key back to it: audit rows, notifications that
-// point at the event, record history, idempotency keys.
+// filed under the rehearsal meet, a stranger's open claim on the org. It
+// also takes out what the rehearsal left in tables without a foreign key
+// back to it: audit rows, notifications that point at the event, record
+// history, idempotency keys.
 //
 // The event is NOT flagged is_rehearsal. That flag (migration 048) skips
 // the live and results emails and record setting, which are exactly the
