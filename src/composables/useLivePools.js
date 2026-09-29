@@ -16,6 +16,7 @@
 // caller (P6's Live mode) wires the socket in and runs the
 // history/advance side-effects off the {allScoresIn} return.
 import { reactive } from 'vue'
+import { heldAward } from './useScoreTrim.js'
 
 export function makePoolState() {
   return {
@@ -227,6 +228,29 @@ export function applyRedive(pool, data, numberOfJudges) {
   pool.judgeTiles = initJudgeTiles(numberOfJudges)
   pool.advanceArmed = false
   pool.rediveSeq = (pool.rediveSeq || 0) + 1
+  return true
+}
+
+// Apply a referee Failed ('failed') or Cap ('cap') call to ONE pool. The
+// server has already rewritten the stored scores and says so with
+// referee_action_failed / referee_action_cap, but the tiles still showed
+// the awards from before it until the next diver. Bring what's in line
+// with the call (heldAward: 0 for a failed dive, nothing above the
+// declared maximum for a cap). The dive stays complete, so Next stays
+// as it was. Returns true when it matched the live dive.
+export function applyRefereeCall(pool, data, call) {
+  const a = pool && pool.currentActive
+  if (!a || !data) return false
+  if (String(data.event_id) !== String(a.event_id)) return false
+  if (String(data.competitor_id) !== String(a.competitor_id)) return false
+  if (Number(data.round_number) !== Number(a.round_number)) return false
+  const held = (v) => heldAward(v, call, data.cap_value)
+  for (const id of Object.keys(pool.scoresThisRound || {})) {
+    pool.scoresThisRound[id] = held(pool.scoresThisRound[id])
+  }
+  for (const tile of pool.judgeTiles || []) {
+    if (tile.scored) tile.score = held(parseFloat(tile.score)).toFixed(1)
+  }
   return true
 }
 

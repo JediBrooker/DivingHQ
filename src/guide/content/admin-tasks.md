@@ -238,13 +238,13 @@ The books are public at [`/records`](/records) (**Records** in the sidebar's Com
 - **Continental** — every diver whose federation the system admin has given a continent (see [Continental records](#continental-records)).
 - **Personal bests** aren't a book. They live on each diver's profile.
 
-Every book is split into **Women's** and **Men's**, and each record is one board height, dive code and position, so a 105B from 3 m and a 105B from 1 m are separate records. Only individual events count: a synchro dive is two people's work credited to one of them, so synchro and team events never set records. A Mixed event files each dive under the diver's own profile gender, and skips the dive if the profile doesn't give one. Rehearsal events never touch the books, and nor do scores typed in through manual entry while an event is still Upcoming (that's somebody trying the Control Room out, not a competition).
+Every book is split into **Women's** and **Men's**, and each record is one board height, dive code and position, so a 105B from 3 m and a 105B from 1 m are separate records. Only individual events count: a synchro dive is two people's work credited to one of them, so synchro and team events never set records. A Mixed event files each dive under the diver's own profile gender, and skips the dive if the profile doesn't give one. Rehearsal events never touch the books, and nor do scores typed in through manual entry while an event is still Upcoming (that's somebody trying the Control Room out, not a competition). A dive worth 0 points never sets a record either: that's a failed dive (the referee's **Failed** call, or every judge giving 0), and 0 points isn't a mark anyone can beat.
 
 Each club links to its book from **My club**, and each region from **My region**.
 
 **Unofficial marks.** A national or state book whose governing body hasn't claimed its account on DivingHQ yet (a country the clubs started, or a state nobody has claimed) carries one **Unofficial** note with a link to the claim flow. The marks don't change when the claim is approved, they simply become official. Club and continental books always read as official.
 
-**Corrections and deletions don't re-check records.** A score corrected after the fact leaves the books as they were, and so does deleting an event: a record the original score set stands until somebody beats it, and a deleted event's records stay with their holder (the *Set at* column goes blank). If a book needs putting right, the system admin can [rebuild it from the scores](#rebuilding-the-record-books).
+**Corrections and referee calls re-check records, deletions don't.** When a dive that's already scored changes (a score correction, a resolved conflict, the referee failing or capping it), its books are replayed from the scores. A record the dive no longer earns goes back to the mark it beat, with that mark's original date, and if nobody else has done that dive the entry comes off the book. Deleting an event is different: its records stay with their holder (the *Set at* column goes blank). If a book needs putting right, the system admin can [rebuild it from the scores](#rebuilding-the-record-books).
 
 There's no approval step before a national record shows publicly. If your federation needs one, that's a future enhancement.
 
@@ -269,7 +269,7 @@ Signups find their federation by country, so a live organisation with no country
 
 ### Rebuilding the record books
 
-Records are written as scores land, and when a dive that's already scored changes (the referee fails or caps it, a score is corrected, a conflict is resolved, a redive is scored again) its books are replayed, so a record goes back to whoever held it before. A book can still drift from the scores behind it, mostly books written before migration 094 split them by gender (back then a man's dive could replace a woman's club record, and synchro dives counted). The system admin can replay every book from the scores themselves:
+Records are written as scores land, and when a dive that's already scored changes (the referee fails or caps it, a score is corrected, a conflict is resolved, a redive is scored again) its books are replayed, so a record goes back to whoever held it before. A book can still drift from the scores behind it, mostly books written before migration 094 split them by gender (back then a man's dive could replace a woman's club record, and synchro dives counted), and 0.00 marks from failed dives written before those stopped counting (the dry run lists them as *removed*, and a record that "beat" one as *prev*). The system admin can replay every book from the scores themselves:
 
 ```
 node scripts/rebuild-records.js                  # dry run: counts per book, writes nothing
@@ -278,7 +278,7 @@ node scripts/rebuild-records.js --org <uuid>     # one federation's books (conti
 node scripts/rebuild-records.js --apply          # actually write it
 ```
 
-Nothing is written without `--apply`. With it, every row that's replaced or removed is copied to the matching history table first, and the whole rebuild runs in one transaction with the record tables locked, so a dive finishing mid-rebuild just waits for it. Records whose event has since been deleted can't be checked against scores, so they're left alone unless the replay beats them. A dive counts for the club and state its diver was entered from, the same as when it was scored live, and a club still waiting for its federation's approval gets no club records.
+Nothing is written without `--apply`. With it, every row that's replaced or removed is copied to the matching history table first, and the whole rebuild runs in one transaction with the record tables locked, so a dive finishing mid-rebuild just waits for it. Records whose event has since been deleted can't be checked against scores, so they're left alone unless the replay beats them (a 0.00 one goes anyway). A dive counts for the club and state its diver was entered from, the same as when it was scored live, and a club still waiting for its federation's approval gets no club records.
 
 ### Cross-org user lookup
 

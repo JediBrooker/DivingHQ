@@ -210,6 +210,35 @@ export function correctionPreview({ scores, judgeNumbers, idx, newVal, numJudges
   }
 }
 
+/**
+ * What a judge's award counts for once the referee has called the dive.
+ * The server rewrites the stored scores itself (applyRefereeAction in
+ * routes/socket.js, and submit_score holds any award that lands after the
+ * call). This is for screens already showing the awards from before it:
+ * the live pills, the Control Room tiles, the judge's own panel.
+ *
+ *   'failed'  WA 8.6.6: a failed dive gets 0 points.
+ *   'cap'     WA 8.4.7 (8.6.7 for 4.5): once the referee declares a
+ *             maximum award, an award above it counts as the maximum.
+ *
+ * Anything else, or a cap that isn't a number, leaves the award alone.
+ *
+ * @param {number|string} score
+ * @param {'failed'|'cap'|string} call
+ * @param {number|string} [cap]
+ * @returns {number}
+ */
+export function heldAward(score, call, cap) {
+  const v = Number(score)
+  if (Number.isNaN(v)) return v
+  if (call === 'failed') return 0
+  if (call === 'cap') {
+    const c = Number(cap)
+    if (cap != null && cap !== '' && Number.isFinite(c) && v > c) return c
+  }
+  return v
+}
+
 // Re-export the bucket helper so callers that already imported the
 // composable don't need a second import.
 export { scoreCategory } from './useScoreCategories.js'

@@ -11,10 +11,12 @@ const { test, before } = require('node:test')
 const assert = require('node:assert/strict')
 
 let isCacheExpired
+let isEventScoresUrl
 
 before(async () => {
   const mod = await import('../src/lib/idbCache.js')
   isCacheExpired = mod.isCacheExpired
+  isEventScoresUrl = mod.isEventScoresUrl
 })
 
 test('isCacheExpired: null/undefined cached entry is treated as expired', () => {
@@ -56,4 +58,28 @@ test('isCacheExpired: maxAgeMs of 0 means everything is expired', () => {
   const oneMsOld = { data: {}, ts: now - 1 }
   assert.equal(isCacheExpired(fresh, 0, now), false)
   assert.equal(isCacheExpired(oneMsOld, 0, now), true)
+})
+
+// invalidateEventScores drops what this matches. The recap URL was the
+// one left out before: a correction on a Completed event re-read a copy
+// the cache called fresh for another 24 hours.
+test('isEventScoresUrl: the live board, its leaderboard and the recap for that event', () => {
+  const id = '11111111-2222-3333-4444-555555555555'
+  const other = '99999999-2222-3333-4444-555555555555'
+  for (const url of [
+    `/api/scoreboard/${id}`,
+    `/api/scoreboard/${id}/leaderboard`,
+    `/api/scoreboard/${id}?cache=skip`,
+    `/api/archive/${id}/results`,
+  ]) assert.equal(isEventScoresUrl(url, id), true, url)
+  for (const url of [
+    `/api/scoreboard/${other}`,
+    `/api/archive/${other}/results`,
+    `/api/scoreboard/${id}0`,
+    '/api/archive',
+    '/api/archive/clubs',
+    '/api/dive-directory',
+  ]) assert.equal(isEventScoresUrl(url, id), false, url)
+  assert.equal(isEventScoresUrl(`/api/scoreboard/${id}`, null), false)
+  assert.equal(isEventScoresUrl(null, id), false)
 })

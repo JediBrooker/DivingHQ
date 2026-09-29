@@ -46,6 +46,63 @@ test("standings refresh when a dive's panel completes, and the recap takes over 
   await setup.deleteOrg(orgId);
 });
 
+// A correction has to reach a scoreboard that's already open. The page
+// re-read its standings through the IndexedDB cache, which calls a live
+// copy fresh for 5s and a recap for a day, so a correction a moment after
+// the last refresh (and any correction once the recap was up) put the old
+// numbers straight back on screen. The rehearsal caught both.
+test("a score correction reaches an open scoreboard, live and on the recap", async ({ page, request, baseURL }) => {
+  test.setTimeout(120_000);
+  const { orgId, adminToken } = await setup.createOrgAndAdmin(request, { countryCode: "AUS", orgName: "Scoreboard Correction" });
+  const { event, diveId, divers, judges } = await liveEvent(request, {
+    orgId, adminToken, name: "Correction Event", diverNames: ["AAA Fix"],
+  });
+  expect(await emitAck(baseURL, adminToken, "set_active_diver", {
+    event_id: event.id, competitor_id: divers[0].userId, round_number: 1,
+    full_name: "AAA Fix", diverName: "AAA Fix", dd: 1.5, status: "ready",
+  })).toMatchObject({ ok: true });
+
+  await page.goto(`/scoreboard/${event.id}`);
+  await expect(page.locator(".sb-name").first()).toContainText("AAA Fix", { timeout: 10_000 });
+  await page.waitForLoadState("networkidle");
+  await page.waitForTimeout(1000);
+
+  // 6 and one 8 are trimmed: (7 + 7 + 8) x 1.5 = 33.0
+  await setup.submitPanelScores({
+    baseURL, judges, eventId: event.id, competitorId: divers[0].userId, roundNumber: 1, diveId,
+    scores: [6, 7, 7, 8, 8],
+  });
+  const standing = page.locator(".sb-col-standings .standing").first();
+  await expect(standing.locator(".standing-score")).toHaveText("33.0", { timeout: 8_000 });
+
+  const scoreId = async (judge) => (await setup.pool.query(
+    "SELECT id FROM scores WHERE event_id = $1 AND competitor_id = $2 AND judge_id = $3",
+    [event.id, divers[0].userId, judge.userId],
+  )).rows[0].id;
+  const correct = async (judge, score) => {
+    const res = await request.put(`/api/scores/${await scoreId(judge)}`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
+      data: { score, reason: "e2e correction" },
+    });
+    expect(res.status()).toBe(200);
+  };
+
+  // Straight after that refresh, well inside the 5s the cached copy
+  // counts as fresh: J1's 6 becomes a 9, so (7 + 8 + 8) x 1.5 = 34.5.
+  await correct(judges[0], 9);
+  await expect(standing.locator(".standing-score")).toHaveText("34.5", { timeout: 4_000 });
+
+  // Once it's Completed the recap takes over, cached for a day. J2's 7
+  // becomes a 10: (8 + 8 + 9) x 1.5 = 37.5.
+  await setup.setEventStatus(request, { adminToken, eventId: event.id, status: "Completed" });
+  const recap = page.locator(".sb-completed");
+  await expect(recap).toContainText("34.5", { timeout: 8_000 });
+  await correct(judges[1], 10);
+  await expect(recap).toContainText("37.5", { timeout: 4_000 });
+  await expect(recap).not.toContainText("34.5");
+  await setup.deleteOrg(orgId);
+});
+
 // The live pills were the Nth score to arrive in slot N (under judge N's
 // name), trimmed flat, and the synchro dive total skipped the x0.6.
 test("live pills sit under their own judge, and a synchro total uses the WA trim and 0.6", async ({ page, request, baseURL }) => {

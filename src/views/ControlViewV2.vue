@@ -39,13 +39,13 @@ import { useSocket } from '@/composables/useSocket'
 import { useSocketEvent } from '@/composables/useSocketEvent'
 import {
   useLivePools, selectDiver, rosterIndexForActive, competingQueue, rebaseQueue, nextQueueIndex,
-  applyRedive, historyNewestFirst,
+  applyRedive, applyRefereeCall, historyNewestFirst,
 } from '@/composables/useLivePools'
 import { annotateJudgeRows } from '@/composables/useScoreTrim'
 import { synchroJudgeGroups } from '@/composables/useScoreCategories'
 import { controlKeyIntent, hotkeyBlocked, spaceOwnerOf } from '@/composables/useControlKeymap'
 import { diveDescription } from '@/composables/useDiveLabel'
-import { idbInvalidate } from '@/lib/idbCache'
+import { invalidateEventScores } from '@/lib/idbCache'
 import { activeDiverPayload } from '@/lib/activeDiver'
 import { useMeetHold, MEET_HOLD_STORE } from '@/composables/useMeetHold'
 import { useHttpOutbox, waitForOutboxEntry } from '@/composables/useHttpOutbox'
@@ -73,7 +73,7 @@ const socket = useSocket()
 const { pools, poolFor, routeScore, routeSignal } = useLivePools()
 
 useSocketEvent(socket, 'score_received', (data) => {
-  if (data?.event_id) idbInvalidate(`/api/scoreboard/${data.event_id}`).catch(() => {})
+  if (data?.event_id) invalidateEventScores(data.event_id)
   const res = routeScore(data, numberOfJudgesFor)
   // A completed dive changes that pool's history + standings, so refresh
   // its side-panel data (whichever pool, focused or not). Each card
@@ -96,7 +96,7 @@ useSocketEvent(socket, 'judge_signal', (data) => {
 // queueing its PUT, which usually beat the PUT to the server.
 useSocketEvent(socket, 'score_corrected', (data) => {
   if (data?.event_id) {
-    idbInvalidate(`/api/scoreboard/${data.event_id}`).catch(() => {})
+    invalidateEventScores(data.event_id)
     loadPoolPanels(data.event_id)
   }
 })
@@ -108,6 +108,20 @@ useSocketEvent(socket, 'score_corrected', (data) => {
 useSocketEvent(socket, 'referee_action_redive', (data) => {
   const pool = data?.event_id != null ? pools[data.event_id] : null
   if (pool) applyRedive(pool, data, numberOfJudgesFor(data.event_id))
+})
+
+// A Failed or Cap call on the live dive (from any operator). The server
+// has rewritten the scores and score_corrected re-reads History and
+// Standings, but the pool's tiles kept the awards from before the call
+// until the next diver. applyRefereeCall holds them to it: 0 for a failed
+// dive, nothing above the declared maximum for a cap.
+useSocketEvent(socket, 'referee_action_failed', (data) => {
+  const pool = data?.event_id != null ? pools[data.event_id] : null
+  if (pool) applyRefereeCall(pool, data, 'failed')
+})
+useSocketEvent(socket, 'referee_action_cap', (data) => {
+  const pool = data?.event_id != null ? pools[data.event_id] : null
+  if (pool) applyRefereeCall(pool, data, 'cap')
 })
 
 // A coach withdrew a diver from an event that's live here (routes/coach.js
