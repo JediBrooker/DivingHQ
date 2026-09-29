@@ -40,7 +40,11 @@ async function acquireWakeLock() {
   } catch { /* permission denied or unsupported */ }
 }
 function onVisibilityChange() {
-  if (document.visibilityState === 'visible' && !wakeLock.value) acquireWakeLock()
+  if (document.visibilityState !== 'visible') return
+  if (!wakeLock.value) acquireWakeLock()
+  // A phone that slept through the start: go and look (see
+  // adoptOwnLiveEvent further down, a no-op once there's an event).
+  adoptOwnLiveEvent()
 }
 function buzz(pattern) {
   // pattern can be a single number (ms) or an array of on/off
@@ -254,16 +258,43 @@ function joinEventRoom() {
 // meet. Take the judge's own Live panel instead: the newest one, since
 // my-events comes back newest first. No Live panel just leaves it
 // waiting, same as before.
+//
+// Waiting isn't the end of it though. Judges open this before Start
+// Event, and with no event there's no room to hear the first diver in,
+// so the look has to happen again once the panel goes live: on the
+// status change and the "panel is live" notice (both come to this
+// socket), on a reconnect or the phone waking up, and on a slow poll for
+// a judge none of those reach. Only ever while the URL names no event.
+// A call that lands mid-lookup runs once more afterwards, since that
+// lookup may have read the list just before the event flipped.
+let adopting = false
+let adoptAgain = false
 async function adoptOwnLiveEvent() {
   if (eventIdFromUrl.value) return
+  if (adopting) { adoptAgain = true; return }
+  adopting = true
   try {
     const mine = await auth.apiFetch('/api/judge/my-events')
     const live = Array.isArray(mine) ? mine.find((e) => e.status === 'Live') : null
     if (live && !eventIdFromUrl.value) {
       router.replace({ query: { ...route.query, event: live.id } })
     }
-  } catch { /* stays on the waiting screen */ }
+  } catch { /* stays on the waiting screen */ } finally {
+    adopting = false
+    if (adoptAgain) {
+      adoptAgain = false
+      adoptOwnLiveEvent()
+    }
+  }
 }
+const ADOPT_POLL_MS = 10_000
+let adoptPoll = null
+useSocketEvent(socket, 'event_status_changed', (d) => {
+  if (d?.to === 'Live') adoptOwnLiveEvent()
+})
+useSocketEvent(socket, 'notification', (n) => {
+  if (n?.category === 'event_live' && n.data?.role === 'judge') adoptOwnLiveEvent()
+})
 // The URL picking up an event (the adopt above, or a link while this
 // view is open) has to join that room. On a later reconnect the
 // connect handler below does it. A diver that came in for some other
@@ -282,6 +313,7 @@ watch(eventIdFromUrl, (id) => {
 useSocketEvent(socket, 'connect', () => {
   drainOutbox()
   joinEventRoom()
+  adoptOwnLiveEvent()
 })
 
 const { isOffline, unsyncedCount } = outboxState
@@ -304,6 +336,9 @@ onBeforeRouteLeave(() => {
 onMounted(() => {
   if (socket.connected) joinEventRoom()
   adoptOwnLiveEvent()
+  adoptPoll = setInterval(() => {
+    if (!eventIdFromUrl.value && document.visibilityState === 'visible') adoptOwnLiveEvent()
+  }, ADOPT_POLL_MS)
   acquireWakeLock()
   document.addEventListener('visibilitychange', onVisibilityChange)
   window.addEventListener('beforeunload', onJudgeBeforeUnload)
@@ -311,6 +346,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  clearInterval(adoptPoll)
   offQueuedEntries?.()
   document.removeEventListener('visibilitychange', onVisibilityChange)
   window.removeEventListener('beforeunload', onJudgeBeforeUnload)

@@ -117,7 +117,11 @@ Seed refuses, and changes nothing, when:
 1. **Laptop**: sign in as `rehearsal-admin`, open the Control Room URL the seed
    printed (`/control?event=...`).
 2. **Judges**: each phone signs in as `rehearsal-judge1` to `rehearsal-judge5`
-   and opens `/judge`. Check each phone shows the right judge number.
+   and opens `/judge`. Before the start it says it's waiting and shows only
+   the judge's name; leave it there. When the event starts the phone picks it
+   up by itself (a few seconds at most, no reload or tap), and the judge
+   number shows next to the name with the first diver. Check each phone shows
+   the right one then.
 3. **Pre-meet steps** in the Control Room:
    - check in all four divers
    - randomise the start order
