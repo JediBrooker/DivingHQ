@@ -81,12 +81,14 @@ module.exports = function createSignoffRoutes({
   // event's room yet (the Control Room joins it at Live), so it goes to
   // their own room as well. Best-effort: the dialog also asks
   // GET .../request/:requestId while it waits, so a socket that was
-  // mid-reconnect still catches up.
+  // mid-reconnect still catches up. The referee's own room gets it too,
+  // so a dashboard they have open elsewhere drops the "Waiting for you"
+  // card straight away.
   function announceAnswer(reqRow, decision, byUserId) {
     try {
       push?.emitEvent?.(reqRow.event_id, "referee_signoff_response", {
         request_id: reqRow.id, decision, by_user_id: byUserId,
-      }, { users: [reqRow.requested_by] });
+      }, { users: [reqRow.requested_by, byUserId] });
     } catch { /* silent */ }
   }
 

@@ -163,7 +163,8 @@ test("an approval from the referee's device reaches the operator's own room", as
 
   const got = answers();
   assert.equal(got.length, 1, "one emit, over every room at once");
-  assert.deepEqual(new Set(got[0].rooms), new Set([`event:${eventId}`, `user:${operator}`]));
+  // The referee's own room too, for a dashboard they have open elsewhere.
+  assert.deepEqual(new Set(got[0].rooms), new Set([`event:${eventId}`, `user:${operator}`, `user:${referee}`]));
   assert.deepEqual(got[0].payload, { request_id: requestId, decision: "approved", by_user_id: referee });
 
   status = await call("operator", "GET", `/api/events/${eventId}/dive-order/sign-off/request/${requestId}`);
@@ -207,7 +208,7 @@ test("a handoff code typed on the referee's phone reaches the operator's own roo
   assert.equal(res.status, 200);
   const got = answers();
   assert.equal(got.length, 1);
-  assert.deepEqual(new Set(got[0].rooms), new Set([`event:${eventId}`, `user:${operator}`]));
+  assert.deepEqual(new Set(got[0].rooms), new Set([`event:${eventId}`, `user:${operator}`, `user:${referee}`]));
   assert.deepEqual(got[0].payload, { request_id: gen.body.request_id, decision: "approved", by_user_id: referee });
 
   const status = await call("operator", "GET", `/api/events/${eventId}/dive-order/sign-off/request/${gen.body.request_id}`);

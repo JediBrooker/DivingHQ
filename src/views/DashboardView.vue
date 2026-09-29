@@ -432,6 +432,32 @@ const pulseChips = computed(() => {
     })
   }
 
+  // Referee, sign-off requests waiting on them. They run out after five
+  // minutes, so every one counts as urgent. Without this chip the lane
+  // said "All quiet, nothing pending." with a request sitting there.
+  const signoffs = refereeDesk.value?.pending_signoffs || []
+  if (signoffs.length && auth.hasRole('referee')) {
+    chips.push({
+      id:           'referee',
+      kind:         'referee',
+      glyph:        '📋',
+      number:       signoffs.length,
+      label:        t('dashboard.actions.sign_off'),
+      layout:       'count-first',
+      targetTab:    'referee',
+      popoverTitle: t('dashboard.sections.waiting_for_you'),
+      items: signoffs.map((req) => ({
+        id:    'so-' + req.request_id,
+        title: req.event_name,
+        meta:  t('dashboard.referee.signoff_requested_by', {
+          name: req.requested_by_name || t('dashboard.referee.meet_manager_fallback'),
+        }),
+        to:    `/control?signoff_request=${req.request_id}`,
+        urgency: 'urgent',
+      })),
+    })
+  }
+
   // Diver, entries close countdown
   if (diverEntryCloseDays.value != null && auth.hasRole('diver')) {
     const now = Date.now()
@@ -599,9 +625,10 @@ function flashChip(id) {
 let pulseInitialised = false
 watch(
   [liveCount, upcomingCount, pendingCount, diverEntryCloseDays,
-    () => judgeEvents.value.length, () => coachData.value?.divers?.length || 0],
-  ([nLive, nUp, nPend, nDiv, nJudge, nCoach],
-   [pLive, pUp, pPend, pDiv, pJudge, pCoach]) => {
+    () => judgeEvents.value.length, () => coachData.value?.divers?.length || 0,
+    () => refereeDesk.value?.pending_signoffs?.length || 0],
+  ([nLive, nUp, nPend, nDiv, nJudge, nCoach, nRef],
+   [pLive, pUp, pPend, pDiv, pJudge, pCoach, pRef]) => {
     if (!pulseInitialised) {
       pulseInitialised = true
       return
@@ -612,6 +639,7 @@ watch(
     if (nDiv  !== pDiv)    flashChip('diver-entries')
     if (nJudge !== pJudge) flashChip('judge')
     if (nCoach !== pCoach) flashChip('coach')
+    if (nRef  !== pRef)    flashChip('referee')
   },
 )
 
@@ -1017,11 +1045,22 @@ function onScoreActivity() {
   }
 }
 
+// A sign-off request lands on the referee as a `notification` (their own
+// user room), and the answer, from this tab's banner or their phone, comes
+// back as referee_signoff_response. Either changes the referee desk, which
+// otherwise waited for the 30 s poll: a request could expire, or be
+// answered, before the "Waiting for you" card ever showed.
+function onNotification(n) {
+  if (n?.category === 'referee_signoff') refetchPulseData()
+}
+
 function attachSocketHandlers() {
   if (!dashboardSocket) return
   dashboardSocket.on('event_status_changed', onPulseSignal)
   dashboardSocket.on('role_request_created', onPulseSignal)
   dashboardSocket.on('score_corrected', onScoreActivity)
+  dashboardSocket.on('notification', onNotification)
+  dashboardSocket.on('referee_signoff_response', onPulseSignal)
 }
 
 function detachSocketHandlers() {
@@ -1029,6 +1068,8 @@ function detachSocketHandlers() {
   dashboardSocket.off('event_status_changed', onPulseSignal)
   dashboardSocket.off('role_request_created', onPulseSignal)
   dashboardSocket.off('score_corrected', onScoreActivity)
+  dashboardSocket.off('notification', onNotification)
+  dashboardSocket.off('referee_signoff_response', onPulseSignal)
 }
 </script>
 
