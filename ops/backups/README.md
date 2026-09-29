@@ -16,6 +16,12 @@ app to be up.
 16:30 UTC is 02:30 in Sydney in winter and 03:30 in summer. Both scripts log
 to `/var/log/divinghq-backup.log`.
 
+Don't deploy while the nightly dump is running (`pgrep -a pg_dump` shows
+it). `pg_dump` holds a share lock on every table until it finishes. A
+migration that alters a table waits behind that lock, and every app query
+on the table then queues behind the migration, so the site stalls until
+the dump is done.
+
 ## How it works
 
 **backup-db.sh** takes a custom-format `pg_dump` of the app's database. It
@@ -314,6 +320,16 @@ gives nulls. The shape is shared with the outside monitor; `src/types.js`
 
 (`sha` is always 7 characters.) `errors` counts the 5xx and all responses this
 process sent in the last 15 minutes, from zero after a restart.
+
+What a monitor reading this needs to know:
+
+* `backup.last_ok` is the local dump only. A night where the dump worked but
+  the R2 upload didn't has `last_ok: true` and `offsite: "failed"` (and the
+  script exits non-zero), so alert on `offsite` as well.
+* `backup.last_success_at` moves with every good local dump, off-site or
+  not.
+* Maintenance mode answers writes with a 503, and those count in
+  `server_errors` like any other 5xx.
 
 ## When something's wrong
 
