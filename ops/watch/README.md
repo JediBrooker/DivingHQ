@@ -60,11 +60,16 @@ A few behaviours worth knowing:
   history.
 * **KV writes stay low.** State is only written when something that
   matters changes, plus a heartbeat every 30 minutes. A quiet day is about
-  50 writes, well under the free plan's 1,000.
+  50 writes, well under the free plan's 1,000, and even a site flapping
+  every run can't pass 720 (one per run).
 * **Recovery notes need proof.** "Backups OK again" waits for a success
   newer than the one on record when the trouble started, and "restore
   check OK again" for a newer run that said `ok: true`. A state file that
   goes missing clears nothing.
+* **No KV, no run.** If reading the state from KV fails, the run stops
+  there (it shows as failed in the cron history) rather than starting from
+  a blank state, which would re-send every first-sight alert every 2
+  minutes.
 
 Subjects are short so they read on a lock screen: `[DivingHQ] DOWN`,
 `[DivingHQ] still DOWN (1 h 2 min)`, `[DivingHQ] back up after 12 min`,
@@ -162,6 +167,13 @@ To watch a different site (a staging box, say), change `TARGET`.
   one from the news.
 * KV is eventually consistent and cron runs can land in different data
   centres, so very rarely a reminder may go out twice.
+* On the free plan the 1,000 KV writes a day are per account, shared with
+  every other Worker on it, and once they're gone writes fail until 00:00
+  UTC. The watcher then can't remember what it already sent: an alert that
+  fires on first sight (a failed deploy, say) repeats every run, and DOWN
+  can't count its second strike. `wrangler tail` shows "couldn't save
+  state" when that's happening; the fix is the paid plan or finding the
+  other writer.
 * If DOWN alerts arrive while the site works fine from your browser,
   look at Security, Events in the dashboard for blocked requests with the
   user agent `divinghq-watch/1`; a Bot Fight Mode or WAF rule may be

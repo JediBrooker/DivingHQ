@@ -207,17 +207,51 @@ describe("runCheck", () => {
     }
   });
 
-  test("KV trouble doesn't stop the check", async () => {
+  test("a failed KV write doesn't stop the check", async () => {
     const e = env();
-    e.WATCH_STATE.failGet = true;
     e.WATCH_STATE.failPut = true;
     const r = await watch.runCheck(e, deps(site("up", T0), T0));
     assert.deepEqual(r.alerts, []);
   });
 
+  test("a failed KV read skips the run: nothing sent, nothing written over the real state", async () => {
+    // A deploy failure fires on first sight, so a watcher that started
+    // from a blank state on every failed read would send it every run.
+    const failedDeploy = (now) => async (url) => {
+      if (url.endsWith("/api/health")) return jsonRes(200, { ok: true });
+      return jsonRes(200, { ...okStatus(now), deploy: { last_at: new Date(now).toISOString(), ok: false, sha: "abc1234" } });
+    };
+    const e = env();
+    await watch.runCheck(e, deps(failedDeploy(T0), T0));
+    assert.equal(e.ALERT_EMAIL.sent.length, 1);
+    const saved = e.WATCH_STATE.store.get("state");
+    const writes = e.WATCH_STATE.writes;
+
+    e.WATCH_STATE.failGet = true;
+    for (let i = 1; i <= 3; i++) {
+      await assert.rejects(watch.runCheck(e, deps(failedDeploy(T0), T0 + i * 2 * MIN)), /kv down/);
+    }
+    assert.equal(e.ALERT_EMAIL.sent.length, 1, "no repeats while KV can't be read");
+    assert.equal(e.WATCH_STATE.writes, writes);
+    assert.equal(e.WATCH_STATE.store.get("state"), saved);
+
+    // KV back: carries on from the real state, still no repeat.
+    e.WATCH_STATE.failGet = false;
+    await watch.runCheck(e, deps(failedDeploy(T0), T0 + 8 * MIN));
+    assert.equal(e.ALERT_EMAIL.sent.length, 1);
+  });
+
   test("garbage in KV is treated as a first run", async () => {
     const e = env({ WATCH_STATE: fakeKv({ version: 7, whatever: true }) });
     await watch.runCheck(e, deps(site("up", T0), T0));
+    assert.equal(e.WATCH_STATE.state.version, 1);
+  });
+
+  test("a stored value that isn't JSON at all is treated as a first run too", async () => {
+    const e = env();
+    e.WATCH_STATE.store.set("state", "{not json");
+    const r = await watch.runCheck(e, deps(site("up", T0), T0));
+    assert.deepEqual(r.alerts, []);
     assert.equal(e.WATCH_STATE.state.version, 1);
   });
 });
@@ -279,6 +313,14 @@ describe("fetch handler", () => {
   test("GET / before the first run says so", async () => {
     const body = await (await get(worker(), env(), "/")).json();
     assert.equal(body.state, null);
+  });
+
+  test("GET / when KV can't be read is a 503, not an empty state", async () => {
+    const e = env();
+    e.WATCH_STATE.failGet = true;
+    const res = await get(worker(), e, "/");
+    assert.equal(res.status, 503);
+    assert.equal((await res.json()).state, undefined);
   });
 
   test("/test-alert is a 404 whenever TEST_KEY isn't set", async () => {

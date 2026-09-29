@@ -75,13 +75,22 @@ export async function probe(url, fetchImpl, timeoutMs = PROBE_TIMEOUT_MS) {
   }
 }
 
-async function loadState(env) {
+// Two different failures here, handled differently on purpose.
+//   * KV answered but the value is junk: start clean. normalizeState() does
+//     the same for a shape it doesn't know, and the worst case is one
+//     repeated alert.
+//   * KV didn't answer (get() threw): throw, and the caller skips the run.
+//     Starting blank every 2 minutes would re-send everything that fires on
+//     first sight (a failed deploy, the offsite reminder) on every run, and
+//     save that blank state over the real one. DOWN can't fire without
+//     state anyway, since its debounce lives in KV.
+async function readState(env) {
+  const text = await env.WATCH_STATE.get(STATE_KEY, "text");
+  if (text === null || text === undefined) return null;
   try {
-    const raw = await env.WATCH_STATE.get(STATE_KEY, "json");
-    return raw ?? null;
+    return JSON.parse(text);
   } catch (err) {
-    // Unparseable or KV hiccup: start clean rather than stop watching.
-    console.error("divinghq-watch: couldn't read state, starting fresh", err && err.message);
+    console.error("divinghq-watch: stored state isn't JSON, starting fresh", err && err.message);
     return null;
   }
 }
@@ -112,7 +121,8 @@ async function sendAlerts(env, EmailMessage, cfg, alerts, now) {
 
 /**
  * One cron run. Returns what happened, for logs and tests. Throws after
- * saving state if the email couldn't be sent, so the run shows up as
+ * saving state if the email couldn't be sent, and without sending or
+ * saving anything if KV couldn't be read, so either run shows up as
  * failed in the dashboard's cron history.
  */
 export async function runCheck(env, deps = {}) {
@@ -123,11 +133,19 @@ export async function runCheck(env, deps = {}) {
   const timeoutMs = deps.timeoutMs ?? PROBE_TIMEOUT_MS;
   const cfg = config(env);
 
-  const [health, status, prevRaw] = await Promise.all([
+  const [health, status, stored] = await Promise.all([
     probe(`${cfg.target}/api/health`, fetchImpl, timeoutMs),
     probe(`${cfg.target}/api/ops/status`, fetchImpl, timeoutMs),
-    loadState(env),
+    readState(env).then(
+      (value) => ({ value }),
+      (error) => ({ error }),
+    ),
   ]);
+  if (stored.error) {
+    console.error("divinghq-watch: couldn't read state from KV, skipping this run", stored.error && stored.error.message);
+    throw stored.error;
+  }
+  const prevRaw = stored.value;
 
   const { state, alerts } = evaluate(prevRaw, { health, status }, now, {
     timeZone: cfg.timeZone,
@@ -194,7 +212,12 @@ export async function handleFetch(request, env, deps = {}) {
 
   if (url.pathname === "/") {
     const cfg = config(env);
-    const raw = await loadState(env);
+    let raw;
+    try {
+      raw = await readState(env);
+    } catch {
+      return json({ target: cfg.target, error: "couldn't read the state from KV" }, 503);
+    }
     return json({ target: cfg.target, now: new Date(deps.now ?? Date.now()).toISOString(), state: raw ? normalizeState(raw) : null });
   }
 
