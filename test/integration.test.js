@@ -13260,3 +13260,22 @@ test("start-list.pdf prints a row for every script, folded when there's no font"
     await teardownFixture(st);
   }
 });
+
+// GET /api/ops/status is mounted on the real server, ahead of the SPA
+// fallback and the maintenance gate, and the request window sees the
+// traffic this suite has already sent. routes/ops-status.js has its own
+// suite (ops-status.integration.test.js) for the details.
+test("ops status answers on the real server", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const health = await fetchJson("GET", "/api/health");
+  const res = await fetch(`${baseUrl}/api/ops/status`);
+  assert.equal(res.status, 200);
+  assert.equal(res.headers.get("cache-control"), "no-store");
+  const body = await res.json();
+  assert.equal(body.ok, true);
+  assert.equal(body.schema_version, health.body.schema_version);
+  assert.equal(body.errors.window_minutes, 15);
+  assert.ok(body.errors.requests >= 1, "the /api/health call above was counted");
+  for (const block of ["backup", "restore_check", "deploy"]) assert.equal(typeof body[block], "object");
+});

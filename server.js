@@ -19,7 +19,7 @@
 //   [SECTION: MAINTENANCE GATE]       read-only lockdown for non-sysadmins
 //   [SECTION: LIVE STATE]             activeDivers / meetHolds (lib/live-state)
 //   [SECTION: TOKEN PAYLOAD]          buildTokenPayload (JWT shape)
-//   [SECTION: ROUTES: HEALTH]         /api/health, /metrics
+//   [SECTION: ROUTES: HEALTH]         /api/health, /api/ops/status, /metrics
 //   [SECTION: ROUTES: AUTH]           routes/auth.js
 //   [SECTION: ROUTES: ORGANISATIONS]  /api/orgs/*, /api/clubs/*
 //   [SECTION: ROUTES: PAYMENTS]       fees, checkout, refunds, payouts, webhook
@@ -94,6 +94,11 @@ const app = express();
 // Time every request and emit a Prometheus histogram + counter.
 // Mounted FIRST so it captures even helmet/cors short-circuits.
 app.use(metrics.httpMetricsMiddleware);
+// Rolling 15-minute tally of responses and 5xx for GET /api/ops/status.
+// Up here next to the metrics timer for the same reason, so a request
+// that helmet, cors or the body parser turns away still counts.
+const requestWindow = require("./lib/request-window").createRequestWindow({ minutes: 15 });
+app.use(requestWindow.middleware);
 
 // Trust the immediate reverse proxy (Cloudflare / Nginx / etc).
 // Without this:
@@ -740,6 +745,21 @@ app.get("/api/health", async (_req, res) => {
     res.status(503).json({ ok: false });
   }
 });
+
+// The monitor's view: health plus the backup, restore-check and deploy
+// state the ops scripts leave in OPS_STATE_DIR, and the 5xx count from
+// requestWindow above. Public like /api/health, but it reads three files
+// on every call, so it gets a limiter. 60 a minute per IP is plenty for
+// anything polling it once a minute. See routes/ops-status.js.
+const opsStatusLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 60,
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+  message: { error: "Too many requests, please try again shortly." },
+  skip: skipWhenDisabled,
+});
+app.use(limitRoutes(opsStatusLimiter, require("./routes/ops-status")({ pool, requestWindow, logger })));
 
 // Public deployment settings for the signed-out SPA (the support address
 // in the home / login / legal footers). See routes/public-config.js.
