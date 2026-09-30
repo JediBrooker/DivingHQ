@@ -349,8 +349,17 @@ What a monitor reading this needs to know:
   missing data; far larger means the live table lost rows since the backup,
   which is worth a look on its own.
 * **`offsite failed`.** The log says which part: the passphrase file, a missing
-  `R2_*` setting, the upload itself (a `403` is usually the token's bucket
-  scope), or an ETag mismatch.
+  `R2_*` setting, the upload itself, or an ETag mismatch. A refused upload
+  ends with what R2 said, for example `(R2 said: HTTP 400 InvalidArgument:
+  Credential access key has length 53, should be 32)`. The usual ones:
+  * `Credential access key has length ..., should be 32`: `R2_ACCESS_KEY_ID`
+    holds the token's *Token value*. It wants the 32-character *Access Key ID*.
+  * `SignatureDoesNotMatch`: `R2_SECRET_ACCESS_KEY` is wrong, or belongs to a
+    different token than the key id.
+  * `AccessDenied` (403): the token isn't scoped to this bucket, or is read
+    only.
+  * `NoSuchBucket` (404): `R2_BUCKET` is misspelt, or the bucket was made in a
+    jurisdiction (EU, FedRAMP), which needs its own endpoint in `R2_ENDPOINT`.
 * **"another backup or restore check still holds ..."** Two runs overlapped;
   the second waits up to half an hour (an hour for the restore check) and then
   gives up. Look for a stuck `pg_dump` with `ps`.

@@ -236,7 +236,7 @@ test("retention keeps the newest BACKUP_KEEP_LOCAL dumps and nothing else is tou
   for (const f of ["divinghq-manual.dump", "notes.txt"]) fs.writeFileSync(path.join(d.backupDir, f), "keep me");
   // What a run killed with SIGKILL leaves: its temp files, never cleaned
   // by its own trap. Old ones go, a fresh one might be another run's.
-  const stale = [".divinghq-20250104T163000Z.dump.partial", "divinghq-20250103T163000Z.dump.enc", ".r2-headers.AbC123"];
+  const stale = [".divinghq-20250104T163000Z.dump.partial", "divinghq-20250103T163000Z.dump.enc", ".r2-headers.AbC123", ".r2-body.XyZ789"];
   const sevenHoursAgo = new Date(Date.now() - 7 * 3600 * 1000);
   for (const f of stale) {
     fs.writeFileSync(path.join(d.backupDir, f), "half");
@@ -408,10 +408,11 @@ test("off-site refusals: no passphrase, half the settings, a rejected PUT, a bad
     await r2.close();
   }
 
-  // R2 says no.
+  // R2 says no, and the log says why in R2's own words.
   const denied = await fakeR2((_req, res) => {
     res.statusCode = 403;
-    res.end("<Error><Code>AccessDenied</Code></Error>");
+    res.setHeader("Content-Type", "application/xml");
+    res.end('<?xml version="1.0" encoding="UTF-8"?><Error><Code>AccessDenied</Code><Message>Access Denied</Message></Error>');
     return true;
   });
   try {
@@ -419,12 +420,37 @@ test("off-site refusals: no passphrase, half the settings, a rejected PUT, a bad
     const r = await runScript(BACKUP, { ...d.env, ...R2, R2_ENDPOINT: denied.endpoint, BACKUP_PASSPHRASE_FILE: passphraseFile });
     assert.notEqual(r.code, 0);
     assert.equal(denied.requests.length, 1, "a 403 isn't retried");
+    assert.match(r.log, /the upload to R2 failed \(R2 said: HTTP 403 AccessDenied: Access Denied\)/);
     const state = readState(d.stateDir, "backup.json");
     assert.equal(state.offsite, "failed");
     assert.equal(state.last_ok, true);
     assert.ok(!r.log.includes(R2.R2_SECRET_ACCESS_KEY));
+    assert.deepEqual(fs.readdirSync(d.backupDir).filter((f) => f.startsWith(".r2-")), [], "no header or body file left behind");
   } finally {
     await denied.close();
+  }
+
+  // The mistake that prompted it: the Token value pasted in as the key id.
+  // R2's message goes in the log, but never the key id or the secret, even
+  // when a message quotes them back (nothing else in the body, either).
+  const tooLong = await fakeR2((_req, res) => {
+    res.statusCode = 400;
+    res.end('<?xml version="1.0" encoding="UTF-8"?><Error><Code>InvalidArgument</Code>' +
+      `<Message>Credential access key has length 53, should be 32 &amp; got ${R2.R2_ACCESS_KEY_ID} with ${R2.R2_SECRET_ACCESS_KEY}</Message>` +
+      `<StringToSign>AWS4-HMAC-SHA256 ${R2.R2_ACCESS_KEY_ID}</StringToSign></Error>`);
+    return true;
+  });
+  try {
+    const d = dirs("toolong");
+    const r = await runScript(BACKUP, { ...d.env, ...R2, R2_ENDPOINT: tooLong.endpoint, BACKUP_PASSPHRASE_FILE: passphraseFile });
+    assert.notEqual(r.code, 0);
+    assert.match(r.log, /R2 said: HTTP 400 InvalidArgument: Credential access key has length 53, should be 32 & got <key id> with <secret>\)/);
+    assert.ok(!r.log.includes(R2.R2_SECRET_ACCESS_KEY), "no secret in the log");
+    assert.ok(!r.log.includes(R2.R2_ACCESS_KEY_ID), "no key id in the log");
+    assert.doesNotMatch(r.log, /StringToSign|AWS4-HMAC/);
+    assert.equal(readState(d.stateDir, "backup.json").offsite, "failed");
+  } finally {
+    await tooLong.close();
   }
 
   // R2 took it but stored something else.

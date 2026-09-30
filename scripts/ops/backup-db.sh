@@ -72,6 +72,7 @@ SIZE=""
 PARTIAL=""
 ENC=""
 HDRS=""
+BODY=""
 
 # How many of the four R2 settings are filled in: 0 is "not configured",
 # 4 is "try it", anything between is a mistake worth failing loudly on.
@@ -87,6 +88,7 @@ finish() {
   [[ -n "$PARTIAL" ]] && rm -f "$PARTIAL"
   [[ -n "$ENC" ]] && rm -f "$ENC"
   [[ -n "$HDRS" ]] && rm -f "$HDRS"
+  [[ -n "$BODY" ]] && rm -f "$BODY"
 
   # We never got as far as the upload (the dump failed). If R2 is set up
   # that's still a night without an off-site copy.
@@ -130,6 +132,29 @@ r2_curl_auth() {
   id="${id//\"/\\\"}"
   secret="${secret//\"/\\\"}"
   printf 'user = "%s:%s"\n' "$id" "$secret"
+}
+
+# Why R2 turned the upload down, for the log: the status line plus the
+# Code and Message out of its XML error body, e.g. "HTTP 400
+# InvalidArgument: Credential access key has length 53, should be 32".
+# Nothing else from the body, an S3 error can echo the signed request
+# back. The key id and secret get blanked in case a message ever quotes
+# them. Prints nothing when there was no HTTP answer at all; curl's own
+# --show-error line has already said what went wrong then.
+r2_said() {
+  local hdrs="$1" body="$2" status code msg out
+  status="$(tr -d '\r' < "$hdrs" 2>/dev/null | sed -n 's/^HTTP\/[0-9.]* \([0-9][0-9][0-9]\).*/\1/p' | tail -n 1)"
+  code="$(grep -o '<Code>[^<]*</Code>' "$body" 2>/dev/null | head -n 1 | sed 's/<[^>]*>//g')"
+  msg="$(grep -o '<Message>[^<]*</Message>' "$body" 2>/dev/null | head -n 1 | sed 's/<[^>]*>//g')"
+  [[ -z "$status$code$msg" ]] && return 0
+  out="HTTP ${status:-?}"
+  [[ -n "$code" ]] && out+=" $code"
+  [[ -n "$msg" ]] && out+=": $msg"
+  out="$(printf '%s' "$out" | sed -e 's/&lt;/</g' -e 's/&gt;/>/g' -e 's/&quot;/"/g' -e "s/&apos;/'/g" -e 's/&amp;/\&/g')"
+  [[ -n "${R2_SECRET_ACCESS_KEY:-}" ]] && out="${out//"$R2_SECRET_ACCESS_KEY"/<secret>}"
+  [[ -n "${R2_ACCESS_KEY_ID:-}" ]] && out="${out//"$R2_ACCESS_KEY_ID"/<key id>}"
+  out="$(printf '%s' "$out" | tr -cd '[:print:]' | cut -c1-300)"
+  printf ' (R2 said: %s)' "$out"
 }
 
 # Encrypt, verify, upload. Called from an `if`, which switches set -e off
@@ -177,17 +202,19 @@ r2_upload() {
   key="divinghq/$(basename "$ENC")"
   url="${endpoint%/}/${R2_BUCKET}/${key}"
   HDRS="$(mktemp "$BACKUP_DIR/.r2-headers.XXXXXX")" || return 1
+  BODY="$(mktemp "$BACKUP_DIR/.r2-body.XXXXXX")" || return 1
   ops_log "uploading $key to R2 bucket $R2_BUCKET ($(wc -c < "$ENC" | tr -d ' ') bytes)"
   # SigV4 the way R2 wants it: provider aws:amz, region "auto", service s3.
   # curl signs a PUT from a file as UNSIGNED-PAYLOAD, which R2 accepts;
-  # the ETag check below covers the payload instead.
-  if ! r2_curl_auth | curl --silent --show-error --fail --config - \
+  # the ETag check below covers the payload instead. --fail-with-body
+  # still fails on a 4xx/5xx but keeps R2's answer, so the log can say why.
+  if ! r2_curl_auth | curl --silent --show-error --fail-with-body --config - \
       --aws-sigv4 "aws:amz:auto:s3" \
       --retry 3 --retry-delay 10 --connect-timeout 20 --max-time "${R2_UPLOAD_TIMEOUT:-3600}" \
       --header "Content-Type: application/octet-stream" \
-      --upload-file "$ENC" --dump-header "$HDRS" --output /dev/null \
+      --upload-file "$ENC" --dump-header "$HDRS" --output "$BODY" \
       "$url"; then
-    ops_error "the upload to R2 failed"
+    ops_error "the upload to R2 failed$(r2_said "$HDRS" "$BODY")"
     return 1
   fi
   # For a single PUT, R2 (like S3) answers with the object's MD5 as the
@@ -202,9 +229,10 @@ r2_upload() {
   else
     ops_log "warning: R2 sent no MD5 ETag, going by the 2xx alone"
   fi
-  rm -f "$ENC" "$HDRS"
+  rm -f "$ENC" "$HDRS" "$BODY"
   ENC=""
   HDRS=""
+  BODY=""
   return 0
 }
 
@@ -222,14 +250,14 @@ ops_lock "$BACKUP_DIR/.divinghq-ops.lock" "${OPS_LOCK_WAIT:-1800}"
 
 # A run that was killed outright (the OOM killer, a reboot mid-dump) never
 # got to its EXIT trap, so its half-written dump, encrypted copy or curl
-# header file is still here. Retention only looks at finished dump names,
+# header / body file is still here. Retention only looks at finished dump names,
 # so nothing else would ever delete them, and a few of those a month add
 # up. Only ones more than 6 hours old go: without flock (macOS) that keeps
 # us off a file another run is still writing.
 while IFS= read -r f; do
   rm -f -- "$f" && ops_log "removed $(basename "$f"), left over from a run that didn't finish"
 done < <(find "$BACKUP_DIR" -maxdepth 1 -type f -mmin +360 \
-  \( -name '.divinghq-*.dump.partial' -o -name 'divinghq-*.dump.enc' -o -name '.r2-headers.*' \))
+  \( -name '.divinghq-*.dump.partial' -o -name 'divinghq-*.dump.enc' -o -name '.r2-headers.*' -o -name '.r2-body.*' \))
 
 # ---- 1. dump and verify ----------------------------------------------
 ops_log "dumping database $PGDATABASE to $FINAL"
