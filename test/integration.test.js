@@ -7667,37 +7667,69 @@ test("an audit insert that fails inside a transaction doesn't roll the caller's 
 // when server.js is the entry point (boot order, shutdown, env parsing).
 const b1Boot = {
   path: require("node:path"),
+  // The child's port comes from 20000-29999, below every ephemeral range
+  // (Linux 32768-60999, macOS and Windows 49152-65535). Checking a port is
+  // free and then letting go of it leaves a gap before the child binds it,
+  // and a listen(0) in another test file (they run in parallel) or any
+  // outgoing connection draws from the ephemeral range, so a port picked
+  // there can be handed straight to someone else. It was on 30 Sep:
+  // EADDRINUSE on 56815. The check binds the way server.js does (every
+  // interface, no host) and on 127.0.0.1, which the tests call it on: macOS
+  // lets the any-address bind succeed next to someone holding 127.0.0.1,
+  // and then the health checks would be talking to them.
   async freePort() {
     const net = require("node:net");
-    return new Promise((resolve, reject) => {
-      const srv = net.createServer();
-      srv.once("error", reject);
-      srv.listen(0, "127.0.0.1", () => { const { port } = srv.address(); srv.close(() => resolve(port)); });
+    const bindable = (port, host) => new Promise((resolve) => {
+      const probe = net.createServer();
+      probe.once("error", () => resolve(false));
+      probe.listen(port, host, () => probe.close(() => resolve(true)));
     });
-  },
-  async spawn(env = {}) {
-    const { spawn } = require("node:child_process");
-    const port = await b1Boot.freePort();
-    const childEnv = { ...process.env, PORT: String(port), DR_IMPORT_SYNC_HOURS: "0", AUDIT_SNAPSHOT_DIR: "" };
-    for (const [k, v] of Object.entries(env)) {
-      if (v === null) delete childEnv[k]; else childEnv[k] = String(v);
+    for (let i = 0; i < 50; i++) {
+      const port = 20000 + Math.floor(Math.random() * 10000);
+      if ((await bindable(port)) && (await bindable(port, "127.0.0.1"))) return port;
     }
+    throw new Error("no free port in 20000-29999 after 50 tries");
+  },
+  // A handle on the child that survives a relaunch: waitHealthy() starts it
+  // again on a new port if the first one was taken after all, and callers
+  // keep using srv.url / srv.child / srv.stop() as before. `firstPort` is
+  // only for the test that proves the relaunch works.
+  async spawn(env = {}, { firstPort } = {}) {
+    const { spawn } = require("node:child_process");
     const root = b1Boot.path.join(__dirname, "..");
-    const child = spawn(process.execPath, [b1Boot.path.join(root, "server.js")], {
-      cwd: root, env: childEnv, stdio: ["ignore", "pipe", "pipe"],
-    });
-    let log = "";
-    child.stdout.on("data", (d) => { log += d; });
-    child.stderr.on("data", (d) => { log += d; });
-    const exited = new Promise((resolve) => child.on("exit", (code, signal) => resolve({ code, signal })));
-    let gone = false;
-    exited.then(() => { gone = true; });
-    return {
-      child, port, url: `http://127.0.0.1:${port}`, exited,
-      log: () => log,
-      get gone() { return gone; },
-      async stop() { if (!gone) { child.kill("SIGKILL"); await exited; } },
+    const srv = {
+      spawns: 0,
+      takenPorts: [],
+      async start(port) {
+        this.port = port ?? (await b1Boot.freePort());
+        this.url = `http://127.0.0.1:${this.port}`;
+        this.spawns += 1;
+        const childEnv = { ...process.env, PORT: String(this.port), DR_IMPORT_SYNC_HOURS: "0", AUDIT_SNAPSHOT_DIR: "" };
+        for (const [k, v] of Object.entries(env)) {
+          if (v === null) delete childEnv[k]; else childEnv[k] = String(v);
+        }
+        const child = spawn(process.execPath, [b1Boot.path.join(root, "server.js")], {
+          cwd: root, env: childEnv, stdio: ["ignore", "pipe", "pipe"],
+        });
+        this.child = child;
+        this._log = "";
+        this._gone = false;
+        child.stdout.on("data", (d) => { if (this.child === child) this._log += d; });
+        child.stderr.on("data", (d) => { if (this.child === child) this._log += d; });
+        // 'close', not 'exit': it waits for stdout and stderr to drain, so
+        // lostItsPort() never looks at a log that's still missing the error.
+        this.exited = new Promise((resolve) => child.on("close", (code, signal) => resolve({ code, signal })));
+        this.exited.then(() => { if (this.child === child) this._gone = true; });
+      },
+      log() { return this._log; },
+      get gone() { return this._gone; },
+      // Died at boot because somebody else had the port: worth another go.
+      // Any other exit is what the test is there to see.
+      lostItsPort() { return this._gone && /EADDRINUSE/.test(this._log); },
+      async stop() { if (!this._gone) { this.child.kill("SIGKILL"); await this.exited; } },
     };
+    await srv.start(firstPort);
+    return srv;
   },
   // GET against a spawned server. Resolves { status, body } or null when
   // nothing is listening (yet).
@@ -7720,6 +7752,11 @@ const b1Boot = {
   async waitHealthy(srv, ms = 15000) {
     const until = Date.now() + ms;
     while (Date.now() < until) {
+      if (srv.gone && srv.lostItsPort() && srv.spawns < 5) {
+        srv.takenPorts.push(srv.port);
+        await srv.start();
+        continue;
+      }
       if (srv.gone) throw new Error(`server exited during boot:\n${srv.log()}`);
       const r = await b1Boot.get(srv.url, "/api/health");
       if (r && r.status === 200) return;
@@ -7728,6 +7765,31 @@ const b1Boot = {
     throw new Error(`server never became healthy:\n${srv.log()}`);
   },
 };
+
+test("a spawned server whose port gets taken before it binds starts again on another", { timeout: 60000 }, async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  // Stand in for the stranger that grabbed the port: hold one, and hand
+  // it to the child as its first port. It hangs up on anyone who calls
+  // (the health polls hit it too until the child moves); a socket nobody
+  // reads never sees the other end go, and close() would wait on it.
+  const net = require("node:net");
+  const squatter = net.createServer((conn) => conn.destroy());
+  await new Promise((resolve) => squatter.listen(0, resolve));
+  const taken = squatter.address().port;
+  const srv = await b1Boot.spawn({}, { firstPort: taken });
+  try {
+    await b1Boot.waitHealthy(srv);
+    assert.deepEqual(srv.takenPorts, [taken]);
+    assert.equal(srv.spawns, 2);
+    assert.notEqual(srv.port, taken);
+    assert.ok(srv.port >= 20000 && srv.port < 30000, `port ${srv.port} is outside the ephemeral ranges`);
+    assert.equal((await b1Boot.get(srv.url, "/api/health"))?.status, 200);
+  } finally {
+    await srv.stop();
+    await new Promise((resolve) => squatter.close(resolve));
+  }
+});
 
 test("SIGTERM with a socket connected shuts down cleanly and quickly", { timeout: 60000 }, async (t) => {
   if (!dbReachable) return t.skip("DB not reachable");
