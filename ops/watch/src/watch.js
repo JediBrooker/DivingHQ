@@ -15,6 +15,14 @@ export const DEFAULT_TARGET = "https://divinghq.app";
 export const DEFAULT_FROM = "alerts@divinghq.app";
 export const DEFAULT_FROM_NAME = "DivingHQ watch";
 export const PROBE_TIMEOUT_MS = 10_000;
+// A probe that got lost on the way in is tried again, twice, 5 s apart,
+// before the run counts it as failed. The box sits on a home line, and on
+// a busy evening (30 Sep: a big download, then an hour of stray 520s) the
+// odd request never reaches it. One lost request shouldn't be half a DOWN
+// alert; a real outage fails all three tries anyway. Worst case a run
+// takes 3 x 10 s + 2 x 5 s, fine for a cron Worker.
+export const PROBE_ATTEMPTS = 3;
+export const PROBE_RETRY_DELAY_MS = 5_000;
 // Even when nothing changes, write the state now and then so GET / shows
 // the Worker is alive. 30 min is 48 writes a day.
 export const HEARTBEAT_MS = 30 * MINUTE;
@@ -75,6 +83,36 @@ export async function probe(url, fetchImpl, timeoutMs = PROBE_TIMEOUT_MS) {
   }
 }
 
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// Worth another try: no answer at all (timeout, network error), or a code
+// Cloudflare or the tunnel made up because the request never got an answer
+// from the app (502, 504, 520-530). Anything else came from the app itself
+// and is the real answer, bad news included: /api/health's 503 when the
+// database is down gets counted in the app's own 5xx window, so tripling
+// it would set off the ERRORS rule on the watcher's own probes.
+export function worthRetrying(res) {
+  const code = res && res.httpStatus;
+  if (code === null || code === undefined) return true;
+  return code === 502 || code === 504 || (code >= 520 && code <= 530);
+}
+
+/**
+ * probe(), tried again while worthRetrying() says the request got lost.
+ * Returns the first real answer, or the last failure, with `attempts`
+ * saying how many tries it took.
+ */
+export async function probeWithRetry(url, fetchImpl, { timeoutMs = PROBE_TIMEOUT_MS, attempts = PROBE_ATTEMPTS, delayMs = PROBE_RETRY_DELAY_MS, sleep = wait } = {}) {
+  const tries = Math.max(1, Math.floor(attempts) || 1);
+  let res = null;
+  for (let i = 1; i <= tries; i++) {
+    res = await probe(url, fetchImpl, timeoutMs);
+    if (!worthRetrying(res)) return { ...res, attempts: i };
+    if (i < tries) await sleep(delayMs);
+  }
+  return { ...res, attempts: tries };
+}
+
 // Two different failures here, handled differently on purpose.
 //   * KV answered but the value is junk: start clean. normalizeState() does
 //     the same for a shape it doesn't know, and the worst case is one
@@ -130,12 +168,17 @@ export async function runCheck(env, deps = {}) {
   // Wrapped rather than passed bare, some runtimes object to fetch being
   // called with a `this` that isn't the global.
   const fetchImpl = deps.fetch ?? ((url, init) => fetch(url, init));
-  const timeoutMs = deps.timeoutMs ?? PROBE_TIMEOUT_MS;
+  const retry = {
+    timeoutMs: deps.timeoutMs ?? PROBE_TIMEOUT_MS,
+    attempts: deps.attempts ?? PROBE_ATTEMPTS,
+    delayMs: deps.retryDelayMs ?? PROBE_RETRY_DELAY_MS,
+    sleep: deps.sleep ?? wait,
+  };
   const cfg = config(env);
 
   const [health, status, stored] = await Promise.all([
-    probe(`${cfg.target}/api/health`, fetchImpl, timeoutMs),
-    probe(`${cfg.target}/api/ops/status`, fetchImpl, timeoutMs),
+    probeWithRetry(`${cfg.target}/api/health`, fetchImpl, retry),
+    probeWithRetry(`${cfg.target}/api/ops/status`, fetchImpl, retry),
     readState(env).then(
       (value) => ({ value }),
       (error) => ({ error }),

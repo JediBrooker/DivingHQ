@@ -112,7 +112,8 @@ function site(mode, now) {
   return fn;
 }
 
-const deps = (fetch, now, extra = {}) => ({ fetch, now, EmailMessage: FakeEmailMessage, timeoutMs: 200, ...extra });
+// sleep is instant here; the retry tests below pass their own to see it.
+const deps = (fetch, now, extra = {}) => ({ fetch, now, EmailMessage: FakeEmailMessage, timeoutMs: 200, sleep: async () => {}, ...extra });
 
 describe("runCheck", () => {
   test("probes both endpoints with a timeout signal and no redirects", async () => {
@@ -285,6 +286,111 @@ describe("probe", () => {
     assert.deepEqual(await watch.probe("u", html), { httpStatus: 502, body: null, error: null });
     const huge = async () => jsonRes(200, { ok: true, pad: "x".repeat(70 * 1024) });
     assert.equal((await watch.probe("u", huge)).body, null);
+  });
+});
+
+describe("probe retries", () => {
+  // Fails the first `failures` calls with a 520, then answers like a healthy site.
+  const flaky = (failures) => {
+    const fn = async (url) => {
+      fn.calls.push(url);
+      if (fn.calls.length <= failures) return new Response("", { status: 520 });
+      return jsonRes(200, { ok: true, schema_version: 99 });
+    };
+    fn.calls = [];
+    return fn;
+  };
+  const noSleep = async () => {};
+
+  test("a failed probe is tried again 5 s later, and the first 200 wins", async () => {
+    assert.equal(watch.PROBE_ATTEMPTS, 3);
+    assert.equal(watch.PROBE_RETRY_DELAY_MS, 5000);
+    const slept = [];
+    const f = flaky(2);
+    const r = await watch.probeWithRetry("https://x.test/api/health", f, { timeoutMs: 200, sleep: async (ms) => slept.push(ms) });
+    assert.equal(r.httpStatus, 200);
+    assert.equal(r.attempts, 3);
+    assert.equal(f.calls.length, 3);
+    assert.deepEqual(slept, [5000, 5000]);
+  });
+
+  test("only lost requests are retried, never an answer from the app", async () => {
+    for (const code of [502, 504, 520, 522, 524, 530]) assert.equal(watch.worthRetrying({ httpStatus: code }), true, `${code}`);
+    assert.equal(watch.worthRetrying({ httpStatus: null, error: "timed out after 10 s" }), true);
+    for (const code of [200, 301, 302, 403, 404, 429, 500, 503]) assert.equal(watch.worthRetrying({ httpStatus: code }), false, `${code}`);
+
+    // The database-down 503 from /api/health: one request, not three, or the
+    // watcher's own probes would fill the app's 5xx window.
+    let calls = 0;
+    const dbDown = async () => {
+      calls++;
+      return jsonRes(503, { ok: false });
+    };
+    const r = await watch.probeWithRetry("u", dbDown, { timeoutMs: 200, sleep: async () => {} });
+    assert.deepEqual([r.httpStatus, r.attempts, calls], [503, 1, 1]);
+  });
+
+  test("three failures come back as the last one; a 200 is never retried, even ok:false", async () => {
+    const f = flaky(99);
+    const r = await watch.probeWithRetry("u", f, { timeoutMs: 200, sleep: noSleep });
+    assert.deepEqual([r.httpStatus, r.attempts, f.calls.length], [520, 3, 3]);
+
+    let calls = 0;
+    const dbDown = async () => {
+      calls++;
+      return jsonRes(200, { ok: false });
+    };
+    const r2 = await watch.probeWithRetry("u", dbDown, { timeoutMs: 200, sleep: noSleep });
+    assert.deepEqual([r2.httpStatus, r2.attempts, calls], [200, 1, 1]);
+  });
+
+  test("network errors and timeouts get the retries too", async () => {
+    let calls = 0;
+    const boom = async () => {
+      calls++;
+      if (calls < 3) throw new TypeError("fetch failed");
+      return jsonRes(200, { ok: true });
+    };
+    const r = await watch.probeWithRetry("u", boom, { timeoutMs: 200, sleep: noSleep });
+    assert.deepEqual([r.httpStatus, r.attempts, calls], [200, 3, 3]);
+  });
+
+  test("a site that loses the odd request never trips DOWN", async () => {
+    const e = env();
+    for (let i = 0; i < 5; i++) {
+      const t = T0 + i * 2 * MIN;
+      const healthy = site("up", t);
+      let dropped = false;
+      // Every run's first health request is lost on the way in.
+      const lossy = async (url, init) => {
+        if (url.endsWith("/api/health") && !dropped) {
+          dropped = true;
+          return new Response("", { status: 520 });
+        }
+        return healthy(url, init);
+      };
+      await watch.runCheck(e, deps(lossy, t));
+    }
+    assert.equal(e.ALERT_EMAIL.sent.length, 0);
+    assert.equal(e.WATCH_STATE.state.down.fails, 0);
+  });
+
+  test("a real outage still alerts on the second run, and says it tried three times", async () => {
+    const e = env();
+    const down = site("down");
+    await watch.runCheck(e, deps(down, T0));
+    assert.equal(down.calls.length, 6, "3 tries at each endpoint");
+    await watch.runCheck(e, deps(site("down"), T0 + 2 * MIN));
+    assert.equal(e.ALERT_EMAIL.sent.length, 1);
+    const text = e.ALERT_EMAIL.sent[0].raw.replace(/=\r\n/g, "");
+    assert.match(text, /HTTP 530 after 3 tries/);
+  });
+
+  test("runCheck waits between tries with the real delay unless told otherwise", async () => {
+    const slept = [];
+    const e = env();
+    await watch.runCheck(e, deps(flaky(1), T0, { sleep: async (ms) => slept.push(ms) }));
+    assert.deepEqual(slept, [5000]);
   });
 });
 

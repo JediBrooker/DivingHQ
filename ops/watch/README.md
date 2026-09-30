@@ -23,7 +23,9 @@ Tests: `node --test test/watch-evaluate.test.js test/watch-worker.test.js`
 ## What it checks
 
 Each run fetches `$TARGET/api/health` and `$TARGET/api/ops/status`, 10 s
-timeout each, then runs these rules:
+timeout each. A fetch that got lost on the way (a timeout, a network error, or
+a 502, 504 or 520-530 that Cloudflare or the tunnel made up) is tried twice
+more, 5 s apart, before the run counts it as failed. Then it runs these rules:
 
 | Rule | Fires when | Then |
 |---|---|---|
@@ -39,8 +41,14 @@ timeout each, then runs these rules:
 
 A few behaviours worth knowing:
 
-* **One blip isn't an outage.** DOWN and DB want two failed runs in a
-  row (so 2 to 4 minutes), which rides out a `pm2 restart` during a deploy.
+* **One blip isn't an outage.** Each fetch gets three tries, 5 s apart, so
+  a request lost on a busy home line doesn't count. On top of that DOWN and
+  DB want two failed runs in a row (so 2 to 4 minutes), which rides out a
+  `pm2 restart` during a deploy. The email says how many tries the last
+  failure took (`HTTP 520 after 3 tries`). An answer from the app itself is
+  never retried, bad news included (`/api/health`'s 503 when the database
+  is down, a 200 that says `ok: false`): retrying the 503 would triple the
+  watcher's own share of the app's 5xx count and set off ERRORS.
 * **Unreadable status means "don't know", not "broken".** When
   `/api/ops/status` times out, 404s or returns junk, the DB, backup,
   restore, deploy and error checks hold still: no alerts, no recovery
@@ -176,6 +184,11 @@ To watch a different site (a staging box, say), change `TARGET`.
   can't count its second strike. `wrangler tail` shows "couldn't save
   state" when that's happening; the fix is the paid plan or finding the
   other writer.
+* **520s with nothing in the app's logs** are the line between Cloudflare
+  and the box, not the app. On 30 Sep 2026 a big download filled the home
+  connection and requests went missing for an hour; the retries above
+  hide single losses, and if it keeps happening the tunnel (CT 100) can be
+  moved from QUIC to HTTP/2 with `TUNNEL_TRANSPORT_PROTOCOL=http2`.
 * If DOWN alerts arrive while the site works fine from your browser,
   look at Security, Events in the dashboard for blocked requests with the
   user agent `divinghq-watch/1`; a Bot Fight Mode or WAF rule may be

@@ -88,6 +88,11 @@ function watcher(start = T0) {
 const ids = (alerts) => alerts.map((a) => a.id);
 const allOk = (now) => ({ health: healthy(), status: status(now) });
 const siteDown = () => ({ health: healthHttp(530), status: statusGone() });
+const siteDownText = () => {
+  const w = watcher();
+  w.run(siteDown);
+  return w.tick(siteDown)[0].lines.join("\n");
+};
 
 // ---- DOWN -----------------------------------------------------------------
 
@@ -105,6 +110,19 @@ describe("DOWN", () => {
     assert.match(alerts[0].lines.join("\n"), /pm2 logs dive-recorder/);
     // And only once.
     assert.deepEqual(ids(w.tick(siteDown)), []);
+  });
+
+  test("a 520 that survived the retries says so, with the tunnel hint", () => {
+    const w = watcher();
+    const lost = (now) => ({ health: { ...healthHttp(520), attempts: 3 }, status: status(now) });
+    w.run(lost);
+    const alerts = w.tick(lost);
+    assert.deepEqual(ids(alerts), ["down"]);
+    const text = alerts[0].lines.join("\n");
+    assert.match(text, /latest: HTTP 520 after 3 tries/);
+    assert.match(text, /A 520 means Cloudflare got an empty or broken answer/);
+    // A probe that wasn't retried keeps the plain wording.
+    assert.doesNotMatch(siteDownText(), /tries/);
   });
 
   test("a pass between two failures resets the debounce", () => {

@@ -103,6 +103,7 @@ const HTTP_HINTS = {
   502: "A 502 means Cloudflare reached the tunnel but nothing answered behind it, so the app process is probably down.",
   503: "/api/health answers 503 when its database query fails, so the process is up and Postgres probably isn't.",
   504: "A 504 means the app took too long to answer.",
+  520: "A 520 means Cloudflare got an empty or broken answer from the tunnel. If the app's own logs show nothing wrong, it's usually the connection between Cloudflare and the box dropping requests (a busy home line), not the app.",
   524: "A 524 means Cloudflare gave up waiting on the app.",
   530: "A 530 means Cloudflare couldn't reach the tunnel at all, so cloudflared or the box itself is down.",
 };
@@ -184,11 +185,17 @@ export function isDue(last, interval, now) {
   return elapsed >= interval;
 }
 
+// " after 3 tries" when the probe was retried, so an email says how hard
+// it tried before calling it a failure.
+function afterTries(p) {
+  return Number.isInteger(p.attempts) && p.attempts > 1 ? ` after ${p.attempts} tries` : "";
+}
+
 function readHealth(p) {
   if (!isObj(p)) return { ok: false, detail: "no result", httpStatus: null };
-  if (p.error) return { ok: false, detail: String(p.error), httpStatus: null };
+  if (p.error) return { ok: false, detail: String(p.error) + afterTries(p), httpStatus: null };
   const code = Number.isInteger(p.httpStatus) ? p.httpStatus : null;
-  if (code !== 200) return { ok: false, detail: code === null ? "no response" : `HTTP ${code}`, httpStatus: code };
+  if (code !== 200) return { ok: false, detail: (code === null ? "no response" : `HTTP ${code}`) + afterTries(p), httpStatus: code };
   if (!isObj(p.body) || p.body.ok !== true) {
     return { ok: false, detail: "HTTP 200 but the body didn't say ok: true", httpStatus: code };
   }
@@ -197,9 +204,9 @@ function readHealth(p) {
 
 function readStatus(p) {
   if (!isObj(p)) return { known: false, body: null, detail: "no result" };
-  if (p.error) return { known: false, body: null, detail: String(p.error) };
+  if (p.error) return { known: false, body: null, detail: String(p.error) + afterTries(p) };
   const code = Number.isInteger(p.httpStatus) ? p.httpStatus : null;
-  if (code !== 200) return { known: false, body: null, detail: code === null ? "no response" : `HTTP ${code}` };
+  if (code !== 200) return { known: false, body: null, detail: (code === null ? "no response" : `HTTP ${code}`) + afterTries(p) };
   if (!isObj(p.body) || typeof p.body.ok !== "boolean") {
     return { known: false, body: null, detail: "HTTP 200 but not the expected JSON" };
   }
