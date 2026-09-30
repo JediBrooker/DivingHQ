@@ -14,6 +14,7 @@
 
 const express = require("express");
 const { buildReadinessFromRow } = require("../lib/workflow");
+const { pendingSignoffCte } = require("../lib/signoff-sql");
 const { detectConflicts } = require("../lib/schedule-conflicts");
 const { retirePendingPayment } = require("../lib/payment-lifecycle");
 
@@ -190,15 +191,7 @@ module.exports = function createMeetsRouter({
            JOIN visible_events ve ON ve.id = ej.event_id
           GROUP BY ej.event_id
        ),
-       pending_signoff AS (
-         SELECT DISTINCT ON (rsr.event_id)
-                rsr.event_id, u.full_name AS pending_signoff_referee_name
-           FROM referee_signoff_requests rsr
-           JOIN users u ON u.id = rsr.target_referee_id
-           JOIN visible_events ve ON ve.id = rsr.event_id
-          WHERE rsr.status = 'pending'
-          ORDER BY rsr.event_id, rsr.created_at DESC
-       ),
+       ${pendingSignoffCte({ events: "visible_events" })},
        federation_rows AS (
          -- org_id is the diver's home federation. The LEFT JOINs keep a
          -- row even for an orphaned entry whose user/org is missing (a
