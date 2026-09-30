@@ -453,6 +453,32 @@ test("off-site refusals: no passphrase, half the settings, a rejected PUT, a bad
     await tooLong.close();
   }
 
+  // A 503 (curl waits 10 s and tries again), then the connection dies
+  // before R2 answers the retry. The headers file still holds the first
+  // try's 503, but that isn't why the upload failed, so the log mustn't
+  // quote it.
+  const dropped = await fakeR2((req, res) => {
+    if (dropped.requests.length === 1) {
+      res.statusCode = 503;
+      res.end('<?xml version="1.0" encoding="UTF-8"?><Error><Code>SlowDown</Code><Message>Reduce your request rate.</Message></Error>');
+    } else {
+      req.socket.destroy();
+    }
+    return true;
+  });
+  try {
+    const d = dirs("dropped");
+    const r = await runScript(BACKUP, { ...d.env, ...R2, R2_ENDPOINT: dropped.endpoint, BACKUP_PASSPHRASE_FILE: passphraseFile });
+    assert.notEqual(r.code, 0);
+    assert.equal(dropped.requests.length, 2, "the 503 was retried once, then the connection died");
+    assert.match(r.log, /the upload to R2 failed/);
+    assert.doesNotMatch(r.log, /R2 said/);
+    assert.equal(readState(d.stateDir, "backup.json").offsite, "failed");
+    assert.deepEqual(fs.readdirSync(d.backupDir).filter((f) => f.startsWith(".r2-")), [], "no header or body file left behind");
+  } finally {
+    await dropped.close();
+  }
+
   // R2 took it but stored something else.
   const garbled = await fakeR2((_req, res) => {
     res.setHeader("ETag", '"00000000000000000000000000000000"');

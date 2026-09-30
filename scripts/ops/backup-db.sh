@@ -139,11 +139,12 @@ r2_curl_auth() {
 # InvalidArgument: Credential access key has length 53, should be 32".
 # Nothing else from the body, an S3 error can echo the signed request
 # back. The key id and secret get blanked in case a message ever quotes
-# them. Prints nothing when there was no HTTP answer at all; curl's own
-# --show-error line has already said what went wrong then.
+# them. Only called when curl's last try got an HTTP error (exit 22): the
+# header file piles up every try's headers, 100 Continue blocks included,
+# so after a timeout or a reset it would be quoting an earlier answer.
 r2_said() {
   local hdrs="$1" body="$2" status code msg out
-  status="$(tr -d '\r' < "$hdrs" 2>/dev/null | sed -n 's/^HTTP\/[0-9.]* \([0-9][0-9][0-9]\).*/\1/p' | tail -n 1)"
+  status="$(tr -d '\r' < "$hdrs" 2>/dev/null | sed -n 's/^HTTP\/[0-9.]* \([2-5][0-9][0-9]\).*/\1/p' | tail -n 1)"
   code="$(grep -o '<Code>[^<]*</Code>' "$body" 2>/dev/null | head -n 1 | sed 's/<[^>]*>//g')"
   msg="$(grep -o '<Message>[^<]*</Message>' "$body" 2>/dev/null | head -n 1 | sed 's/<[^>]*>//g')"
   [[ -z "$status$code$msg" ]] && return 0
@@ -160,7 +161,7 @@ r2_said() {
 # Encrypt, verify, upload. Called from an `if`, which switches set -e off
 # inside it, so every step checks its own status.
 r2_upload() {
-  local src="$1" first="" endpoint key url want got etag md5
+  local src="$1" first="" endpoint key url want got etag md5 rc=0 said=""
   if [[ ! -f "$BACKUP_PASSPHRASE_FILE" || ! -r "$BACKUP_PASSPHRASE_FILE" ]]; then
     ops_error "R2 is configured but the passphrase file $BACKUP_PASSPHRASE_FILE is missing or unreadable, not uploading (see ops/backups/README.md)"
     return 1
@@ -208,13 +209,17 @@ r2_upload() {
   # curl signs a PUT from a file as UNSIGNED-PAYLOAD, which R2 accepts;
   # the ETag check below covers the payload instead. --fail-with-body
   # still fails on a 4xx/5xx but keeps R2's answer, so the log can say why.
-  if ! r2_curl_auth | curl --silent --show-error --fail-with-body --config - \
+  r2_curl_auth | curl --silent --show-error --fail-with-body --config - \
       --aws-sigv4 "aws:amz:auto:s3" \
       --retry 3 --retry-delay 10 --connect-timeout 20 --max-time "${R2_UPLOAD_TIMEOUT:-3600}" \
       --header "Content-Type: application/octet-stream" \
       --upload-file "$ENC" --dump-header "$HDRS" --output "$BODY" \
-      "$url"; then
-    ops_error "the upload to R2 failed$(r2_said "$HDRS" "$BODY")"
+      "$url" || rc=$?
+  if (( rc != 0 )); then
+    # 22 is "R2 answered with an error". Anything else (a timeout, a reset)
+    # never got an answer, and curl's own line above has said so.
+    if (( rc == 22 )); then said="$(r2_said "$HDRS" "$BODY")"; fi
+    ops_error "the upload to R2 failed$said"
     return 1
   fi
   # For a single PUT, R2 (like S3) answers with the object's MD5 as the
