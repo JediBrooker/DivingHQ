@@ -128,7 +128,7 @@ test("drain() with no pending entries returns empty result", async () => {
   const o = newOutbox();
   const received = [];
   const result = await o.drain({ send: okSend(received) });
-  assert.deepEqual(result, { drained: 0, conflicts: 0, failed: 0, retryInMs: null });
+  assert.deepEqual(result, { drained: 0, conflicts: 0, failed: 0, rejected: 0, retryInMs: null });
   assert.equal(received.length, 0);
 });
 
@@ -177,9 +177,9 @@ test("drain() retries transient failures up to maxAttempts", async () => {
   // flips status back to pending without retrying in the same call.
   const send = flakySend(2);
   const r1 = await o.drain({ send });
-  assert.deepEqual(r1, { drained: 0, conflicts: 0, failed: 0, retryInMs: 1000 });
+  assert.deepEqual(r1, { drained: 0, conflicts: 0, failed: 0, rejected: 0, retryInMs: 1000 });
   const r2 = await o.drain({ send });
-  assert.deepEqual(r2, { drained: 0, conflicts: 0, failed: 0, retryInMs: 2000 });
+  assert.deepEqual(r2, { drained: 0, conflicts: 0, failed: 0, rejected: 0, retryInMs: 2000 });
   const r3 = await o.drain({ send });
   assert.equal(r3.drained, 1);
 });
@@ -371,6 +371,7 @@ test("isTerminal recognises every terminal state", () => {
   assert.ok(isTerminal('failed'));
   assert.ok(isTerminal('cancelled'));
   assert.ok(isTerminal('conflict'));
+  assert.ok(isTerminal('rejected'));
   assert.ok(!isTerminal('pending'));
   assert.ok(!isTerminal('inflight'));
 });
@@ -503,4 +504,63 @@ test("a recently inflight entry is left for its sender, with a hint when to look
   assert.equal(sent.length, 0);
   assert.equal((await backend.get(key)).status, STATUSES.INFLIGHT);
   assert.ok(r.retryInMs > 0 && r.retryInMs <= 15_000, `retryInMs=${r.retryInMs}`);
+});
+
+// ---- Refusals a resend can't change --------------------------------
+
+// What useHttpOutbox's socket sender throws for one of those, a judge's
+// score for an event that isn't Live any more.
+function finalRefusal(reason = 'event_not_live') {
+  const err = new Error(reason);
+  err.final = true;
+  return err;
+}
+
+test("a final refusal closes the entry on the first answer", async () => {
+  const o = newOutbox();
+  const key = await o.push('submit_score', { score: 7.5 });
+  const r = await o.drain({ send: async () => { throw finalRefusal(); } });
+  assert.equal(r.rejected, 1);
+  assert.equal(r.failed, 0);
+  assert.equal(r.retryInMs, null, 'nothing to come back for');
+  const e = await o.getEntry(key);
+  assert.equal(e.status, STATUSES.REJECTED);
+  assert.equal(e.attempts, 1);
+  assert.equal(e.last_error, 'event_not_live');
+
+  // Later drains leave it be, and the banner's Retry can't pick it up.
+  const sent = [];
+  await o.drain({ send: okSend(sent) });
+  assert.equal(await o.retryFailed(), 0);
+  await o.drain({ send: okSend(sent) });
+  assert.equal(sent.length, 0);
+  assert.equal((await o.getEntry(key)).status, STATUSES.REJECTED);
+});
+
+test("a final refusal doesn't hold back the entries behind it", async () => {
+  const o = newOutbox();
+  const late = await o.push('submit_score', { event: 'finished' });
+  const next = await o.push('submit_score', { event: 'live' });
+  const r = await o.drain({
+    send: async (entry) => {
+      if (entry.payload.event === 'finished') throw finalRefusal();
+      return { ok: true };
+    },
+  });
+  assert.equal(r.rejected, 1);
+  assert.equal(r.drained, 1);
+  assert.equal((await o.getEntry(late)).status, STATUSES.REJECTED);
+  assert.equal((await o.getEntry(next)).status, STATUSES.SYNCED);
+});
+
+test("gc() clears old rejected entries like any other finished one", async () => {
+  const backend = createMemoryBackend();
+  const o = createOutbox({ backend, userFingerprint: 'u1', retentionMs: 1000 });
+  const key = await o.push('submit_score', { score: 8 });
+  await o.drain({ send: async () => { throw finalRefusal(); } });
+  const e = await backend.get(key);
+  e.created_at = new Date(Date.now() - 5000).toISOString();
+  await backend.put(e);
+  assert.equal(await o.gc(), 1);
+  assert.equal(await o.getEntry(key), null);
 });

@@ -871,7 +871,11 @@
     "queued_label": "Em fila",
     "show_big": "Ampliar",
     "show_big_tip": "Preencha o ecrã com a pontuação para que o operador a consiga ler do outro lado da sala",
-    "tap_to_return": "Toque para regressar"
+    "tap_to_return": "Toque para regressar",
+    "event_finished": "Prova terminada",
+    "event_not_live": "A prova já não está em direto",
+    "waiting_next_panel": "A aguardar o teu próximo painel de juízes…",
+    "score_not_recorded": "A tua nota de {score} não foi registada: a prova já não aceitava notas."
   },
   "control": {
     "page_label": "Sala de Controlo",

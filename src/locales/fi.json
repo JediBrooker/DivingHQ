@@ -871,7 +871,11 @@
     "queued_label": "Jonossa",
     "show_big": "Näytä isona",
     "show_big_tip": "Täytä näyttö tuloksella, jotta operaattori voi lukea sen huoneen toiselta puolelta",
-    "tap_to_return": "Napauta palataksesi"
+    "tap_to_return": "Napauta palataksesi",
+    "event_finished": "Kisalaji päättyi",
+    "event_not_live": "Kisalaji ei ole enää käynnissä",
+    "waiting_next_panel": "Odotetaan seuraavaa tuomaripaneeliasi…",
+    "score_not_recorded": "Pisteitäsi {score} ei tallennettu: kisalaji ei enää ottanut vastaan pisteitä."
   },
   "control": {
     "page_label": "Ohjaamo",

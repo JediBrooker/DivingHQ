@@ -69,7 +69,7 @@ Entry shape:
   status:             'pending',    // see state machine below
   attempts:           0,
   last_attempt_at:    null,
-  last_error:         null,         // string when status==='failed'
+  last_error:         null,         // string when status is 'failed' or 'rejected'
   conflict_info:      null,         // server payload when status==='conflict'
   created_at:         '2026-05-21T14:32:08.103Z',
   synced_at:          null,         // set when status flips to 'synced'
@@ -90,12 +90,17 @@ Entry shape:
      │                       │
      │                       ├─ timeout →  pending  (retry)
      │                       │
+     │                       ├─ final   →  rejected (no retry: a refusal a
+     │                       │               resend can't change, e.g. a
+     │                       │               score for an event that isn't
+     │                       │               Live any more)
+     │                       │
      │                       └─ 500/4xx →  failed   (max-attempts reached)
      │
      └─ manual.cancel() →  cancelled (rare; only via debug UI)
 ```
 
-Terminal states: `synced`, `failed`, `cancelled`, `conflict`. Each TTLs out
+Terminal states: `synced`, `failed`, `cancelled`, `conflict`, `rejected`. Each TTLs out
 after 72 hours (matches server idempotency TTL) and is garbage-collected
 on startup.
 

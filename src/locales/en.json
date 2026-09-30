@@ -860,7 +860,11 @@
     "queued_label": "Queued",
     "show_big": "Show big",
     "show_big_tip": "Fill the screen with the score so the operator can read it from across the room",
-    "tap_to_return": "Tap to return"
+    "tap_to_return": "Tap to return",
+    "event_finished": "Event finished",
+    "event_not_live": "Event no longer live",
+    "waiting_next_panel": "Waiting for your next judging panel…",
+    "score_not_recorded": "Your score of {score} wasn't recorded: the event had already stopped taking scores."
   },
   "control": {
     "page_label": "Control Room",

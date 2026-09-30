@@ -102,7 +102,9 @@ After the round, the audience-facing scoreboard shows every judge's score (with 
 
 ## After the meet
 
-The judge view closes itself when the event flips to Completed. You can sign back in any time and review past meets you scored from your dashboard's Judge tile — historical events stay listed there with read-only access to the per-judge audit history.
+When the event flips to Completed, the judge view stops taking scores: the diver clears, the keypad locks and the screen says **Event finished**. It then waits for your next judging panel, the same as it does if you open it before the start, and picks that panel up by itself once it goes Live. If you sent a score just as the event finished, the screen tells you it wasn't recorded and shows which score it was. Tell the referee if it should have counted, the meet manager can still enter it by hand.
+
+You can sign back in any time and review past meets you scored from your dashboard's Judge tile — historical events stay listed there with read-only access to the per-judge audit history.
 
 ## Judge Analysis — how am I tracking?
 

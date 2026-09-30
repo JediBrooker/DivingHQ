@@ -860,7 +860,11 @@
     "queued_label": "已排队",
     "show_big": "放大显示",
     "show_big_tip": "将分数充满屏幕，便于操作员从房间对面读取",
-    "tap_to_return": "点按返回"
+    "tap_to_return": "点按返回",
+    "event_finished": "赛事已结束",
+    "event_not_live": "赛事已不在进行中",
+    "waiting_next_panel": "等待您的下一个裁判组…",
+    "score_not_recorded": "您的分数 {score} 未被记录：该赛事已停止接收分数。"
   },
   "control": {
     "page_label": "控制室",

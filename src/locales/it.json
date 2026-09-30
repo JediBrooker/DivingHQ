@@ -871,7 +871,11 @@
     "queued_label": "In coda",
     "show_big": "Mostrare a tutto schermo",
     "show_big_tip": "Riempire lo schermo con il punteggio in modo che l'operatore possa leggerlo dall'altra parte della sala",
-    "tap_to_return": "Toccare per tornare"
+    "tap_to_return": "Toccare per tornare",
+    "event_finished": "Gara conclusa",
+    "event_not_live": "La gara non è più in diretta",
+    "waiting_next_panel": "In attesa del suo prossimo panel di giudici…",
+    "score_not_recorded": "Il suo voto di {score} non è stato registrato: la gara non accettava più voti."
   },
   "control": {
     "page_label": "Sala Controllo",

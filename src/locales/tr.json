@@ -860,7 +860,11 @@
     "queued_label": "Sırada",
     "show_big": "Büyük göster",
     "show_big_tip": "Görevlinin odanın karşısından okuyabilmesi için skoru ekranı tümüyle kaplayacak şekilde gösterin",
-    "tap_to_return": "Geri dönmek için dokunun"
+    "tap_to_return": "Geri dönmek için dokunun",
+    "event_finished": "Etkinlik sona erdi",
+    "event_not_live": "Etkinlik artık canlı değil",
+    "waiting_next_panel": "Sonraki hakem paneliniz bekleniyor…",
+    "score_not_recorded": "{score} puanınız kaydedilmedi: etkinlik artık puan kabul etmiyordu."
   },
   "control": {
     "page_label": "Kontrol Odası",

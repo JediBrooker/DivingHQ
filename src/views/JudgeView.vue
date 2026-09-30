@@ -43,9 +43,11 @@ async function acquireWakeLock() {
 function onVisibilityChange() {
   if (document.visibilityState !== 'visible') return
   if (!wakeLock.value) acquireWakeLock()
-  // A phone that slept through the start: go and look (see
-  // adoptOwnLiveEvent further down, a no-op once there's an event).
+  // A phone that slept through the start, or the finish: go and look
+  // (adoptOwnLiveEvent and checkStillLive further down, each a no-op
+  // when it doesn't apply).
   adoptOwnLiveEvent()
+  checkStillLive()
 }
 function buzz(pattern) {
   // pattern can be a single number (ms) or an array of on/off
@@ -71,6 +73,12 @@ const user = auth.user
 const currentScore = ref(0)
 const isHalf = ref(false)
 const activeDiver = ref(null)
+// Set once the event this screen is judging stops taking scores: its id
+// and name, the status it went to (null when all we know is that a score
+// came back refused), and the score of this judge's it turned away, if
+// there was one. While it's set the keypad is shut and the header says
+// why. The next diver clears it (see endJudgingEvent).
+const finished = ref(null)
 const judgeLabel = ref(user?.full_name || 'Judge')
 // Connection state lives on the singleton socket itself
 // (`socket.isConnected`, a ref), so a parallel `connStatus` ref
@@ -125,6 +133,7 @@ async function refreshQueuedEntries() {
     || e.status === 'failed'
     || e.status === 'conflict'
   )
+  noticeRefusals(all)
 }
 // The outbox is a module singleton that outlives this view, so the
 // listener has to come off again on unmount. Without that every visit to
@@ -164,7 +173,9 @@ const panelSize = computed(() =>
 // judge has flagged the referee. The flag re-opens the
 // keypad so the judge can correct the score, and submitting
 // the new score auto-clears the signal.
-const keypadLocked = computed(() => submitted.value && !signaled.value)
+const keypadLocked = computed(() => !!finished.value || (submitted.value && !signaled.value))
+const finishedTitle = computed(() =>
+  finished.value?.status === 'Upcoming' ? t('judge.event_not_live') : t('judge.event_finished'))
 // List of OTHER judges (excludes this judge's own number) who
 // currently have an active signal. Drives the "Judge X flagged
 // the referee" banner above the dive panel.
@@ -249,8 +260,125 @@ async function adoptOwnLiveEvent() {
 }
 const ADOPT_POLL_MS = 10_000
 let adoptPoll = null
+
+// The event on screen has stopped taking scores: finalised, put back to
+// Upcoming, or a score for it just came back refused. Nothing more can go
+// in, so the diver goes, the keypad shuts and the header says the event
+// is over. It used to sit on the last diver with Submit lit, and a score
+// sent then came back refused and looked like a phone fault. After that
+// it waits for the judge's next Live panel the way a phone opened before
+// the start does: ?event= comes off and adoptOwnLiveEvent takes over. The
+// notice stays until the next diver lands, so a judge whose next panel is
+// already running still gets to read it.
+function endJudgingEvent(eventId, { status = null, eventName = null, unrecorded = null } = {}) {
+  const id = String(eventId)
+  const prev = finished.value
+  if (prev?.eventId === id) {
+    // Already on screen; a refused score arriving after the broadcast
+    // just adds its line.
+    finished.value = {
+      ...prev,
+      status: status ?? prev.status,
+      eventName: prev.eventName || eventName,
+      unrecorded: unrecorded ?? prev.unrecorded,
+    }
+    return
+  }
+  const onScreen = String(activeDiver.value?.event_id) === id ? activeDiver.value : null
+  finished.value = { eventId: id, status, eventName: eventName || onScreen?.eventName || null, unrecorded }
+  if (!finished.value.eventName) fillFinishedName(id)
+  diveSeq++
+  activeDiver.value = null
+  resetScore()
+  panelScores.value = {}
+  panelSignals.value = {}
+  signaled.value = false
+  judgeNumber.value = null
+  judgeLabel.value = user?.full_name || 'Judge'
+  isHeld.value = false
+  holdReason.value = ''
+  bigDisplayOpen.value = false
+  if (eventIdFromUrl.value) {
+    const query = { ...route.query }
+    delete query.event
+    // adoptOwnLiveEvent won't look while the URL still names an event.
+    router.replace({ query }).then(() => adoptOwnLiveEvent())
+  } else {
+    adoptOwnLiveEvent()
+  }
+}
+
+// Only needed when neither the diver nor the caller had the name (a
+// refused score for an event this screen never showed a diver for).
+async function fillFinishedName(id) {
+  try {
+    const mine = await auth.apiFetch('/api/judge/my-events')
+    const ev = Array.isArray(mine) ? mine.find((e) => String(e.id) === id) : null
+    if (ev && finished.value?.eventId === id && !finished.value.eventName) {
+      finished.value = { ...finished.value, eventName: ev.name }
+    }
+  } catch { /* the notice reads fine without it */ }
+}
+
+// The status broadcast is fire and forget, so this also asks whenever the
+// phone may have missed it: opening a link to the event, a reconnect, the
+// phone waking up. Only Completed counts here. A link to an Upcoming event
+// is a judge getting ready for the start.
+async function checkStillLive() {
+  const id = eventIdFromUrl.value || activeDiver.value?.event_id
+  if (!id || finished.value?.eventId === String(id)) return
+  try {
+    const mine = await auth.apiFetch('/api/judge/my-events')
+    const ev = Array.isArray(mine) ? mine.find((e) => String(e.id) === String(id)) : null
+    const now = eventIdFromUrl.value || activeDiver.value?.event_id
+    if (ev?.status === 'Completed' && String(now) === String(id)) {
+      endJudgingEvent(id, { status: 'Completed', eventName: ev.name })
+    }
+  } catch { /* a score sent now would still come back refused, and say so */ }
+}
+
+// Scores the server turned down for good because their event isn't Live
+// any more. The outbox closes those on the first answer (FINAL_REFUSALS
+// in useHttpOutbox) rather than retrying them into a failed chip, and this
+// is where the judge hears about it. Only ones sent since this screen
+// opened: anything older was either told already or is long gone.
+const openedAt = Date.now()
+const refusalsSeen = new Set()
+function noticeRefusals(entries) {
+  for (const e of entries) {
+    if (e.status !== 'rejected' || e.action_type !== 'submit_score') continue
+    if (e.last_error !== 'event_not_live' || refusalsSeen.has(e.idempotency_key)) continue
+    refusalsSeen.add(e.idempotency_key)
+    if (Date.parse(e.last_attempt_at) >= openedAt) onScoreRefused(e.payload)
+  }
+}
+
+// On the event on screen, or the one that just finished, this is the
+// finish the broadcast didn't bring: the notice goes up with the score it
+// turned away. For an event the judge has already moved on from, a toast.
+function onScoreRefused(payload) {
+  const id = String(payload?.event_id)
+  const score = Number(payload?.score)
+  const current = eventIdFromUrl.value || activeDiver.value?.event_id
+  if (!current || String(current) === id || finished.value?.eventId === id) {
+    endJudgingEvent(id, { unrecorded: score })
+  } else {
+    showInfo(t('judge.score_not_recorded', { score: score.toFixed(1) }))
+  }
+}
+
 useSocketEvent(socket, 'event_status_changed', (d) => {
-  if (d?.to === 'Live') adoptOwnLiveEvent()
+  if (d?.to === 'Live') {
+    adoptOwnLiveEvent()
+    return
+  }
+  // Off Live (finalised, or back to Upcoming), or straight to Completed
+  // without ever starting. Either way this screen can't score it.
+  if (d?.from !== 'Live' && d?.to !== 'Completed') return
+  const current = eventIdFromUrl.value || activeDiver.value?.event_id
+  if (current && String(current) === String(d.event_id)) {
+    endJudgingEvent(current, { status: d.to })
+  }
 })
 useSocketEvent(socket, 'notification', (n) => {
   if (n?.category === 'event_live' && n.data?.role === 'judge') adoptOwnLiveEvent()
@@ -264,16 +392,18 @@ watch(eventIdFromUrl, (id) => {
   if (!id) return
   if (activeDiver.value && activeDiver.value.event_id !== id) activeDiver.value = null
   if (socket.connected) joinEventRoom()
+  checkStillLive()
 })
 
 // Heads up: all socket listeners go through useSocketEvent. The
 // pooled socket outlives this view, so bare socket.on registrations
 // would stack a duplicate panel/keypad handler every time the
-// judge navigates back here.
-// No drain here: the app-wide hook already drains on every connect.
+// judge navigates back here. No outbox drain in this one, the
+// app-wide hook already drains on every connect.
 useSocketEvent(socket, 'connect', () => {
   joinEventRoom()
   adoptOwnLiveEvent()
+  checkStillLive()
 })
 
 const { isOffline, unsyncedCount } = outboxState
@@ -296,6 +426,7 @@ onBeforeRouteLeave(() => {
 onMounted(() => {
   if (socket.connected) joinEventRoom()
   adoptOwnLiveEvent()
+  checkStillLive()
   adoptPoll = setInterval(() => {
     if (!eventIdFromUrl.value && document.visibilityState === 'visible') adoptOwnLiveEvent()
   }, ADOPT_POLL_MS)
@@ -436,6 +567,11 @@ async function restoreDiveScores(dive) {
 
 useSocketEvent(socket, 'state_update', async (data) => {
   if (!data || !isMyEvent(data.event_id)) return
+  // A diver for the event that just finished (a late or replayed
+  // set_active_diver) mustn't reopen the keypad on it. Coming back through
+  // the Live adopt, an undone finalise say, puts it back in the URL first.
+  if (finished.value?.eventId === String(data.event_id) && eventIdFromUrl.value !== finished.value.eventId) return
+  finished.value = null
   // The same dive again is a replay (the reconnect, get_active_diver on
   // a rejoin), not a new diver. Wiping the keypad on it reopened it for
   // a judge who had already scored, so only a different dive resets.
@@ -707,8 +843,19 @@ const submitLabel = computed(() => {
           <RouterLink to="/dashboard" class="btn-back-judge">← Dashboard</RouterLink>
         </div>
       </div>
-      <div class="event-name">{{ activeDiver?.eventName || '—' }}</div>
-      <div class="diver-name">
+      <div class="event-name">{{ (finished ? finished.eventName : activeDiver?.eventName) || '—' }}</div>
+      <!-- The event stopped taking scores (see endJudgingEvent). Says so,
+           says what happened to a score it refused, and what's next. -->
+      <div v-if="finished" class="judge-finished" role="status" data-testid="judge-finished">
+        <div class="diver-name">{{ finishedTitle }}</div>
+        <p v-if="finished.unrecorded != null" class="judge-finished-lost">
+          {{ $t('judge.score_not_recorded', { score: finished.unrecorded.toFixed(1) }) }}
+        </p>
+        <p class="judge-finished-next">
+          {{ eventIdFromUrl ? $t('judge.waiting') : $t('judge.waiting_next_panel') }}
+        </p>
+      </div>
+      <div v-else class="diver-name">
         <template v-if="activeDiver?.partner_name">
           {{ activeDiver.diverName }}<span v-if="activeDiver?.country_code" class="diver-country">{{ activeDiver.country_code }}</span>
           <span class="diver-amp">&amp;</span>
@@ -724,7 +871,7 @@ const submitLabel = computed(() => {
       <div v-if="synchroRole" :class="['synchro-role', `role-${synchroRole.tone}`]">
         You are scoring: <strong>{{ synchroRole.label }}</strong>
       </div>
-      <div class="dive-info-row">
+      <div v-if="!finished" class="dive-info-row">
         <span class="dive-pill code">{{ activeDiver?.diveCode || '—' }}</span>
         <span class="dive-pill dd">{{ activeDiver?.dd ? `DD ${activeDiver.dd}` : 'DD —' }}</span>
         <span class="dive-desc">{{ activeDiver ? (diveDescription(activeDiver) || '—') : '—' }}</span>
@@ -818,10 +965,10 @@ const submitLabel = computed(() => {
       <div class="submit-row">
         <button class="clear-btn" type="button" :disabled="keypadLocked" @click="resetScore">Clear</button>
         <button
-          :class="['submit-btn', (submitted && !signaled) ? 'locked' : '', isHeld ? 'held' : '']"
-          :disabled="(submitted && !signaled) || isHeld"
+          :class="['submit-btn', (submitted && !signaled) || finished ? 'locked' : '', isHeld ? 'held' : '']"
+          :disabled="(submitted && !signaled) || isHeld || !!finished"
           @click="submitScore"
-        >{{ isHeld ? 'Meet on hold — wait for resume' : submitLabel }}</button>
+        >{{ finished ? finishedTitle : isHeld ? 'Meet on hold — wait for resume' : submitLabel }}</button>
       </div>
     </div>
     <!-- Manual-fallback "Show big" button (P5). Only renders after
@@ -875,6 +1022,25 @@ const submitLabel = computed(() => {
 .hold-reason {
   font-family: var(--font-mono); font-size: 11px; font-weight: 700;
   opacity: 0.85;
+}
+
+/* The event stopped taking scores. Sits where the diver's name was, the
+   title in the same type so it reads from arm's length on the table. */
+.judge-finished-lost,
+.judge-finished-next {
+  margin: 0.4rem 0 0;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--text-2);
+}
+.judge-finished-lost {
+  padding: 0.4rem 0.6rem;
+  background: var(--warn-bg);
+  border: 1px solid var(--warn-solid);
+  border-radius: var(--radius-sm);
+  color: var(--warn-fg);
+  font-weight: 600;
 }
 
 /* Queued-entries strip. Sits below the OfflineBanner; shows each

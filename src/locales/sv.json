@@ -871,7 +871,11 @@
     "queued_label": "I kö",
     "show_big": "Visa i helskärm",
     "show_big_tip": "Fyll skärmen med resultatet så att operatören kan läsa det från andra sidan rummet",
-    "tap_to_return": "Tryck för att återgå"
+    "tap_to_return": "Tryck för att återgå",
+    "event_finished": "Grenen är avslutad",
+    "event_not_live": "Grenen pågår inte längre",
+    "waiting_next_panel": "Väntar på din nästa domarpanel…",
+    "score_not_recorded": "Din poäng på {score} registrerades inte: grenen tog inte längre emot poäng."
   },
   "control": {
     "page_label": "Kontrollrum",

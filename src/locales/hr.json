@@ -860,7 +860,11 @@
     "queued_label": "U redu čekanja",
     "show_big": "Prikaži uvećano",
     "show_big_tip": "Ispunite zaslon rezultatom kako bi ga operater mogao pročitati s druge strane prostorije",
-    "tap_to_return": "Dodirnite za povratak"
+    "tap_to_return": "Dodirnite za povratak",
+    "event_finished": "Natjecanje je završeno",
+    "event_not_live": "Natjecanje više nije uživo",
+    "waiting_next_panel": "Čekanje vašeg sljedećeg sudačkog panela…",
+    "score_not_recorded": "Vaša ocjena {score} nije zabilježena: natjecanje više nije primalo ocjene."
   },
   "control": {
     "page_label": "Kontrolna soba",

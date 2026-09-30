@@ -860,7 +860,11 @@
     "queued_label": "キューに登録されています",
     "show_big": "大きく表示します",
     "show_big_tip": "画面をスコアでいっぱいに表示し、オペレーターが部屋の向こう側からでも読めるようにします",
-    "tap_to_return": "戻るにはタップしてください"
+    "tap_to_return": "戻るにはタップしてください",
+    "event_finished": "種目が終了しました",
+    "event_not_live": "種目はライブではなくなりました",
+    "waiting_next_panel": "次の審判団を待っています…",
+    "score_not_recorded": "あなたの点数 {score} は記録されませんでした。種目はすでに点数の受付を終了していました。"
   },
   "control": {
     "page_label": "コントロールルーム",
