@@ -73,10 +73,10 @@ async function httpSend(auth, entry) {
 let _socket = null
 
 // JudgeView predates the 'socket:' prefix and pushes plain 'submit_score'
-// entries, draining them through its own sender. Now that the drain also
-// runs app-wide, a judge's queued score can be picked up here, and routing
-// it to httpSend would fire fetch(undefined) and burn the entry's retries
-// until it was marked failed. Treat the legacy name as a socket action.
+// entries, and they drain through here like everything else (it had its
+// own copy of socketSend once). Routing one to httpSend would fire
+// fetch(undefined) and burn the entry's retries until it was marked
+// failed, so the legacy name counts as a socket action.
 const LEGACY_SOCKET_ACTIONS = new Set(['submit_score'])
 
 function isSocketAction(actionType) {
@@ -155,6 +155,13 @@ function scheduleDrain(auth) {
       console.error('[outbox] drain failed:', err.message)
     }
   })
+}
+
+// Send whatever's queued now, for a screen that pushes onto the outbox
+// itself instead of through queueAction (the judge keypad). Same sender,
+// same lock and the same retry timer as every other drain.
+export function drainOutboxNow() {
+  scheduleDrain(useAuthStore())
 }
 
 // Manual retry for entries that ran out of attempts (the offline

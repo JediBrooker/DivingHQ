@@ -14,6 +14,7 @@ import OfflineBanner from '@/components/OfflineBanner.vue'
 import SyncStatusBadge from '@/components/SyncStatusBadge.vue'
 import BigScoreDisplay from '@/components/BigScoreDisplay.vue'
 import { useOutbox } from '@/composables/useOutbox'
+import { drainOutboxNow } from '@/composables/useHttpOutbox'
 
 const { t } = useI18n()
 
@@ -132,47 +133,6 @@ async function refreshQueuedEntries() {
 const offQueuedEntries = outboxInstance?.on('change', refreshQueuedEntries)
 if (outboxInstance) refreshQueuedEntries()
 
-// Per-entry send function for outbox.drain. Uses socket.io's
-// ack callback (3rd arg to socket.emit) so the drain protocol
-// gets reliable per-submit correlation instead of tuple-matching
-// the room broadcast, which is racy when multiple judges submit
-// for the same diver. Server side, routes/socket.js's
-// submit_score handler calls ack() on both success and failure.
-function sendViaSocket(entry) {
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error('timeout')), 10000)
-    socket.emit('submit_score', {
-      ...entry.payload,
-      idempotency_key: entry.idempotency_key,
-      actor_local_time: entry.actor_local_time,
-    }, (response) => {
-      clearTimeout(timer)
-      if (response?.ok) {
-        resolve({ ok: true, response: response.response })
-      } else if (response?.conflict) {
-        // Server flagged a conflict (P4 territory, won't fire in
-        // P1 since OFFLINE_CONFLICT_RESOLUTION defaults to auto).
-        // The outbox marks the entry as 'conflict' and the
-        // operator's review tray resolves it.
-        const err = new Error(response.error || 'conflict')
-        err.kind = 'conflict'
-        err.conflict = response.conflict
-        reject(err)
-      } else {
-        // Transient or validation failure. Outbox retries with
-        // exponential backoff, up to 5 attempts, then marks failed.
-        reject(new Error(response?.error || 'rejected'))
-      }
-    })
-  })
-}
-
-async function drainOutbox() {
-  const ob = getOutbox()
-  if (!ob) return
-  await ob.drain({ send: sendViaSocket })
-  refreshPendingCount()
-}
 // Panel of every judge's score for the current dive, keyed by
 // judge_number and populated as score_received broadcasts arrive.
 // Lets THIS judge see the full panel (e.g. their own 8.5 next
@@ -310,8 +270,8 @@ watch(eventIdFromUrl, (id) => {
 // pooled socket outlives this view, so bare socket.on registrations
 // would stack a duplicate panel/keypad handler every time the
 // judge navigates back here.
+// No drain here: the app-wide hook already drains on every connect.
 useSocketEvent(socket, 'connect', () => {
-  drainOutbox()
   joinEventRoom()
   adoptOwnLiveEvent()
 })
@@ -342,7 +302,6 @@ onMounted(() => {
   acquireWakeLock()
   document.addEventListener('visibilitychange', onVisibilityChange)
   window.addEventListener('beforeunload', onJudgeBeforeUnload)
-  if (socket.connected) drainOutbox()
 })
 
 onBeforeUnmount(() => {
@@ -651,7 +610,14 @@ async function submitScore() {
         signaled:      false,
       })
     }
-    if (socket.connected) drainOutbox()
+    // Out through the app-wide sender in useHttpOutbox, the one App.vue
+    // arms for the whole session. This screen used to carry its own copy
+    // and the two drifted: that one spent an attempt on a send that never
+    // left a phone with no signal, let the next score overtake one whose
+    // ack timed out, and never came back for a retry it was owed. Offline
+    // is fine here, the send is put back for free and the reconnect
+    // drains it.
+    drainOutboxNow()
   } catch (err) {
     submitted.value = false
     showInfo(`Could not queue score: ${err.message}`)
