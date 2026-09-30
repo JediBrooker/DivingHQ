@@ -355,7 +355,7 @@ describe("probe retries", () => {
     assert.deepEqual([r.httpStatus, r.attempts, calls], [200, 3, 3]);
   });
 
-  test("a site that loses the odd request never trips DOWN", async () => {
+  test("a site that keeps losing requests gets one FLAKY note, never DOWN", async () => {
     const e = env();
     for (let i = 0; i < 5; i++) {
       const t = T0 + i * 2 * MIN;
@@ -369,10 +369,14 @@ describe("probe retries", () => {
         }
         return healthy(url, init);
       };
-      await watch.runCheck(e, deps(lossy, t));
+      const r = await watch.runCheck(e, deps(lossy, t));
+      if (i < 4) assert.equal(e.ALERT_EMAIL.sent.length, 0, `nothing after ${i + 1} lossy runs`);
+      else assert.equal(r.subject, "[DivingHQ] connection flaky");
     }
-    assert.equal(e.ALERT_EMAIL.sent.length, 0);
+    assert.equal(e.ALERT_EMAIL.sent.length, 1);
+    assert.doesNotMatch(e.ALERT_EMAIL.sent[0].raw, /Subject: [^\r]*DOWN/);
     assert.equal(e.WATCH_STATE.state.down.fails, 0);
+    assert.equal(e.WATCH_STATE.state.flaky.runs.length, 5);
   });
 
   test("a real outage still alerts on the second run, and says it tried three times", async () => {

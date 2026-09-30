@@ -38,6 +38,7 @@ more, 5 s apart, before the run counts it as failed. Then it runs these rules:
 | **DEPLOY** | `deploy.ok` is false | Once per distinct (`last_at`, `sha`) |
 | **ERRORS** | `errors.server_errors` >= 20 and >= 5% of `errors.requests` | At most hourly |
 | **STATUS** | `/api/ops/status` unreadable for an hour while health passes | At most daily |
+| **FLAKY** | 5 or more runs in the last hour lost requests on the way in (health retried, through or not; status through on a retry) without DOWN going out | At most every 12 h, only on a run where health passes |
 
 A few behaviours worth knowing:
 
@@ -49,6 +50,17 @@ A few behaviours worth knowing:
   never retried, bad news included (`/api/health`'s 503 when the database
   is down, a 200 that says `ok: false`): retrying the 503 would triple the
   watcher's own share of the app's 5xx count and set off ERRORS.
+* **Retries hide a sagging line from DOWN, so FLAKY watches for it.** A
+  connection losing a fifth of its requests would mostly get through on a
+  retry and never string two failed runs together, while visitors keep
+  seeing errors. FLAKY counts the runs where health lost requests, whether
+  a retry got through or all three tries were lost (bad spells last a few
+  seconds and often swallow all three), plus status getting through on a
+  retry, and sends one low-key note when there are 5 in an hour. Runs
+  during a DOWN don't count, and status lost outright while health passes
+  is the STATUS rule's, not this one's. `GET /` shows the list under
+  `state.flaky.runs`. Only shaky runs change it, so a steady day costs no
+  extra KV writes.
 * **Unreadable status means "don't know", not "broken".** When
   `/api/ops/status` times out, 404s or returns junk, the DB, backup,
   restore, deploy and error checks hold still: no alerts, no recovery
@@ -187,8 +199,9 @@ To watch a different site (a staging box, say), change `TARGET`.
 * **520s with nothing in the app's logs** are the line between Cloudflare
   and the box, not the app. On 30 Sep 2026 a big download filled the home
   connection and requests went missing for an hour; the retries above
-  hide single losses, and if it keeps happening the tunnel (CT 100) can be
-  moved from QUIC to HTTP/2 with `TUNNEL_TRANSPORT_PROTOCOL=http2`.
+  hide single losses, FLAKY reports a run of them, and the tunnel (CT 100)
+  was moved from QUIC to HTTP/2 with `TUNNEL_TRANSPORT_PROTOCOL=http2` in a
+  systemd drop-in the same night.
 * If DOWN alerts arrive while the site works fine from your browser,
   look at Security, Events in the dashboard for blocked requests with the
   user agent `divinghq-watch/1`; a Bot Fight Mode or WAF rule may be

@@ -16,6 +16,8 @@
 //   RESTORE  ok false, or not run for 8 days. At most daily.
 //   DEPLOY   ok false, once per (last_at, sha).
 //   ERRORS   >= 20 5xx and >= 5% of requests in the window. At most hourly.
+//   FLAKY    >= 5 runs in the last hour lost requests on the way in without
+//            the site staying down (DOWN has that). At most every 12 h.
 //
 // When the status endpoint can't be read (timeout, 404 because the route
 // isn't deployed, junk JSON) every check that needs it holds still: no
@@ -86,6 +88,15 @@ export const LIMITS = Object.freeze({
   ERRORS_REMIND_MS: 60 * MINUTE,
   BLIND_AFTER_MS: 60 * MINUTE,
   BLIND_REMIND_MS: 24 * HOUR,
+  // FLAKY: a line that keeps losing requests without the site going down.
+  // 5 of the ~30 runs in an hour is well past the odd lost request a quiet
+  // day has (2 in the 26 hours before 30 Sep's evening). That evening lost
+  // requests in spells, often all three tries of a check at once, which is
+  // why a run counts whether or not the retry got through.
+  FLAKY_WINDOW_MS: 60 * MINUTE,
+  FLAKY_RUNS: 5,
+  FLAKY_REMIND_MS: 12 * HOUR,
+  FLAKY_MAX_RUNS: 30,
   // A stored timestamp further in the future than this is junk (a bad
   // clock, a hand-edited KV value) and gets ignored rather than holding
   // an alert back for however long it claims.
@@ -124,6 +135,10 @@ function freshState() {
     deploy: { lastAlertedKey: null },
     errors: { lastAlertAt: null },
     blind: { since: null, lastAlertAt: null },
+    // When runs in the last hour lost requests on the way in (ISO times,
+    // oldest first). Only shaky runs add to it, so a steady day doesn't
+    // touch it and costs no KV writes.
+    flaky: { runs: [], lastAlertAt: null },
     // Alerts whose email didn't go out; watch.js retries them next run.
     outbox: [],
   };
@@ -172,7 +187,51 @@ export function normalizeState(prev) {
   s.down.fails = Math.min(s.down.fails, LIMITS.DEBOUNCE_RUNS);
   s.db.fails = Math.min(s.db.fails, LIMITS.DEBOUNCE_RUNS);
   s.outbox = normalizeOutbox(prev.outbox);
+  s.flaky = normalizeFlaky(prev.flaky);
   return s;
+}
+
+// The SECTIONS loop only knows scalar fields, and runs is a list.
+function normalizeFlaky(src) {
+  const f = { runs: [], lastAlertAt: null };
+  if (!isObj(src)) return f;
+  f.lastAlertAt = typeof src.lastAlertAt === "string" && toMs(src.lastAlertAt) !== null ? src.lastAlertAt : null;
+  if (Array.isArray(src.runs)) {
+    f.runs = src.runs
+      .filter((r) => typeof r === "string" && toMs(r) !== null)
+      .sort((a, b) => toMs(a) - toMs(b))
+      .slice(-LIMITS.FLAKY_MAX_RUNS);
+  }
+  return f;
+}
+
+/**
+ * Did this probe result come from somewhere short of the app? No answer at
+ * all (a timeout, a network error), or a code Cloudflare or the tunnel made
+ * up because the request never got an answer (502, 504, 520-530). watch.js
+ * retries exactly these, and FLAKY counts runs where a retry got past one.
+ * Anything else is the app's own answer, bad news included.
+ */
+export function worthRetrying(res) {
+  if (!isObj(res)) return true;
+  const code = res.httpStatus;
+  if (code === null || code === undefined || res.error) return true;
+  return code === 502 || code === 504 || (code >= 520 && code <= 530);
+}
+
+function retried(p) {
+  return isObj(p) && Number.isInteger(p.attempts) && p.attempts > 1;
+}
+
+// Did this run lose requests on the way in? Health counts either way, a
+// retry that got through or all three tries lost: on a busy line the loss
+// comes in spells a few seconds long, and a spell that swallows all three
+// tries is the worst of it, not a reason to look away (one such run on
+// its own isn't a DOWN, that needs two in a row). Status only counts when
+// a retry got through. Status lost outright while health passes is a hung
+// status endpoint, which is the STATUS rule's job, not the line's.
+function lostOnTheWay(obs) {
+  return retried(obs.health) || (retried(obs.status) && !worthRetrying(obs.status));
 }
 
 // Has at least `interval` passed since `last`? Never-sent is due. A `last`
@@ -587,6 +646,33 @@ function checkErrors(s, st, ctx) {
   s.errors.lastAlertAt = toIso(ctx.now);
 }
 
+function checkFlaky(s, obs, health, ctx) {
+  const sec = s.flaky;
+  const cutoff = ctx.now - LIMITS.FLAKY_WINDOW_MS;
+  sec.runs = sec.runs.filter((iso) => {
+    const ms = toMs(iso);
+    return ms > cutoff && ms <= ctx.now + LIMITS.FUTURE_SKEW_MS;
+  });
+  // Not while DOWN is out: an outage isn't a flaky line. checkDown has
+  // already run, so the run that sets DOWN off isn't counted either.
+  if (!s.down.alerted && lostOnTheWay(obs)) {
+    sec.runs = [...sec.runs, toIso(ctx.now)].slice(-LIMITS.FLAKY_MAX_RUNS);
+  }
+  // And it only speaks up on a run where health passes, so the note never
+  // lands in the middle of what might be turning into an outage.
+  if (!health.ok || s.down.alerted) return;
+  const n = sec.runs.length;
+  if (n < LIMITS.FLAKY_RUNS) return;
+  if (!isDue(sec.lastAlertAt, LIMITS.FLAKY_REMIND_MS, ctx.now)) return;
+  fire(ctx, "flaky", "connection flaky", "DivingHQ's connection is flaky", [
+    `In the hour to ${ctx.when(ctx.now)}, ${n} of the checks lost requests on the way to ${ctx.target}, some getting through on a retry, some not at all, without the site staying down long enough to count as an outage.`,
+    "Visitors are hitting the same thing: pages that don't load first time, scores that need a second go to send.",
+    "When the app's own logs are clean, it's the line between Cloudflare and the box: a big download filling it, or evening congestion. Look at what's using the connection, and at the tunnel's log (journalctl -u cloudflared, wherever cloudflared runs).",
+    "At most one of these every 12 hours.",
+  ]);
+  sec.lastAlertAt = toIso(ctx.now);
+}
+
 function checkBlind(s, health, st, ctx) {
   const sec = s.blind;
   // Status readable, or the whole site down (DOWN has that covered): not blind.
@@ -638,6 +724,7 @@ export function evaluate(prevState, observations, now, options = {}) {
   checkOffsite(s, st, ctx);
   checkRestore(s, st, ctx);
   checkBlind(s, health, st, ctx);
+  checkFlaky(s, obs, health, ctx);
 
   s.lastRunAt = toIso(t);
   s.last = summarize(health, st.known ? st.body : null, st.detail, t);

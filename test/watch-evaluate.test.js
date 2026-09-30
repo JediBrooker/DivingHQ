@@ -8,12 +8,12 @@
 const { test, describe, before } = require("node:test");
 const assert = require("node:assert/strict");
 
-let evaluate, normalizeState, isDue, composeEmail, testAlert, LIMITS;
+let evaluate, normalizeState, isDue, composeEmail, testAlert, significant, LIMITS;
 let formatDuration, formatWhen;
 let buildMime, encodeHeader, formatMailbox, formatRfc5322Date;
 
 before(async () => {
-  ({ evaluate, normalizeState, isDue, composeEmail, testAlert, LIMITS } = await import(
+  ({ evaluate, normalizeState, isDue, composeEmail, testAlert, significant, LIMITS } = await import(
     "../ops/watch/src/evaluate.js"
   ));
   ({ formatDuration, formatWhen } = await import("../ops/watch/src/format.js"));
@@ -26,6 +26,7 @@ const DAY = 24 * HOUR;
 const RUN = 2 * MIN;
 const T0 = Date.parse("2026-09-29T10:00:00.000Z");
 const iso = (ms) => new Date(ms).toISOString();
+const toMsIso = (v) => Date.parse(v);
 
 // ---- observation builders -------------------------------------------------
 
@@ -590,6 +591,119 @@ describe("ERRORS", () => {
     ]) {
       assert.deepEqual(ids(watcher().run(errs(e, r))), [], `${e}/${r}`);
     }
+  });
+});
+
+// ---- FLAKY ----------------------------------------------------------------
+
+describe("FLAKY", () => {
+  // Health needed a retry but the app answered in the end.
+  const shaky = (now) => ({ health: { ...healthy(), attempts: 2 }, status: status(now) });
+
+  test("five runs in an hour that only got through on a retry send one note", () => {
+    assert.deepEqual([LIMITS.FLAKY_RUNS, LIMITS.FLAKY_WINDOW_MS, LIMITS.FLAKY_REMIND_MS], [5, HOUR, 12 * HOUR]);
+    const w = watcher();
+    w.run(allOk);
+    for (let i = 0; i < 4; i++) assert.deepEqual(ids(w.tick(shaky)), [], `shaky run ${i + 1}`);
+    assert.equal(w.state.flaky.runs.length, 4);
+    const alerts = w.tick(shaky);
+    assert.deepEqual(ids(alerts), ["flaky"]);
+    assert.equal(alerts[0].tag, "connection flaky");
+    const text = alerts[0].lines.join("\n");
+    assert.match(text, /5 of the checks lost requests on the way to https:\/\/divinghq\.app/);
+    assert.match(text, /without the site staying down/);
+    // Not again within 12 hours, however flaky it stays.
+    for (let i = 0; i < 20; i++) assert.deepEqual(ids(w.tick(shaky)), []);
+    assert.equal(w.state.flaky.runs.length, 25, "still counting, just not mailing");
+  });
+
+  test("a reminder after 12 hours if it's still flaky", () => {
+    const w = watcher();
+    for (let i = 0; i < 5; i++) w.tick(shaky);
+    assert.equal(toMsIso(w.state.flaky.lastAlertAt), w.now);
+    // Quiet for half a day, then another shaky hour.
+    w.tick(allOk, 12 * HOUR);
+    const later = [];
+    for (let i = 0; i < 5; i++) later.push(...ids(w.tick(shaky)));
+    assert.deepEqual(later, ["flaky"]);
+  });
+
+  test("the odd lost request, spread out, never adds up", () => {
+    const w = watcher();
+    // One shaky run every 16 minutes for five hours: never more than 4 in any hour.
+    for (let i = 0; i < 19; i++) {
+      assert.deepEqual(ids(w.tick(shaky, 16 * MIN)), []);
+      assert.ok(w.state.flaky.runs.length <= 4);
+    }
+  });
+
+  test("the status endpoint getting through on a retry counts too", () => {
+    const w = watcher();
+    const statusShaky = (now) => ({ health: healthy(), status: { ...status(now), attempts: 3 } });
+    const got = [];
+    for (let i = 0; i < 5; i++) got.push(...ids(w.tick(statusShaky)));
+    assert.deepEqual(got, ["flaky"]);
+  });
+
+  test("an outage isn't flaky: once DOWN is out its runs aren't counted", () => {
+    const w = watcher();
+    const hardDown = () => ({ health: { ...healthHttp(530), attempts: 3 }, status: { ...statusGone(), attempts: 3 } });
+    const got = [];
+    for (let i = 0; i < 10; i++) got.push(...ids(w.tick(hardDown)));
+    assert.deepEqual(got, ["down"]);
+    // Only the first failed run, before DOWN could know, is on the list.
+    assert.equal(w.state.flaky.runs.length, 1);
+    // Nor is an app that answers badly on the first try (no retry needed).
+    const w3 = watcher();
+    const dbDown = (now) => ({ health: healthHttp(503, { ok: false }), status: status(now, { ok: false }) });
+    for (let i = 0; i < 6; i++) w3.tick(dbDown);
+    assert.deepEqual(w3.state.flaky.runs, []);
+  });
+
+  test("spells that swallow all three tries count, as long as they don't join up into DOWN", () => {
+    // The 30 Sep shape: health lost outright on some runs, through on a
+    // retry on others, never two failures in a row.
+    const w = watcher();
+    const lostAll = (now) => ({ health: { ...healthHttp(520), attempts: 3 }, status: status(now) });
+    const seq = [lostAll, allOk, shaky, lostAll, allOk, shaky, lostAll, allOk];
+    const got = seq.map((obs) => ids(w.tick(obs)));
+    assert.deepEqual(got.flat(), ["flaky"]);
+    assert.deepEqual(got[got.length - 1], ["flaky"], "on the healthy run after the fifth");
+    assert.equal(w.state.down.alerted, false);
+  });
+
+  test("a hung status endpoint isn't a flaky line", () => {
+    const w = watcher();
+    const statusHung = () => ({ health: healthy(), status: { ...statusGone(), attempts: 3 } });
+    for (let i = 0; i < 10; i++) assert.deepEqual(ids(w.tick(statusHung)), []);
+    assert.deepEqual(w.state.flaky.runs, []);
+  });
+
+  test("holds off while health fails or DOWN is out, then speaks up once it passes", () => {
+    const w2 = watcher();
+    // Four shaky runs, then two outright failures (DOWN), then shaky passes.
+    for (let i = 0; i < 4; i++) w2.tick(shaky);
+    const failing = () => ({ health: { ...healthHttp(520), attempts: 3 }, status: statusGone() });
+    assert.deepEqual(ids(w2.tick(failing)), []);
+    assert.deepEqual(ids(w2.tick(failing)), ["down"]);
+    const back = w2.tick(shaky);
+    assert.deepEqual(ids(back), ["down.recovered", "flaky"]);
+  });
+
+  test("a steady run doesn't change what's stored, so it costs no KV write", () => {
+    const w = watcher();
+    w.run(allOk);
+    const before = significant(w.state);
+    w.tick(allOk);
+    assert.equal(significant(w.state), before);
+    w.tick(shaky);
+    assert.notEqual(significant(w.state), before);
+  });
+
+  test("junk in the stored flaky block is cleaned up, not fatal", () => {
+    const s = normalizeState({ version: 1, flaky: { runs: ["nope", 7, iso(T0 - MIN), iso(T0 - 2 * MIN)], lastAlertAt: "never" } });
+    assert.deepEqual(s.flaky, { runs: [iso(T0 - 2 * MIN), iso(T0 - MIN)], lastAlertAt: null });
+    assert.deepEqual(normalizeState({ version: 1, flaky: "x" }).flaky, { runs: [], lastAlertAt: null });
   });
 });
 

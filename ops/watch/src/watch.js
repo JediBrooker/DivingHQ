@@ -6,7 +6,7 @@
 // EmailMessage in through createWorker(), so the tests can drive the whole
 // thing from Node with a fake KV, a fake fetch and a fake mail binding.
 
-import { evaluate, normalizeState, normalizeOutbox, significant, composeEmail, testAlert, LIMITS } from "./evaluate.js";
+import { evaluate, normalizeState, normalizeOutbox, significant, composeEmail, testAlert, worthRetrying, LIMITS } from "./evaluate.js";
 import { buildMime } from "./mime.js";
 import { MINUTE, toMs } from "./format.js";
 
@@ -85,17 +85,12 @@ export async function probe(url, fetchImpl, timeoutMs = PROBE_TIMEOUT_MS) {
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// Worth another try: no answer at all (timeout, network error), or a code
-// Cloudflare or the tunnel made up because the request never got an answer
-// from the app (502, 504, 520-530). Anything else came from the app itself
-// and is the real answer, bad news included: /api/health's 503 when the
-// database is down gets counted in the app's own 5xx window, so tripling
-// it would set off the ERRORS rule on the watcher's own probes.
-export function worthRetrying(res) {
-  const code = res && res.httpStatus;
-  if (code === null || code === undefined) return true;
-  return code === 502 || code === 504 || (code >= 520 && code <= 530);
-}
+// What's worth another try lives in evaluate.js (worthRetrying), so the
+// retries here and the FLAKY rule there agree on what "lost" means. Never
+// an answer from the app itself, bad news included: /api/health's 503 when
+// the database is down gets counted in the app's own 5xx window, so
+// tripling it would set off the ERRORS rule on the watcher's own probes.
+export { worthRetrying };
 
 /**
  * probe(), tried again while worthRetrying() says the request got lost.
