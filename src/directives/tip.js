@@ -139,10 +139,17 @@ function positionFixedTip(el, bubble) {
 // Exported for a host that wants its bubble on a tap as well (the record
 // chip). Hover and focus already call it; a tap on iOS doesn't reliably
 // give a button either, so such a host calls this from its click.
+// One bubble is open at a time, and the page-level listeners below only
+// ever look at that one host, so a scoreboard with a few hundred chips
+// doesn't carry a few hundred scroll listeners.
+let openHost = null;
+
 export function showFixedTip(el) {
   const text = el.getAttribute("data-tip");
   if (!text) return;
+  if (openHost && openHost !== el) hideFixedTip(openHost);
   hideFixedTip(el);
+  openHost = el;
   const bubble = document.createElement("div");
   bubble.className = "tip-fixed";
   bubble.setAttribute("role", "tooltip");
@@ -157,6 +164,22 @@ function hideFixedTip(el) {
     el.__tipFixedNode.remove();
     el.__tipFixedNode = null;
   }
+  if (openHost === el) openHost = null;
+}
+
+// A bubble opened by a tap stays until the next tap somewhere else, a
+// scroll, or focus moving on. A scroll anywhere can slide the host out
+// from under the bubble.
+let pageListeners = false;
+function listenToPage() {
+  if (pageListeners || typeof document === "undefined") return;
+  pageListeners = true;
+  document.addEventListener("pointerdown", (e) => {
+    if (openHost && !openHost.contains(e.target)) hideFixedTip(openHost);
+  }, true);
+  window.addEventListener("scroll", () => {
+    if (openHost) hideFixedTip(openHost);
+  }, true);
 }
 function attachFixed(el) {
   // Mark the host so the CSS ::after bubble is suppressed (see
@@ -165,24 +188,28 @@ function attachFixed(el) {
   // clipped host, giving you a visible double tooltip.
   el.setAttribute("data-tip-fixed", "");
   if (el.__tipFixedHandlers) return;
+  listenToPage();
   const show = () => showFixedTip(el);
   const hide = () => hideFixedTip(el);
-  el.addEventListener("mouseenter", show);
-  el.addEventListener("mouseleave", hide);
+  // Hover is a mouse thing, so only a mouse leaving takes the bubble down.
+  // A finger "leaves" the moment it lifts, and some browsers (Chrome on
+  // Linux, in CI) then send a leave that shut the bubble the tap had just
+  // opened. Any pointer coming in still opens it.
+  const enter = () => show();
+  const leave = (e) => { if (e.pointerType === "mouse") hide(); };
+  el.addEventListener("pointerenter", enter);
+  el.addEventListener("pointerleave", leave);
   el.addEventListener("focusin", show);
   el.addEventListener("focusout", hide);
-  // A scroll anywhere can slide the host out from under the bubble.
-  window.addEventListener("scroll", hide, true);
-  el.__tipFixedHandlers = { show, hide };
+  el.__tipFixedHandlers = { show, hide, enter, leave };
 }
 function detachFixed(el) {
   const h = el.__tipFixedHandlers;
   if (!h) return;
-  el.removeEventListener("mouseenter", h.show);
-  el.removeEventListener("mouseleave", h.hide);
+  el.removeEventListener("pointerenter", h.enter);
+  el.removeEventListener("pointerleave", h.leave);
   el.removeEventListener("focusin", h.show);
   el.removeEventListener("focusout", h.hide);
-  window.removeEventListener("scroll", h.hide, true);
   el.__tipFixedHandlers = null;
   el.removeAttribute("data-tip-fixed");
   hideFixedTip(el);

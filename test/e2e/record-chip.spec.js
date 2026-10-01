@@ -211,9 +211,18 @@ test("a record chip opens with a tap and from the keyboard", async ({ browser, r
     await expect(bubble).toHaveCount(0);
     await chip.tap();
     await expect(bubble).toBeVisible();
+    // What Chrome on Linux sends as the finger lifts, which closed the bubble
+    // in CI: a touch "leave", and the mouse-compat one after it. Neither is a
+    // reason to close it, the finger was never hovering.
+    await chip.dispatchEvent("pointerleave", { pointerType: "touch" });
+    await chip.dispatchEvent("mouseleave");
+    await expect(bubble).toBeVisible();
     await expect(bubble).toContainText("RHSL record");
     await expect(bubble).toContainText("Previous record: 28.25");
     await expect(bubble).toContainText("Unofficial");
+    // A tap anywhere else puts it away.
+    await page.getByText("Completed dives", { exact: false }).first().tap();
+    await expect(bubble).toHaveCount(0);
 
     // The keyboard gets there too: Tab stops on it and focus opens it.
     const dpage = await desk.newPage();
@@ -224,6 +233,13 @@ test("a record chip opens with a tap and from the keyboard", async ({ browser, r
     await expect(dchip).toHaveJSProperty("tabIndex", 0);
     await dchip.focus();
     await expect(dpage.getByRole("tooltip")).toContainText("Previous record: 30.50");
+    await dchip.blur();
+    await expect(dpage.getByRole("tooltip")).toHaveCount(0);
+    // A mouse is the one pointer that hovers: in on the chip, out again.
+    await dchip.hover();
+    await expect(dpage.getByRole("tooltip")).toContainText("RHSL record");
+    await dpage.mouse.move(5, 5);
+    await expect(dpage.getByRole("tooltip")).toHaveCount(0);
   } finally {
     await phone.close();
     await desk.close();
