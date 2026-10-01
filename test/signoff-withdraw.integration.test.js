@@ -37,6 +37,7 @@ let server;
 let port;
 const ids = { orgs: [], users: [], events: [] };
 let operator, referee, refereeUsername, eventId, otherEventId;
+let refereeB, refereeBUsername;
 let caller = null;
 const sent = [];
 const REF_PASSWORD = "referee-pw-1234";
@@ -79,9 +80,15 @@ before(async () => {
     `INSERT INTO users (username, password, full_name, org_id, email_verified_at)
      VALUES ($1, $2, 'Referee', $3, now()) RETURNING id`,
     [refereeUsername, await bcrypt.hash(REF_PASSWORD, 4), org]);
-  ids.users.push(operator, referee);
+  refereeBUsername = `sw-refb-${sfx}`;
+  refereeB = await one(
+    `INSERT INTO users (username, password, full_name, org_id, email_verified_at)
+     VALUES ($1, $2, 'Second Referee', $3, now()) RETURNING id`,
+    [refereeBUsername, await bcrypt.hash(REF_PASSWORD, 4), org]);
+  ids.users.push(operator, referee, refereeB);
   await pool.query(
-    "INSERT INTO user_org_roles (user_id, org_id, role) VALUES ($1, $2, 'referee')", [referee, org]);
+    "INSERT INTO user_org_roles (user_id, org_id, role) VALUES ($1, $3, 'referee'), ($2, $3, 'referee')",
+    [referee, refereeB, org]);
 
   const mkEvent = (name) => one(
     `INSERT INTO events (org_id, name, gender, status, height, event_type, total_rounds, number_of_judges,
@@ -147,7 +154,7 @@ async function call(as, method, path, body) {
 
 async function fresh() {
   await pool.query(
-    "UPDATE events SET dive_order_signed_off_at = NULL, dive_order_signed_off_by = NULL WHERE id = $1",
+    "UPDATE events SET status = 'Upcoming', dive_order_signed_off_at = NULL, dive_order_signed_off_by = NULL WHERE id = $1",
     [eventId],
   );
   await pool.query(
@@ -176,6 +183,16 @@ function retractions(requestId) {
 async function signedOff() {
   const r = await pool.query("SELECT dive_order_signed_off_at FROM events WHERE id = $1", [eventId]);
   return r.rows[0].dive_order_signed_off_at;
+}
+
+async function signedOffBy() {
+  const r = await pool.query("SELECT dive_order_signed_off_by FROM events WHERE id = $1", [eventId]);
+  return r.rows[0].dive_order_signed_off_by;
+}
+
+async function requestStatus(requestId) {
+  const r = await pool.query("SELECT status FROM referee_signoff_requests WHERE id = $1", [requestId]);
+  return r.rows[0].status;
 }
 
 test("Cancel withdraws the request: the banner leaves the feed and a late Approve doesn't sign off", async (t) => {
@@ -300,4 +317,107 @@ test("a banner whose time ran out isn't listed, even before the sweep gets to it
     [referee, requestId],
   );
   assert.deepEqual(await bannersFor(requestId), []);
+});
+
+// Signed off another way while a push was still out: the operator pressed
+// Esc on the dialog (which leaves the request open on purpose), opened it
+// again and attested as meet manager, or a different referee signed in at
+// the laptop. The earlier request stayed pending with its banner, so the
+// referee's phone kept Approve and Deny for an order already signed off.
+// Deny answered 200 'declined' as if it counted, and Approve rewrote who
+// signed off. Whatever signs the order off now closes every request still
+// out for it.
+test("the manager attesting closes a request still out to the referee's phone", async (t) => {
+  if (!dbReachable) { t.skip(); return; }
+  await fresh();
+  const requestId = await ask();
+  const attest = await call("operator", "POST", `/api/events/${eventId}/dive-order/sign-off`);
+  assert.equal(attest.status, 200);
+  assert.equal(await signedOffBy(), operator);
+
+  assert.equal(await requestStatus(requestId), "expired");
+  assert.deepEqual(await bannersFor(requestId), [], "a reload doesn't bring the banner back");
+  const told = retractions(requestId);
+  assert.equal(told.length, 1);
+  assert.ok(told[0].rooms.includes(`user:${referee}`));
+  assert.deepEqual(told[0].payload, { event_id: eventId, request_id: requestId, decision: "expired", by_user_id: operator });
+
+  for (const decision of ["deny", "approve"]) {
+    const late = await call("referee", "POST", `/api/events/${eventId}/dive-order/sign-off/respond`,
+      { request_id: requestId, decision });
+    assert.equal(late.status, 409, `a late ${decision} isn't taken`);
+  }
+  assert.equal(await signedOffBy(), operator, "nobody rewrites who signed off");
+});
+
+test("another referee signing at the laptop closes the first referee's request too", async (t) => {
+  if (!dbReachable) { t.skip(); return; }
+  await fresh();
+  const requestId = await ask();
+  const res = await call("operator", "POST", `/api/events/${eventId}/dive-order/sign-off/credential`,
+    { username: refereeBUsername, password: REF_PASSWORD });
+  assert.equal(res.status, 200);
+  assert.equal(await signedOffBy(), refereeB);
+
+  assert.equal(await requestStatus(requestId), "expired", "the first referee never answered it");
+  assert.deepEqual(await bannersFor(requestId), []);
+  assert.equal(retractions(requestId).length, 1);
+  assert.equal(retractions(requestId)[0].payload.decision, "expired");
+
+  const late = await call("referee", "POST", `/api/events/${eventId}/dive-order/sign-off/respond`,
+    { request_id: requestId, decision: "approve" });
+  assert.equal(late.status, 409);
+  assert.equal(await signedOffBy(), refereeB);
+});
+
+// Backstop for a request that's somehow still pending (one written before
+// this change, say): an order that's already signed off, or an event
+// that's gone Live, has nothing left for it to decide.
+test("a request still pending after the order was signed off can't relabel the sign-off", async (t) => {
+  if (!dbReachable) { t.skip(); return; }
+  await fresh();
+  const requestId = await ask();
+  await pool.query(
+    "UPDATE events SET dive_order_signed_off_at = now(), dive_order_signed_off_by = $2 WHERE id = $1",
+    [eventId, operator],
+  );
+  const late = await call("referee", "POST", `/api/events/${eventId}/dive-order/sign-off/respond`,
+    { request_id: requestId, decision: "approve" });
+  assert.equal(late.status, 409);
+  assert.equal(late.body.status, "expired");
+  assert.equal(await signedOffBy(), operator);
+  assert.equal(await requestStatus(requestId), "expired");
+  assert.deepEqual(await bannersFor(requestId), []);
+  assert.equal(retractions(requestId).length, 1, "the referee's other devices hear it closed");
+});
+
+test("a request still pending once the event is Live can't be answered", async (t) => {
+  if (!dbReachable) { t.skip(); return; }
+  await fresh();
+  const requestId = await ask();
+  await pool.query("UPDATE events SET status = 'Live' WHERE id = $1", [eventId]);
+  const late = await call("referee", "POST", `/api/events/${eventId}/dive-order/sign-off/respond`,
+    { request_id: requestId, decision: "deny" });
+  assert.equal(late.status, 409);
+  assert.equal(await requestStatus(requestId), "expired");
+  assert.equal(await signedOff(), null);
+});
+
+test("a handoff code still pending after the order was signed off is refused", async (t) => {
+  if (!dbReachable) { t.skip(); return; }
+  await fresh();
+  const code = String(100000 + crypto.randomInt(900000));
+  const ins = await pool.query(
+    `INSERT INTO referee_signoff_requests (event_id, requested_by, target_referee_id, handoff_code)
+     VALUES ($1, $2, $3, $4) RETURNING id`,
+    [eventId, operator, referee, code],
+  );
+  await pool.query(
+    "UPDATE events SET dive_order_signed_off_at = now(), dive_order_signed_off_by = $2 WHERE id = $1",
+    [eventId, operator],
+  );
+  const late = await call("referee", "POST", "/api/sign-off/code/verify", { code });
+  assert.equal(late.status, 409);
+  assert.equal(await signedOffBy(), operator);
+  assert.equal(await requestStatus(ins.rows[0].id), "expired");
 });

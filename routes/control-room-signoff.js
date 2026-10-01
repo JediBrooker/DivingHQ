@@ -84,10 +84,54 @@ async function closeSignoffRequests(db, { eventId, requestId = null, refereeId =
   return r.rows;
 }
 
-// A new request or code supersedes whatever was still pending for the
-// event, so the manager's modal only ever tracks the latest one.
-function expirePendingSignoffs(pool, eventId) {
-  return closeSignoffRequests(pool, { eventId, status: "expired" });
+// Close whatever is still pending for the event as 'expired'. A new
+// request or code supersedes the old ones, so the manager's modal only
+// ever tracks the latest. And once the order is signed off some other way
+// (the manager attesting, a referee at the laptop) nothing still out to a
+// referee's phone can count: those used to stay open with their banner, so
+// a Deny answered 200 as if it mattered and an Approve rewrote who signed
+// off. `db` is the pool or a transaction's client.
+function expirePendingSignoffs(db, eventId) {
+  return closeSignoffRequests(db, { eventId, status: "expired" });
+}
+
+// Has the order still got a sign-off to give? Not once it's signed off,
+// and not once the event has left Upcoming. Returns why not, or null while
+// it's still wanted. For a request found pending past either, the backstop
+// to the closes above (a row written before them, say). Takes the event
+// row FOR UPDATE, so call it after locking the request row: every
+// sign-off path locks request rows first, then the event.
+async function signoffNoLongerWanted(db, eventId) {
+  const r = await db.query(
+    "SELECT status, dive_order_signed_off_at FROM events WHERE id = $1 FOR UPDATE",
+    [eventId],
+  );
+  const ev = r.rows[0];
+  if (!ev) return "Event not found";
+  if (ev.status !== "Upcoming") return `The event is ${ev.status}`;
+  if (ev.dive_order_signed_off_at) return "The dive order is already signed off";
+  return null;
+}
+
+// A request closed: the referee answered (push, banner, code, or at the
+// laptop), or it was withdrawn, replaced, outlived by a sign-off made
+// another way, or ran out ('expired'). The dialog waiting on it is on the
+// laptop of whoever asked, and that laptop isn't in the event's room yet
+// (the Control Room joins it at Live), so it goes to their own room as
+// well. Best-effort: the dialog also asks GET .../request/:requestId while
+// it waits, so a socket that was mid-reconnect still catches up. The
+// referee's own room gets it too, so every device of theirs drops the
+// request's banner and a dashboard drops the "Waiting for you" card
+// straight away (a device that was offline asks again when it's back).
+// event_id rides along for a Setup stage that isn't the one that asked.
+function announceSignoffClosed(push, rows, decision, byUserId) {
+  for (const row of rows || []) {
+    try {
+      push?.emitEvent?.(row.event_id, "referee_signoff_response", {
+        event_id: row.event_id, request_id: row.id, decision, by_user_id: byUserId,
+      }, { users: [row.requested_by, row.target_referee_id, byUserId] });
+    } catch { /* silent */ }
+  }
 }
 
 module.exports = function createSignoffRoutes({
@@ -109,25 +153,12 @@ module.exports = function createSignoffRoutes({
   }
   const router = express.Router();
 
-  // A request closed: the referee answered (push, banner, code, or at the
-  // laptop), or it was withdrawn, replaced or ran out ('expired'). The
-  // dialog waiting on it is on the laptop of whoever asked, and that
-  // laptop isn't in the event's room yet (the Control Room joins it at
-  // Live), so it goes to their own room as well. Best-effort: the dialog
-  // also asks GET .../request/:requestId while it waits, so a socket that
-  // was mid-reconnect still catches up. The referee's own room gets it
-  // too, so every device of theirs drops the request's banner and a
-  // dashboard drops the "Waiting for you" card straight away. event_id
-  // rides along for a Setup stage that isn't the one that asked.
-  function announceAnswer(reqRow, decision, byUserId) {
-    try {
-      push?.emitEvent?.(reqRow.event_id, "referee_signoff_response", {
-        event_id: reqRow.event_id, request_id: reqRow.id, decision, by_user_id: byUserId,
-      }, { users: [reqRow.requested_by, reqRow.target_referee_id, byUserId] });
-    } catch { /* silent */ }
-  }
+  // See announceSignoffClosed above.
   function announceClosed(rows, decision, byUserId) {
-    for (const row of rows) announceAnswer(row, decision, byUserId);
+    announceSignoffClosed(push, rows, decision, byUserId);
+  }
+  function announceAnswer(reqRow, decision, byUserId) {
+    announceClosed([reqRow], decision, byUserId);
   }
 
   // -------------------------------------------------------------
@@ -375,6 +406,18 @@ module.exports = function createSignoffRoutes({
         announceClosed(lapsed, "expired", req.user.id);
         return res.status(409).json({ error: "Request expired", status: "expired" });
       }
+      // Signed off another way already, or the event's moved on. A Deny
+      // here used to answer 200 as if it counted, and an Approve put this
+      // referee's name over whoever had signed off.
+      const moot = await signoffNoLongerWanted(client, req.params.id);
+      if (moot) {
+        const closed = await closeSignoffRequests(client, {
+          eventId: req.params.id, requestId: request_id, status: "expired",
+        });
+        await client.query("COMMIT");
+        announceClosed(closed, "expired", req.user.id);
+        return res.status(409).json({ error: moot, status: "expired" });
+      }
 
       const newStatus = decision === "approve" ? "approved" : "declined";
       await closeSignoffRequests(client, {
@@ -534,9 +577,11 @@ module.exports = function createSignoffRoutes({
         if (!accepted) return res.status(401).json({ error: "Invalid TOTP code" });
       }
 
-      // Stamp the sign-off in the event row + close any pending
-      // push request for the same event (the referee just signed
-      // in person, the push is moot).
+      // Stamp the sign-off in the event row + close every pending
+      // request for the same event: this referee's own as approved
+      // (they just signed in person, the push is moot), anyone else's
+      // as expired, since the order no longer needs them. Requests
+      // first, then the event, the lock order respond takes too.
       //
       // IMPORTANT: BEGIN/COMMIT must run on the same pooled
       // connection. Using `pool.query` here checks out a fresh
@@ -548,8 +593,13 @@ module.exports = function createSignoffRoutes({
       // stuck "pending" forever.
       const txClient = await pool.connect();
       let closedPushes = [];
+      let closedOthers = [];
       try {
         await txClient.query("BEGIN");
+        closedPushes = await closeSignoffRequests(txClient, {
+          eventId: req.params.id, refereeId: user.id, status: "approved", method: "credential",
+        });
+        closedOthers = await expirePendingSignoffs(txClient, req.params.id);
         await txClient.query(
           `UPDATE events
            SET dive_order_signed_off_at = now(),
@@ -557,9 +607,6 @@ module.exports = function createSignoffRoutes({
            WHERE id = $2`,
           [user.id, req.params.id],
         );
-        closedPushes = await closeSignoffRequests(txClient, {
-          eventId: req.params.id, refereeId: user.id, status: "approved", method: "credential",
-        });
         await txClient.query("COMMIT");
       } catch (err) {
         await txClient.query("ROLLBACK").catch(() => {});
@@ -567,9 +614,11 @@ module.exports = function createSignoffRoutes({
       } finally {
         txClient.release();
       }
-      // A request still out to this referee's phone is answered now, so
-      // its banner comes down.
+      // A request still out to this referee's phone is answered now, and
+      // one out to another referee's has nothing left to ask, so their
+      // banners come down.
       announceClosed(closedPushes, "approved", user.id);
+      announceClosed(closedOthers, "expired", user.id);
 
       res.json({
         ok: true,
@@ -751,6 +800,17 @@ module.exports = function createSignoffRoutes({
         await client.query("COMMIT");
         return res.status(409).json({ error: "Code expired" });
       }
+      // Same backstop as respond: an order signed off another way, or an
+      // event that's moved on, has no use for the code.
+      const moot = await signoffNoLongerWanted(client, reqRow.event_id);
+      if (moot) {
+        const closed = await closeSignoffRequests(client, {
+          eventId: reqRow.event_id, requestId: reqRow.id, status: "expired",
+        });
+        await client.query("COMMIT");
+        announceClosed(closed, "expired", req.user.id);
+        return res.status(409).json({ error: moot });
+      }
       await closeSignoffRequests(client, {
         eventId: reqRow.event_id, requestId: reqRow.id, status: "approved", method: "code",
       });
@@ -779,3 +839,8 @@ module.exports = function createSignoffRoutes({
 
   return router;
 };
+
+// For the manager-attests POST /dive-order/sign-off, which stays in
+// control-room.js and has to close what's still out the same way.
+module.exports.expirePendingSignoffs = expirePendingSignoffs;
+module.exports.announceSignoffClosed = announceSignoffClosed;
