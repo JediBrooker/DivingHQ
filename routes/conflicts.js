@@ -181,12 +181,17 @@ module.exports = function createConflictsRouter({
         }
 
         // accept_proposed: overwrite + audit + broadcast.
+        // The status stays what it was. A clash only ever comes from a
+        // row that wasn't set aside (submit_score takes a judge's mark
+        // over a set-aside row as the new dive's), so a row that's
+        // 'redive' now had its dive thrown out after the clash. The
+        // judge's value is settled for that dive, and the row waits for
+        // their mark on the new one like the rest of the panel.
         const newScore = Number(proposedScore);
         await client.query(
           `UPDATE scores
              SET score = $2,
-                 score_source = 'manual_then_reconciled',
-                 status = 'active'
+                 score_source = 'manual_then_reconciled'
            WHERE id = $1`,
           [row.id, newScore],
         );

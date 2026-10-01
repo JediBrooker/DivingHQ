@@ -8644,6 +8644,65 @@ test("a judge's mark over a set-aside manual entry scores the redive", async (t)
   }
 });
 
+// A clash from before the redive can still be settled afterwards (the log
+// should say which mark the judge really gave the first dive), but taking
+// the judge's value used to set the row back to active. That counted the
+// thrown-out dive's mark as the judge's score for the new one, and the
+// judge's real mark for the new dive then went in as a correction.
+test("settling a clash from before a redive doesn't score the new dive", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const orgId = await compKit.org("redive-clash");
+  const socks = [];
+  try {
+    const manager = await compKit.user(orgId, "Clash Manager", ["meet_manager"]);
+    const referee = await compKit.user(orgId, "Clash Referee", ["referee"]);
+    const j1 = await compKit.user(orgId, "Clash Judge One", ["judge"]);
+    const diver = await compKit.user(orgId, "Clash Diver", ["diver"]);
+    const eventId = await compKit.event(orgId, { status: "Live", total_rounds: 1 });
+    await compKit.enter(eventId, diver.id, await compKit.dives(1), { display_order: 1 });
+    await compKit.panel(eventId, [j1]);
+    const [rs, s1] = await Promise.all([referee, j1].map((u) => compKit.socket(u.token)));
+    socks.push(rs, s1);
+    const dive = { event_id: eventId, competitor_id: diver.id, round_number: 1 };
+    const row = async () => (await pool.query(
+      "SELECT id, score::float AS score, score_source, status FROM scores WHERE event_id = $1",
+      [eventId],
+    )).rows[0];
+
+    // The operator typed 7 during the outage, the phone's queued 8 lost
+    // to it, and then the referee threw the dive out.
+    const typed = await fetchJson("POST", "/api/scores/manual-entry", {
+      token: manager.token, body: { ...dive, judge_id: j1.id, score: 7, reason: "outage" },
+    });
+    assert.equal(typed.status, 200, JSON.stringify(typed.body));
+    assert.equal((await compKit.ask(s1, "submit_score", { ...dive, score: 8 })).superseded_by, "manual_entry");
+    assert.deepEqual(await compKit.ask(rs, "referee_redive", dive), { ok: true });
+
+    const { id } = await row();
+    const settled = await fetchJson("POST", `/api/conflicts/${id}/resolve`, {
+      token: manager.token, body: { decision: "accept_proposed", proposed_score: 8 },
+    });
+    assert.equal(settled.status, 200, JSON.stringify(settled.body));
+    const after = await row();
+    assert.equal(after.score, 8, "the first dive's mark is settled as the judge's");
+    assert.equal(after.status, "redive", "but it isn't the new dive's score");
+
+    // J1 scores the new dive, and that's what counts.
+    assert.equal((await compKit.ask(s1, "submit_score", { ...dive, score: 6 })).ok, true);
+    const { id: _, ...stored } = await row();
+    assert.deepEqual(stored, { score: 6, score_source: "judge_direct", status: "active" });
+    const last = (await pool.query(
+      `SELECT reason FROM score_audit_log WHERE event_id = $1 AND judge_id = $2
+        ORDER BY created_at DESC, id DESC LIMIT 1`, [eventId, j1.id],
+    )).rows[0];
+    assert.equal(last.reason, "re-scored after redive");
+  } finally {
+    socks.forEach((s) => s.close());
+    await compKit.cleanup(orgId);
+  }
+});
+
 // The same thing through the sockets a meet actually uses. The rehearsal
 // found "403C 0.00" in the national, club and personal books after a
 // Failed call. A dive that holds a book has to lose it the moment the call
