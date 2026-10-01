@@ -71,7 +71,7 @@ The link works for anonymous spectators too — judge profiles are public by des
 
 ## Record chip
 
-A dive that beats a standing club, state, national or continental record gets one small chip next to its dive code, on the Completed Dives card and on the recap's dive-by-dive rows: **NSW record**, **AUS record**, **Oceania record**. It names the biggest book the dive got into; hover it for every book it made and the score each one beat. The chip is amber, or grey while that state or country hasn't been claimed by its governing body (the record is [unofficial](#record-books-records) until then).
+A dive that beats a standing club, state, national or continental record gets one small chip next to its dive code, on the Completed Dives card and on the recap's dive-by-dive rows: **NSW record**, **AUS record**, **Oceania record**. It names the biggest book the dive got into; hover it, tap it on a phone, or Tab to it for every book it made and the score each one beat. The chip is amber, or grey and marked **Unofficial** while that state or country hasn't been claimed by its governing body (the record is [unofficial](#record-books-records) until then).
 
 It's deliberately quiet. Personal bests never get a chip, and neither does the first mark in a book (the first time anyone at a club does a dive, it's the club record by default), so it only turns up when somebody actually beat somebody. It arrives live the moment the last judge's score lands, and the Broadcast and Stream Overlay screens leave it off.
 

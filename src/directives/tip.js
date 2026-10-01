@@ -136,7 +136,10 @@ function positionFixedTip(el, bubble) {
   bubble.style.top = `${Math.round(top)}px`;
   bubble.style.left = `${Math.round(left)}px`;
 }
-function showFixedTip(el) {
+// Exported for a host that wants its bubble on a tap as well (the record
+// chip). Hover and focus already call it; a tap on iOS doesn't reliably
+// give a button either, so such a host calls this from its click.
+export function showFixedTip(el) {
   const text = el.getAttribute("data-tip");
   if (!text) return;
   hideFixedTip(el);
