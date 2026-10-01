@@ -156,3 +156,35 @@ test("the sign-off banner's Approve and Deny are full-size touch targets on a ph
     expect(box.height, sel).toBeGreaterThanOrEqual(44);
   }
 });
+
+// The usual case for a referee's phone: it locks and its socket drops. A
+// request withdrawn in that time (or replaced, or answered on another
+// device) sent its close to a socket that wasn't there, and the banner
+// came back from the lock screen still offering Approve and Deny. Tapping
+// it failed cleanly, but it shouldn't have been there to tap.
+test("a sign-off withdrawn while the phone was offline leaves its banner when it's back", async ({ page, request, context }) => {
+  test.setTimeout(60_000);
+  const event = await setup.createEvent(request, { adminToken: world.adminToken, name: "E2E Push Offline 3m" });
+  await signIn(page, world.referee.username);
+  await page.goto("/dashboard");
+  await page.waitForLoadState("networkidle").catch(() => {});
+  const res = await request.post(`/api/events/${event.id}/dive-order/sign-off/request`, {
+    headers: { Authorization: `Bearer ${world.adminToken}` },
+    data: { referee_id: world.referee.userId },
+  });
+  expect(res.status()).toBe(201);
+  const { request_id: requestId } = await res.json();
+  const banner = page.locator(".notif-referee_signoff", { hasText: "E2E Push Offline 3m" });
+  await expect(banner).toBeVisible({ timeout: 10_000 });
+
+  await context.setOffline(true);
+  // Long enough for the socket to notice and drop.
+  await page.waitForTimeout(2_000);
+  const cancel = await request.post(`/api/events/${event.id}/dive-order/sign-off/request/${requestId}/cancel`, {
+    headers: { Authorization: `Bearer ${world.adminToken}` },
+  });
+  expect(await cancel.json()).toEqual({ ok: true, status: "expired" });
+  await context.setOffline(false);
+
+  await expect(banner).toHaveCount(0, { timeout: 15_000 });
+});

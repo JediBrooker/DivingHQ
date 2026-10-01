@@ -31,7 +31,9 @@
 //                    request is no longer open.
 //
 // The bound socket also drops a sign-off banner when its request closes
-// anywhere (referee_signoff_response, see onSignoffClosed).
+// anywhere (referee_signoff_response, see onSignoffClosed), and on a
+// reconnect it asks after every sign-off banner still up, for the closes
+// it missed while it was down (onReconnect).
 
 import { ref, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
@@ -70,6 +72,45 @@ const onSignoffClosed = (d) => {
   )
 }
 
+// Where one sign-off request stands, from the server: 'pending',
+// 'approved', 'declined' or 'expired', or null when it couldn't be asked.
+// It's the read the operator's dialog polls while it waits, and referees
+// are among the Control Room roles it lets in. A request that isn't on
+// that event any more (404) counts as closed.
+async function signoffRequestStatus(auth, eventId, requestId) {
+  if (!eventId || !requestId) return null
+  try {
+    const r = await auth.apiFetch(
+      `/api/events/${encodeURIComponent(eventId)}/dive-order/sign-off/request/${encodeURIComponent(requestId)}`,
+    )
+    return typeof r?.status === 'string' ? r.status : null
+  } catch (err) {
+    return err?.status === 404 ? 'expired' : null
+  }
+}
+
+// Back from a dropped socket. A referee's phone locks and its socket goes
+// with it, and a request withdrawn, replaced or answered elsewhere in that
+// time sent its referee_signoff_response to nobody: the banner came back
+// from the lock screen still offering Approve and Deny for a request that
+// was gone. So every sign-off banner still up asks after its request, and
+// the closed ones go. Nothing to ask about on most connects, so it's
+// usually free. Also runs on the first connect, harmlessly.
+const onReconnect = () => {
+  recheckSignoffBanners().catch(() => {})
+}
+
+async function recheckSignoffBanners() {
+  const banners = notifications.value.filter((n) => n?.category === 'referee_signoff' && n.data?.request_id)
+  if (!banners.length) return
+  const auth = useAuthStore()
+  if (!auth.isLoggedIn) return
+  await Promise.all(banners.map(async (n) => {
+    const status = await signoffRequestStatus(auth, n.data.event_id, n.data.request_id)
+    if (status && status !== 'pending') onSignoffClosed({ request_id: n.data.request_id })
+  }))
+}
+
 // Bind (or rebind) the socket the shared notification stream
 // listens on. The pooled socket object is different per auth
 // token, so a set-once guard would keep listening on the
@@ -82,11 +123,13 @@ export function bindPushSocket(sock) {
   if (socket) {
     socket.off('notification', onNotification)
     socket.off('referee_signoff_response', onSignoffClosed)
+    socket.off('connect', onReconnect)
   }
   socket = next
   if (socket) {
     socket.on('notification', onNotification)
     socket.on('referee_signoff_response', onSignoffClosed)
+    socket.on('connect', onReconnect)
   }
 }
 
@@ -148,23 +191,6 @@ export async function unsubscribePush(auth) {
     }
   } catch (err) {
     console.warn('[usePush] unsubscribe failed', err.message)
-  }
-}
-
-// Where one sign-off request stands, from the server: 'pending',
-// 'approved', 'declined' or 'expired', or null when it couldn't be asked.
-// It's the read the operator's dialog polls while it waits, and referees
-// are among the Control Room roles it lets in. A request that isn't on
-// that event any more (404) counts as closed.
-async function signoffRequestStatus(auth, eventId, requestId) {
-  if (!eventId || !requestId) return null
-  try {
-    const r = await auth.apiFetch(
-      `/api/events/${encodeURIComponent(eventId)}/dive-order/sign-off/request/${encodeURIComponent(requestId)}`,
-    )
-    return typeof r?.status === 'string' ? r.status : null
-  } catch (err) {
-    return err?.status === 404 ? 'expired' : null
   }
 }
 
