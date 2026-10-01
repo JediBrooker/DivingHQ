@@ -226,7 +226,10 @@ module.exports = function createSignoffRoutes({
           request_id: requestId,
           requested_by_name: managerName,
         },
-        action_url: `/control?signoff_request=${requestId}`,
+        // The event as well as the request (src/lib/signoffLink.js builds
+        // the same link for the dashboard), or the referee lands on an
+        // empty Control Room with nothing showing the order they approve.
+        action_url: `/control?event=${eventId}&signoff_request=${requestId}`,
         actions: [
           { action: "approve", title: "Approve" },
           { action: "deny",    title: "Deny"    },

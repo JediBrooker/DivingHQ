@@ -182,7 +182,10 @@ test("Cancel withdraws the request: the banner leaves the feed and a late Approv
   if (!dbReachable) { t.skip(); return; }
   await fresh();
   const requestId = await ask();
-  assert.equal((await bannersFor(requestId)).length, 1, "the referee has the banner");
+  const banners = await bannersFor(requestId);
+  assert.equal(banners.length, 1, "the referee has the banner");
+  // Tapping it opens the Control Room on this event, not "No event selected".
+  assert.equal(banners[0].action_url, `/control?event=${eventId}&signoff_request=${requestId}`);
 
   const cancel = await call("operator", "POST", `/api/events/${eventId}/dive-order/sign-off/request/${requestId}/cancel`);
   assert.equal(cancel.status, 200);

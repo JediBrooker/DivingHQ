@@ -36,6 +36,7 @@ import { useDiverSearch } from '@/composables/useDiverSearch'
 import { contributesToDiverChip, rankAttentionChips } from '@/composables/useAttention'
 import AttentionLane from '@/components/dashboard/AttentionLane.vue'
 import { fmtCloses, fmtDate, fmtRelative } from '@/lib/format'
+import { signoffLink } from '@/lib/signoffLink'
 import { usePlural } from '@/composables/usePlural'
 import { Building2, Calendar, MonitorPlay, Scale, UserCog } from '@lucide/vue'
 
@@ -452,7 +453,7 @@ const pulseChips = computed(() => {
         meta:  t('dashboard.referee.signoff_requested_by', {
           name: req.requested_by_name || t('dashboard.referee.meet_manager_fallback'),
         }),
-        to:    `/control?signoff_request=${req.request_id}`,
+        to:    signoffLink(req),
         urgency: 'urgent',
       })),
     })

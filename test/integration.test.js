@@ -13749,3 +13749,41 @@ test("dive-panel: the Control Room reads back a dive's stored scores", async (t)
     await compKit.cleanup(orgId, otherOrg);
   }
 });
+
+// The Control Room's Setup stage reads the readiness checklist, and the
+// Control Room is open to meet managers and referees as well as org
+// admins. Readiness was org admins and event delegates only, so a referee
+// following a sign-off request into the Control Room (and a meet manager
+// running it) got "You don't have permission" where the checklist and the
+// start order belong. Same people as the roster now, own org only.
+test("readiness: the Control Room's people read the checklist, nobody else", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const orgId = await compKit.org("ready");
+  const otherOrg = await compKit.org("readyx");
+  try {
+    const referee = await compKit.user(orgId, "RD Referee", ["referee"]);
+    const manager = await compKit.user(orgId, "RD Manager", ["meet_manager"]);
+    const admin = await compKit.user(orgId, "RD Admin", ["org_admin"]);
+    const judge = await compKit.user(orgId, "RD Judge", ["judge"]);
+    const diver = await compKit.user(orgId, "RD Diver", ["diver"]);
+    const outsider = await compKit.user(otherOrg, "RD Outsider", ["referee"]);
+    const sys = await compKit.user(otherOrg, "RD Sysadmin", [], { sysadmin: true });
+    const eventId = await compKit.event(orgId);
+    const url = `/api/events/${eventId}/readiness`;
+    for (const u of [referee, manager, admin, sys]) {
+      const res = await fetchJson("GET", url, { token: u.token });
+      assert.equal(res.status, 200, u.full_name);
+      assert.equal(res.body.event_id, eventId);
+      assert.ok(res.body.steps.some((s) => s.key === "sign_off"));
+    }
+    assert.equal((await fetchJson("GET", url, { token: outsider.token })).status, 404);
+    for (const u of [judge, diver]) {
+      assert.equal((await fetchJson("GET", url, { token: u.token })).status, 403, u.full_name);
+    }
+    assert.equal((await fetchJson("GET", url)).status, 403);
+    assert.equal((await fetchJson("GET", "/api/events/not-a-uuid/readiness", { token: manager.token })).status, 404);
+  } finally {
+    await compKit.cleanup(orgId, otherOrg);
+  }
+});
