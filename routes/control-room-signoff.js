@@ -5,6 +5,8 @@
 //   POST /api/events/:id/dive-order/sign-off/request     push to a referee
 //   GET  /api/events/:id/dive-order/sign-off/request/:requestId
 //                                                         where a request stands
+//   POST /api/events/:id/dive-order/sign-off/request/:requestId/cancel
+//                                                         the operator withdraws it
 //   POST /api/events/:id/dive-order/sign-off/respond     referee's answer
 //   POST /api/events/:id/dive-order/sign-off/credential  referee signs in
 //                                                         on the manager's laptop
@@ -47,15 +49,45 @@ async function requireReferee(pool, res, refereeId, orgId) {
   return r.rows[0];
 }
 
+// Every way a sign-off request stops being open goes through here:
+// answered (banner, notification, code, or the referee signing at the
+// laptop), withdrawn by the operator, replaced by a newer request or code,
+// or found out of time. Its notification is retired in the same statement.
+// That row used to stay 'sent' after the request had gone, so the
+// referee's phone kept an Approve / Deny banner for it (a reload put it
+// straight back) and Approve only earned "Request already expired".
+// 'expired' is final for a notification (acknowledging one doesn't revive
+// it, lib/push.js), so a /control?signoff_request= link can't dig it up
+// either. Narrow it with requestId and / or refereeId. `db` is the pool or
+// a transaction's client. Returns the rows it closed, for announceClosed.
+async function closeSignoffRequests(db, { eventId, requestId = null, refereeId = null, status, method = null }) {
+  const r = await db.query(
+    `WITH closed AS (
+       UPDATE referee_signoff_requests
+          SET status = $4, responded_at = now(),
+              decision_method = COALESCE($5, decision_method)
+        WHERE event_id = $1 AND status = 'pending'
+          AND ($2::uuid IS NULL OR id = $2)
+          AND ($3::uuid IS NULL OR target_referee_id = $3)
+        RETURNING id, event_id, requested_by, target_referee_id, notification_id
+     ),
+     banners AS (
+       UPDATE notifications n
+          SET status = 'expired'
+         FROM closed
+        WHERE n.id = closed.notification_id
+       RETURNING n.id
+     )
+     SELECT id, event_id, requested_by, target_referee_id FROM closed`,
+    [eventId, requestId, refereeId, status, method],
+  );
+  return r.rows;
+}
+
 // A new request or code supersedes whatever was still pending for the
 // event, so the manager's modal only ever tracks the latest one.
 function expirePendingSignoffs(pool, eventId) {
-  return pool.query(
-    `UPDATE referee_signoff_requests
-     SET status = 'expired', responded_at = now()
-     WHERE event_id = $1 AND status = 'pending'`,
-    [eventId],
-  );
+  return closeSignoffRequests(pool, { eventId, status: "expired" });
 }
 
 module.exports = function createSignoffRoutes({
@@ -77,20 +109,25 @@ module.exports = function createSignoffRoutes({
   }
   const router = express.Router();
 
-  // The referee answered (push, banner or code). The dialog waiting on
-  // it is on the laptop of whoever asked, and that laptop isn't in the
-  // event's room yet (the Control Room joins it at Live), so it goes to
-  // their own room as well. Best-effort: the dialog also asks
-  // GET .../request/:requestId while it waits, so a socket that was
-  // mid-reconnect still catches up. The referee's own room gets it too,
-  // so a dashboard they have open elsewhere drops the "Waiting for you"
-  // card straight away.
+  // A request closed: the referee answered (push, banner, code, or at the
+  // laptop), or it was withdrawn, replaced or ran out ('expired'). The
+  // dialog waiting on it is on the laptop of whoever asked, and that
+  // laptop isn't in the event's room yet (the Control Room joins it at
+  // Live), so it goes to their own room as well. Best-effort: the dialog
+  // also asks GET .../request/:requestId while it waits, so a socket that
+  // was mid-reconnect still catches up. The referee's own room gets it
+  // too, so every device of theirs drops the request's banner and a
+  // dashboard drops the "Waiting for you" card straight away. event_id
+  // rides along for a Setup stage that isn't the one that asked.
   function announceAnswer(reqRow, decision, byUserId) {
     try {
       push?.emitEvent?.(reqRow.event_id, "referee_signoff_response", {
-        request_id: reqRow.id, decision, by_user_id: byUserId,
-      }, { users: [reqRow.requested_by, byUserId] });
+        event_id: reqRow.event_id, request_id: reqRow.id, decision, by_user_id: byUserId,
+      }, { users: [reqRow.requested_by, reqRow.target_referee_id, byUserId] });
     } catch { /* silent */ }
+  }
+  function announceClosed(rows, decision, byUserId) {
+    for (const row of rows) announceAnswer(row, decision, byUserId);
   }
 
   // -------------------------------------------------------------
@@ -154,7 +191,7 @@ module.exports = function createSignoffRoutes({
       const ev = await loadUpcomingEvent(pool, req, res, { verb: "request sign-off" });
       if (!ev) return;
       if (!(await requireReferee(pool, res, referee_id, ev.org_id))) return;
-      await expirePendingSignoffs(pool, eventId);
+      announceClosed(await expirePendingSignoffs(pool, eventId), "expired", req.user.id);
 
       // Fetch the managers name now so we can put it in the
       // notification body without another join later.
@@ -255,6 +292,40 @@ module.exports = function createSignoffRoutes({
     }
   });
 
+  // POST /api/events/:id/dive-order/sign-off/request/:requestId/cancel
+  // The operator pressed Cancel to try another way. That used to only
+  // forget the request on the laptop: the referee's phone kept its
+  // Approve / Deny, and an Approve there still signed the order off while
+  // the Control Room had moved on and never noticed. Withdrawn now, so the
+  // phone drops the banner and a late Approve gets the 409 a replaced
+  // request already got. Answers with where the request ended up: if the
+  // referee got there first it says 'approved' (or 'declined'), and the
+  // dialog takes that answer instead of throwing it away. Any of the
+  // event's operators may withdraw it, same as sending a new one.
+  router.post("/api/events/:id/dive-order/sign-off/request/:requestId/cancel",
+              requireMeetController, async (req, res) => {
+    if (!isUuid(req.params.requestId)) return res.status(404).json({ error: "Request not found" });
+    try {
+      if (!(await ensureEventOrgGate(req, res, "id"))) return;
+      const closed = await closeSignoffRequests(pool, {
+        eventId: req.params.id, requestId: req.params.requestId, status: "expired",
+      });
+      if (closed.length) {
+        announceClosed(closed, "expired", req.user.id);
+        return res.json({ ok: true, status: "expired" });
+      }
+      const r = await pool.query(
+        "SELECT status FROM referee_signoff_requests WHERE id = $1 AND event_id = $2",
+        [req.params.requestId, req.params.id],
+      );
+      if (!r.rows.length) return res.status(404).json({ error: "Request not found" });
+      res.json({ ok: true, status: r.rows[0].status });
+    } catch (err) {
+      console.error("[Sign-Off Cancel Error]", err.message);
+      res.status(500).json({ error: "Failed to withdraw the request" });
+    }
+  });
+
   // POST /api/events/:id/dive-order/sign-off/respond
   //   Body: { request_id, decision: 'approve' | 'deny' }
   // Referee's SPA hits this from the in-app banner Approve/Deny
@@ -294,23 +365,18 @@ module.exports = function createSignoffRoutes({
         });
       }
       if (new Date(reqRow.expires_at) < new Date()) {
-        await client.query(
-          `UPDATE referee_signoff_requests
-           SET status = 'expired', responded_at = now()
-           WHERE id = $1`,
-          [request_id],
-        );
+        const lapsed = await closeSignoffRequests(client, {
+          eventId: req.params.id, requestId: request_id, status: "expired",
+        });
         await client.query("COMMIT");
-        return res.status(409).json({ error: "Request expired" });
+        announceClosed(lapsed, "expired", req.user.id);
+        return res.status(409).json({ error: "Request expired", status: "expired" });
       }
 
       const newStatus = decision === "approve" ? "approved" : "declined";
-      await client.query(
-        `UPDATE referee_signoff_requests
-         SET status = $1, decision_method = 'push', responded_at = now()
-         WHERE id = $2`,
-        [newStatus, request_id],
-      );
+      await closeSignoffRequests(client, {
+        eventId: req.params.id, requestId: request_id, status: newStatus, method: "push",
+      });
 
       if (decision === "approve") {
         await client.query(
@@ -478,6 +544,7 @@ module.exports = function createSignoffRoutes({
       // event signed off but the referee_signoff_requests row
       // stuck "pending" forever.
       const txClient = await pool.connect();
+      let closedPushes = [];
       try {
         await txClient.query("BEGIN");
         await txClient.query(
@@ -487,14 +554,9 @@ module.exports = function createSignoffRoutes({
            WHERE id = $2`,
           [user.id, req.params.id],
         );
-        await txClient.query(
-          `UPDATE referee_signoff_requests
-           SET status = 'approved', decision_method = 'credential',
-               responded_at = now()
-           WHERE event_id = $1 AND status = 'pending'
-             AND target_referee_id = $2`,
-          [req.params.id, user.id],
-        );
+        closedPushes = await closeSignoffRequests(txClient, {
+          eventId: req.params.id, refereeId: user.id, status: "approved", method: "credential",
+        });
         await txClient.query("COMMIT");
       } catch (err) {
         await txClient.query("ROLLBACK").catch(() => {});
@@ -502,6 +564,9 @@ module.exports = function createSignoffRoutes({
       } finally {
         txClient.release();
       }
+      // A request still out to this referee's phone is answered now, so
+      // its banner comes down.
+      announceClosed(closedPushes, "approved", user.id);
 
       res.json({
         ok: true,
@@ -555,7 +620,7 @@ module.exports = function createSignoffRoutes({
       const ev = await loadUpcomingEvent(pool, req, res, { verb: "generate code" });
       if (!ev) return;
       if (!(await requireReferee(pool, res, referee_id, ev.org_id))) return;
-      await expirePendingSignoffs(pool, eventId);
+      announceClosed(await expirePendingSignoffs(pool, eventId), "expired", req.user.id);
 
       // Retry on the unique-pending-code-per-referee index race.
       // Three tries is plenty, the cardinality is 1e6 and the
@@ -662,7 +727,7 @@ module.exports = function createSignoffRoutes({
     try {
       await client.query("BEGIN");
       const reqQ = await client.query(
-        `SELECT id, event_id, requested_by, expires_at, status
+        `SELECT id, event_id, requested_by, target_referee_id, expires_at, status
          FROM referee_signoff_requests
          WHERE target_referee_id = $1 AND handoff_code = $2
          ORDER BY created_at DESC LIMIT 1
@@ -679,19 +744,13 @@ module.exports = function createSignoffRoutes({
         return res.status(409).json({ error: `Code already ${reqRow.status}` });
       }
       if (new Date(reqRow.expires_at) < new Date()) {
-        await client.query(
-          `UPDATE referee_signoff_requests SET status='expired', responded_at=now() WHERE id=$1`,
-          [reqRow.id],
-        );
+        await closeSignoffRequests(client, { eventId: reqRow.event_id, requestId: reqRow.id, status: "expired" });
         await client.query("COMMIT");
         return res.status(409).json({ error: "Code expired" });
       }
-      await client.query(
-        `UPDATE referee_signoff_requests
-         SET status='approved', decision_method='code', responded_at=now()
-         WHERE id=$1`,
-        [reqRow.id],
-      );
+      await closeSignoffRequests(client, {
+        eventId: reqRow.event_id, requestId: reqRow.id, status: "approved", method: "code",
+      });
       await client.query(
         `UPDATE events
          SET dive_order_signed_off_at = now(),

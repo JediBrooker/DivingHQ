@@ -98,3 +98,38 @@ test("the e2e server runs with web push off", async ({ request }) => {
   const r = await request.get("/api/push/vapid-public-key");
   expect(await r.json()).toEqual({ key: "", enabled: false });
 });
+
+// The socket message that takes a closed request's banner down can miss a
+// phone (it was asleep, say). Approve then got "Could not record approve:
+// Request already expired" and the dead banner stayed. It goes now, with
+// a word on why, and a link to a request that's closed says so too.
+test("Approve on a request that closed while the phone wasn't listening takes the banner down", async ({ page, request }) => {
+  const event = await setup.createEvent(request, { adminToken: world.adminToken, name: "E2E Push Gone 3m" });
+  const res = await request.post(`/api/events/${event.id}/dive-order/sign-off/request`, {
+    headers: { Authorization: `Bearer ${world.adminToken}` },
+    data: { referee_id: world.referee.userId },
+  });
+  expect(res.status()).toBe(201);
+  const { request_id: requestId } = await res.json();
+
+  await signIn(page, world.referee.username);
+  await page.goto(`/control?event=${event.id}&signoff_request=${requestId}`);
+  const banner = page.locator(".notif-referee_signoff");
+  await expect(banner).toBeVisible({ timeout: 10_000 });
+  // Replaced behind the phone's back: what the server writes when a newer
+  // request comes in, minus the socket message the phone missed.
+  await setup.pool.query("UPDATE referee_signoff_requests SET status = 'expired' WHERE id = $1", [requestId]);
+  await setup.pool.query("UPDATE notifications SET status = 'expired' WHERE data->>'request_id' = $1", [requestId]);
+
+  await banner.locator(".notif-action-approve").click();
+  await expect(banner).toHaveCount(0);
+  await expect(page.locator(".notify-bar")).toContainText(/no longer open/i);
+  await expect(page.locator(".notify-bar-error")).toHaveCount(0);
+  const ev = await setup.pool.query("SELECT dive_order_signed_off_at FROM events WHERE id = $1", [event.id]);
+  expect(ev.rows[0].dive_order_signed_off_at).toBeNull();
+
+  // Opening the link again: nothing to answer, and it says so.
+  await page.reload();
+  await expect(page.locator(".notify-bar")).toContainText(/no longer open/i, { timeout: 10_000 });
+  await expect(banner).toHaveCount(0);
+});

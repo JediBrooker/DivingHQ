@@ -27,6 +27,10 @@
 //                  - put a referee sign-off request back in the
 //                    banner stack (the only place with Approve/Deny)
 //                    for a /control?signoff_request=... deep link.
+//                    Resolves false when the request is no longer open.
+//
+// The bound socket also drops a sign-off banner when its request closes
+// anywhere (referee_signoff_response, see onSignoffClosed).
 
 import { ref, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
@@ -51,6 +55,20 @@ let autoSubscribedFor = null
 // orphaning a closure on the old one.
 const onNotification = (n) => pushIntoList(n)
 
+// A sign-off request closed somewhere: answered on another device,
+// withdrawn by the operator, replaced by a newer request or code, or out
+// of time (routes/control-room-signoff.js tells the referee's own room
+// every time). Its banner has nothing left to answer, so it goes. It used
+// to stay up offering Approve / Deny until the referee tapped it and got
+// "Request already expired".
+const onSignoffClosed = (d) => {
+  const requestId = d?.request_id
+  if (!requestId) return
+  notifications.value = notifications.value.filter(
+    (n) => !(n.category === 'referee_signoff' && n.data?.request_id === requestId),
+  )
+}
+
 // Bind (or rebind) the socket the shared notification stream
 // listens on. The pooled socket object is different per auth
 // token, so a set-once guard would keep listening on the
@@ -60,9 +78,15 @@ const onNotification = (n) => pushIntoList(n)
 export function bindPushSocket(sock) {
   const next = sock || null
   if (next === socket) return
-  if (socket) socket.off('notification', onNotification)
+  if (socket) {
+    socket.off('notification', onNotification)
+    socket.off('referee_signoff_response', onSignoffClosed)
+  }
   socket = next
-  if (socket) socket.on('notification', onNotification)
+  if (socket) {
+    socket.on('notification', onNotification)
+    socket.on('referee_signoff_response', onSignoffClosed)
+  }
 }
 
 // Most browsers refuse to subscribe to push from an http:// origin.
@@ -235,6 +259,10 @@ export function usePush({ socket: sock } = {}) {
     } catch { /* silent */ }
   }
 
+  // Resolves true when the request's banner is up, false when the server
+  // has no open notification for it (answered, withdrawn, replaced or out
+  // of time: those are retired with the request), null when it couldn't
+  // be asked.
   async function showSignoff(requestId) {
     if (!requestId || !auth.isLoggedIn) return false
     const match = (n) => n?.category === 'referee_signoff' && n.data?.request_id === requestId
@@ -245,7 +273,9 @@ export function usePush({ socket: sock } = {}) {
         // acked it while the request itself is still waiting.
         const rows = await auth.apiFetch('/api/notifications/me?limit=50')
         n = (rows || []).find(match)
-      } catch { /* silent, same as recent() */ }
+      } catch {
+        return null
+      }
     }
     if (n) pushIntoList(n)
     return !!n
