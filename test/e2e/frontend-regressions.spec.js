@@ -186,6 +186,10 @@ test("A6-05 the offline banner shows when the connection drops", async ({ page, 
       await page.evaluate(() => window.__sockets.forEach((s) => s.close()));
       await expect(page.locator(".offline-banner")).toBeVisible({ timeout: 10_000 });
       await expect(page.locator(".offline-banner")).toContainText(/Offline/);
+      // And the time has to run. The label read Date.now() inside a
+      // computed, which Vue never re-runs for the clock, so the rehearsal's
+      // judge phones said "Offline for 0s" a minute into an outage.
+      await expect(page.locator(".offline-banner")).toContainText(/Offline for ([3-9]|\d{2,})s/, { timeout: 8_000 });
     } finally {
       await context.setOffline(false);
     }

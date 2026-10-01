@@ -16,7 +16,7 @@
  * also wait on an `enabled` flag from useOutbox, which went away when
  * the outbox became always-on, so the banner silently never showed.
  */
-import { computed, ref } from 'vue'
+import { computed, ref, watch, onBeforeUnmount } from 'vue'
 import { useOutbox } from '@/composables/useOutbox'
 import { retryFailedActions } from '@/composables/useHttpOutbox'
 
@@ -37,12 +37,28 @@ async function retryFailed() {
   try { await retryFailedActions() } finally { retrying.value = false }
 }
 
-// Human-readable elapsed time since disconnect. Updates every
-// minute via the composable's 30s refresh tick; resolution to the
-// minute is fine for the user-facing display.
+// Our own clock for the "Offline for ..." label. A computed doesn't re-run
+// for Date.now(), only for refs, so the label got worked out once at the
+// moment of the drop and said "0s" until the phone came back, however long
+// that took. Ticks once a second, and only while we're offline.
+const now = ref(Date.now())
+let ticker = null
+function stopTicker() {
+  if (ticker) clearInterval(ticker)
+  ticker = null
+}
+watch(isOffline, (offline) => {
+  stopTicker()
+  if (!offline) return
+  now.value = Date.now()
+  ticker = setInterval(() => { now.value = Date.now() }, 1000)
+}, { immediate: true })
+onBeforeUnmount(stopTicker)
+
+// Human-readable elapsed time since disconnect.
 const offlineDurationLabel = computed(() => {
   if (!offlineSince.value) return ''
-  const elapsedSec = Math.floor((Date.now() - offlineSince.value.getTime()) / 1000)
+  const elapsedSec = Math.max(0, Math.floor((now.value - offlineSince.value.getTime()) / 1000))
   if (elapsedSec < 60) return `${elapsedSec}s`
   const mins = Math.floor(elapsedSec / 60)
   if (mins < 60) return `${mins}m`
