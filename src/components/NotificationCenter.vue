@@ -260,8 +260,13 @@ async function onDismiss(n, ev) {
 .notif-actions {
   display: flex; gap: 0.4rem; margin-top: 0.7rem;
 }
+/* WCAG 2.5.5 again: these are the buttons that do the work, and a referee
+   answers them on a phone at the poolside. They were about 30px tall next
+   to the 44px ✕. */
 .notif-action {
   flex: 1; padding: 0.4rem 0.7rem;
+  min-height: 44px;
+  display: inline-flex; align-items: center; justify-content: center;
   font-family: var(--font-display, sans-serif);
   font-weight: 700; font-size: 11.5px;
   letter-spacing: 0.06em; text-transform: uppercase;

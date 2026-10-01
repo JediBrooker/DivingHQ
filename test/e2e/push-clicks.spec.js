@@ -133,3 +133,26 @@ test("Approve on a request that closed while the phone wasn't listening takes th
   await expect(page.locator(".notify-bar")).toContainText(/no longer open/i, { timeout: 10_000 });
   await expect(banner).toHaveCount(0);
 });
+
+// A referee answers this at the poolside on a phone. Approve and Deny were
+// 30px tall next to a 44px dismiss ✕, under the 44px touch target the ✕
+// (and WCAG 2.5.5) already go by.
+test("the sign-off banner's Approve and Deny are full-size touch targets on a phone", async ({ page, request }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const event = await setup.createEvent(request, { adminToken: world.adminToken, name: "E2E Push Targets 3m" });
+  const res = await request.post(`/api/events/${event.id}/dive-order/sign-off/request`, {
+    headers: { Authorization: `Bearer ${world.adminToken}` },
+    data: { referee_id: world.referee.userId },
+  });
+  expect(res.status()).toBe(201);
+  const { request_id: requestId } = await res.json();
+
+  await signIn(page, world.referee.username);
+  await page.goto(`/control?event=${event.id}&signoff_request=${requestId}`);
+  const banner = page.locator(".notif-referee_signoff", { hasText: "E2E Push Targets 3m" });
+  await expect(banner).toBeVisible({ timeout: 10_000 });
+  for (const sel of [".notif-action-approve", ".notif-action-deny", ".notif-dismiss"]) {
+    const box = await banner.locator(sel).boundingBox();
+    expect(box.height, sel).toBeGreaterThanOrEqual(44);
+  }
+});
