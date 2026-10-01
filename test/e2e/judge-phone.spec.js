@@ -245,7 +245,9 @@ test("banners on the judge screen stay clear of the keypad, Submit and Signal Re
 
 // Real phone sizes. The two iPhones are the smallest the judges use and
 // have to fit the whole pad with no scrolling; the original SE is the
-// floor and may scroll, but its keys still meet the 44px minimum.
+// floor, where the header may scroll inside itself, but its keys still
+// meet the 44px minimum. judge-pad-fit.spec.js has the Safari-sized
+// viewports, a long dive and a flagged referee.
 const PHONES = [
   { name: "iPhone 13", width: 390, height: 664, fits: true },
   { name: "iPhone SE 3rd gen", width: 375, height: 667, fits: true },
@@ -295,12 +297,14 @@ test("the keypad keeps thumb-sized keys on small phones", async ({ browser, requ
           expect(box.y, `${c.name}: ${sel} is on screen`).toBeGreaterThanOrEqual(0);
         }
         if (c.fits) {
-          // Everything on one screen: nothing to scroll.
-          const overflow = await page.evaluate(() => {
-            const el = document.querySelector(".judge-layout");
+          // Everything on one screen: nothing to scroll, the pad or the
+          // header inside it (which gives way on the smallest phones).
+          const overflow = await page.evaluate(() => [".judge-layout", ".judge-header"].map((sel) => {
+            const el = document.querySelector(sel);
             return el.scrollHeight - el.clientHeight;
-          });
-          expect(overflow, `${c.name}: the pad fits`).toBeLessThanOrEqual(1);
+          }));
+          expect(overflow[0], `${c.name}: the pad fits`).toBeLessThanOrEqual(1);
+          expect(overflow[1], `${c.name}: the header fits`).toBeLessThanOrEqual(1);
         }
         // The header links are still there and still tappable.
         for (const link of ["Analysis", "Dashboard"]) {

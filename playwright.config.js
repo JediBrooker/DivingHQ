@@ -80,9 +80,9 @@ module.exports = defineConfig({
     video: "retain-on-failure",
   },
   projects: [
-    // Mobile-Safari project, runs only the mobile-safari.spec.js
-    // file by default (testMatch keeps it out of the regular
-    // chromium project) using Playwright's iPhone 13 device
+    // Mobile-Safari project, runs the mobile-safari.spec.js file
+    // (testMatch keeps it out of the regular chromium project), and
+    // judge-pad-fit.spec.js (see below), using Playwright's iPhone 13 device
     // profile + the WebKit engine. WebKit is the actual rendering
     // engine that ships in iOS Safari, so CSS quirks (font-size
     // auto-zoom, safe-area-inset behaviour, backdrop-filter
@@ -121,9 +121,12 @@ module.exports = defineConfig({
         ...devices["Pixel 7"],
       },
     },
+    // judge-pad-fit.spec.js runs here as well as in chromium: whether the
+    // judge pad fits an iPhone is a WebKit question first. It makes its
+    // own phone contexts, so the iPhone 13 below doesn't apply to it.
     {
       name: "mobile-safari",
-      testMatch: /mobile-safari\.spec\.js$/,
+      testMatch: /(mobile-safari|judge-pad-fit)\.spec\.js$/,
       use: {
         ...devices["iPhone 13"],
         // Newer WebKit features (dvh, safe-area-inset, :has()) all

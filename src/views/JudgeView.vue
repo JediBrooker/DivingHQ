@@ -189,6 +189,15 @@ const signalingOthers = computed(() => {
 })
 const panelInCount = computed(() => Object.keys(panelScores.value).length)
 
+// On the smallest phones the header scrolls inside itself (see the phone
+// styles at the bottom). A judge who scrolled it down to the panel
+// shouldn't meet the next diver half way down it.
+const headerEl = ref(null)
+watch(
+  () => activeDiver.value && `${activeDiver.value.competitor_id}:${activeDiver.value.round_number}`,
+  () => { if (headerEl.value) headerEl.value.scrollTop = 0 },
+)
+
 // Synchro role, derived from this judge's position in the panel.
 // Lets the judge see whether they should be scoring Diver A's
 // execution, Diver B's execution, or the synchronisation. The seat map
@@ -874,7 +883,7 @@ const submitLabel = computed(() => {
       <span v-if="holdReason" class="hold-reason">{{ holdReason }}</span>
     </div>
     <!-- Header -->
-    <div class="judge-header">
+    <div ref="headerEl" :class="['judge-header', finished ? 'is-finished' : '']">
       <!-- One slim row for who's judging and the two ways out. They used
            to stack down the right-hand side, and on a phone that wrapped
            under the diver's name and took ~100px from the keypad. The
@@ -930,21 +939,25 @@ const submitLabel = computed(() => {
            judge's own tile so they can read the spread including
            their own contribution at a glance. -->
       <div v-if="activeDiver && panelSize" class="judge-panel">
-        <!-- Other-judge signal alert. Surfaces the moment another
-             panel member taps "Signal Referee", so this judge
-             knows to pause or coordinate before locking their
-             score in. Hidden when no other judge has flagged. -->
-        <div v-if="signalingOthers.length" class="judge-panel-alert">
-          🚩
-          <template v-if="signalingOthers.length === 1">
-            Judge {{ signalingOthers[0] }} flagged the referee
-          </template>
-          <template v-else>
-            Judges {{ signalingOthers.join(', ') }} flagged the referee
-          </template>
-        </div>
         <div class="judge-panel-label">
-          DIVE PANEL · {{ panelInCount }} / {{ panelSize }}
+          <span class="judge-panel-count">DIVE PANEL · {{ panelInCount }} / {{ panelSize }}</span>
+          <!-- Another panel member tapped Signal Referee, so this judge
+               knows to pause or coordinate before locking their score in.
+               It shares the label's row on purpose: as a strip of its own
+               it added a line, which pushed Signal Referee off a small
+               phone and moved the keypad down mid-entry. The flagging
+               judge's tile pulses red as well. -->
+          <span v-if="signalingOthers.length" class="judge-panel-alert" role="status">
+            <span class="signal-dot" aria-hidden="true"></span>
+            <span class="judge-panel-alert-text">
+              <template v-if="signalingOthers.length === 1">
+                Judge {{ signalingOthers[0] }} flagged the referee
+              </template>
+              <template v-else>
+                Judges {{ signalingOthers.join(', ') }} flagged the referee
+              </template>
+            </span>
+          </span>
         </div>
         <div class="judge-panel-tiles">
           <div v-for="n in panelSize" :key="n"
@@ -1132,8 +1145,10 @@ const submitLabel = computed(() => {
      keypad, submit/clear, signal) fits one screen. position:fixed
      escapes any global body styling the public auth views inject. The
      keypad flexes to take the leftover space, but only down to its
-     floor (see .keypad); past that this scrolls rather than squash the
-     keys, which is how an iPhone 13 ended up with 18px keys. */
+     floor (see .keypad). Past that, on a phone, the header scrolls
+     inside itself (see the phone styles), and only past the header's
+     own floor does this scroll. Squashing the keys instead is how an
+     iPhone 13 ended up with 18px keys. */
   position: fixed;
   inset: 0;
   display: flex;
@@ -1149,6 +1164,9 @@ const submitLabel = computed(() => {
   border-top: env(safe-area-inset-top, 0px) solid var(--status-band);
   padding-left: env(safe-area-inset-left, 0px);
   padding-right: env(safe-area-inset-right, 0px);
+  /* The keypad's floor: four rows of 56px keys plus the gaps and padding
+     (48px keys on a phone, see the phone styles). */
+  --keypad-floor: calc(4 * 56px + 3 * 0.5rem + 1rem);
 }
 
 .btn-back-judge {
@@ -1253,14 +1271,20 @@ const submitLabel = computed(() => {
 }
 .judge-id-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .judge-id-num { flex-shrink: 0; white-space: nowrap; }
+/* One line whatever the dive. A long description (5355B is "Reverse 2½
+   Somersaults 2½ Twists Pike") used to wrap onto a line of its own and
+   push Signal Referee off a small phone, so it shortens instead. The
+   code and DD never do, and the code is what names the dive anyway. */
 .dive-info-row {
   display: flex;
   align-items: center;
-  gap: 0.35rem 0.75rem;
-  flex-wrap: wrap;
+  gap: 0.75rem;
   margin-top: 0.625rem;
+  min-width: 0;
 }
 .dive-pill {
+  flex-shrink: 0;
+  white-space: nowrap;
   font-family: var(--font-mono);
   font-size: 12px;
   padding: 0.2rem 0.625rem;
@@ -1271,7 +1295,14 @@ const submitLabel = computed(() => {
 }
 .dive-pill.code { color: var(--text); font-weight: 500; font-size: 13px; }
 .dive-pill.dd { color: var(--cyan); border-color: rgba(6,182,212,0.3); background: var(--cyan-dim); }
-.dive-desc { font-size: 11px; color: var(--text-3); font-family: var(--font-mono); }
+.dive-desc {
+  flex: 1 1 0;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 11px; color: var(--text-3); font-family: var(--font-mono);
+}
 
 /* Live panel display: every judge's tile fills as their score
    lands. The current judge's own tile gets a cyan ring so they
@@ -1281,12 +1312,20 @@ const submitLabel = computed(() => {
   padding-top: 0.6rem;
   border-top: 1px solid var(--border);
 }
+/* The label row holds the flag notice too, so it has a fixed line
+   height: the notice coming and going mustn't move anything below it. */
 .judge-panel-label {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-width: 0;
+  line-height: 14px;
   font-family: var(--font-display); font-size: 9px; font-weight: 700;
   letter-spacing: 0.25em; text-transform: uppercase;
   color: var(--text-3);
   margin-bottom: 0.4rem;
 }
+.judge-panel-count { flex-shrink: 0; white-space: nowrap; }
 .judge-panel-tiles {
   display: flex;
   flex-wrap: wrap;
@@ -1347,21 +1386,18 @@ const submitLabel = computed(() => {
 .judge-panel-tile.signaled .judge-panel-tile-label,
 .judge-panel-tile.signaled .judge-panel-tile-score { color: var(--red); }
 
-/* Banner above the panel calling out which other judge(s)
-   have flagged. Stays compact so it doesn't push the keypad
-   below the fold on phones / small tablets. */
+/* Which other judge(s) flagged the referee, at the end of the panel's
+   label row. Red and bold so it reads at a glance; on a narrow phone it
+   shortens before the count does. */
 .judge-panel-alert {
-  display: flex; align-items: center; gap: 0.4rem;
-  margin-bottom: 0.5rem;
-  padding: 0.4rem 0.6rem;
-  background: var(--red-dim);
-  border: 1px solid var(--red);
-  border-inline-start-width: 3px;
-  border-radius: var(--radius-sm);
-  font-family: var(--font-mono); font-size: 11px; font-weight: 700;
+  display: inline-flex; align-items: center; gap: 0.35rem;
+  min-width: 0;
+  font-family: var(--font-mono); font-size: 10.5px; font-weight: 700;
+  letter-spacing: 0; text-transform: none;
   color: var(--red);
-  animation: judgePanelSignalPulse 1.4s ease-in-out infinite;
 }
+.judge-panel-alert .signal-dot { flex-shrink: 0; width: 7px; height: 7px; }
+.judge-panel-alert-text { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 
 .score-zone {
   display: flex;
@@ -1397,11 +1433,14 @@ const submitLabel = computed(() => {
      screens but no longer dominate the page on a desktop. Caps
      at a sensible width and height so the layout stays balanced
      against the dive header above. */
-  flex: 1 1 auto;
-  /* The floor: four rows of 56px keys plus the gaps and padding. The
-     rows used to be minmax(0, ...) with min-height 0, so a tall header
-     squashed them to nothing. */
-  min-height: calc(4 * 56px + 3 * 0.5rem + 1rem);
+  /* Starts at its floor and grows into whatever room is left. The rows
+     used to be minmax(0, ...) with min-height 0, so a tall header
+     squashed them to nothing. Starting at the floor rather than at its
+     full height means it never takes room from the header either: the
+     header only gives way (see the phone styles) once the keypad is
+     down to the floor. */
+  flex: 1 1 var(--keypad-floor);
+  min-height: var(--keypad-floor);
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   /* Cap key height so they don't balloon on tall screens, and
@@ -1592,21 +1631,51 @@ const submitLabel = computed(() => {
    one-handed. The keys stay at least 48px tall (over Apple's 44pt
    and WCAG 2.5.5's 44px) so a wet thumb doesn't mash two at once,
    and the header, score and footers tighten so that the whole pad
-   fits an iPhone SE or iPhone 13 screen without scrolling. The
-   budget on a 664px screen is roughly: header 205 (240 for a
-   synchro pair in a team event, the tallest), score 83, keypad
-   222 at the floor, submit 63, signal 56. Whatever's left grows
-   the keys. Anything smaller than that scrolls.
+   fits an iPhone 13 or 13 mini in Safari, or an iPhone SE added to
+   the home screen, without scrolling. A long dive description, a
+   synchro pair in a team event or another judge flagging the referee
+   doesn't change that: none of them adds a line any more. The budget
+   on a 629px screen is roughly: header 187 (220 for the synchro pair),
+   score 80, keypad 222 at its floor, submit 63, signal 56. Whatever's
+   left grows the keys.
+
+   Shorter than that (an SE in Safari is 548px, the first SE 568px)
+   the header gives way rather than the keys: it scrolls inside itself
+   down to its own floor, the judge's row, the event, the diver and the
+   dive, so the keypad, Submit and Signal Referee all stay whole on the
+   screen. The rehearsal had Submit half off the bottom of an SE and
+   Signal Referee below it, which a judge had to scroll the whole pad
+   to reach.
    ========================================================= */
 @media (max-width: 600px) {
-  .judge-header { padding: 0.5rem 0.85rem; }
+  .judge-layout { --keypad-floor: calc(4 * 48px + 3 * 0.4rem + 0.7rem); }
+  .judge-header {
+    padding: 0.5rem 0.85rem;
+    flex: 0 1 auto;
+    min-height: 7.6rem;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    /* When it does scroll, a soft shadow on the edge with more behind it
+       says so. The covers ride with the content and the shadows don't,
+       so a shadow only shows where the covers have scrolled away. */
+    background:
+      linear-gradient(var(--bg-2) 30%, transparent) top / 100% 24px no-repeat local,
+      linear-gradient(transparent, var(--bg-2) 70%) bottom / 100% 24px no-repeat local,
+      radial-gradient(farthest-side at 50% 0, rgba(15, 23, 42, 0.22), transparent) top / 100% 8px no-repeat scroll,
+      radial-gradient(farthest-side at 50% 100%, rgba(15, 23, 42, 0.22), transparent) bottom / 100% 8px no-repeat scroll,
+      var(--bg-2);
+  }
+  /* The finished notice is the whole point of the screen then, and the
+     keypad is shut, so that header keeps its height and the pad scrolls. */
+  .judge-header.is-finished { flex-shrink: 0; }
   .judge-topbar { margin-bottom: 0.15rem; }
   .diver-name { font-size: 20px; }
   .dive-info-row { margin-top: 0.4rem; }
   /* Tighter tracking so a team event's two tags share one line. */
   .synchro-role, .judge-team-line { margin-top: 0.35rem; padding: 0.2rem 0.5rem; letter-spacing: 0.06em; }
   .judge-panel { margin-top: 0.45rem; padding-top: 0.45rem; }
-  .judge-panel-label { margin-bottom: 0.3rem; }
+  .judge-panel-label { margin-bottom: 0.3rem; letter-spacing: 0.2em; }
   /* Share the row rather than a fixed 52px each, so a 7-judge panel
      stays on one line on a phone. Still a fixed size for a given
      panel, so nothing moves as the scores come in. */
@@ -1616,7 +1685,6 @@ const submitLabel = computed(() => {
   .score-hint { margin-top: 0.1rem; }
   .keypad {
     grid-template-rows: repeat(4, minmax(48px, 76px));
-    min-height: calc(4 * 48px + 3 * 0.4rem + 0.7rem);
     max-width: none;
     padding: 0.35rem 0.6rem;
     gap: 0.4rem;
@@ -1633,6 +1701,22 @@ const submitLabel = computed(() => {
 /* Short phones (an iPhone SE or 13 in Safari, a phone in landscape):
    a smaller score number buys the keys their room. */
 @media (max-height: 700px) {
-  .score-number { font-size: 56px; }
+  .score-zone { padding-block: 0.25rem; }
+  .score-number { font-size: 54px; }
+}
+
+/* The shortest (an SE in Safari, the first SE): the score number
+   shrinks again and loses its caption, and the header tightens, so it
+   has to give way as little as it can. What it hides first is the
+   panel's tiles, under the label row (and the flag notice in it). */
+@media (max-width: 600px) and (max-height: 600px) {
+  .score-zone { padding-block: 0.15rem; }
+  .score-number { font-size: 46px; }
+  .score-hint { display: none; }
+  .submit-footer { padding-block: 0.3rem; }
+  .event-name { margin-bottom: 0.1rem; }
+  .dive-info-row { margin-top: 0.25rem; }
+  .judge-panel { margin-top: 0.3rem; padding-top: 0.3rem; }
+  .judge-panel-label { margin-bottom: 0.2rem; }
 }
 </style>
