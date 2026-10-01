@@ -710,6 +710,10 @@
  *   total either: nothing to chase yet. The page leaves it out.
  * @property {{ active_diver_name: string|null, active_round: number|null,
  *   divers_until_me: number|null, my_position_in_round: number|null }} queue
+ *   divers_until_me counts the dives before the diver's next one in dive
+ *   order, across a round change too: the one on the board until its panel
+ *   is in, then everyone between. 0 is "you're up"; null before anyone is
+ *   on the board.
  */
 
 /**

@@ -184,3 +184,76 @@ test("no lead and no medals claimed for a diver with no score", async (t) => {
   assert.equal(day.standing.rank, 1);
   assert.equal(day.targets.gold.achieved, true);
 });
+
+test("divers until you're up counts across a round change", async (t) => {
+  if (!dbReachable) return t.skip("Postgres not reachable");
+  await reset();
+  const [ada, bea, cat, zoe] = divers;
+  const until = async (diver) => (await meetDay(diver)).queue.divers_until_me;
+
+  assert.equal(await until(zoe), null, "nothing is up yet");
+
+  // Round 1 in order. The active diver counts until their dive is in.
+  await putUp(ada, 1);
+  assert.equal(await until(zoe), 3);
+  assert.equal(await until(bea), 1);
+  await scoreDive(ada, 1, 7);
+  await putUp(bea, 1);
+  assert.equal(await until(zoe), 2);
+  assert.equal(await until(bea), 0, "Bea is up");
+  await scoreDive(bea, 1, 7);
+  // Bea's dive is in and still on the board: her next one is round 2,
+  // with Cat and Zoë still to go in round 1 and Ada ahead of her in 2.
+  assert.equal(await until(bea), 3);
+  await putUp(cat, 1);
+  assert.equal(await until(bea), 3);
+  assert.equal(await until(zoe), 1);
+  await scoreDive(cat, 1, 7);
+  await putUp(zoe, 1);
+  assert.equal(await until(zoe), 0, "Zoë is up");
+  assert.equal(await until(bea), 2);
+
+  // Zoë's round 1 is in, still on the board. Three dive before her in
+  // round 2, not four.
+  await scoreDive(zoe, 1, 7);
+  assert.equal(await until(zoe), 3);
+  assert.equal(await until(ada), 0, "Ada opens round 2, nobody is left before her");
+
+  await putUp(ada, 2);
+  assert.equal(await until(zoe), 3);
+  await scoreDive(ada, 2, 7);
+  assert.equal(await until(zoe), 2, "Ada's round 2 is in");
+  await putUp(bea, 2);
+  await scoreDive(bea, 2, 7);
+  await putUp(cat, 2);
+  await scoreDive(cat, 2, 7);
+  await putUp(zoe, 2);
+  await scoreDive(zoe, 2, 7);
+  assert.equal(await until(zoe), 3, "end of round 2, same again");
+
+  // The referee calls a redive on Zoë's round 2: her next dive is that
+  // one again, and she's the one up.
+  await pool.query(
+    "UPDATE scores SET status = 'redive' WHERE event_id = $1 AND competitor_id = $2 AND round_number = 2",
+    [eventId, zoe.id]);
+  let day = await meetDay(zoe);
+  assert.equal(day.next_dive.round_number, 2);
+  assert.equal(day.queue.divers_until_me, 0);
+  await pool.query(
+    "UPDATE scores SET status = 'active' WHERE event_id = $1 AND competitor_id = $2 AND round_number = 2",
+    [eventId, zoe.id]);
+  day = await meetDay(zoe);
+  assert.equal(day.next_dive.round_number, 3);
+
+  // A diver who's withdrawn isn't in anyone's count.
+  await pool.query(
+    "UPDATE competitor_dive_lists SET withdrawn_at = now() WHERE event_id = $1 AND competitor_id = $2",
+    [eventId, bea.id]);
+  try {
+    assert.equal(await until(zoe), 2);
+  } finally {
+    await pool.query(
+      "UPDATE competitor_dive_lists SET withdrawn_at = NULL WHERE event_id = $1 AND competitor_id = $2",
+      [eventId, bea.id]);
+  }
+});
