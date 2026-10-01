@@ -829,15 +829,18 @@ function recordMarksFor(d) {
 // phone whose socket dropped for a few seconds lost the scores sent
 // meanwhile the same way. So every time we ask who's up (opening an event,
 // each reconnect) we ask with an ack, and the server answers with what it
-// has stored for that dive (get_active_diver in routes/socket.js).
+// has stored for that dive (get_active_diver in routes/socket.js). A
+// correction to that dive asks again too, see score_corrected below.
+// `refresh: false` is for a caller that has just re-pulled the standings
+// itself, so a full panel coming back doesn't cost a second fetch.
 //
 // What lands while the answer is on its way is newer than it. A score keeps
 // its live value; a referee Failed or Cap is applied over the stored values
 // as well (holding a held award again changes nothing); a re-dive means the
 // answer may be the old panel, so it's thrown away. The judge screen's
 // restoreDiveScores works the same way.
-function askActiveDiver(eventId) {
-  const ask = { eventId, arrived: new Set(), call: null, redive: false }
+function askActiveDiver(eventId, { refresh = true } = {}) {
+  const ask = { eventId, refresh, arrived: new Set(), call: null, redive: false }
   pendingAsk = ask
   socket.emit('get_active_diver', { event_id: eventId }, (reply) => {
     // a later ask, or a different event, has taken over
@@ -868,7 +871,7 @@ function restoreLiveScores(reply, ask) {
     .map(([judge_number, value]) => ({ value, judge_number }))
     .sort((a, b) => a.judge_number - b.judge_number)
   // A full panel means the dive has its total, same as the live path.
-  if (liveJudgeScores.value.length >= panelSize.value) scheduleRefresh()
+  if (ask.refresh && liveJudgeScores.value.length >= panelSize.value) scheduleRefresh()
 }
 
 // All listeners below go through useSocketEvent so they're torn
@@ -1011,10 +1014,19 @@ useSocketEvent(socket, 'meet_resumed', (data) => {
 // re-pull so totals reflect it. Fresh, or a correction made within a few
 // seconds of the last refresh (or at all, once the recap is showing) got
 // the cached numbers back.
+//
+// The Control Room's History has a dive as soon as its panel is in, while
+// the diver is still up here, so the correction is often to the dive under
+// the performer. Its pills (and the trim and Dive Total off them) kept the
+// old value until the next diver, so ask for the stored panel again. The
+// payload has no judge number to patch one pill with. After a referee call
+// the stored values are already held to it, so asking again changes nothing.
 useSocketEvent(socket, 'score_corrected', (data) => {
   if (data?.event_id) invalidateEventScores(data.event_id)
   if (data?.event_id !== currentEventId.value) return
   refreshData({ fresh: true })
+  // standings were just re-pulled, the answer needn't do it again
+  if (isActiveDive(data)) askActiveDiver(currentEventId.value, { refresh: false })
 })
 
 useSocketEvent(socket, 'final_score_announced', () => {

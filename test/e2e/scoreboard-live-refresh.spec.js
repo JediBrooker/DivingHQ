@@ -103,6 +103,61 @@ test("a score correction reaches an open scoreboard, live and on the recap", asy
   await setup.deleteOrg(orgId);
 });
 
+// The Control Room's History lists a dive as soon as its panel is in, while
+// that diver is still up on the boards, so a slip (J3 keyed 2 for a 7) gets
+// put right before the next diver. The correction only ever re-pulled the
+// standings: the pill under the performer kept the 2.0, and the trim and
+// Dive Total that went with it, until the next diver came up.
+test("a correction to the dive still on the board fixes its pills and Dive Total", async ({ page, request, baseURL }) => {
+  test.setTimeout(120_000);
+  const { orgId, adminToken } = await setup.createOrgAndAdmin(request, { countryCode: "AUS", orgName: "Scoreboard Live Fix" });
+  try {
+    const { event, diveId, divers, judges } = await liveEvent(request, {
+      orgId, adminToken, name: "Live Fix Event", diverNames: ["AAA Slip"],
+    });
+    expect(await emitAck(baseURL, adminToken, "set_active_diver", {
+      event_id: event.id, competitor_id: divers[0].userId, round_number: 1,
+      full_name: "AAA Slip", diverName: "AAA Slip", dd: 1.5, status: "ready",
+    })).toMatchObject({ ok: true });
+
+    await page.goto(`/scoreboard/${event.id}`);
+    await expect(page.locator(".sb-name").first()).toContainText("AAA Slip", { timeout: 10_000 });
+    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(1000);
+
+    // J3's 2 and one 8 trimmed: (6 + 7 + 8) x 1.5 = 31.5
+    await setup.submitPanelScores({
+      baseURL, judges, eventId: event.id, competitorId: divers[0].userId, roundNumber: 1, diveId,
+      scores: [6, 7, 2, 8, 8],
+    });
+    const pills = page.locator(".sb-live-judges .j-score");
+    const total = page.locator(".sb-live-total-value");
+    const standing = page.locator(".sb-col-standings .standing").first();
+    await expect(pills).toHaveText(["6.0", "7.0", "2.0", "8.0", "8.0"], { timeout: 6_000 });
+    await expect(total).toHaveText("31.5");
+    await expect(standing.locator(".standing-score")).toHaveText("31.5", { timeout: 8_000 });
+
+    // Put right while AAA Slip is still up. Now J1's 6 and one 8 go:
+    // (7 + 7 + 8) x 1.5 = 33.0
+    const { rows } = await setup.pool.query(
+      "SELECT id FROM scores WHERE event_id = $1 AND competitor_id = $2 AND judge_id = $3",
+      [event.id, divers[0].userId, judges[2].userId],
+    );
+    const res = await request.put(`/api/scores/${rows[0].id}`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
+      data: { score: 7, reason: "J3 keyed 2 for a 7" },
+    });
+    expect(res.status()).toBe(200);
+    await expect(standing.locator(".standing-score")).toHaveText("33.0", { timeout: 8_000 });
+    await expect(pills).toHaveText(["6.0", "7.0", "7.0", "8.0", "8.0"], { timeout: 6_000 });
+    await expect(total).toHaveText("33.0");
+    await expect(pills.nth(0)).toHaveClass(/j-dropped/);
+    await expect(pills.nth(2)).not.toHaveClass(/j-dropped/);
+  } finally {
+    await setup.deleteOrg(orgId);
+  }
+});
+
 // The live pills were the Nth score to arrive in slot N (under judge N's
 // name), trimmed flat, and the synchro dive total skipped the x0.6.
 test("live pills sit under their own judge, and a synchro total uses the WA trim and 0.6", async ({ page, request, baseURL }) => {
