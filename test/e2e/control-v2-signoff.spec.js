@@ -232,3 +232,50 @@ test("a second request replaces the first on the referee's phone", async ({ page
   await expect(banner).toHaveCount(0);
   await ctx.close();
 });
+
+// The dialog closed (Esc, ✕) with a request still out to the referee.
+// The request stays open on purpose, the checklist says who it's waiting
+// on, but when the referee approved, nothing on the Setup stage was
+// listening: it kept offering Referee Sign Off until a reload.
+test("the dialog closed with a request out: the referee's Approve still moves Setup on", async ({ page, request }) => {
+  test.setTimeout(90_000);
+  const event = await eventAtSignoff(request, "Signoff Closed");
+  const { primary, dialog } = await openSignoff(page, event);
+  const requestId = await sendPush(page, dialog);
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+  await expect(page.locator(".setup-step", { hasText: "Referee sign-off" })).toContainText(/Waiting for Rhea Referee/, { timeout: 6_000 });
+
+  const res = await request.post(`/api/events/${event.id}/dive-order/sign-off/respond`, {
+    headers: asReferee(), data: { request_id: requestId, decision: "approve" },
+  });
+  expect(res.status()).toBe(200);
+  await expect(primary).toContainText(/Start Event/i, { timeout: 8_000 });
+  await expect(page.locator(".setup-step", { hasText: "Referee sign-off" })).toHaveClass(/done/);
+});
+
+// A second operator asked: the answer goes to their own room and the
+// event's, never this laptop's user room. The Setup stage listens on the
+// event's room now.
+test("someone else's request, approved: this laptop's Setup moves on too", async ({ page, request }) => {
+  test.setTimeout(90_000);
+  const event = await eventAtSignoff(request, "Signoff Elsewhere");
+  const other = await setup.insertUser({ orgId: world.orgId, role: "meet_manager", fullName: "Other Operator" });
+  const otherToken = (await setup.loginAs(request, other.username)).token;
+
+  await signIn(page, world.username);
+  await page.goto(`/control?event=${event.id}`);
+  const primary = page.locator(".setup-primary");
+  await expect(primary).toContainText(/Referee Sign Off/i, { timeout: 10_000 });
+  await page.waitForLoadState("networkidle");
+
+  const asked = await request.post(`/api/events/${event.id}/dive-order/sign-off/request`, {
+    headers: { Authorization: `Bearer ${otherToken}` }, data: { referee_id: world.referee.userId },
+  });
+  expect(asked.status()).toBe(201);
+  const res = await request.post(`/api/events/${event.id}/dive-order/sign-off/respond`, {
+    headers: asReferee(), data: { request_id: (await asked.json()).request_id, decision: "approve" },
+  });
+  expect(res.status()).toBe(200);
+  await expect(primary).toContainText(/Start Event/i, { timeout: 8_000 });
+});

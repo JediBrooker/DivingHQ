@@ -9,6 +9,8 @@ import { ref, computed, watch, onMounted, defineAsyncComponent } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { orderWorkflowStateFor } from '@/composables/useControlStage'
 import { competingQueue } from '@/composables/useLivePools'
+import { useSocket } from '@/composables/useSocket'
+import { useSocketEvent } from '@/composables/useSocketEvent'
 import CheckInModal from '@/components/control/CheckInModal.vue'
 import RandomiseDrawModal from '@/components/control/RandomiseDrawModal.vue'
 
@@ -48,17 +50,29 @@ const stepLabel = computed(
     })[stage.value] || '',
 )
 
-async function loadReadiness() {
+// quiet: refresh what's on screen without swapping it for "Loading…" (or
+// an error) in between, for the re-reads that happen while the operator
+// is looking at the checklist.
+async function loadReadiness({ quiet = false } = {}) {
   if (!props.event?.id) return
-  loading.value = true
-  error.value = ''
+  if (!quiet) {
+    loading.value = true
+    error.value = ''
+  }
   try {
     readiness.value = await auth.apiFetch(`/api/events/${props.event.id}/readiness`)
+    error.value = ''
+    // The stage's button reads the event row's stamp, and an approval this
+    // screen didn't hear about (its socket was down) only shows up here.
+    const at = readiness.value?.dive_order_signed_off_at
+    if (at && !props.event.dive_order_signed_off_at) props.event.dive_order_signed_off_at = at
   } catch (err) {
-    error.value = err?.message || 'Failed to load readiness'
-    readiness.value = null
+    if (!quiet) {
+      error.value = err?.message || 'Failed to load readiness'
+      readiness.value = null
+    }
   } finally {
-    loading.value = false
+    if (!quiet) loading.value = false
   }
 }
 
@@ -116,6 +130,41 @@ function onSignedOff(patch) {
   else props.event.dive_order_signed_off_at = new Date().toISOString()
   signoffOpen.value = false
   loadReadiness()
+}
+
+// The dialog only hears the request it's waiting on, and only while it's
+// open. Close it with a request still out (the checklist then says who
+// it's waiting on), or have another operator send one, and the referee's
+// Approve reached nobody here: Setup kept offering Referee Sign Off until
+// a reload. So the stage listens too, on the event's room (the Control
+// Room only joins it once the event is Live, and the answer goes to the
+// asker's own room besides). A Cancel withdraws its request on the
+// server, so an approval arriving here is one that counts.
+const socket = useSocket()
+function joinEventRoom() {
+  if (props.event?.id) socket.emit('subscribe_event', { event_id: props.event.id })
+}
+watch(() => props.event?.id, joinEventRoom, { immediate: true })
+useSocketEvent(socket, 'referee_signoff_response', (d) => {
+  if (!props.event || String(d?.event_id) !== String(props.event.id)) return
+  if (d.decision === 'approved') {
+    if (!props.event.dive_order_signed_off_at) {
+      onSignedOff({ dive_order_signed_off_at: new Date().toISOString(), dive_order_signed_off_by: d.by_user_id ?? null })
+    }
+  } else if (!signoffOpen.value) {
+    // Declined or withdrawn: the "Waiting for ..." line goes.
+    loadReadiness({ quiet: true })
+  }
+})
+// Back from a socket drop: the room has to be joined again, and an answer
+// sent meanwhile only shows in the readiness read.
+useSocketEvent(socket, 'connect', () => {
+  joinEventRoom()
+  loadReadiness({ quiet: true })
+})
+function onSignoffClosed() {
+  signoffOpen.value = false
+  loadReadiness({ quiet: true })
 }
 
 watch(() => props.event?.id, loadReadiness, { immediate: true })
@@ -199,7 +248,7 @@ watch(
     <SignoffModal
       v-if="signoffOpen"
       :event="event"
-      @close="signoffOpen = false"
+      @close="onSignoffClosed"
       @signed-off="onSignedOff"
     />
   </div>

@@ -8,11 +8,11 @@
  * Lifecycle contract: the parent mounts this with v-if, so a
  * fresh mount = a fresh modal session (mode reset to 'push',
  * no pending request). The referee_signoff_response socket
- * listener is registered synchronously here via useSocketEvent.
- * It only needs to live while a request can be pending, and a
- * pending request can only exist while this modal is mounted
- * (closing clears it), so scoping the listener to this component
- * preserves the pre-extraction behaviour.
+ * listener here only settles the request this session is waiting
+ * on. Closing the dialog leaves that request open on the server
+ * (the checklist shows who it's waiting on), and SetupStage keeps
+ * listening for an approval after this unmounts. Cancel withdraws
+ * it on the server instead (cancelPending).
  *
  * The socket message reaches us through our own user room (the
  * event's room is only joined once the event is Live, and sign-off
