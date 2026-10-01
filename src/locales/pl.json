@@ -773,7 +773,8 @@
     "failed_one": "1 niepowodzenie",
     "failed_many": "{n} niepowodzeń",
     "conflict_one": "1 konflikt oczekuje na weryfikację",
-    "conflict_many": "{n} konfliktów oczekuje na weryfikację"
+    "conflict_many": "{n} konfliktów oczekuje na weryfikację",
+    "offline": "Brak połączenia"
   },
   "inbox": {
     "title": "Skrzynka odbiorcza",

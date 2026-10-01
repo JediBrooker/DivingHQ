@@ -762,7 +762,8 @@
     "failed_one": "1건이 실패했습니다",
     "failed_many": "{n}건이 실패했습니다",
     "conflict_one": "충돌 1건이 검토 대기 중입니다",
-    "conflict_many": "{n}건의 충돌이 검토 대기 중입니다"
+    "conflict_many": "{n}건의 충돌이 검토 대기 중입니다",
+    "offline": "오프라인입니다"
   },
   "inbox": {
     "title": "받은 편지함",

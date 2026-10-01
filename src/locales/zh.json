@@ -762,7 +762,8 @@
     "failed_one": "1 个失败的操作",
     "failed_many": "{n} 个失败的操作",
     "conflict_one": "1 个冲突待审查",
-    "conflict_many": "{n} 个冲突待审查"
+    "conflict_many": "{n} 个冲突待审查",
+    "offline": "已离线"
   },
   "inbox": {
     "title": "收件箱",

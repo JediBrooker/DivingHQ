@@ -762,7 +762,8 @@
     "failed_one": "1件が失敗しました",
     "failed_many": "{n}件が失敗しました",
     "conflict_one": "1件の競合が確認待ちです",
-    "conflict_many": "{n}件の競合が確認待ちです"
+    "conflict_many": "{n}件の競合が確認待ちです",
+    "offline": "オフラインです"
   },
   "inbox": {
     "title": "受信箱",

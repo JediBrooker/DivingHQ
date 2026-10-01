@@ -762,7 +762,8 @@
     "failed_one": "1 başarısız işlem",
     "failed_many": "{n} başarısız işlem",
     "conflict_one": "1 çakışma inceleme bekliyor",
-    "conflict_many": "{n} çakışma inceleme bekliyor"
+    "conflict_many": "{n} çakışma inceleme bekliyor",
+    "offline": "Çevrimdışı"
   },
   "inbox": {
     "title": "Gelen Kutusu",

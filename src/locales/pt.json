@@ -773,7 +773,8 @@
     "failed_one": "1 falha",
     "failed_many": "{n} falhas",
     "conflict_one": "1 conflito pendente de revisão",
-    "conflict_many": "{n} conflitos pendentes de revisão"
+    "conflict_many": "{n} conflitos pendentes de revisão",
+    "offline": "Sem ligação"
   },
   "inbox": {
     "title": "Caixa de entrada",

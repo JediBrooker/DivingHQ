@@ -762,7 +762,8 @@
     "failed_one": "1 neuspjelo",
     "failed_many": "{n} neuspjelih",
     "conflict_one": "1 sukob čeka na pregled",
-    "conflict_many": "{n} sukoba čeka na pregled"
+    "conflict_many": "{n} sukoba čeka na pregled",
+    "offline": "Izvan mreže"
   },
   "inbox": {
     "title": "Pristigle poruke",

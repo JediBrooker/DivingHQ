@@ -762,7 +762,8 @@
     "failed_one": "1 failed",
     "failed_many": "{n} failed",
     "conflict_one": "1 conflict pending review",
-    "conflict_many": "{n} conflicts pending review"
+    "conflict_many": "{n} conflicts pending review",
+    "offline": "Offline"
   },
   "inbox": {
     "title": "Inbox",

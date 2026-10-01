@@ -773,7 +773,8 @@
     "failed_one": "1 feilet",
     "failed_many": "{n} feilet",
     "conflict_one": "1 konflikt venter på gjennomgang",
-    "conflict_many": "{n} konflikter venter på gjennomgang"
+    "conflict_many": "{n} konflikter venter på gjennomgang",
+    "offline": "Frakoblet"
   },
   "inbox": {
     "title": "Innboks",

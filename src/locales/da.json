@@ -773,7 +773,8 @@
     "failed_one": "1 fejl",
     "failed_many": "{n} fejl",
     "conflict_one": "1 konflikt afventer gennemgang",
-    "conflict_many": "{n} konflikter afventer gennemgang"
+    "conflict_many": "{n} konflikter afventer gennemgang",
+    "offline": "Frakoblet"
   },
   "inbox": {
     "title": "Indbakke",

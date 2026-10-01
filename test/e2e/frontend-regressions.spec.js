@@ -184,12 +184,22 @@ test("A6-05 the offline banner shows when the connection drops", async ({ page, 
     await context.setOffline(true);
     try {
       await page.evaluate(() => window.__sockets.forEach((s) => s.close()));
-      await expect(page.locator(".offline-banner")).toBeVisible({ timeout: 10_000 });
-      await expect(page.locator(".offline-banner")).toContainText(/Offline/);
+      const banner = page.locator(".offline-banner");
+      await expect(banner).toBeVisible({ timeout: 10_000 });
+      await expect(banner).toContainText(/Offline/);
+      // The banner is a polite live region, so anything in it that changes
+      // gets read out. Once the clock ran, a judge on VoiceOver or TalkBack
+      // heard "Offline for 1s", "Offline for 2s"... every second of the
+      // outage, queued up ahead of the keypad's own feedback. What a screen
+      // reader gets has to hold still while the number on screen moves.
+      await expect(banner).toHaveAttribute("aria-live", "polite");
+      const heard = await banner.ariaSnapshot();
+      expect(heard).toContain("Offline");
       // And the time has to run. The label read Date.now() inside a
       // computed, which Vue never re-runs for the clock, so the rehearsal's
       // judge phones said "Offline for 0s" a minute into an outage.
-      await expect(page.locator(".offline-banner")).toContainText(/Offline for ([3-9]|\d{2,})s/, { timeout: 8_000 });
+      await expect(banner).toContainText(/Offline for ([3-9]|\d{2,})s/, { timeout: 8_000 });
+      expect(await banner.ariaSnapshot(), "the clock isn't in what gets announced").toBe(heard);
     } finally {
       await context.setOffline(false);
     }

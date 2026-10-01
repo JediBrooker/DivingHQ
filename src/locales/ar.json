@@ -762,7 +762,8 @@
     "failed_one": "1 فشل",
     "failed_many": "{n} حالات فشل",
     "conflict_one": "1 تعارض قيد المراجعة",
-    "conflict_many": "{n} تعارضات قيد المراجعة"
+    "conflict_many": "{n} تعارضات قيد المراجعة",
+    "offline": "غير متصل"
   },
   "inbox": {
     "title": "صندوق الوارد",

@@ -762,7 +762,8 @@
     "failed_one": "1 nabigo",
     "failed_many": "{n} nabigo",
     "conflict_one": "1 konflikto ang nakabinbin para sa pagsusuri",
-    "conflict_many": "{n} konflikto ang nakabinbin para sa pagsusuri"
+    "conflict_many": "{n} konflikto ang nakabinbin para sa pagsusuri",
+    "offline": "Walang koneksyon"
   },
   "inbox": {
     "title": "Kahon ng mensahe",

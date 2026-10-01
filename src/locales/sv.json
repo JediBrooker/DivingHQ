@@ -773,7 +773,8 @@
     "failed_one": "1 misslyckad",
     "failed_many": "{n} misslyckade",
     "conflict_one": "1 konflikt väntar på granskning",
-    "conflict_many": "{n} konflikter väntar på granskning"
+    "conflict_many": "{n} konflikter väntar på granskning",
+    "offline": "Offline"
   },
   "inbox": {
     "title": "Inkorg",

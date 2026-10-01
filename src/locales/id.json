@@ -762,7 +762,8 @@
     "failed_one": "1 gagal",
     "failed_many": "{n} gagal",
     "conflict_one": "1 konflik menunggu peninjauan",
-    "conflict_many": "{n} konflik menunggu peninjauan"
+    "conflict_many": "{n} konflik menunggu peninjauan",
+    "offline": "Offline"
   },
   "inbox": {
     "title": "Kotak masuk",

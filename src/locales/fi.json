@@ -773,7 +773,8 @@
     "failed_one": "1 epäonnistunut",
     "failed_many": "{n} epäonnistunutta",
     "conflict_one": "1 ristiriita odottaa tarkistusta",
-    "conflict_many": "{n} ristiriitaa odottaa tarkastelua"
+    "conflict_many": "{n} ristiriitaa odottaa tarkastelua",
+    "offline": "Ei yhteyttä"
   },
   "inbox": {
     "title": "Saapuneet",

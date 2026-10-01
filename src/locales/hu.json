@@ -773,7 +773,8 @@
     "failed_one": "1 sikertelen művelet",
     "failed_many": "{n} sikertelen művelet",
     "conflict_one": "1 konfliktus felülvizsgálatra vár",
-    "conflict_many": "{n} konfliktus felülvizsgálatra vár"
+    "conflict_many": "{n} konfliktus felülvizsgálatra vár",
+    "offline": "Offline"
   },
   "inbox": {
     "title": "Bejövő üzenetek",

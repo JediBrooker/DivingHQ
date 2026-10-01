@@ -762,7 +762,8 @@
     "failed_one": "1 selhalo",
     "failed_many": "{n} selhalo",
     "conflict_one": "1 konflikt čeká na prověření",
-    "conflict_many": "{n} konfliktů čeká na prověření"
+    "conflict_many": "{n} konfliktů čeká na prověření",
+    "offline": "Offline"
   },
   "inbox": {
     "title": "Schránka",

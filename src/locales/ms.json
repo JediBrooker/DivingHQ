@@ -762,7 +762,8 @@
     "failed_one": "1 tindakan gagal",
     "failed_many": "{n} tindakan gagal",
     "conflict_one": "1 konflik menunggu semakan",
-    "conflict_many": "{n} konflik menunggu semakan"
+    "conflict_many": "{n} konflik menunggu semakan",
+    "offline": "Luar talian"
   },
   "inbox": {
     "title": "Peti masuk",
