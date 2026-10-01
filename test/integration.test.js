@@ -8460,6 +8460,63 @@ test("referee calls hold the awards that land after them (WA 8.6.6, 8.4.7)", asy
   }
 });
 
+// The rehearsal re-dived a dive and J3 gave the second one the same 7.5 as
+// the first. The row went from 'redive' back to active, but the audit log
+// stopped at the referee's marker, so nobody could tell from it whether J3
+// scored the new dive at all. The judges who changed their mark got a row.
+test("a judge who gives the same mark after a redive is still on the audit log", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const orgId = await compKit.org("rescore");
+  const socks = [];
+  try {
+    const referee = await compKit.user(orgId, "Rescore Referee", ["referee"]);
+    const j1 = await compKit.user(orgId, "Rescore Judge One", ["judge"]);
+    const j2 = await compKit.user(orgId, "Rescore Judge Two", ["judge"]);
+    const diver = await compKit.user(orgId, "Rescore Diver", ["diver"]);
+    const eventId = await compKit.event(orgId, { status: "Live", total_rounds: 1 });
+    await compKit.enter(eventId, diver.id, await compKit.dives(1), { display_order: 1 });
+    await compKit.panel(eventId, [j1, j2]);
+    const [rs, s1, s2] = await Promise.all([referee, j1, j2].map((u) => compKit.socket(u.token)));
+    socks.push(rs, s1, s2);
+    const dive = { event_id: eventId, competitor_id: diver.id, round_number: 1 };
+    const trail = async (judge) => (await pool.query(
+      `SELECT action::text AS action, old_score::float AS old, new_score::float AS new, reason
+         FROM score_audit_log WHERE event_id = $1 AND judge_id = $2
+        ORDER BY created_at`,
+      [eventId, judge.id],
+    )).rows;
+
+    assert.equal((await compKit.ask(s1, "submit_score", { ...dive, score: 7 })).ok, true);
+    assert.equal((await compKit.ask(s2, "submit_score", { ...dive, score: 7.5 })).ok, true);
+    assert.deepEqual(await compKit.ask(rs, "referee_redive", dive), { ok: true });
+    assert.equal((await compKit.ask(s1, "submit_score", { ...dive, score: 6 })).ok, true);
+    assert.equal((await compKit.ask(s2, "submit_score", { ...dive, score: 7.5 })).ok, true);
+
+    const status = (await pool.query(
+      "SELECT status FROM scores WHERE event_id = $1", [eventId],
+    )).rows.map((r) => r.status);
+    assert.deepEqual(status, ["active", "active"], "both rows are back from the redive");
+    assert.deepEqual((await trail(j1)).map((r) => [r.action, r.old, r.new]), [
+      ["insert", null, 7], ["update", 7, 7], ["update", 7, 6],
+    ]);
+    const j2Trail = await trail(j2);
+    assert.deepEqual(j2Trail.map((r) => [r.action, r.old, r.new]), [
+      ["insert", null, 7.5], ["update", 7.5, 7.5], ["update", 7.5, 7.5],
+    ], "J2's second 7.5 is there, not just the referee's marker");
+    assert.equal(j2Trail[1].reason, "referee:redive");
+    assert.match(j2Trail[2].reason || "", /redive/i, "and it reads as the re-score, not a no-op");
+
+    // A plain resend of the same mark, with no redive in between, still
+    // changes nothing and logs nothing.
+    assert.equal((await compKit.ask(s2, "submit_score", { ...dive, score: 7.5 })).ok, true);
+    assert.equal((await trail(j2)).length, 3);
+  } finally {
+    socks.forEach((s) => s.close());
+    await compKit.cleanup(orgId);
+  }
+});
+
 // The same thing through the sockets a meet actually uses. The rehearsal
 // found "403C 0.00" in the national, club and personal books after a
 // Failed call. A dive that holds a book has to lose it the moment the call

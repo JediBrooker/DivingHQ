@@ -32,7 +32,7 @@ const createIdempotency = require("../lib/idempotency");
 const { readSessionCookie } = require("../lib/session-cookie");
 const { trustProxyHops } = require("../lib/trust-proxy");
 const { announceRecords } = require("../lib/records");
-const { insertScoreAudit, isValidScore } = require("../lib/score-audit");
+const { insertScoreAudit, isValidScore, rescoreReason } = require("../lib/score-audit");
 const { isUuid } = require("../lib/uuid");
 const { isSessionClaims } = require("../lib/middleware");
 // Held as the module object and called through it, never destructured:
@@ -859,7 +859,7 @@ module.exports = function attachSocket({
         }
 
         const prior = await client.query(
-          `SELECT id, score, score_source FROM scores
+          `SELECT id, score, score_source, status FROM scores
            WHERE event_id=$1 AND competitor_id=$2 AND round_number=$3 AND judge_id=$4
            FOR UPDATE`,
           [data.event_id, data.competitor_id, round, judgeId],
@@ -867,6 +867,12 @@ module.exports = function attachSocket({
         const existing = prior.rows[0] || null;
         isInsert = !existing;
         oldScore = existing ? Number(existing.score) : null;
+        // A row the referee set aside for a redive. Scoring it again is a
+        // change even when the mark comes out the same: the row goes back
+        // to active and the new dive counts. Without this a judge who gave
+        // the same 7.5 twice left nothing on the audit log after the
+        // referee's marker, as if they'd never scored the new dive.
+        const wasRedive = existing?.status === "redive";
 
         // Manual-fallback reconciliation (P5). If an operator
         // already typed this judge's score during an outage, the
@@ -980,7 +986,7 @@ module.exports = function attachSocket({
           scoreId = upsert.rows[0].id;
         }
 
-        if (isInsert || oldScore !== score || reconciledManual) {
+        if (isInsert || oldScore !== score || reconciledManual || wasRedive) {
           // Audit row records both clocks (migration 054). For
           // legacy online-only clients actor_local_time is NULL and
           // server_committed_at is now(), those rows look like the
@@ -996,7 +1002,7 @@ module.exports = function attachSocket({
             oldScore, newScore: score,
             actorId: socket.userId, ip: clientIp(socket),
             userAgent: socket.handshake.headers["user-agent"] || null,
-            reason: refereeNote,
+            reason: rescoreReason({ wasRedive, note: refereeNote }),
             actorLocalTime, committedNow: true,
           });
         }

@@ -34,7 +34,7 @@
 const express = require("express");
 const createIdempotency = require("../lib/idempotency");
 const { announceRecords } = require("../lib/records");
-const { scoreBodyError, insertScoreAudit } = require("../lib/score-audit");
+const { scoreBodyError, insertScoreAudit, rescoreReason } = require("../lib/score-audit");
 const { scoreAuthorityRefusal } = require("../lib/middleware");
 const { isUuid } = require("../lib/uuid");
 
@@ -138,7 +138,7 @@ module.exports = function createManualScoresRouter({
         //                                  the operator should use the
         //                                  score-correction path instead)
         const prior = await client.query(
-          `SELECT id, score, score_source
+          `SELECT id, score, score_source, status
            FROM scores
            WHERE event_id=$1 AND competitor_id=$2 AND round_number=$3 AND judge_id=$4
            FOR UPDATE`,
@@ -146,6 +146,9 @@ module.exports = function createManualScoresRouter({
         );
 
         let scoreId, isInsert, oldScore;
+        // Set aside by a referee redive: typing the mark back in is a
+        // change even when it's the same value (see submit_score).
+        const wasRedive = prior.rows[0]?.status === "redive";
         if (!prior.rows.length) {
           isInsert = true;
           oldScore = null;
@@ -191,7 +194,7 @@ module.exports = function createManualScoresRouter({
         // actor_user_id is the OPERATOR (not the judge whose row this
         // is) so the audit log clearly reads "operator X typed this
         // score on judge Y's behalf at 14:32".
-        if (isInsert || oldScore !== scoreVal) {
+        if (isInsert || oldScore !== scoreVal || wasRedive) {
           const trimmedReason = typeof reason === "string"
             ? reason.trim().slice(0, 500)
             : null;
@@ -200,7 +203,7 @@ module.exports = function createManualScoresRouter({
             action: isInsert ? "insert" : "update",
             oldScore, newScore: scoreVal,
             actorId: req.user.id, ip: req.ip, userAgent: req.headers["user-agent"] || null,
-            reason: trimmedReason || "manual entry (P5 fallback)",
+            reason: rescoreReason({ wasRedive, note: trimmedReason || "manual entry (P5 fallback)" }),
             actorLocalTime, committedNow: true,
           });
         }
