@@ -9,6 +9,9 @@
 const { test, expect } = require("@playwright/test");
 const speakeasy = require("speakeasy");
 const setup = require("./_setup");
+// trackSockets records every WebSocket the page opens, so a test can close
+// them (to force a reconnect) or check none were left open.
+const { trackSockets } = require("./_meetday");
 
 // Browser session via the API: page.request shares the page's cookie
 // jar, so the SPA boots signed in without driving the login form.
@@ -24,21 +27,6 @@ async function quiet(page) {
   await setup.bypassRoleTour(page);
   await page.addInitScript(() => {
     try { localStorage.setItem("setup.wizardDismissed.v1", "1"); } catch { /* ignore */ }
-  });
-}
-
-// Record every WebSocket the page opens, so a test can close them (to
-// force a reconnect) or check none were left open.
-async function trackSockets(page) {
-  await page.addInitScript(() => {
-    const Native = window.WebSocket;
-    window.__sockets = [];
-    window.WebSocket = class extends Native {
-      constructor(...args) {
-        super(...args);
-        window.__sockets.push(this);
-      }
-    };
   });
 }
 

@@ -20,7 +20,7 @@
 const path = require("node:path");
 const { test, expect } = require("@playwright/test");
 const setup = require("./_setup");
-const { signIn, liveEvent, emitAck, roomWatcher } = require("./_meetday");
+const { signIn, liveEvent, emitAck, roomWatcher, trackSockets } = require("./_meetday");
 
 test.describe.configure({ mode: "serial" });
 
@@ -71,22 +71,6 @@ async function outboxEntries(page) {
       all.onerror = () => { db.close(); resolve([]); };
     };
   }));
-}
-
-// Every WebSocket the page opens, so a test can drop them the way a phone
-// losing signal does. Going offline in the browser doesn't close one
-// that's already open.
-async function trackSockets(page) {
-  await page.addInitScript(() => {
-    const Native = window.WebSocket;
-    window.__sockets = [];
-    window.WebSocket = class extends Native {
-      constructor(...args) {
-        super(...args);
-        window.__sockets.push(this);
-      }
-    };
-  });
 }
 
 // The judge scores 7.5 with no signal, the event is finalised meanwhile,
