@@ -248,6 +248,9 @@ async function adoptOwnLiveEvent() {
     const mine = await auth.apiFetch('/api/judge/my-events')
     const live = Array.isArray(mine) ? mine.find((e) => e.status === 'Live') : null
     if (live && !eventIdFromUrl.value) {
+      // Picking the finished event back up means it's Live again (an
+      // undone finalise the broadcast didn't bring), so the notice goes.
+      reopenFinished(live.id)
       router.replace({ query: { ...route.query, event: live.id } })
     }
   } catch { /* stays on the waiting screen */ } finally {
@@ -282,30 +285,40 @@ function endJudgingEvent(eventId, { status = null, eventName = null, unrecorded 
       eventName: prev.eventName || eventName,
       unrecorded: unrecorded ?? prev.unrecorded,
     }
-    return
+  } else {
+    const onScreen = String(activeDiver.value?.event_id) === id ? activeDiver.value : null
+    finished.value = { eventId: id, status, eventName: eventName || onScreen?.eventName || null, unrecorded }
+    if (!finished.value.eventName) fillFinishedName(id)
+    diveSeq++
+    activeDiver.value = null
+    resetScore()
+    panelScores.value = {}
+    panelSignals.value = {}
+    signaled.value = false
+    judgeNumber.value = null
+    judgeLabel.value = user?.full_name || 'Judge'
+    isHeld.value = false
+    holdReason.value = ''
+    bigDisplayOpen.value = false
   }
-  const onScreen = String(activeDiver.value?.event_id) === id ? activeDiver.value : null
-  finished.value = { eventId: id, status, eventName: eventName || onScreen?.eventName || null, unrecorded }
-  if (!finished.value.eventName) fillFinishedName(id)
-  diveSeq++
-  activeDiver.value = null
-  resetScore()
-  panelScores.value = {}
-  panelSignals.value = {}
-  signaled.value = false
-  judgeNumber.value = null
-  judgeLabel.value = user?.full_name || 'Judge'
-  isHeld.value = false
-  holdReason.value = ''
-  bigDisplayOpen.value = false
-  if (eventIdFromUrl.value) {
+  // Both ways round, the notice already up included. If the URL still
+  // names this event it has to come off, or the page sits on it for good:
+  // adoptOwnLiveEvent and the poll only look while the URL names nothing.
+  // An event that's only some other one's (the judge has moved on) stays.
+  if (String(eventIdFromUrl.value) === id) {
     const query = { ...route.query }
     delete query.event
-    // adoptOwnLiveEvent won't look while the URL still names an event.
     router.replace({ query }).then(() => adoptOwnLiveEvent())
   } else {
     adoptOwnLiveEvent()
   }
+}
+
+// The finished event is Live again (an undone finalise), so it isn't
+// finished. Left up, the notice kept the keypad shut on a Live event until
+// a diver came, and a second finalise then found it "already on screen".
+function reopenFinished(eventId) {
+  if (finished.value?.eventId === String(eventId)) finished.value = null
 }
 
 // Only needed when neither the diver nor the caller had the name (a
@@ -369,6 +382,10 @@ function onScoreRefused(payload) {
 
 useSocketEvent(socket, 'event_status_changed', (d) => {
   if (d?.to === 'Live') {
+    // An undone finalise with no diver announced: nothing else would
+    // take the notice down, since the server dropped its diver at
+    // Completed and there's none to replay.
+    reopenFinished(d.event_id)
     adoptOwnLiveEvent()
     return
   }

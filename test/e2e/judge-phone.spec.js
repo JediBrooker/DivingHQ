@@ -544,3 +544,69 @@ test("an undone finalise puts the last diver back on the judge's phone", async (
     await setup.deleteOrg(orgId);
   }
 });
+
+// A finalise undone from the Manager with nobody announced after it, then
+// finalised again. The phone kept "Event finished" up through the undo
+// (the server drops its diver at Completed, so nothing replayed to take
+// it down), the second finish then found the notice "already on screen"
+// and left ?event= where it was, and with the URL naming an event nothing
+// looked for the next panel again. It sat on "Event finished" until it
+// was reloaded. The undo is done twice here, the second time in the
+// database only, the way a phone that missed the broadcast sees it.
+test("a finalise undone with no diver, then finalised again, still lets the next panel in", async ({ browser, request, baseURL }) => {
+  test.setTimeout(90_000);
+  const { orgId, adminToken } = await setup.createOrgAndAdmin(request, { countryCode: "AUS", orgName: "Judge Refinalise" });
+  const A = await liveEvent(request, { orgId, adminToken, name: "Refinalise First", diverNames: ["MMM First"] });
+  const B = await setup.createEvent(request, { adminToken, name: "Refinalise Next", total_rounds: 1, number_of_judges: 5, height: "3m" });
+  await setup.assignJudges(request, { adminToken, eventId: B.id, judgeIds: A.judges.map((j) => j.userId) });
+  const next = await setup.insertUser({ orgId, role: "diver", fullName: "NNN Next" });
+  await setup.insertDiveList({ eventId: B.id, competitorId: next.userId, dives: [{ round_number: 1, dive_id: A.diveId }] });
+
+  const { ctx, page } = await phone(browser, 390, 664);
+  const notice = page.getByTestId("judge-finished");
+  const finalise = async () => {
+    await setup.setEventStatus(request, { adminToken, eventId: A.event.id, status: "Completed" });
+    await expect(notice).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator(".keypad .key", { hasText: /^8$/ })).toBeDisabled();
+    await expect(page).toHaveURL(/\/judge$/);
+  };
+  // Live again and on screen again, waiting for a diver with the keypad
+  // open, not still saying it's finished.
+  const backOnA = async () => {
+    await expect(page).toHaveURL(new RegExp(`/judge\\?event=${A.event.id}$`), { timeout: 15_000 });
+    await expect(notice).toHaveCount(0);
+    await expect(page.locator(".diver-name")).toContainText(/Waiting/);
+    await expect(page.locator(".keypad .key", { hasText: /^8$/ })).toBeEnabled();
+  };
+  try {
+    await signIn(page, A.judges[0].username);
+    await page.goto(`/judge?event=${A.event.id}`);
+    expect(await emitAck(baseURL, adminToken, "set_active_diver", activeDiver(A.event, A.divers[0], "MMM First")))
+      .toMatchObject({ ok: true });
+    await expect(page.locator(".diver-name")).toContainText("MMM First", { timeout: 8_000 });
+
+    await finalise();
+    await setup.setEventStatus(request, { adminToken, eventId: A.event.id, status: "Live" });
+    await backOnA();
+    await finalise();
+
+    // No broadcast this time. The phone finds it when it wakes up (or on
+    // the slow poll, which is why the wait above runs to 15s).
+    await setup.pool.query("UPDATE events SET status = 'Live' WHERE id = $1", [A.event.id]);
+    await page.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
+    await backOnA();
+    await finalise();
+
+    await setup.setEventStatus(request, { adminToken, eventId: B.id, status: "Live" });
+    expect(await emitAck(baseURL, adminToken, "set_active_diver", activeDiver({ ...B, name: "Refinalise Next" }, next, "NNN Next")))
+      .toMatchObject({ ok: true });
+    await expect(page).toHaveURL(new RegExp(`/judge\\?event=${B.id}$`), { timeout: 5_000 });
+    await expect(page.locator(".diver-name")).toContainText("NNN Next", { timeout: 5_000 });
+    await expect(notice).toHaveCount(0);
+    await expect(page.locator(".judge-id")).toContainText("— J1");
+    await expect(page.locator(".submit-btn")).toBeEnabled();
+  } finally {
+    await ctx.close();
+    await setup.deleteOrg(orgId);
+  }
+});
