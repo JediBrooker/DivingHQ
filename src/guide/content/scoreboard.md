@@ -90,8 +90,8 @@ Signed-in users reach **Judge Analysis** via the sidebar. Anonymous spectators s
 
 The cyan-tinted block in the centre column tells the audience and the diver themselves what they need to overtake the leaders.
 
-- **Chasing** — `Catch-up — N dives left · currently 3rd` with a row per podium target: `1st  Lead Name  avg 7.5`. The "avg" is the **average judge score** the diver needs across the remaining dives to close the gap, **rounded up to the next achievable half-point** (judges only score in halves, so 5.2 isn't a possible target — 5.5 is). When the math is impossible (would need straight 10s and still come up short), the row reads "not possible".
-- **Leading** — `Leading by +X.X` with the runner-up's catch-up math: what they'd need to overtake.
+- **Chasing** — `Catch-up — N dives left · currently 3rd` with a row per podium target: `1st  Lead Name  avg 7.5`. The "avg" is the **average judge score** the diver needs across the remaining dives to close the gap, **rounded up to the next achievable half-point** (judges only score in halves, so 5.2 isn't a possible target — 5.5 is). When the math is impossible (would need straight 10s and still come up short), the row reads "not possible". "Dives left" counts the dives the diver hasn't been scored on yet, so once the dive on the board has its scores it drops out of the count. After a diver's last dive the block reads `Catch-up — no dives left · currently 3rd`, with no rows.
+- **Leading** — `Leading by +X.X` with the runner-up's catch-up math: what they'd need to overtake, over the dives the runner-up has left. A runner-up with none left reads "can't overtake".
 - **Pre** — `No completed dives yet. Lead Diver leads at X.X` — shown for the first diver of the meet.
 
 ## Per-round leaderboard pop

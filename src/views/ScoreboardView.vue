@@ -15,6 +15,7 @@ import {
 import { diveDescription } from '@/composables/useDiveLabel'
 import { livePanel, heldAward } from '@/composables/useScoreTrim'
 import { sharedRanks, placeOf } from '@/lib/standings'
+import { divesLeft, scoreToClose } from '@/lib/catchUp'
 import { normaliseActiveDiver } from '@/lib/activeDiver'
 import { cachedFetch, invalidateEventScores } from '@/lib/idbCache'
 import { SCOREBOARD_LIVE_TTL_MS, SCOREBOARD_ARCHIVE_TTL_MS } from '@/lib/cache-policy'
@@ -1018,9 +1019,9 @@ const activeDiverRank = computed(() => {
 //   * gap to leader (or to runner-up if leading)
 //   * average dive total they need across remaining dives
 //   * average judge score per kept score those dives need
-// DD proxy is the active diver's current dive (we don't have the
-// full upcoming roster on the audience scoreboard, just the
-// state_update payload that drives the active block). Catch-up
+// The dives left, and the DD they average, come from the diver's rows
+// in Up Next (src/lib/catchUp.js); the dive on the board stands in for
+// the DD when those rows don't carry one. Catch-up
 // table mirrors the Control Room, surfaces the average judge score
 // needed across the remaining dives to reach 1st / 2nd / 3rd, with
 // "not possible" for targets that even straight 10s wouldn't catch.
@@ -1067,29 +1068,20 @@ const activeProjection = computed(() => {
   const numJudges   = parseInt(currentEvent.value?.number_of_judges) || 5
   const isSynchro   = currentEvent.value?.event_type === 'synchro_pair'
   const ddProxy     = parseFloat(subject.dd) || null
-  const remaining   = totalRounds
-    ? totalRounds - (parseInt(subject.round_number) || 1) + 1
-    : 0
   const mult = panelMultiplier(numJudges, isSynchro)
 
-  // Per-dive contribution if every judge scores X is X × mult × DD.
-  // So gap G across R dives at avg DD D solves to X = G / (mult × D
-  // × R). 10 is the ceiling, any X > 10 means straight 10s wouldn't
-  // close the gap.
-  //
-  // The displayed score rounds UP to the next 0.5 because judges can
-  // only score in half-point increments. 5.2 isn't a possible judge
-  // score, but 5.5 is. Rounded value is what the diver would need
-  // from EVERY judge on every remaining dive to mathematically
-  // guarantee closing the gap. `possible` stays tied to the raw
-  // value so a raw of 9.6 (rounds to 10.0, straight 10s, achievable)
-  // doesn't flip to "not possible".
-  function avgJudgeForGap(gap) {
-    if (gap <= 0)                   return { score: 0,    possible: true  }
-    if (remaining <= 0 || !ddProxy) return { score: null, possible: null  }
-    const raw = gap / (mult * ddProxy * remaining)
-    const rounded = Math.ceil(raw * 2) / 2
-    return { score: rounded, possible: raw <= 10 }
+  // What someone still has to dive. Their unscored rows in Up Next come
+  // with the standings, so a dive whose points are already in the
+  // standings isn't counted again (it was, "1 dive left" after the event's
+  // last dive). With no id to match on, fall back to counting rounds from
+  // the one on the board, and null when even that's unknown.
+  function leftFor(row) {
+    const queued = divesLeft(upcoming.value, row?.competitor_id)
+    if (queued) return { dives: queued.count, dd: queued.avgDd || ddProxy, mult }
+    const dives = totalRounds
+      ? Math.max(0, totalRounds - (parseInt(subject.round_number) || 1) + 1)
+      : null
+    return { dives, dd: ddProxy, mult }
   }
 
   if (idx === -1) {
@@ -1109,12 +1101,14 @@ const activeProjection = computed(() => {
     const second = standings.value[1]
     if (!second) return { kind: 'unopposed', activeName: myLabel }
     const gap = myTotal - Number(second.total || 0)
-    const { score, possible } = avgJudgeForGap(gap)
+    // What the runner-up needs, over the dives the runner-up has left.
+    const theirs = leftFor(second)
+    const { score, possible } = scoreToClose(gap, theirs)
     return {
       kind: 'lead',
       activeName: myLabel,
       runnerUp: pairLabel(second),
-      gap, remaining,
+      gap, remaining: theirs.dives,
       avgJudge: score, possible,
     }
   }
@@ -1122,12 +1116,15 @@ const activeProjection = computed(() => {
   // Chase: build a row for each podium rank above the active
   // diver (max 1st / 2nd / 3rd). Beyond #3 the panel gets dense
   // and the spectator-facing scoreboard is supposed to skim, not
-  // read deeply.
+  // read deeply. Once they've nothing left to dive there's nothing
+  // to chase, so no rows, just the place they're in.
+  const mine = leftFor(subject)
+  const remaining = mine.dives
   const targets = []
-  for (const r of [0, 1, 2].filter(r => r < idx)) {
+  for (const r of [0, 1, 2].filter(r => r < idx && remaining !== 0)) {
     const opponent = standings.value[r]
     const gap = Number(opponent.total || 0) - myTotal
-    const { score, possible } = avgJudgeForGap(gap)
+    const { score, possible } = scoreToClose(gap, mine)
     targets.push({
       rank: placeOf(standings.value, r),
       name: pairLabel(opponent),
@@ -1548,19 +1545,23 @@ onMounted(async () => {
           <div v-if="activeProjection" :class="['sb-projection', `sb-projection-${activeProjection.kind}`]">
             <template v-if="activeProjection.kind === 'chase'">
               <div class="sb-projection-head">
-                Catch-up — <strong>{{ activeProjection.remaining }}</strong>
-                {{ activeProjection.remaining === 1 ? 'dive' : 'dives' }} left
+                Catch-up
+                <template v-if="activeProjection.remaining === 0">— no dives left</template>
+                <template v-else-if="activeProjection.remaining != null">
+                  — <strong>{{ activeProjection.remaining }}</strong>
+                  {{ activeProjection.remaining === 1 ? 'dive' : 'dives' }} left
+                </template>
                 · currently {{ ordinal(activeProjection.currentRank) }}
               </div>
               <div v-for="t in activeProjection.targets" :key="`${t.rank}-${t.name}`" class="sb-catchup-row">
                 <span class="sb-catchup-rank">{{ ordinal(t.rank) }}</span>
                 <span class="sb-catchup-name">{{ t.name }}</span>
                 <span :class="['sb-catchup-target', t.possible === false ? 'sb-catchup-impossible' : '']">
-                  <template v-if="t.avgJudge == null">
-                    +{{ t.gap.toFixed(1) }} pts
-                  </template>
-                  <template v-else-if="t.possible === false">
+                  <template v-if="t.possible === false">
                     not possible
+                  </template>
+                  <template v-else-if="t.avgJudge == null">
+                    +{{ t.gap.toFixed(1) }} pts
                   </template>
                   <template v-else-if="t.avgJudge === 0">
                     already there
@@ -1579,11 +1580,13 @@ onMounted(async () => {
                 <span class="sb-catchup-rank">2nd</span>
                 <span class="sb-catchup-name">{{ activeProjection.runnerUp }}</span>
                 <span :class="['sb-catchup-target', activeProjection.possible === false ? 'sb-catchup-impossible' : '']">
-                  <template v-if="activeProjection.avgJudge == null">
-                    +{{ activeProjection.gap.toFixed(1) }} pts
-                  </template>
-                  <template v-else-if="activeProjection.possible === false">
+                  <!-- possible first: a runner-up with no dives left has no
+                       average to show, and still can't overtake -->
+                  <template v-if="activeProjection.possible === false">
                     can't overtake
+                  </template>
+                  <template v-else-if="activeProjection.avgJudge == null">
+                    +{{ activeProjection.gap.toFixed(1) }} pts
                   </template>
                   <template v-else>
                     needs avg {{ activeProjection.avgJudge.toFixed(1) }}

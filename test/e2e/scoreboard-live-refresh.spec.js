@@ -215,3 +215,59 @@ test("a deep link's loading placeholder is in the viewer's language", async ({ p
   await expect(page.locator(".sb-body")).toBeVisible({ timeout: 10_000 });
   await setup.deleteOrg(orgId);
 });
+
+// The catch-up box counted the dive on the board as still to come even
+// after its panel was in and its points were in the standings. After R2 of
+// 3 it said "2 dives left", and after the very last dive of the event the
+// projector still said "1 dive left", with the averages it asked for
+// spread over a dive that would never happen.
+test("the catch-up box stops counting a dive once it's been scored", async ({ page, request, baseURL }) => {
+  test.setTimeout(120_000);
+  const { orgId, adminToken } = await setup.createOrgAndAdmin(request, { countryCode: "AUS", orgName: "Scoreboard Catch-up" });
+  try {
+    const { event, diveId, divers, judges } = await liveEvent(request, {
+      orgId, adminToken, name: "Catch-up Event", diverNames: ["AAA Lead", "BBB Chase"], rounds: 3,
+    });
+    const [lead, chaser] = divers;
+    const insertPanel = async (who, round, score) => {
+      for (const j of judges) {
+        await setup.insertScore({ eventId: event.id, competitorId: who.userId, judgeId: j.userId, diveId, roundNumber: round, score });
+      }
+    };
+    // AAA stays ahead throughout: a dive ahead and 8s to BBB's 6s.
+    await insertPanel(lead, 1, 8);
+    await insertPanel(lead, 2, 8);
+    await insertPanel(chaser, 1, 6);
+    const up = (round) => emitAck(baseURL, adminToken, "set_active_diver", {
+      event_id: event.id, competitor_id: chaser.userId, round_number: round,
+      full_name: "BBB Chase", diverName: "BBB Chase", dd: 1.5, status: "ready",
+    });
+
+    expect(await up(2)).toMatchObject({ ok: true });
+    await page.goto(`/scoreboard/${event.id}`);
+    const head = page.locator(".sb-projection-chase .sb-projection-head");
+    // R2 and R3 still to dive
+    await expect(head).toContainText(/\b2\s+dives left/, { timeout: 10_000 });
+    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(1000);
+    await setup.submitPanelScores({
+      baseURL, judges, eventId: event.id, competitorId: chaser.userId, roundNumber: 2, diveId, scores: [6, 6, 6, 6, 6],
+    });
+    // R2's points are in the standings now, only R3 is left
+    await expect(page.locator(".sb-live-total-value")).toBeVisible({ timeout: 6_000 });
+    await expect(head).toContainText(/\b1\s+dive left/, { timeout: 8_000 });
+
+    await insertPanel(lead, 3, 8);
+    expect(await up(3)).toMatchObject({ ok: true });
+    await expect(page.locator(".sb-round-pill")).toContainText("Round 3", { timeout: 6_000 });
+    await expect(head).toContainText(/\b1\s+dive left/, { timeout: 8_000 });
+    await setup.submitPanelScores({
+      baseURL, judges, eventId: event.id, competitorId: chaser.userId, roundNumber: 3, diveId, scores: [6, 6, 6, 6, 6],
+    });
+    // The event's last dive is in: nothing left to catch up with
+    await expect(head).toContainText(/no dives left/i, { timeout: 8_000 });
+    await expect(page.locator(".sb-projection .sb-catchup-row")).toHaveCount(0);
+  } finally {
+    await setup.deleteOrg(orgId);
+  }
+});
