@@ -52,6 +52,7 @@
 
 const express = require("express");
 const { buildReadinessFromRow } = require("../lib/workflow");
+const { pendingSignoffCte, liveSignoffRequest } = require("../lib/signoff-sql");
 const roleRequests = require("../lib/role-requests");
 const claims = require("../lib/claims");
 const clubApprovals = require("../lib/club-approvals");
@@ -158,15 +159,7 @@ module.exports = function createDashboardRouter({ pool, verifyToken }) {
            JOIN visible_events ve ON ve.id = ej.event_id
            GROUP BY ej.event_id
          ),
-         pending_signoff AS (
-           SELECT DISTINCT ON (rsr.event_id)
-                  rsr.event_id, u.full_name AS pending_signoff_referee_name
-           FROM referee_signoff_requests rsr
-           JOIN users u ON u.id = rsr.target_referee_id
-           JOIN visible_events ve ON ve.id = rsr.event_id
-           WHERE rsr.status = 'pending'
-           ORDER BY rsr.event_id, rsr.created_at DESC
-         )
+         ${pendingSignoffCte({ events: "visible_events" })}
          SELECT ve.id, ve.name, ve.status, ve.number_of_judges,
                 ve.scheduled_at, ve.entries_close_at, ve.is_rehearsal,
                 ve.check_in_done_at, ve.dive_order_randomised_at,
@@ -321,11 +314,10 @@ module.exports = function createDashboardRouter({ pool, verifyToken }) {
                JOIN events e ON e.id = rsr.event_id
                JOIN users u ON u.id = rsr.requested_by
                WHERE rsr.target_referee_id = $1
-                 AND rsr.status = 'pending'
                  /* Nothing flips a request to expired when it runs out,
                     so a stale one would sit here as "Waiting for you"
                     and answer 409 when tapped. */
-                 AND rsr.expires_at > now()
+                 AND ${liveSignoffRequest("rsr")}
                  AND ($2::boolean OR e.org_id = $3)
                ORDER BY rsr.created_at DESC
                LIMIT 10`,

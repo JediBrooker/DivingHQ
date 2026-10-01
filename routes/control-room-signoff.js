@@ -25,6 +25,7 @@ const express = require("express");
 const rateLimit = require("express-rate-limit");
 const QRCode  = require("qrcode");
 const { isUuid } = require("../lib/uuid");
+const { lapsedSignoffRequest } = require("../lib/signoff-sql");
 
 // The referee a sign-off request or handoff code is aimed at has to
 // exist, be in the event's org and actually hold the referee role, a
@@ -230,7 +231,7 @@ module.exports = function createSignoffRoutes({
       if (!(await ensureEventOrgGate(req, res, "id"))) return;
       const r = await pool.query(
         `SELECT rsr.id, rsr.status, rsr.decision_method, rsr.responded_at,
-                rsr.expires_at, rsr.status = 'pending' AND rsr.expires_at < now() AS lapsed,
+                rsr.expires_at, ${lapsedSignoffRequest("rsr")} AS lapsed,
                 e.dive_order_signed_off_at, e.dive_order_signed_off_by
            FROM referee_signoff_requests rsr
            JOIN events e ON e.id = rsr.event_id
