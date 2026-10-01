@@ -555,7 +555,7 @@
  * @typedef {Object} ControlDivePanel
  * GET /api/events/:id/dive-panel?competitor_id=&round_number=
  * (routes/control-room.js). The same dive's stored scores for the Control
- * Room, which puts them back on the live pool's tiles after a reload, a
+ * Room, which rebuilds the live pool's tiles from them after a reload, a
  * reconnect or an undone finalise (restoreLiveScores in
  * src/composables/useLivePools.js). Roster gate: org admins, meet
  * managers, referees and the event's delegates. Re-dive set-asides are

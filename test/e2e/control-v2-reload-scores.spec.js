@@ -180,6 +180,78 @@ test("scores sent while the Control Room was offline are there when it reconnect
   await expect(card.locator(".cv2-primary")).toBeEnabled({ timeout: 8_000 });
 });
 
+// A reconnect doesn't just add what it missed, it takes the server's word
+// for the dive. These calls came from another device (a second laptop, the
+// referee's own) while this one was offline, so the only thing that tells
+// this pool about them is the read it does on the way back.
+async function callFromElsewhere(baseURL, name, w) {
+  const sock = await setup.openSocket(baseURL, world.adminToken);
+  try {
+    const ack = await new Promise((resolve) => sock.emit(name, {
+      event_id: w.event.id, competitor_id: w.divers[0].userId, round_number: 1,
+    }, resolve));
+    expect(ack).toEqual({ ok: true });
+  } finally {
+    sock.disconnect();
+  }
+}
+
+async function fullPanelThenOffline(page, request, baseURL, context, name) {
+  const w = await twoDivers(request, name);
+  await signIn(page, world.username);
+  const card = await openControl(page, w.event.id);
+  await expect(card.locator(".cv2-live-diver")).toContainText(`AAA ${name}`);
+  await expect.poll(() => serverDiver(w.event.id), { timeout: 8_000 }).toBe(`AAA ${name}`);
+  await scoreJudges(baseURL, w, 0, w.judges, [7, 7.5, 8, 8.5, 9]);
+  await expect(card.locator(".cv2-primary")).toBeEnabled({ timeout: 8_000 });
+  await context.setOffline(true);
+  await page.waitForTimeout(2_000);
+  return { w, card };
+}
+
+test("a re-dive called while the Control Room was offline takes the old panel off when it's back", async ({ page, request, baseURL, context }) => {
+  test.setTimeout(120_000);
+  const { w, card } = await fullPanelThenOffline(page, request, baseURL, context, "Offline Redive");
+  await callFromElsewhere(baseURL, "referee_redive", w);
+  await scoreJudges(baseURL, w, 0, w.judges.slice(0, 2), [5, 5.5]);
+  await context.setOffline(false);
+
+  // Three judges still have their keypads open for the re-dive, so Next
+  // mustn't be armed off the old panel.
+  await expect(tiles(card)).toHaveText(["5.0", "5.5", "—", "—", "—"], { timeout: 15_000 });
+  await expect(card.locator(".cv2-primary")).toBeDisabled();
+  await expect(card.locator(".cv2-blockers")).toContainText("Waiting for 3 more judge scores");
+  await scoreJudges(baseURL, w, 0, w.judges.slice(2), [6, 6.5, 7]);
+  await expect(card.locator(".cv2-primary")).toBeEnabled({ timeout: 8_000 });
+});
+
+test("a Failed call made while the Control Room was offline shows its zeros when it's back", async ({ page, request, baseURL, context }) => {
+  test.setTimeout(120_000);
+  const { w, card } = await fullPanelThenOffline(page, request, baseURL, context, "Offline Failed");
+  await callFromElsewhere(baseURL, "referee_failed_dive", w);
+  await context.setOffline(false);
+
+  await expect(tiles(card)).toHaveText(["0.0", "0.0", "0.0", "0.0", "0.0"], { timeout: 15_000 });
+  await expect(card.locator(".cv2-primary")).toBeEnabled();
+});
+
+test("a diver withdrawn while the Control Room was offline isn't called next", async ({ page, request, baseURL, context }) => {
+  test.setTimeout(120_000);
+  const { w, card } = await fullPanelThenOffline(page, request, baseURL, context, "Offline Withdrawn");
+  await expect(card.locator(".cv2-primary")).toContainText(/Next Diver/);
+  // The coach's withdrawal sends roster_changed to the room, which this
+  // laptop wasn't in at the time.
+  await setup.pool.query(
+    "UPDATE competitor_dive_lists SET withdrawn_at = now() WHERE event_id = $1 AND competitor_id = $2",
+    [w.event.id, w.divers[1].userId],
+  );
+  await context.setOffline(false);
+
+  // BBB was the only one left, so AAA's dive is the last and the button
+  // finalises rather than calling BBB up.
+  await expect(card.locator(".cv2-primary")).toHaveClass(/is-finalise/, { timeout: 15_000 });
+});
+
 // The referee's calls already made on the dive come back with it: a
 // Failed dive comes back at 0 and still armed, a re-dive's set-aside
 // panel doesn't come back at all (those judges have to score again).

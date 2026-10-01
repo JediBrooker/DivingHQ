@@ -125,12 +125,17 @@ watch(activeKey, armClockForActive)
 // (false->true edge only; never auto-fires finalise). Not when the panel
 // came back from the server's stored scores (armedByRestore): nobody has
 // seen that dive finish on this screen, so the operator moves on by hand.
+// Disarmed again (a reconnect found the panel was set aside for a re-dive
+// meanwhile), a countdown off the old panel mustn't carry on and call the
+// next diver over judges who are still scoring.
 watch(
   () => props.pool?.advanceArmed,
   (armed, was) => {
     if (armed && !was) {
       stopShotClock()
       if (!nextBtnComplete.value && !isHeld.value && !props.pool?.armedByRestore) startAutoAdvance(fireAdvance)
+    } else if (!armed && was) {
+      cancelAutoAdvance()
     }
   },
 )

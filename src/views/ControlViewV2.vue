@@ -39,7 +39,7 @@ import { useSocket } from '@/composables/useSocket'
 import { useSocketEvent } from '@/composables/useSocketEvent'
 import {
   useLivePools, selectDiver, rosterIndexForActive, competingQueue, rebaseQueue, nextQueueIndex,
-  applyRedive, applyRefereeCall, historyNewestFirst, resumeIndex, restoreLiveScores,
+  applyRedive, applyRefereeCall, historyNewestFirst, resumeIndex, restoreLiveScores, liveMark,
 } from '@/composables/useLivePools'
 import { annotateJudgeRows } from '@/composables/useScoreTrim'
 import { synchroJudgeGroups } from '@/composables/useScoreCategories'
@@ -217,18 +217,30 @@ function seedPoolFromServer(eventId) {
   restoreLiveDive(eventId)
 }
 
-// Put back what the server has stored for the dive a pool is on (see
+// Put the server's copy of the dive a pool is on back on it (see
 // restoreLiveScores). Called wherever a pool lands on a dive without
-// having watched it: the server's diver on load, a pick-up from the
-// history, a reconnect, an undone finalise. A re-dive called while the
-// fetch was out means the answer is the old panel's, so it's dropped;
-// a different diver by then is caught by the helper's own match.
-// Resolves to true when the server answered.
-async function restoreLiveDive(eventId) {
+// having watched all of it: the server's diver on load, a pick-up from the
+// history, a reconnect, an undone finalise, a short panel before Skip. The
+// pool is rebuilt from the answer, keeping only what came in live after
+// the read went out (liveMark). A re-dive called while it was out means
+// the answer is the old panel's, so it's dropped, and so is an answer
+// older than one already put on the pool (two reads out at once, say a
+// reconnect and a Skip, can come back in either order). A different diver
+// by then is caught by the helper's own match.
+//
+// A dive that finished out of sight changed History and Standings, and the
+// queue gets the re-read score_received gives it, so a withdrawal lands
+// before Next walks on. `panels: false` leaves those to a caller that
+// re-reads them anyway. Resolves to true when the server answered.
+const restoreReads = {} // event_id -> { started, applied }
+async function restoreLiveDive(eventId, { panels = true } = {}) {
   const pool = pools[eventId]
   const a = pool?.currentActive
   if (!a) return false
+  const reads = (restoreReads[eventId] ||= { started: 0, applied: 0 })
+  const read = ++reads.started
   const seq = pool.rediveSeq
+  const since = liveMark(pool)
   let dive
   try {
     const qs = new URLSearchParams({ competitor_id: a.competitor_id, round_number: a.round_number })
@@ -236,10 +248,13 @@ async function restoreLiveDive(eventId) {
   } catch {
     return false
   }
-  if (unmounted || pool.rediveSeq !== seq) return false
-  const res = restoreLiveScores(pool, dive, numberOfJudgesFor(eventId))
-  // A dive that finished out of sight still changed History and Standings.
-  if (res.allScoresIn) loadPoolPanels(eventId)
+  if (unmounted || pool.rediveSeq !== seq || read < reads.applied) return false
+  reads.applied = read
+  const res = restoreLiveScores(pool, dive, numberOfJudgesFor(eventId), { since })
+  if (res.allScoresIn && panels) {
+    loadPoolPanels(eventId)
+    await refreshPoolRoster(eventId)
+  }
   return true
 }
 
@@ -768,11 +783,13 @@ useSocketEvent(socket, 'connect', () => {
     delete holdStore[String(ev.id)]
     joinPoolRooms(ev.id)
     socket.emit('get_active_diver', { event_id: ev.id })
-    // Scores sent while we were away only went to the room, so they never
-    // reached this pool. Ask for the live dive's, and re-read History and
-    // Standings for any dive that finished meanwhile.
-    restoreLiveDive(ev.id)
+    // Everything sent while we were away only went to the room: scores,
+    // a re-dive or a Failed / Cap from another device, a coach's
+    // withdrawal. So the live dive is rebuilt from the server's copy, and
+    // the queue, History and Standings are read again.
+    refreshPoolRoster(ev.id)
     loadPoolPanels(ev.id)
+    restoreLiveDive(ev.id, { panels: false })
   }
 })
 
