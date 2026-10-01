@@ -260,9 +260,10 @@ function defaultStart(now = new Date()) {
 }
 
 // --start has to say its offset. The script runs on the box, and Node
-// reads a bare 2026-10-04T10:00 in the box's zone, which is UTC on a stock
-// container: for someone in Sydney that's the event listed at 9pm.
-// Refusing is kinder than a schedule that's quietly ten hours out.
+// reads a bare 2026-10-04T10:00 in the box's zone: Sydney on the live box,
+// UTC on a stock container, where for someone in Sydney that's the event
+// listed at 9pm. Neither is necessarily the venue's. Refusing is kinder
+// than a schedule that's quietly hours out.
 const START_FORMAT = /^(\d{4}-\d{2}-\d{2})T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2})$/i;
 
 function parseStart(raw) {
@@ -282,7 +283,8 @@ function localDate(d) {
 }
 
 // The day on the meet: the one written in --start (the venue's day, which
-// the box's UTC clock can put a day early), else the box's own date.
+// the box's clock can put a day out when the box and the venue are in
+// different zones), else the box's own date.
 function meetDate(raw, start) {
   return raw == null ? localDate(start) : START_FORMAT.exec(String(raw).trim())[1];
 }
