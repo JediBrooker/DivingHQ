@@ -548,7 +548,8 @@
     "medal_title_home_nation": "Tableau des médailles par nation",
     "medal_title_region": "Tableau des médailles par région",
     "medal_col_country": "Pays",
-    "medal_col_club": "Club sportif"
+    "medal_col_club": "Club sportif",
+    "status_upcoming": "À venir"
   },
   "guide": {
     "title": "Guide d'utilisation",
@@ -772,7 +773,8 @@
     "failed_one": "1 échec",
     "failed_many": "{n} échecs",
     "conflict_one": "1 conflit en attente d'examen",
-    "conflict_many": "{n} conflits en attente d'examen"
+    "conflict_many": "{n} conflits en attente d'examen",
+    "offline": "Hors ligne"
   },
   "inbox": {
     "title": "Boîte de réception",

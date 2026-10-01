@@ -548,7 +548,8 @@
     "medal_title_home_nation": "Mitalitaulukko kansakunnittain",
     "medal_title_region": "Mitalitaulukko alueittain",
     "medal_col_country": "Maa",
-    "medal_col_club": "Seura"
+    "medal_col_club": "Seura",
+    "status_upcoming": "Tulossa"
   },
   "guide": {
     "title": "Käyttöopas",
@@ -772,7 +773,8 @@
     "failed_one": "1 epäonnistunut",
     "failed_many": "{n} epäonnistunutta",
     "conflict_one": "1 ristiriita odottaa tarkistusta",
-    "conflict_many": "{n} ristiriitaa odottaa tarkastelua"
+    "conflict_many": "{n} ristiriitaa odottaa tarkastelua",
+    "offline": "Ei yhteyttä"
   },
   "inbox": {
     "title": "Saapuneet",

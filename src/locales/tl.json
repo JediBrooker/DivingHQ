@@ -537,7 +537,8 @@
     "medal_title_home_nation": "Talaan ng medalya ayon sa bansa (UK)",
     "medal_title_region": "Talaan ng medalya ayon sa rehiyon",
     "medal_col_country": "Bansa",
-    "medal_col_club": "Samahan"
+    "medal_col_club": "Samahan",
+    "status_upcoming": "Paparating"
   },
   "guide": {
     "title": "Gabay ng user",
@@ -761,7 +762,8 @@
     "failed_one": "1 nabigo",
     "failed_many": "{n} nabigo",
     "conflict_one": "1 konflikto ang nakabinbin para sa pagsusuri",
-    "conflict_many": "{n} konflikto ang nakabinbin para sa pagsusuri"
+    "conflict_many": "{n} konflikto ang nakabinbin para sa pagsusuri",
+    "offline": "Walang koneksyon"
   },
   "inbox": {
     "title": "Kahon ng mensahe",

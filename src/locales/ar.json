@@ -537,7 +537,8 @@
     "medal_title_home_nation": "جدول الميداليات حسب الأمة",
     "medal_title_region": "جدول الميداليات حسب المنطقة",
     "medal_col_country": "الدولة",
-    "medal_col_club": "النادي"
+    "medal_col_club": "النادي",
+    "status_upcoming": "قادم"
   },
   "guide": {
     "title": "دليل المستخدم",
@@ -761,7 +762,8 @@
     "failed_one": "1 فشل",
     "failed_many": "{n} حالات فشل",
     "conflict_one": "1 تعارض قيد المراجعة",
-    "conflict_many": "{n} تعارضات قيد المراجعة"
+    "conflict_many": "{n} تعارضات قيد المراجعة",
+    "offline": "غير متصل"
   },
   "inbox": {
     "title": "صندوق الوارد",

@@ -548,7 +548,8 @@
     "medal_title_home_nation": "Medaljeoversikt etter nasjon",
     "medal_title_region": "Medaljeoversikt etter region",
     "medal_col_country": "Land",
-    "medal_col_club": "Klubb"
+    "medal_col_club": "Klubb",
+    "status_upcoming": "Kommende"
   },
   "guide": {
     "title": "Brukerveiledning",
@@ -772,7 +773,8 @@
     "failed_one": "1 feilet",
     "failed_many": "{n} feilet",
     "conflict_one": "1 konflikt venter på gjennomgang",
-    "conflict_many": "{n} konflikter venter på gjennomgang"
+    "conflict_many": "{n} konflikter venter på gjennomgang",
+    "offline": "Frakoblet"
   },
   "inbox": {
     "title": "Innboks",

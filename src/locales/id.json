@@ -537,7 +537,8 @@
     "medal_title_home_nation": "Klasemen medali per bangsa",
     "medal_title_region": "Klasemen medali per wilayah",
     "medal_col_country": "Negara",
-    "medal_col_club": "Klub"
+    "medal_col_club": "Klub",
+    "status_upcoming": "Akan datang"
   },
   "guide": {
     "title": "Panduan pengguna",
@@ -761,7 +762,8 @@
     "failed_one": "1 gagal",
     "failed_many": "{n} gagal",
     "conflict_one": "1 konflik menunggu peninjauan",
-    "conflict_many": "{n} konflik menunggu peninjauan"
+    "conflict_many": "{n} konflik menunggu peninjauan",
+    "offline": "Offline"
   },
   "inbox": {
     "title": "Kotak masuk",

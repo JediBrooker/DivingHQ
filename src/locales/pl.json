@@ -548,7 +548,8 @@
     "medal_title_home_nation": "Klasyfikacja medalowa krajów (UK)",
     "medal_title_region": "Klasyfikacja medalowa regionów",
     "medal_col_country": "Kraj",
-    "medal_col_club": "Klub"
+    "medal_col_club": "Klub",
+    "status_upcoming": "Nadchodzące"
   },
   "guide": {
     "title": "Przewodnik użytkownika",
@@ -772,7 +773,8 @@
     "failed_one": "1 niepowodzenie",
     "failed_many": "{n} niepowodzeń",
     "conflict_one": "1 konflikt oczekuje na weryfikację",
-    "conflict_many": "{n} konfliktów oczekuje na weryfikację"
+    "conflict_many": "{n} konfliktów oczekuje na weryfikację",
+    "offline": "Brak połączenia"
   },
   "inbox": {
     "title": "Skrzynka odbiorcza",

@@ -579,7 +579,8 @@
  * reconnect or an undone finalise (restoreLiveScores in
  * src/composables/useLivePools.js). Roster gate: org admins, meet
  * managers, referees and the event's delegates. Re-dive set-asides are
- * left out, same SQL as JudgeDiveScores (DIVE_PANEL_SCORES_SQL).
+ * left out; the same read as JudgeDiveScores (lib/dive-scores.js, asked
+ * for judge ids).
  *
  * @property {string} event_id
  * @property {string} competitor_id
@@ -589,6 +590,25 @@
  * @property {Array<{ judge_id: string, judge_number: number, score: number }>} scores
  *   one per judge who has scored, by judge_number; the value stored, after
  *   any referee call. judge_id keys them like a live score_received.
+ */
+
+// ---- socket get_active_diver ack ---------------------------------
+
+/**
+ * @typedef {Object} LiveDiveScores
+ * The ack of socket `get_active_diver` (routes/socket.js), when the caller
+ * passes one: the scores already stored for the dive on the board, read by
+ * lib/dive-scores.js like JudgeDiveScores. The spectator scoreboard puts its
+ * judge pills back from it after opening mid-dive or reconnecting.
+ * `scores` is null when nobody is on the board. A refusal is
+ * `{ ok: false, error: 'not_found' | 'rate_limited' }`.
+ *
+ * @property {boolean} ok
+ * @property {string}  [event_id]
+ * @property {string}  [competitor_id]
+ * @property {number}  [round_number]
+ * @property {Array<{ judge_number: number, score: number }>|null} [scores]
+ * @property {string}  [error]
  */
 
 /**

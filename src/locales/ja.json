@@ -537,7 +537,8 @@
     "medal_title_home_nation": "構成国別メダル表",
     "medal_title_region": "地域別メダル表",
     "medal_col_country": "国",
-    "medal_col_club": "クラブ"
+    "medal_col_club": "クラブ",
+    "status_upcoming": "開始前"
   },
   "guide": {
     "title": "ユーザーガイド",
@@ -761,7 +762,8 @@
     "failed_one": "1件が失敗しました",
     "failed_many": "{n}件が失敗しました",
     "conflict_one": "1件の競合が確認待ちです",
-    "conflict_many": "{n}件の競合が確認待ちです"
+    "conflict_many": "{n}件の競合が確認待ちです",
+    "offline": "オフラインです"
   },
   "inbox": {
     "title": "受信箱",

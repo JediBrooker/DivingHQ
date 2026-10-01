@@ -548,7 +548,8 @@
     "medal_title_home_nation": "Medaillenspiegel nach Landesteilen",
     "medal_title_region": "Medaillenspiegel nach Regionen",
     "medal_col_country": "Land",
-    "medal_col_club": "Verein"
+    "medal_col_club": "Verein",
+    "status_upcoming": "Demnächst"
   },
   "guide": {
     "title": "Anleitung",
@@ -772,7 +773,8 @@
     "failed_one": "1 fehlgeschlagen",
     "failed_many": "{n} fehlgeschlagen",
     "conflict_one": "1 Konflikt wartet auf Überprüfung",
-    "conflict_many": "{n} Konflikte warten auf Überprüfung"
+    "conflict_many": "{n} Konflikte warten auf Überprüfung",
+    "offline": "Offline"
   },
   "inbox": {
     "title": "Posteingang",

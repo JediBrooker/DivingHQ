@@ -537,7 +537,8 @@
     "medal_title_home_nation": "Πίνακας μεταλλίων ανά χώρα του ΗΒ",
     "medal_title_region": "Πίνακας μεταλλίων ανά περιφέρεια",
     "medal_col_country": "Χώρα",
-    "medal_col_club": "Σύλλογος"
+    "medal_col_club": "Σύλλογος",
+    "status_upcoming": "Επερχόμενος"
   },
   "guide": {
     "title": "Οδηγός χρήσης",
@@ -761,7 +762,8 @@
     "failed_one": "1 αποτυχία",
     "failed_many": "{n} αποτυχίες",
     "conflict_one": "1 σύγκρουση εκκρεμεί για έλεγχο",
-    "conflict_many": "{n} συγκρούσεις εκκρεμούν για έλεγχο"
+    "conflict_many": "{n} συγκρούσεις εκκρεμούν για έλεγχο",
+    "offline": "Εκτός σύνδεσης"
   },
   "inbox": {
     "title": "Εισερχόμενα",

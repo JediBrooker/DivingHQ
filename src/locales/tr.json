@@ -537,7 +537,8 @@
     "medal_title_home_nation": "Ülkelere göre madalya tablosu (BK)",
     "medal_title_region": "Bölgelere göre madalya tablosu",
     "medal_col_country": "Ülke",
-    "medal_col_club": "Kulüp"
+    "medal_col_club": "Kulüp",
+    "status_upcoming": "Yaklaşan"
   },
   "guide": {
     "title": "Kullanıcı Kılavuzu",
@@ -761,7 +762,8 @@
     "failed_one": "1 başarısız işlem",
     "failed_many": "{n} başarısız işlem",
     "conflict_one": "1 çakışma inceleme bekliyor",
-    "conflict_many": "{n} çakışma inceleme bekliyor"
+    "conflict_many": "{n} çakışma inceleme bekliyor",
+    "offline": "Çevrimdışı"
   },
   "inbox": {
     "title": "Gelen Kutusu",

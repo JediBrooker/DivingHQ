@@ -12,7 +12,8 @@
 //                                   user/org rooms, register events
 //   * subscribe_event            : explicit room join
 //   * set_active_diver           : driven by Control Room
-//   * get_active_diver           : on-demand pull for late joiners
+//   * get_active_diver           : on-demand pull for late joiners, and
+//                                   with an ack the live dive's scores
 //   * submit_score               : judge scoring (transactional)
 //   * announce_score             : Control Room "say it on screen"
 //   * referee_failed_dive / cap_scores / redive
@@ -35,6 +36,8 @@ const { announceRecords } = require("../lib/records");
 const { insertScoreAudit, isValidScore } = require("../lib/score-audit");
 const { isUuid } = require("../lib/uuid");
 const { isSessionClaims } = require("../lib/middleware");
+const { canSeeEvent } = require("../lib/event-visibility");
+const { storedDiveScores } = require("../lib/dive-scores");
 // Held as the module object and called through it, never destructured:
 // test/socket-rate-limit.test.js swaps emitVenueState on this cached
 // module to keep the DB out of the unit tests.
@@ -249,7 +252,11 @@ module.exports = function attachSocket({
   // subscribe_venue qualifies: it runs the multi-CTE leaderboard build
   // in lib/venue-state.js. Cheap room-join reads (subscribe_event,
   // get_active_diver, get_meet_hold) don't touch the DB, so they're
-  // left out, a connection cap is the right control for those.
+  // left out, a connection cap is the right control for those. The one
+  // exception is get_active_diver asked with an ack, which reads the live
+  // dive's stored scores; that's capped per socket below rather than per
+  // IP, because a whole venue of spectators can share one address and
+  // they all reconnect together when the Wi-Fi blips.
   const SOCKET_IP_LIMITS = {
     subscribe_venue: { limit: 30, windowMs: 60 * 1000 },
   };
@@ -260,6 +267,12 @@ module.exports = function attachSocket({
     if (!cfg || !ip) return false;     // unknown IP → can't key, fail open
     return ipWindows.limited(`${action}:${ip}`, cfg);
   }
+
+  // A scoreboard asks on opening an event and after each reconnect, so a
+  // couple a minute is normal. 20 leaves room for someone flicking
+  // between events and stops a loop hammering the pool.
+  const LIVE_SCORES_LIMIT = { limit: 20, windowMs: 60 * 1000 };
+  const liveScoreWindows = makeWindowLimiter();   // keyed on socket.id
 
   // What a keypad sends with submit_score, the idempotency hash covers
   // exactly these (see the handler).
@@ -289,6 +302,7 @@ module.exports = function attachSocket({
     scoreWindows.prune(SCORE_LIMIT.windowMs);
     actionWindows.prune(longestWindow(SOCKET_ACTION_LIMITS));
     ipWindows.prune(longestWindow(SOCKET_IP_LIMITS));
+    liveScoreWindows.prune(LIVE_SCORES_LIMIT.windowMs);
   }, 5 * 60 * 1000).unref?.();
 
   // Who may drive an event from the Control Room. Same list for every
@@ -642,11 +656,50 @@ module.exports = function attachSocket({
       ackWith(ack, { ok: true });
     });
 
-    on("get_active_diver", (data) => {
+    // Asked with an ack, the reply also carries the scores already stored
+    // for the dive on the board. The scoreboard only ever got its judge
+    // pills from score_received, so a spectator who opened it mid-dive, or
+    // whose phone dropped the socket for a few seconds, never saw the
+    // judges already in, and that dive never got a total. The judge keypad
+    // and the Control Room still ask without an ack and get no DB read.
+    //
+    // These are the numbers the room heard as score_received, so a public
+    // event gives nothing away. They are stored scores though, so they
+    // follow the scoreboard's own rule (lib/event-visibility): Live and
+    // Completed for anyone, before that only the host or a participating
+    // org. state_update goes first, so the client knows the dive by the
+    // time the reply lands.
+    on("get_active_diver", async (data, ack) => {
       if (!joinEvent(data?.event_id)) return;
       const state = activeDivers[data.event_id];
       if (state) socket.emit("state_update", state);
+      if (typeof ack !== "function") return;
+      ack(await liveDiveScores(data.event_id, state));
     });
+
+    async function liveDiveScores(eventId, state) {
+      const round = Number(state?.round_number);
+      if (!state || !isUuid(state.competitor_id) || !Number.isInteger(round) || round < 1) {
+        return { ok: true, scores: null };
+      }
+      if (liveScoreWindows.limited(socket.id, LIVE_SCORES_LIMIT)) {
+        return { ok: false, error: "rate_limited" };
+      }
+      const ev = await pool.query("SELECT id, org_id, status FROM events WHERE id = $1", [eventId]);
+      const viewer = socket.userId
+        ? { id: socket.userId, org_id: socket.userOrgId, is_system_admin: !!socket.userIsSystemAdmin }
+        : null;
+      if (!ev.rows.length || !(await canSeeEvent(pool, ev.rows[0], viewer))) {
+        return { ok: false, error: "not_found" };
+      }
+      return {
+        ok: true,
+        event_id: eventId,
+        competitor_id: state.competitor_id,
+        round_number: round,
+        scores: await storedDiveScores(pool, { eventId, competitorId: state.competitor_id, roundNumber: round }),
+      };
+    }
 
     // -----------------------------------------------------------
     // submit_score: fully transactional. Prior-row read with

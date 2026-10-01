@@ -15,6 +15,7 @@ import {
 import { diveDescription } from '@/composables/useDiveLabel'
 import { livePanel, heldAward } from '@/composables/useScoreTrim'
 import { sharedRanks, placeOf } from '@/lib/standings'
+import { divesLeft, scoreToClose } from '@/lib/catchUp'
 import { normaliseActiveDiver } from '@/lib/activeDiver'
 import { cachedFetch, invalidateEventScores } from '@/lib/idbCache'
 import { SCOREBOARD_LIVE_TTL_MS, SCOREBOARD_ARCHIVE_TTL_MS } from '@/lib/cache-policy'
@@ -258,6 +259,9 @@ const activeDiver = ref(null)
 // the inline pills under the Current Performer block, replacing
 // the older fullscreen score-overlay UX.
 const liveJudgeScores = ref([])
+// The get_active_diver ask whose answer (the live dive's stored scores)
+// hasn't landed yet, see askActiveDiver.
+let pendingAsk = null
 // Completed-event archive payload, only populated when the selected
 // event has status === 'Completed'. Drives the dive breakdown,
 // podium and event-stats panels.
@@ -585,10 +589,11 @@ function selectEvent(id, { pushUrl = true } = {}) {
   payloadRecords.value = []
   liveRecords.value = []
   refreshData()
-  // Pull the current active diver from the server. socket.io
-  // buffers the emit until the connection is up, so this works
-  // whether the socket has already connected or not.
-  socket.emit('get_active_diver', { event_id: id })
+  // Pull the current active diver from the server, and the scores
+  // already in for their dive. socket.io buffers the emit until the
+  // connection is up, so this works whether the socket has already
+  // connected or not.
+  askActiveDiver(id)
   // Pull the current hold state too, covers the case where the page
   // loads after a hold has already been set.
   socket.emit('get_meet_hold', { event_id: id })
@@ -602,8 +607,10 @@ function selectEvent(id, { pushUrl = true } = {}) {
 
 function resetToEventPicker({ pushUrl = true } = {}) {
   // Invalidate any in-flight refreshData so a late response can't
-  // repopulate the panels we're about to clear.
+  // repopulate the panels we're about to clear, and the same for a
+  // live-scores answer still on its way.
   refreshSeq++
+  pendingAsk = null
   currentEventId.value = null
   activeDiver.value = null
   historyItems.value = []
@@ -815,6 +822,58 @@ function recordMarksFor(d) {
   return marks.length ? marks : null
 }
 
+// The scores already stored for the dive on the board. The pills only ever
+// came from score_received, so a board opened or reloaded mid-dive showed
+// nothing for the judges already in, and with pills missing the panel
+// never looked complete: no trim and no Dive Total until the next diver. A
+// phone whose socket dropped for a few seconds lost the scores sent
+// meanwhile the same way. So every time we ask who's up (opening an event,
+// each reconnect) we ask with an ack, and the server answers with what it
+// has stored for that dive (get_active_diver in routes/socket.js). A
+// correction to that dive asks again too, see score_corrected below.
+// `refresh: false` is for a caller that has just re-pulled the standings
+// itself, so a full panel coming back doesn't cost a second fetch.
+//
+// What lands while the answer is on its way is newer than it. A score keeps
+// its live value; a referee Failed or Cap is applied over the stored values
+// as well (holding a held award again changes nothing); a re-dive means the
+// answer may be the old panel, so it's thrown away. The judge screen's
+// restoreDiveScores works the same way.
+function askActiveDiver(eventId, { refresh = true } = {}) {
+  const ask = { eventId, refresh, arrived: new Set(), call: null, redive: false }
+  pendingAsk = ask
+  socket.emit('get_active_diver', { event_id: eventId }, (reply) => {
+    // a later ask, or a different event, has taken over
+    if (pendingAsk !== ask) return
+    pendingAsk = null
+    restoreLiveScores(reply, ask)
+  })
+}
+
+function isActiveDive(data) {
+  const a = activeDiver.value
+  return !!a && String(data?.competitor_id) === String(a.competitor_id)
+    && Number(data?.round_number) === Number(a.round_number)
+}
+
+function restoreLiveScores(reply, ask) {
+  if (!reply?.ok || !Array.isArray(reply.scores)) return
+  if (ask.eventId !== currentEventId.value || ask.redive || !isActiveDive(reply)) return
+  const byJudge = new Map()
+  for (const s of reply.scores) {
+    const stored = Number(s.score)
+    byJudge.set(Number(s.judge_number), ask.call ? heldAward(stored, ask.call.call, ask.call.cap) : stored)
+  }
+  for (const p of liveJudgeScores.value) {
+    if (ask.arrived.has(p.judge_number)) byJudge.set(p.judge_number, p.value)
+  }
+  liveJudgeScores.value = [...byJudge]
+    .map(([judge_number, value]) => ({ value, judge_number }))
+    .sort((a, b) => a.judge_number - b.judge_number)
+  // A full panel means the dive has its total, same as the live path.
+  if (ask.refresh && liveJudgeScores.value.length >= panelSize.value) scheduleRefresh()
+}
+
 // All listeners below go through useSocketEvent so they're torn
 // down with the view rather than relying on the spectator pool's
 // refcount happening to hit zero.
@@ -869,6 +928,8 @@ useSocketEvent(socket, 'score_received', data => {
   if (idx >= 0) liveJudgeScores.value[idx] = next
   else liveJudgeScores.value = [...liveJudgeScores.value, next]
   liveJudgeScores.value.sort((a, b) => a.judge_number - b.judge_number)
+  // newer than the stored copy we may be waiting for
+  pendingAsk?.arrived.add(data.judge_number)
   // The panel's complete, so the dive has a total: standings and
   // Completed Dives both change.
   if (liveJudgeScores.value.length >= panelSize.value) scheduleRefresh()
@@ -878,10 +939,9 @@ useSocketEvent(socket, 'score_received', data => {
 // the pills (and any dive total they'd added up to) go too.
 useSocketEvent(socket, 'referee_action_redive', (data) => {
   if (!currentEventId.value || data?.event_id !== currentEventId.value) return
-  const a = activeDiver.value
-  if (a && String(data.competitor_id) === String(a.competitor_id)
-      && Number(data.round_number) === Number(a.round_number)) {
+  if (isActiveDive(data)) {
     liveJudgeScores.value = []
+    if (pendingAsk) pendingAsk.redive = true
   }
   scheduleRefresh()
 })
@@ -895,10 +955,9 @@ useSocketEvent(socket, 'referee_action_redive', (data) => {
 // above the declared maximum for a cap, WA 8.4.7).
 function applyRefereeCallToPills(data, call) {
   if (!currentEventId.value || data?.event_id !== currentEventId.value) return
-  const a = activeDiver.value
-  if (!a || String(data.competitor_id) !== String(a.competitor_id)
-      || Number(data.round_number) !== Number(a.round_number)) return
+  if (!isActiveDive(data)) return
   liveJudgeScores.value = liveJudgeScores.value.map((s) => ({ ...s, value: heldAward(s.value, call, data.cap_value) }))
+  if (pendingAsk) pendingAsk.call = { call, cap: data.cap_value }
 }
 useSocketEvent(socket, 'referee_action_failed', (data) => applyRefereeCallToPills(data, 'failed'))
 useSocketEvent(socket, 'referee_action_cap', (data) => applyRefereeCallToPills(data, 'cap'))
@@ -917,11 +976,22 @@ useSocketEvent(socket, 'event_status_changed', (data) => {
 // On (re)connect, re-request the current active diver if an
 // event is already selected. Covers the case where the socket
 // drops mid-session and the in-memory state was unchanged on
-// the server but our local state went stale.
+// the server but our local state went stale. The answer brings back the
+// scores sent while we were away, too.
+//
+// Anything else broadcast meanwhile (a correction, a dive announced) is
+// lost as well, so a reconnect also re-pulls the standings. Not on the
+// first connect of a fresh page, selectEvent has just fetched them; the
+// pooled socket may already be up when this view mounts, and then every
+// connect we see is a reconnect.
+let connectedBefore = !!socket.connected
 useSocketEvent(socket, 'connect', () => {
+  const reconnect = connectedBefore
+  connectedBefore = true
   if (currentEventId.value) {
-    socket.emit('get_active_diver', { event_id: currentEventId.value })
+    askActiveDiver(currentEventId.value)
     socket.emit('get_meet_hold',    { event_id: currentEventId.value })
+    if (reconnect) scheduleRefresh()
   }
 })
 
@@ -944,10 +1014,19 @@ useSocketEvent(socket, 'meet_resumed', (data) => {
 // re-pull so totals reflect it. Fresh, or a correction made within a few
 // seconds of the last refresh (or at all, once the recap is showing) got
 // the cached numbers back.
+//
+// The Control Room's History has a dive as soon as its panel is in, while
+// the diver is still up here, so the correction is often to the dive under
+// the performer. Its pills (and the trim and Dive Total off them) kept the
+// old value until the next diver, so ask for the stored panel again. The
+// payload has no judge number to patch one pill with. After a referee call
+// the stored values are already held to it, so asking again changes nothing.
 useSocketEvent(socket, 'score_corrected', (data) => {
   if (data?.event_id) invalidateEventScores(data.event_id)
   if (data?.event_id !== currentEventId.value) return
   refreshData({ fresh: true })
+  // standings were just re-pulled, the answer needn't do it again
+  if (isActiveDive(data)) askActiveDiver(currentEventId.value, { refresh: false })
 })
 
 useSocketEvent(socket, 'final_score_announced', () => {
@@ -1018,9 +1097,9 @@ const activeDiverRank = computed(() => {
 //   * gap to leader (or to runner-up if leading)
 //   * average dive total they need across remaining dives
 //   * average judge score per kept score those dives need
-// DD proxy is the active diver's current dive (we don't have the
-// full upcoming roster on the audience scoreboard, just the
-// state_update payload that drives the active block). Catch-up
+// The dives left, and the DD they average, come from the diver's rows
+// in Up Next (src/lib/catchUp.js); the dive on the board stands in for
+// the DD when those rows don't carry one. Catch-up
 // table mirrors the Control Room, surfaces the average judge score
 // needed across the remaining dives to reach 1st / 2nd / 3rd, with
 // "not possible" for targets that even straight 10s wouldn't catch.
@@ -1067,29 +1146,20 @@ const activeProjection = computed(() => {
   const numJudges   = parseInt(currentEvent.value?.number_of_judges) || 5
   const isSynchro   = currentEvent.value?.event_type === 'synchro_pair'
   const ddProxy     = parseFloat(subject.dd) || null
-  const remaining   = totalRounds
-    ? totalRounds - (parseInt(subject.round_number) || 1) + 1
-    : 0
   const mult = panelMultiplier(numJudges, isSynchro)
 
-  // Per-dive contribution if every judge scores X is X × mult × DD.
-  // So gap G across R dives at avg DD D solves to X = G / (mult × D
-  // × R). 10 is the ceiling, any X > 10 means straight 10s wouldn't
-  // close the gap.
-  //
-  // The displayed score rounds UP to the next 0.5 because judges can
-  // only score in half-point increments. 5.2 isn't a possible judge
-  // score, but 5.5 is. Rounded value is what the diver would need
-  // from EVERY judge on every remaining dive to mathematically
-  // guarantee closing the gap. `possible` stays tied to the raw
-  // value so a raw of 9.6 (rounds to 10.0, straight 10s, achievable)
-  // doesn't flip to "not possible".
-  function avgJudgeForGap(gap) {
-    if (gap <= 0)                   return { score: 0,    possible: true  }
-    if (remaining <= 0 || !ddProxy) return { score: null, possible: null  }
-    const raw = gap / (mult * ddProxy * remaining)
-    const rounded = Math.ceil(raw * 2) / 2
-    return { score: rounded, possible: raw <= 10 }
+  // What someone still has to dive. Their unscored rows in Up Next come
+  // with the standings, so a dive whose points are already in the
+  // standings isn't counted again (it was, "1 dive left" after the event's
+  // last dive). With no id to match on, fall back to counting rounds from
+  // the one on the board, and null when even that's unknown.
+  function leftFor(row) {
+    const queued = divesLeft(upcoming.value, row?.competitor_id)
+    if (queued) return { dives: queued.count, dd: queued.avgDd || ddProxy, mult }
+    const dives = totalRounds
+      ? Math.max(0, totalRounds - (parseInt(subject.round_number) || 1) + 1)
+      : null
+    return { dives, dd: ddProxy, mult }
   }
 
   if (idx === -1) {
@@ -1109,12 +1179,14 @@ const activeProjection = computed(() => {
     const second = standings.value[1]
     if (!second) return { kind: 'unopposed', activeName: myLabel }
     const gap = myTotal - Number(second.total || 0)
-    const { score, possible } = avgJudgeForGap(gap)
+    // What the runner-up needs, over the dives the runner-up has left.
+    const theirs = leftFor(second)
+    const { score, possible } = scoreToClose(gap, theirs)
     return {
       kind: 'lead',
       activeName: myLabel,
       runnerUp: pairLabel(second),
-      gap, remaining,
+      gap, remaining: theirs.dives,
       avgJudge: score, possible,
     }
   }
@@ -1122,12 +1194,15 @@ const activeProjection = computed(() => {
   // Chase: build a row for each podium rank above the active
   // diver (max 1st / 2nd / 3rd). Beyond #3 the panel gets dense
   // and the spectator-facing scoreboard is supposed to skim, not
-  // read deeply.
+  // read deeply. Once they've nothing left to dive there's nothing
+  // to chase, so no rows, just the place they're in.
+  const mine = leftFor(subject)
+  const remaining = mine.dives
   const targets = []
-  for (const r of [0, 1, 2].filter(r => r < idx)) {
+  for (const r of [0, 1, 2].filter(r => r < idx && remaining !== 0)) {
     const opponent = standings.value[r]
     const gap = Number(opponent.total || 0) - myTotal
-    const { score, possible } = avgJudgeForGap(gap)
+    const { score, possible } = scoreToClose(gap, mine)
     targets.push({
       rank: placeOf(standings.value, r),
       name: pairLabel(opponent),
@@ -1261,8 +1336,13 @@ onMounted(async () => {
             <span class="sb-crumb-sep" aria-hidden="true">›</span>
             <span class="sb-crumb-current">{{ currentEvent?.name || (isCompleted ? 'Event Recap' : 'Broadcast Feed') }}</span>
           </nav>
+          <!-- Only a Live event gets the red badge. The meets list links to
+               upcoming events too, and an early spectator was told the
+               event was live next to "Waiting...". Anything else (an
+               event missing from the list, say) gets no badge at all. -->
           <div v-if="isCompleted" class="status-badge done-badge">{{ $t('scoreboard.status_completed') }}</div>
-          <div v-else class="status-badge live-badge">{{ $t('scoreboard.status_live') }}</div>
+          <div v-else-if="currentEvent?.status === 'Live'" class="status-badge live-badge">{{ $t('scoreboard.status_live') }}</div>
+          <div v-else-if="currentEvent?.status === 'Upcoming'" class="status-badge upcoming-badge">{{ $t('scoreboard.status_upcoming') }}</div>
         </div>
       </template>
       <div style="display:flex;gap:0.4rem;align-items:center">
@@ -1543,19 +1623,23 @@ onMounted(async () => {
           <div v-if="activeProjection" :class="['sb-projection', `sb-projection-${activeProjection.kind}`]">
             <template v-if="activeProjection.kind === 'chase'">
               <div class="sb-projection-head">
-                Catch-up — <strong>{{ activeProjection.remaining }}</strong>
-                {{ activeProjection.remaining === 1 ? 'dive' : 'dives' }} left
+                Catch-up
+                <template v-if="activeProjection.remaining === 0">— no dives left</template>
+                <template v-else-if="activeProjection.remaining != null">
+                  — <strong>{{ activeProjection.remaining }}</strong>
+                  {{ activeProjection.remaining === 1 ? 'dive' : 'dives' }} left
+                </template>
                 · currently {{ ordinal(activeProjection.currentRank) }}
               </div>
               <div v-for="t in activeProjection.targets" :key="`${t.rank}-${t.name}`" class="sb-catchup-row">
                 <span class="sb-catchup-rank">{{ ordinal(t.rank) }}</span>
                 <span class="sb-catchup-name">{{ t.name }}</span>
                 <span :class="['sb-catchup-target', t.possible === false ? 'sb-catchup-impossible' : '']">
-                  <template v-if="t.avgJudge == null">
-                    +{{ t.gap.toFixed(1) }} pts
-                  </template>
-                  <template v-else-if="t.possible === false">
+                  <template v-if="t.possible === false">
                     not possible
+                  </template>
+                  <template v-else-if="t.avgJudge == null">
+                    +{{ t.gap.toFixed(1) }} pts
                   </template>
                   <template v-else-if="t.avgJudge === 0">
                     already there
@@ -1574,11 +1658,13 @@ onMounted(async () => {
                 <span class="sb-catchup-rank">2nd</span>
                 <span class="sb-catchup-name">{{ activeProjection.runnerUp }}</span>
                 <span :class="['sb-catchup-target', activeProjection.possible === false ? 'sb-catchup-impossible' : '']">
-                  <template v-if="activeProjection.avgJudge == null">
-                    +{{ activeProjection.gap.toFixed(1) }} pts
-                  </template>
-                  <template v-else-if="activeProjection.possible === false">
+                  <!-- possible first: a runner-up with no dives left has no
+                       average to show, and still can't overtake -->
+                  <template v-if="activeProjection.possible === false">
                     can't overtake
+                  </template>
+                  <template v-else-if="activeProjection.avgJudge == null">
+                    +{{ activeProjection.gap.toFixed(1) }} pts
                   </template>
                   <template v-else>
                     needs avg {{ activeProjection.avgJudge.toFixed(1) }}
@@ -1764,7 +1850,11 @@ onMounted(async () => {
             <span v-if="currentEvent?.created_at" class="meta-tag meta-date">{{ fmtDate(currentEvent.created_at) }}</span>
           </div>
         </div>
-        <div class="export-actions">
+        <!-- Not on /broadcast: a projector has no use for downloads (the
+             stream overlay hides them too), and the floating exit X sat
+             right on top of "Start list", so a click there left broadcast
+             mode instead. The ordinary recap keeps them. -->
+        <div v-if="!broadcastMode" class="export-actions">
           <a :href="`/api/events/${currentEventId}/results.pdf`"
              target="_blank" rel="noopener"
              class="btn btn-ghost btn-sm">PDF</a>

@@ -63,6 +63,22 @@ async function roomWatcher(baseURL, eventId, token = "spectator") {
   return { sock, seen, close: () => sock.disconnect() };
 }
 
+// Every WebSocket the page opens lands in window.__sockets, so a test can
+// drop them the way a phone losing signal does. Going offline in the
+// browser doesn't close one that's already open. Call before the page loads.
+async function trackSockets(page) {
+  await page.addInitScript(() => {
+    const Native = window.WebSocket;
+    window.__sockets = [];
+    window.WebSocket = class extends Native {
+      constructor(...args) {
+        super(...args);
+        window.__sockets.push(this);
+      }
+    };
+  });
+}
+
 // Fire a privileged socket action as someone (an admin token, say) and
 // wait for the server's ack.
 async function emitAck(baseURL, token, eventName, payload) {
@@ -77,4 +93,4 @@ async function emitAck(baseURL, token, eventName, payload) {
   }
 }
 
-module.exports = { signIn, liveEvent, roomWatcher, emitAck };
+module.exports = { signIn, liveEvent, roomWatcher, emitAck, trackSockets };

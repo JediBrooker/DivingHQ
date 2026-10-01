@@ -548,7 +548,8 @@
     "medal_title_home_nation": "Medaljtabell per nation",
     "medal_title_region": "Medaljtabell per region",
     "medal_col_country": "Land",
-    "medal_col_club": "Klubb"
+    "medal_col_club": "Klubb",
+    "status_upcoming": "Kommande"
   },
   "guide": {
     "title": "Användarguide",
@@ -772,7 +773,8 @@
     "failed_one": "1 misslyckad",
     "failed_many": "{n} misslyckade",
     "conflict_one": "1 konflikt väntar på granskning",
-    "conflict_many": "{n} konflikter väntar på granskning"
+    "conflict_many": "{n} konflikter väntar på granskning",
+    "offline": "Offline"
   },
   "inbox": {
     "title": "Inkorg",

@@ -548,7 +548,8 @@
     "medal_title_home_nation": "Éremtáblázat országonként (UK)",
     "medal_title_region": "Éremtáblázat régiónként",
     "medal_col_country": "Ország",
-    "medal_col_club": "Klub"
+    "medal_col_club": "Klub",
+    "status_upcoming": "Hamarosan"
   },
   "guide": {
     "title": "Felhasználói útmutató",
@@ -772,7 +773,8 @@
     "failed_one": "1 sikertelen művelet",
     "failed_many": "{n} sikertelen művelet",
     "conflict_one": "1 konfliktus felülvizsgálatra vár",
-    "conflict_many": "{n} konfliktus felülvizsgálatra vár"
+    "conflict_many": "{n} konfliktus felülvizsgálatra vár",
+    "offline": "Offline"
   },
   "inbox": {
     "title": "Bejövő üzenetek",

@@ -548,7 +548,8 @@
     "medal_title_home_nation": "Медальный зачёт по странам (UK)",
     "medal_title_region": "Медальный зачёт по регионам",
     "medal_col_country": "Страна",
-    "medal_col_club": "Клуб"
+    "medal_col_club": "Клуб",
+    "status_upcoming": "Скоро"
   },
   "guide": {
     "title": "Руководство пользователя",
@@ -772,7 +773,8 @@
     "failed_one": "1 не выполнено",
     "failed_many": "{n} не выполнено",
     "conflict_one": "1 конфликт ожидает проверки",
-    "conflict_many": "{n} конфликтов ожидают проверки"
+    "conflict_many": "{n} конфликтов ожидают проверки",
+    "offline": "Не в сети"
   },
   "inbox": {
     "title": "Входящие",

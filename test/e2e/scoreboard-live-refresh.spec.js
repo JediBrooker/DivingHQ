@@ -7,7 +7,7 @@
 // the recap.
 const { test, expect } = require("@playwright/test");
 const setup = require("./_setup");
-const { liveEvent, emitAck, signIn } = require("./_meetday");
+const { liveEvent, emitAck, signIn, trackSockets } = require("./_meetday");
 
 test.describe.configure({ mode: "serial" });
 
@@ -101,6 +101,61 @@ test("a score correction reaches an open scoreboard, live and on the recap", asy
   await expect(recap).toContainText("37.5", { timeout: 4_000 });
   await expect(recap).not.toContainText("34.5");
   await setup.deleteOrg(orgId);
+});
+
+// The Control Room's History lists a dive as soon as its panel is in, while
+// that diver is still up on the boards, so a slip (J3 keyed 2 for a 7) gets
+// put right before the next diver. The correction only ever re-pulled the
+// standings: the pill under the performer kept the 2.0, and the trim and
+// Dive Total that went with it, until the next diver came up.
+test("a correction to the dive still on the board fixes its pills and Dive Total", async ({ page, request, baseURL }) => {
+  test.setTimeout(120_000);
+  const { orgId, adminToken } = await setup.createOrgAndAdmin(request, { countryCode: "AUS", orgName: "Scoreboard Live Fix" });
+  try {
+    const { event, diveId, divers, judges } = await liveEvent(request, {
+      orgId, adminToken, name: "Live Fix Event", diverNames: ["AAA Slip"],
+    });
+    expect(await emitAck(baseURL, adminToken, "set_active_diver", {
+      event_id: event.id, competitor_id: divers[0].userId, round_number: 1,
+      full_name: "AAA Slip", diverName: "AAA Slip", dd: 1.5, status: "ready",
+    })).toMatchObject({ ok: true });
+
+    await page.goto(`/scoreboard/${event.id}`);
+    await expect(page.locator(".sb-name").first()).toContainText("AAA Slip", { timeout: 10_000 });
+    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(1000);
+
+    // J3's 2 and one 8 trimmed: (6 + 7 + 8) x 1.5 = 31.5
+    await setup.submitPanelScores({
+      baseURL, judges, eventId: event.id, competitorId: divers[0].userId, roundNumber: 1, diveId,
+      scores: [6, 7, 2, 8, 8],
+    });
+    const pills = page.locator(".sb-live-judges .j-score");
+    const total = page.locator(".sb-live-total-value");
+    const standing = page.locator(".sb-col-standings .standing").first();
+    await expect(pills).toHaveText(["6.0", "7.0", "2.0", "8.0", "8.0"], { timeout: 6_000 });
+    await expect(total).toHaveText("31.5");
+    await expect(standing.locator(".standing-score")).toHaveText("31.5", { timeout: 8_000 });
+
+    // Put right while AAA Slip is still up. Now J1's 6 and one 8 go:
+    // (7 + 7 + 8) x 1.5 = 33.0
+    const { rows } = await setup.pool.query(
+      "SELECT id FROM scores WHERE event_id = $1 AND competitor_id = $2 AND judge_id = $3",
+      [event.id, divers[0].userId, judges[2].userId],
+    );
+    const res = await request.put(`/api/scores/${rows[0].id}`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
+      data: { score: 7, reason: "J3 keyed 2 for a 7" },
+    });
+    expect(res.status()).toBe(200);
+    await expect(standing.locator(".standing-score")).toHaveText("33.0", { timeout: 8_000 });
+    await expect(pills).toHaveText(["6.0", "7.0", "7.0", "8.0", "8.0"], { timeout: 6_000 });
+    await expect(total).toHaveText("33.0");
+    await expect(pills.nth(0)).toHaveClass(/j-dropped/);
+    await expect(pills.nth(2)).not.toHaveClass(/j-dropped/);
+  } finally {
+    await setup.deleteOrg(orgId);
+  }
 });
 
 // The live pills were the Nth score to arrive in slot N (under judge N's
@@ -214,4 +269,134 @@ test("a deep link's loading placeholder is in the viewer's language", async ({ p
   await expect(page.locator(".sb-deeplink-pending")).toHaveText("Chargement…");
   await expect(page.locator(".sb-body")).toBeVisible({ timeout: 10_000 });
   await setup.deleteOrg(orgId);
+});
+
+// The catch-up box counted the dive on the board as still to come even
+// after its panel was in and its points were in the standings. After R2 of
+// 3 it said "2 dives left", and after the very last dive of the event the
+// projector still said "1 dive left", with the averages it asked for
+// spread over a dive that would never happen.
+test("the catch-up box stops counting a dive once it's been scored", async ({ page, request, baseURL }) => {
+  test.setTimeout(120_000);
+  const { orgId, adminToken } = await setup.createOrgAndAdmin(request, { countryCode: "AUS", orgName: "Scoreboard Catch-up" });
+  try {
+    const { event, diveId, divers, judges } = await liveEvent(request, {
+      orgId, adminToken, name: "Catch-up Event", diverNames: ["AAA Lead", "BBB Chase"], rounds: 3,
+    });
+    const [lead, chaser] = divers;
+    const insertPanel = async (who, round, score) => {
+      for (const j of judges) {
+        await setup.insertScore({ eventId: event.id, competitorId: who.userId, judgeId: j.userId, diveId, roundNumber: round, score });
+      }
+    };
+    // AAA stays ahead throughout: a dive ahead and 8s to BBB's 6s.
+    await insertPanel(lead, 1, 8);
+    await insertPanel(lead, 2, 8);
+    await insertPanel(chaser, 1, 6);
+    const up = (round) => emitAck(baseURL, adminToken, "set_active_diver", {
+      event_id: event.id, competitor_id: chaser.userId, round_number: round,
+      full_name: "BBB Chase", diverName: "BBB Chase", dd: 1.5, status: "ready",
+    });
+
+    expect(await up(2)).toMatchObject({ ok: true });
+    await page.goto(`/scoreboard/${event.id}`);
+    const head = page.locator(".sb-projection-chase .sb-projection-head");
+    // R2 and R3 still to dive
+    await expect(head).toContainText(/\b2\s+dives left/, { timeout: 10_000 });
+    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(1000);
+    await setup.submitPanelScores({
+      baseURL, judges, eventId: event.id, competitorId: chaser.userId, roundNumber: 2, diveId, scores: [6, 6, 6, 6, 6],
+    });
+    // R2's points are in the standings now, only R3 is left
+    await expect(page.locator(".sb-live-total-value")).toBeVisible({ timeout: 6_000 });
+    await expect(head).toContainText(/\b1\s+dive left/, { timeout: 8_000 });
+
+    await insertPanel(lead, 3, 8);
+    expect(await up(3)).toMatchObject({ ok: true });
+    await expect(page.locator(".sb-round-pill")).toContainText("Round 3", { timeout: 6_000 });
+    await expect(head).toContainText(/\b1\s+dive left/, { timeout: 8_000 });
+    await setup.submitPanelScores({
+      baseURL, judges, eventId: event.id, competitorId: chaser.userId, roundNumber: 3, diveId, scores: [6, 6, 6, 6, 6],
+    });
+    // The event's last dive is in: nothing left to catch up with
+    await expect(head).toContainText(/no dives left/i, { timeout: 8_000 });
+    await expect(page.locator(".sb-projection .sb-catchup-row")).toHaveCount(0);
+  } finally {
+    await setup.deleteOrg(orgId);
+  }
+});
+
+// A spectator who opened or reloaded the board mid-dive got a row of empty
+// pills, and that dive never got a Dive Total: the pills only ever came
+// from score_received broadcasts, so whatever was sent before the page
+// joined was gone for good. A phone whose socket dropped for a moment
+// (Safari drops it whenever the screen locks) missed the scores sent
+// meanwhile the same way. The board asks for the dive's stored scores when
+// it lands on a diver, and again when its socket comes back.
+test("a board opened mid-dive, or back from a dropped connection, shows the judges already in", async ({ page, context, request, baseURL }) => {
+  test.setTimeout(120_000);
+  const { orgId, adminToken } = await setup.createOrgAndAdmin(request, { countryCode: "AUS", orgName: "Scoreboard Mid-dive" });
+  try {
+    const { event, diveId, divers, judges } = await liveEvent(request, {
+      orgId, adminToken, name: "Mid-dive Event", diverNames: ["AAA Early", "BBB Later"],
+    });
+    const up = (d, name) => emitAck(baseURL, adminToken, "set_active_diver", {
+      event_id: event.id, competitor_id: d.userId, round_number: 1,
+      full_name: name, diverName: name, dd: 1.5, status: "ready",
+    });
+    const score = (i, d, value) => setup.submitJudgeScore({
+      baseURL, token: judges[i].token, eventId: event.id, competitorId: d.userId, roundNumber: 1, diveId, score: value,
+    });
+
+    expect(await up(divers[0], "AAA Early")).toMatchObject({ ok: true });
+    await score(2, divers[0], 6);
+    await score(3, divers[0], 6.5);
+    await score(4, divers[0], 7);
+
+    await trackSockets(page);
+    await page.goto(`/scoreboard/${event.id}`);
+    await expect(page.locator(".sb-name").first()).toContainText("AAA Early", { timeout: 10_000 });
+    const pills = page.locator(".sb-live-judges .j-score");
+    await expect(pills).toHaveText(["—", "—", "6.0", "6.5", "7.0"], { timeout: 6_000 });
+
+    // The rest of the panel comes in live, and the dive gets its total:
+    // 6.0 and 8.0 trimmed, (6.5 + 7.0 + 7.5) x 1.5 = 31.5
+    await score(0, divers[0], 7.5);
+    await score(1, divers[0], 8);
+    await expect(pills).toHaveText(["7.5", "8.0", "6.0", "6.5", "7.0"], { timeout: 6_000 });
+    await expect(page.locator(".sb-live-total-value")).toHaveText("31.5");
+
+    // A reload mid-dive puts the same pills back, total and all, and so
+    // does a venue screen opening /broadcast (the same view) right now.
+    await page.reload();
+    await expect(pills).toHaveText(["7.5", "8.0", "6.0", "6.5", "7.0"], { timeout: 10_000 });
+    await expect(page.locator(".sb-live-total-value")).toHaveText("31.5");
+    const tv = await context.newPage();
+    await tv.goto(`/scoreboard/${event.id}/broadcast`);
+    await expect(tv.locator(".sb-live-judges .j-score")).toHaveText(["7.5", "8.0", "6.0", "6.5", "7.0"], { timeout: 10_000 });
+    await expect(tv.locator(".sb-live-total-value")).toHaveText("31.5");
+    await tv.close();
+
+    // Next diver, then the phone loses its connection while two judges score.
+    expect(await up(divers[1], "BBB Later")).toMatchObject({ ok: true });
+    await expect(page.locator(".sb-name").first()).toContainText("BBB Later", { timeout: 6_000 });
+    await expect(pills).toHaveText(["—", "—", "—", "—", "—"]);
+    await context.setOffline(true);
+    try {
+      await page.evaluate(() => window.__sockets.forEach((s) => s.close()));
+      await expect(page.locator(".conn-banner")).toBeVisible({ timeout: 10_000 });
+      await score(0, divers[1], 5);
+      await score(1, divers[1], 5.5);
+      // still down, so neither score reached the page live
+      await expect(page.locator(".conn-banner")).toBeVisible();
+      await expect(pills).toHaveText(["—", "—", "—", "—", "—"]);
+    } finally {
+      await context.setOffline(false);
+    }
+    await expect(page.locator(".conn-banner")).toHaveCount(0, { timeout: 15_000 });
+    await expect(pills).toHaveText(["5.0", "5.5", "—", "—", "—"], { timeout: 6_000 });
+  } finally {
+    await setup.deleteOrg(orgId);
+  }
 });

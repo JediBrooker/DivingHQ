@@ -548,7 +548,8 @@
     "medal_title_home_nation": "Quadro de medalhas por nação",
     "medal_title_region": "Quadro de medalhas por região",
     "medal_col_country": "País",
-    "medal_col_club": "Clube"
+    "medal_col_club": "Clube",
+    "status_upcoming": "Em breve"
   },
   "guide": {
     "title": "Guia do Utilizador",
@@ -772,7 +773,8 @@
     "failed_one": "1 falha",
     "failed_many": "{n} falhas",
     "conflict_one": "1 conflito pendente de revisão",
-    "conflict_many": "{n} conflitos pendentes de revisão"
+    "conflict_many": "{n} conflitos pendentes de revisão",
+    "offline": "Sem ligação"
   },
   "inbox": {
     "title": "Caixa de entrada",

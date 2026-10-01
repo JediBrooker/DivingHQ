@@ -537,7 +537,8 @@
     "medal_title_home_nation": "Home Nation Medal Table",
     "medal_title_region": "Region Medal Table",
     "medal_col_country": "Country",
-    "medal_col_club": "Club"
+    "medal_col_club": "Club",
+    "status_upcoming": "Upcoming"
   },
   "guide": {
     "title": "User Guide",
@@ -761,7 +762,8 @@
     "failed_one": "1 failed",
     "failed_many": "{n} failed",
     "conflict_one": "1 conflict pending review",
-    "conflict_many": "{n} conflicts pending review"
+    "conflict_many": "{n} conflicts pending review",
+    "offline": "Offline"
   },
   "inbox": {
     "title": "Inbox",

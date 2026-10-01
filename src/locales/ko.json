@@ -537,7 +537,8 @@
     "medal_title_home_nation": "구성국별 메달 순위",
     "medal_title_region": "지역별 메달 순위",
     "medal_col_country": "국가",
-    "medal_col_club": "클럽"
+    "medal_col_club": "클럽",
+    "status_upcoming": "예정"
   },
   "guide": {
     "title": "사용자 가이드",
@@ -761,7 +762,8 @@
     "failed_one": "1건이 실패했습니다",
     "failed_many": "{n}건이 실패했습니다",
     "conflict_one": "충돌 1건이 검토 대기 중입니다",
-    "conflict_many": "{n}건의 충돌이 검토 대기 중입니다"
+    "conflict_many": "{n}건의 충돌이 검토 대기 중입니다",
+    "offline": "오프라인입니다"
   },
   "inbox": {
     "title": "받은 편지함",

@@ -537,7 +537,8 @@
     "medal_title_home_nation": "构成国奖牌榜",
     "medal_title_region": "地区奖牌榜",
     "medal_col_country": "国家",
-    "medal_col_club": "俱乐部"
+    "medal_col_club": "俱乐部",
+    "status_upcoming": "即将开始"
   },
   "guide": {
     "title": "用户指南",
@@ -761,7 +762,8 @@
     "failed_one": "1 个失败的操作",
     "failed_many": "{n} 个失败的操作",
     "conflict_one": "1 个冲突待审查",
-    "conflict_many": "{n} 个冲突待审查"
+    "conflict_many": "{n} 个冲突待审查",
+    "offline": "已离线"
   },
   "inbox": {
     "title": "收件箱",

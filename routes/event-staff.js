@@ -16,7 +16,7 @@
 
 const express = require("express");
 const { isUuid } = require("../lib/uuid");
-const { DIVE_PANEL_SCORES_SQL } = require("../lib/scoring-sql");
+const { storedDiveScores } = require("../lib/dive-scores");
 
 module.exports = function createEventStaffRouter({
   pool,
@@ -212,8 +212,8 @@ module.exports = function createEventStaffRouter({
   // second, different score over the first. Only a judge with a seat on
   // this panel gets an answer (a sysadmin too, same as submit_score). The
   // event room's score_received broadcasts carry these same numbers live,
-  // so nothing new leaves here. A score set aside by a re-dive (status
-  // 'redive') isn't in: that judge still has to score again.
+  // so nothing new leaves here. What counts as "in" is lib/dive-scores,
+  // shared with the spectator scoreboard's get_active_diver reply.
   router.get("/api/events/:eventId/dive-scores", requireOrgRole(["judge"]), async (req, res) => {
     const { eventId } = req.params;
     const competitorId = req.query.competitor_id;
@@ -228,10 +228,9 @@ module.exports = function createEventStaffRouter({
         [eventId, req.user.id],
       );
       if (!seat.rows.length) return res.status(404).json({ error: "Not assigned to this event" });
-      const r = await pool.query(DIVE_PANEL_SCORES_SQL, [eventId, competitorId, round]);
       res.json({
         judge_number: seat.rows[0].judge_number,
-        scores: r.rows.map((row) => ({ judge_number: row.judge_number, score: Number(row.score) })),
+        scores: await storedDiveScores(pool, { eventId, competitorId, roundNumber: round }),
       });
     } catch (err) {
       console.error("[Dive Scores Error]", err.message);

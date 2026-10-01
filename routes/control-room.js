@@ -31,7 +31,8 @@ const express = require("express");
 const { publicId } = require("../lib/public-id");
 const { recordAudit, auditFromReq } = require("../lib/audit");
 const createIdempotency = require("../lib/idempotency");
-const { perDiveSelect, eventRepCodesCte, DIVE_PANEL_SCORES_SQL } = require("../lib/scoring-sql");
+const { perDiveSelect, eventRepCodesCte } = require("../lib/scoring-sql");
+const { storedDiveScores } = require("../lib/dive-scores");
 const { isUuid } = require("../lib/uuid");
 const { PUBLIC_CLUB_JOIN } = require("../lib/club-approvals");
 const { canSeeEvent } = require("../lib/event-visibility");
@@ -521,7 +522,7 @@ module.exports = function createControlRoomRouter({
     try {
       if (!(await ensureEventOrgGate(req, res, "id"))) return;
       const [scores, call] = await Promise.all([
-        pool.query(DIVE_PANEL_SCORES_SQL, [req.params.id, competitorId, round]),
+        storedDiveScores(pool, { eventId: req.params.id, competitorId, roundNumber: round }, { withJudgeIds: true }),
         pool.query(
           `SELECT referee_call, referee_cap FROM competitor_dive_lists
             WHERE event_id = $1 AND competitor_id = $2 AND round_number = $3`,
@@ -535,11 +536,7 @@ module.exports = function createControlRoomRouter({
         round_number: round,
         referee_call: call.rows[0]?.referee_call || null,
         referee_cap: cap == null ? null : Number(cap),
-        scores: scores.rows.map((row) => ({
-          judge_id: row.judge_id,
-          judge_number: row.judge_number,
-          score: Number(row.score),
-        })),
+        scores,
       });
     } catch (err) {
       console.error("[Dive Panel Error]", err.message);

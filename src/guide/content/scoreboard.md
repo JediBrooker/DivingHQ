@@ -71,7 +71,7 @@ The link works for anonymous spectators too — judge profiles are public by des
 
 ## Record chip
 
-A dive that beats a standing club, state, national or continental record gets one small chip next to its dive code, on the Completed Dives card and on the recap's dive-by-dive rows: **NSW record**, **AUS record**, **Oceania record**. It names the biggest book the dive got into; hover it for every book it made and the score each one beat. The chip is amber, or grey while that state or country hasn't been claimed by its governing body (the record is [unofficial](#record-books-records) until then).
+A dive that beats a standing club, state, national or continental record gets one small chip next to its dive code, on the Completed Dives card and on the recap's dive-by-dive rows: **NSW record**, **AUS record**, **Oceania record**. It names the biggest book the dive got into; hover it, tap it on a phone, or Tab to it for every book it made and the score each one beat. The chip is amber, or grey and marked **Unofficial** while that state or country hasn't been claimed by its governing body (the record is [unofficial](#record-books-records) until then).
 
 It's deliberately quiet. Personal bests never get a chip, and neither does the first mark in a book (the first time anyone at a club does a dive, it's the club record by default), so it only turns up when somebody actually beat somebody. It arrives live the moment the last judge's score lands, and the Broadcast and Stream Overlay screens leave it off.
 
@@ -90,8 +90,8 @@ Signed-in users reach **Judge Analysis** via the sidebar. Anonymous spectators s
 
 The cyan-tinted block in the centre column tells the audience and the diver themselves what they need to overtake the leaders.
 
-- **Chasing** — `Catch-up — N dives left · currently 3rd` with a row per podium target: `1st  Lead Name  avg 7.5`. The "avg" is the **average judge score** the diver needs across the remaining dives to close the gap, **rounded up to the next achievable half-point** (judges only score in halves, so 5.2 isn't a possible target — 5.5 is). When the math is impossible (would need straight 10s and still come up short), the row reads "not possible".
-- **Leading** — `Leading by +X.X` with the runner-up's catch-up math: what they'd need to overtake.
+- **Chasing** — `Catch-up — N dives left · currently 3rd` with a row per podium target: `1st  Lead Name  avg 7.5`. The "avg" is the **average judge score** the diver needs across the remaining dives to close the gap, **rounded up to the next achievable half-point** (judges only score in halves, so 5.2 isn't a possible target — 5.5 is). When the math is impossible (would need straight 10s and still come up short), the row reads "not possible". "Dives left" counts the dives the diver hasn't been scored on yet, so once the dive on the board has its scores it drops out of the count. After a diver's last dive the block reads `Catch-up — no dives left · currently 3rd`, with no rows.
+- **Leading** — `Leading by +X.X` with the runner-up's catch-up math: what they'd need to overtake, over the dives the runner-up has left. A runner-up with none left reads "can't overtake".
 - **Pre** — `No completed dives yet. Lead Diver leads at X.X` — shown for the first diver of the meet.
 
 ## Per-round leaderboard pop
@@ -110,7 +110,7 @@ The scoreboard subscribes to the live socket; if your wifi or 4G drops, a red ba
 
 For a back-of-house projector, add `/broadcast` to the end of the event's scoreboard URL (`/scoreboard/<event-id>/broadcast`) or click **Broadcast** in the header. This:
 
-- Hides the page chrome (header, footer, navigation)
+- Hides the page chrome (header, footer, navigation), and on the recap the PDF / CSV / Start list buttons (open the ordinary scoreboard to download those)
 - Scales fonts up so a back-row spectator can read everything
 - Tints the background a deeper black for high-contrast projection
 

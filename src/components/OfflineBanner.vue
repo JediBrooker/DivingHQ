@@ -16,7 +16,7 @@
  * also wait on an `enabled` flag from useOutbox, which went away when
  * the outbox became always-on, so the banner silently never showed.
  */
-import { computed, ref } from 'vue'
+import { computed, ref, watch, onBeforeUnmount } from 'vue'
 import { useOutbox } from '@/composables/useOutbox'
 import { retryFailedActions } from '@/composables/useHttpOutbox'
 
@@ -37,12 +37,35 @@ async function retryFailed() {
   try { await retryFailedActions() } finally { retrying.value = false }
 }
 
-// Human-readable elapsed time since disconnect. Updates every
-// minute via the composable's 30s refresh tick; resolution to the
-// minute is fine for the user-facing display.
+// Our own clock for the "Offline for ..." label. A computed doesn't re-run
+// for Date.now(), only for refs, so the label got worked out once at the
+// moment of the drop and said "0s" until the phone came back, however long
+// that took. Ticks once a second, and only while we're offline.
+//
+// The banner is a polite live region, so the ticking label is aria-hidden
+// and a screen reader gets a plain "Offline" in its place (see the
+// template). Otherwise VoiceOver / TalkBack read the new number out every
+// second of the outage, ahead of the keypad's own feedback. aria-live="off"
+// on the label wouldn't do: WebKit walks past an "off" region to the polite
+// one above it, and judges' phones are mostly iPhones.
+const now = ref(Date.now())
+let ticker = null
+function stopTicker() {
+  if (ticker) clearInterval(ticker)
+  ticker = null
+}
+watch(isOffline, (offline) => {
+  stopTicker()
+  if (!offline) return
+  now.value = Date.now()
+  ticker = setInterval(() => { now.value = Date.now() }, 1000)
+}, { immediate: true })
+onBeforeUnmount(stopTicker)
+
+// Human-readable elapsed time since disconnect.
 const offlineDurationLabel = computed(() => {
   if (!offlineSince.value) return ''
-  const elapsedSec = Math.floor((Date.now() - offlineSince.value.getTime()) / 1000)
+  const elapsedSec = Math.max(0, Math.floor((now.value - offlineSince.value.getTime()) / 1000))
   if (elapsedSec < 60) return `${elapsedSec}s`
   const mins = Math.floor(elapsedSec / 60)
   if (mins < 60) return `${mins}m`
@@ -64,7 +87,8 @@ const offlineDurationLabel = computed(() => {
       <div class="offline-banner-pulse" aria-hidden="true"></div>
       <div class="offline-banner-text">
         <strong v-if="isOffline">
-          {{ $t('offline_banner.offline_since', { duration: offlineDurationLabel }) }}
+          <span aria-hidden="true">{{ $t('offline_banner.offline_since', { duration: offlineDurationLabel }) }}</span>
+          <span class="offline-banner-sr">{{ $t('offline_banner.offline') }}</span>
         </strong>
         <strong v-else>
           {{ $t('offline_banner.online_with_pending') }}
@@ -153,6 +177,11 @@ const offlineDurationLabel = computed(() => {
   font-weight: 800; font-style: italic;
   font-size: 12px;
   letter-spacing: 0.02em;
+}
+/* Read by screen readers only, the visible label beside it is aria-hidden. */
+.offline-banner-sr {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
 }
 .offline-banner-meta {
   color: var(--text-2);

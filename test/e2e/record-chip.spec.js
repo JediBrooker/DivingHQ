@@ -17,6 +17,7 @@
 
 const { test, expect } = require("@playwright/test");
 const setup = require("./_setup");
+const { liveEvent } = require("./_meetday");
 
 // Wallis and Futuna: no other spec, seed or integration test uses it.
 const COUNTRY = "WLF";
@@ -160,6 +161,72 @@ test("a dive that beats a standing record wears a quiet chip, a first mark doesn
     await setup.pool.query(
       "DELETE FROM records_personal_history WHERE user_id IN (SELECT id FROM users WHERE org_id = $1)", [admin.orgId]);
     await setup.pool.query("DELETE FROM clubs WHERE org_id = $1", [admin.orgId]);
+    await setup.deleteOrg(admin.orgId);
+  }
+});
+
+// Everything past the chip's own label (the other books the dive made, the
+// marks it beat, "Unofficial") was only in a hover tooltip, and on a phone
+// there's no hover: the bubble is gated on (hover: hover) and the chip was
+// a span nothing could focus. Spectators watch on phones. A tap has to open
+// it, the keyboard has to reach it, and an unofficial book says so on the
+// chip itself. The marks are put into the payload here, the rules for who
+// sets them are the test above and the integration suite.
+test("a record chip opens with a tap and from the keyboard", async ({ browser, request }) => {
+  test.setTimeout(60_000);
+  const admin = await setup.createOrgAndAdmin(request, { countryCode: "AUS", orgName: "Chip Tap" });
+  const phone = await browser.newContext({
+    viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true,
+  });
+  const desk = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  try {
+    const { event, diveId, divers, judges } = await liveEvent(request, {
+      orgId: admin.orgId, adminToken: admin.adminToken, name: "Chip Tap 3m", diverNames: ["Tia Tapper"],
+    });
+    for (const j of judges) {
+      await setup.insertScore({ eventId: event.id, competitorId: divers[0].userId, judgeId: j.userId, diveId, roundNumber: 1, score: 7 });
+    }
+    // An unofficial state record on top, with a club record under it.
+    const withMarks = async (route) => {
+      const res = await route.fetch();
+      const body = await res.json();
+      const records = (body.history || []).flatMap((h) => [
+        { scope: "region", scope_code: "NSW", official: false, competitor_id: h.competitor_id,
+          dive_code: h.dive_code, position: h.position, score: Number(h.total_dive_score), prev_score: 30.5 },
+        { scope: "club", scope_code: "RHSL", official: true, competitor_id: h.competitor_id,
+          dive_code: h.dive_code, position: h.position, score: Number(h.total_dive_score), prev_score: 28.25 },
+      ]);
+      await route.fulfill({ response: res, json: { ...body, records } });
+    };
+
+    const page = await phone.newPage();
+    await page.route(`**/api/scoreboard/${event.id}`, withMarks);
+    await page.goto(`/scoreboard/${event.id}`);
+    const chip = page.getByTestId("record-chip");
+    await expect(chip).toContainText("NSW record", { timeout: 10_000 });
+    await expect(chip).toContainText("Unofficial");
+    await chip.scrollIntoViewIfNeeded();
+    await page.waitForTimeout(300);
+    const bubble = page.getByRole("tooltip");
+    await expect(bubble).toHaveCount(0);
+    await chip.tap();
+    await expect(bubble).toBeVisible();
+    await expect(bubble).toContainText("RHSL record");
+    await expect(bubble).toContainText("Previous record: 28.25");
+    await expect(bubble).toContainText("Unofficial");
+
+    // The keyboard gets there too: Tab stops on it and focus opens it.
+    const dpage = await desk.newPage();
+    await dpage.route(`**/api/scoreboard/${event.id}`, withMarks);
+    await dpage.goto(`/scoreboard/${event.id}`);
+    const dchip = dpage.getByTestId("record-chip");
+    await expect(dchip).toContainText("NSW record", { timeout: 10_000 });
+    await expect(dchip).toHaveJSProperty("tabIndex", 0);
+    await dchip.focus();
+    await expect(dpage.getByRole("tooltip")).toContainText("Previous record: 30.50");
+  } finally {
+    await phone.close();
+    await desk.close();
     await setup.deleteOrg(admin.orgId);
   }
 });
