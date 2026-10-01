@@ -8577,6 +8577,73 @@ test("a manual entry over a judge's set-aside row scores the redive", async (t) 
   }
 });
 
+// The other way round. The operator typed J1's first mark during an
+// outage, the referee called a redive, and J1 scored the new dive from the
+// phone. The manual-vs-sync rule (operator wins) treated that as a late
+// sync clashing with the operator, so the new mark was refused, a conflict
+// went to the tray and the row stayed set aside. The operator's mark was
+// for the dive that got thrown out, so there's nothing to reconcile.
+test("a judge's mark over a set-aside manual entry scores the redive", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const orgId = await compKit.org("redive-judge");
+  const socks = [];
+  try {
+    const manager = await compKit.user(orgId, "Outage Manager", ["meet_manager"]);
+    const referee = await compKit.user(orgId, "Outage Referee", ["referee"]);
+    const j1 = await compKit.user(orgId, "Outage Judge One", ["judge"]);
+    const diver = await compKit.user(orgId, "Outage Diver", ["diver"]);
+    const eventId = await compKit.event(orgId, { status: "Live", total_rounds: 1 });
+    await compKit.enter(eventId, diver.id, await compKit.dives(1), { display_order: 1 });
+    await compKit.panel(eventId, [j1]);
+    const [rs, s1, watcher] = await Promise.all(
+      [referee.token, j1.token, null].map((tok) => compKit.socket(tok)),
+    );
+    socks.push(rs, s1, watcher);
+    watcher.emit("subscribe_event", { event_id: eventId });
+    await new Promise((r) => setTimeout(r, 100));
+    const dive = { event_id: eventId, competitor_id: diver.id, round_number: 1 };
+    const row = async () => (await pool.query(
+      "SELECT id, score::float AS score, score_source, status FROM scores WHERE event_id = $1",
+      [eventId],
+    )).rows[0];
+
+    const typed = await fetchJson("POST", "/api/scores/manual-entry", {
+      token: manager.token, body: { ...dive, judge_id: j1.id, score: 7, reason: "outage" },
+    });
+    assert.equal(typed.status, 200, JSON.stringify(typed.body));
+    assert.deepEqual(await compKit.ask(rs, "referee_redive", dive), { ok: true });
+
+    const conflicts = compKit.listen(watcher, "conflict_pending");
+    const ack = await compKit.ask(s1, "submit_score", { ...dive, score: 8 });
+    assert.equal(ack.ok, true);
+    assert.equal(ack.superseded_by, undefined, "the judge's new mark isn't a late sync");
+    assert.equal(ack.response.score, 8);
+    assert.equal((await conflicts).length, 0, "nothing for the review tray");
+    const { id, ...stored } = await row();
+    assert.deepEqual(stored, { score: 8, score_source: "judge_direct", status: "active" });
+    const audit = (await pool.query(
+      `SELECT action::text AS action, old_score::float AS old, new_score::float AS new, reason
+         FROM score_audit_log WHERE event_id = $1 AND judge_id = $2 ORDER BY created_at, id`,
+      [eventId, j1.id],
+    )).rows;
+    assert.ok(!audit.some((a) => a.action === "rejected_duplicate"));
+    assert.deepEqual(audit.at(-1), { action: "update", old: 7, new: 8, reason: "re-scored after redive" });
+
+    // The row is the judge's own now, so a later fix from the phone goes
+    // straight in and there's no conflict left to settle.
+    assert.equal((await compKit.ask(s1, "submit_score", { ...dive, score: 8.5 })).ok, true);
+    assert.equal((await row()).score, 8.5);
+    const settle = await fetchJson("POST", `/api/conflicts/${id}/resolve`, {
+      token: manager.token, body: { decision: "keep_existing" },
+    });
+    assert.equal(settle.status, 409);
+  } finally {
+    socks.forEach((s) => s.close());
+    await compKit.cleanup(orgId);
+  }
+});
+
 // The same thing through the sockets a meet actually uses. The rehearsal
 // found "403C 0.00" in the national, club and personal books after a
 // Failed call. A dive that holds a book has to lose it the moment the call

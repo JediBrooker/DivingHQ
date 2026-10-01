@@ -885,15 +885,20 @@ module.exports = function attachSocket({
         //                judge's digital sync is rejected with a
         //                conflict_pending event so the review tray
         //                surfaces the mismatch for the referee.
+        //
+        // Not on a row the referee set aside, though. The operator's mark
+        // there was for the dive that got thrown out, so there's nothing
+        // to reconcile: the judge is scoring the new dive, and that goes
+        // in through the upsert below like any other re-score. This used
+        // to refuse a different mark as a clash and leave the row set
+        // aside, so the dive never finished.
         let reconciledManual = false;
-        if (existing && existing.score_source === "manual_entry") {
+        if (existing && existing.score_source === "manual_entry" && !wasRedive) {
           if (oldScore === score) {
             // Same value, reconcile by flipping the source.
-            // status back to active too: this is the judge scoring again
-            // after a redive, same as the upsert below.
             await client.query(
               `UPDATE scores SET score_source = 'manual_then_reconciled',
-                                 actor_local_time = $2, status = 'active'
+                                 actor_local_time = $2
                WHERE id = $1`,
               [existing.id, actorLocalTime],
             );
@@ -970,17 +975,25 @@ module.exports = function attachSocket({
         // Skip the UPSERT when we already handled the reconciliation
         // branch above (the row exists with the correct value;
         // we just flipped score_source).
+        //
+        // Over a set-aside row the mark is the judge's own from here on,
+        // so the source goes back to judge_direct even if the operator
+        // typed the old one. Left as manual_entry, the judge's next fix
+        // would be refused as a clash with the operator, whose mark is
+        // long gone by then.
         if (!reconciledManual) {
           const upsert = await client.query(
             `INSERT INTO scores (event_id, competitor_id, judge_id, dive_id, round_number, score, actor_local_time)
              VALUES ($1, $2, $3, $4, $5, $6, $7)
              ON CONFLICT (event_id, competitor_id, round_number, judge_id)
              DO UPDATE SET score = EXCLUDED.score, status = 'active',
-                           actor_local_time = EXCLUDED.actor_local_time
+                           actor_local_time = EXCLUDED.actor_local_time,
+                           score_source = CASE WHEN $8::boolean THEN 'judge_direct'
+                                               ELSE scores.score_source END
              RETURNING id`,
             [
               data.event_id, data.competitor_id, judgeId,
-              resolvedDiveId, round, score, actorLocalTime,
+              resolvedDiveId, round, score, actorLocalTime, wasRedive,
             ],
           );
           scoreId = upsert.rows[0].id;
