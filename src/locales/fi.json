@@ -1172,7 +1172,7 @@
       "club_name_placeholder": "Pääkaupungin Sukellusseura",
       "club_code_label": "Lyhytkoodi",
       "club_code_label_hint": "(valinnainen)",
-      "club_code_placeholder": "CAP",
+      "club_code_placeholder": "SEURAKOODI",
       "club_create_btn": "Luo seura ja jatka →",
       "club_creating": "Luodaan…",
       "club_no_org_error": "Seuraa ei voi luoda — tililläsi ei ole org_id:tä.",
