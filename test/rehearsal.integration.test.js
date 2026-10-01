@@ -14,6 +14,9 @@
 //     rehearsal-something) or a seeded account sits on a real event's
 //     panel, is idempotent, and --dry-run rolls back
 //   * seed refuses a country that already has real users
+//   * --judges 3 (one person rehearsing) and 7 seed, report and clean up
+//     that panel, and a stranger who signs up as a judge name the panel
+//     didn't use is still a stranger to cleanup
 //
 // Skips when Postgres isn't reachable. The in-process server part also
 // needs JWT_SECRET, same as integration.test.js. The *.integration name
@@ -452,6 +455,77 @@ test("seed, sign in, rehearse, status, clean up, clean up again", async (t) => {
   assert.equal(empty.status, 0);
   assert.deepEqual(empty.json.rehearsals, []);
   assert.equal(empty.json.seed_check.free, true);
+});
+
+// A rehearsal for one person: three judges, so a phone and two browsers
+// can be the panel (docs/rehearsal.md, "Rehearsing alone").
+test("--judges 3: a three-judge panel, and cleanup takes only what seed made", async (t) => {
+  if (!dbReachable) return t.skip("Postgres not reachable");
+  const seeded = cli(["seed", "--judges", "3"]);
+  assert.equal(seeded.status, 0, seeded.stderr || seeded.stdout);
+  const s = seeded.json;
+  assert.equal(s.judges, 3);
+  const judges = s.accounts.filter((a) => a.role === "judge");
+  assert.deepEqual(judges.map((a) => [a.username, a.judge_number]),
+    [["rehearsal-judge1", 1], ["rehearsal-judge2", 2], ["rehearsal-judge3", 3]]);
+  assert.equal(s.accounts.length, 9);
+  const event = await one("SELECT number_of_judges FROM events WHERE id = $1", [s.event_id]);
+  assert.equal(event.number_of_judges, 3);
+  const panel = (await pool.query(
+    `SELECT u.username, ej.judge_number FROM event_judges ej JOIN users u ON u.id = ej.judge_id
+      WHERE ej.event_id = $1 ORDER BY ej.judge_number`, [s.event_id])).rows;
+  assert.deepEqual(panel.map((p) => p.username), judges.map((a) => a.username));
+  for (const j of judges) {
+    const roles = (await pool.query(
+      `SELECT r.role::text AS role FROM user_org_roles r JOIN users u ON u.id = r.user_id
+        WHERE u.username = $1 ORDER BY r.role`, [j.username])).rows.map((r) => r.role);
+    assert.deepEqual(roles, ["judge", "spectator"]);
+  }
+  assert.equal(await n("SELECT count(*) AS n FROM users WHERE username IN ('rehearsal-judge4', 'rehearsal-judge5')"), 0);
+
+  const st = cli(["status"]);
+  assert.equal(st.status, 0, st.stderr);
+  assert.equal(st.json.rehearsals[0].users.length, 9);
+  assert.equal(st.json.rehearsals[0].events[0].judges, 3);
+  const text = spawnSync(process.execPath, [SCRIPT, "status"], { env: { ...process.env }, encoding: "utf8" });
+  assert.match(text.stdout, /3 judges/);
+
+  // rehearsal-judge4 is one of the names seed can make, but this seed
+  // didn't, so it was free to sign up with. Somebody who did is still
+  // somebody, and cleanup stops for them.
+  const stranger = await one(
+    `INSERT INTO users (username, password, full_name, org_id, email_verified_at)
+     VALUES ('rehearsal-judge4', 'x', 'Somebody Real', $1, now()) RETURNING id`, [s.org_id]);
+  try {
+    const refused = cli(["cleanup"]);
+    assert.equal(refused.status, 1, refused.stdout);
+    assert.equal(refused.json.code, "foreign_users");
+    assert.deepEqual(refused.json.details.users.map((u) => u.username), ["rehearsal-judge4"]);
+    assert.equal(await n("SELECT count(*) AS n FROM users WHERE org_id = $1", [s.org_id]), 10);
+  } finally {
+    await pool.query("DELETE FROM users WHERE id = $1", [stranger.id]);
+  }
+
+  const clean = cli(["cleanup"]);
+  assert.equal(clean.status, 0, clean.stderr);
+  assert.equal(clean.json.cleaned[0].deleted.users, 9);
+  assert.equal(clean.json.cleaned[0].deleted.event_judges, 3);
+  assert.equal(await n("SELECT count(*) AS n FROM users WHERE username LIKE 'rehearsal-%'"), 0);
+});
+
+// Bigger than the default too: the judges past five are the rehearsal's
+// as much as the first five, so cleanup takes them without a fuss.
+test("--judges 7: the extra judges are seeded and cleaned up with the rest", async (t) => {
+  if (!dbReachable) return t.skip("Postgres not reachable");
+  const seeded = cli(["seed", "--judges", "7"]);
+  assert.equal(seeded.status, 0, seeded.stderr || seeded.stdout);
+  assert.equal(seeded.json.judges, 7);
+  assert.equal(seeded.json.accounts.length, 13);
+  assert.equal(await n("SELECT count(*) AS n FROM event_judges WHERE event_id = $1", [seeded.json.event_id]), 7);
+  const clean = cli(["cleanup"]);
+  assert.equal(clean.status, 0, clean.stderr);
+  assert.equal(clean.json.cleaned[0].deleted.users, 13);
+  assert.equal(await n("SELECT count(*) AS n FROM users WHERE username LIKE 'rehearsal-%'"), 0);
 });
 
 test("seed refuses a country where real users already are", async (t) => {
