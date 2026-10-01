@@ -1255,7 +1255,8 @@
   "meet_day": {
     "page_label": "Dia da competição",
     "next_dive": "Próximo salto",
-    "waiting": "A aguardar que a prova entre em direto…"
+    "waiting": "A aguardar que a prova entre em direto…",
+    "no_score_yet": "Ainda sem pontuação"
   },
   "score_audit": {
     "title": "Auditoria de Notas",

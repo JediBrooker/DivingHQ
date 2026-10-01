@@ -1255,7 +1255,8 @@
   "meet_day": {
     "page_label": "Stevnedag",
     "next_dive": "Neste stup",
-    "waiting": "Venter på at stevnet skal gå live…"
+    "waiting": "Venter på at stevnet skal gå live…",
+    "no_score_yet": "Ingen poeng ennå"
   },
   "score_audit": {
     "title": "Poenggjennomgang",

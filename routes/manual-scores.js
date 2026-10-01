@@ -34,7 +34,7 @@
 const express = require("express");
 const createIdempotency = require("../lib/idempotency");
 const { announceRecords } = require("../lib/records");
-const { scoreBodyError, insertScoreAudit } = require("../lib/score-audit");
+const { scoreBodyError, insertScoreAudit, rescoreReason } = require("../lib/score-audit");
 const { scoreAuthorityRefusal } = require("../lib/middleware");
 const { isUuid } = require("../lib/uuid");
 
@@ -131,14 +131,17 @@ module.exports = function createManualScoresRouter({
         );
         const resolvedDiveId = dv.rows[0]?.dive_id ?? null;
 
-        // Look up an existing row first. Three cases govern what happens:
+        // Look up an existing row first. Four cases govern what happens:
         //   * no row              → INSERT with score_source='manual_entry'
         //   * source='manual_entry' → UPDATE (operator typo fix)
+        //   * status='redive'     → UPDATE, whoever wrote it (that mark
+        //                           was for the dive the referee threw
+        //                           out, this one's for the new dive)
         //   * source='judge_direct' → 409 (judge got there first;
         //                                  the operator should use the
         //                                  score-correction path instead)
         const prior = await client.query(
-          `SELECT id, score, score_source
+          `SELECT id, score, score_source, status
            FROM scores
            WHERE event_id=$1 AND competitor_id=$2 AND round_number=$3 AND judge_id=$4
            FOR UPDATE`,
@@ -146,6 +149,13 @@ module.exports = function createManualScoresRouter({
         );
 
         let scoreId, isInsert, oldScore;
+        // Set aside by a referee redive: typing the mark back in is a
+        // change even when it's the same value (see submit_score). The
+        // row is open to the operator even when the judge wrote it from
+        // the phone. That judge hasn't scored the new dive yet, and if
+        // the phone has died this is the only way the dive gets finished
+        // (a correction changes the old mark but leaves it set aside).
+        const wasRedive = prior.rows[0]?.status === "redive";
         if (!prior.rows.length) {
           isInsert = true;
           oldScore = null;
@@ -163,7 +173,7 @@ module.exports = function createManualScoresRouter({
           const existing = prior.rows[0];
           oldScore = Number(existing.score);
           isInsert = false;
-          if (existing.score_source === "judge_direct") {
+          if (existing.score_source === "judge_direct" && !wasRedive) {
             await client.query("ROLLBACK");
             return res.status(409).json({
               error: "Judge has already submitted a score for this round. Use the score-correction flow to amend.",
@@ -171,10 +181,14 @@ module.exports = function createManualScoresRouter({
               existing_source: existing.score_source,
             });
           }
-          // Operator is fixing their own typo on a manual_entry row.
+          // Operator is fixing their own typo on a manual_entry row, or
+          // typing the new dive's mark over a set-aside one.
           // Heads up: reset score_source back to 'manual_entry' even
           // if it had already been reconciled, since a fresh manual
           // entry on a reconciled row is effectively a re-override.
+          // Over a judge's set-aside row it's 'manual_entry' too, so if
+          // the phone comes back with its own mark for the new dive the
+          // usual manual-vs-sync rule decides between them.
           await client.query(
             `UPDATE scores
                 SET score = $2,
@@ -191,7 +205,7 @@ module.exports = function createManualScoresRouter({
         // actor_user_id is the OPERATOR (not the judge whose row this
         // is) so the audit log clearly reads "operator X typed this
         // score on judge Y's behalf at 14:32".
-        if (isInsert || oldScore !== scoreVal) {
+        if (isInsert || oldScore !== scoreVal || wasRedive) {
           const trimmedReason = typeof reason === "string"
             ? reason.trim().slice(0, 500)
             : null;
@@ -200,7 +214,7 @@ module.exports = function createManualScoresRouter({
             action: isInsert ? "insert" : "update",
             oldScore, newScore: scoreVal,
             actorId: req.user.id, ip: req.ip, userAgent: req.headers["user-agent"] || null,
-            reason: trimmedReason || "manual entry (P5 fallback)",
+            reason: rescoreReason({ wasRedive, note: trimmedReason || "manual entry (P5 fallback)" }),
             actorLocalTime, committedNow: true,
           });
         }

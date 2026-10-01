@@ -16,9 +16,10 @@
  *      audience scoreboard's projection panel, ceiling-rounded
  *      to the next 0.5 since judges only score in halves.
  *
- * Real-time: subscribe to the event-room socket. score_received
- * and state_update both trigger a bundle refetch (cheap, the
- * server endpoint just composes from cached pieces).
+ * Real-time: subscribe to the event-room socket. Scores, the next
+ * diver and the event's status all trigger a bundle refetch (cheap,
+ * the server endpoint just composes from cached pieces), and so does
+ * a reconnect, for whatever went out while the phone was asleep.
  */
 
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
@@ -38,6 +39,7 @@ const socket  = useSocket()
 
 const eventId = computed(() => route.params.eventId)
 
+/** @type {import('vue').Ref<import('@/types').MeetDayBundle|null>} */
 const data    = ref(null)
 const loading = ref(true)
 const error   = ref('')
@@ -70,16 +72,14 @@ function scheduleRefetch() {
   refetchTimer = setTimeout(() => { load() }, 250)
 }
 
-function onScoreReceived(payload) {
-  if (payload?.event_id && payload.event_id !== eventId.value) return
-  scheduleRefetch()
-}
-function onStateUpdate(payload) {
-  if (payload?.event_id && payload.event_id !== eventId.value) return
-  scheduleRefetch()
-}
-function onScoreCorrected(payload) {
-  if (payload?.event_id && payload.event_id !== eventId.value) return
+// What on the event's room moves the bundle: a score, a correction, the
+// next diver up, and the event's status. Finalising sends only the
+// status flip, and before it was on this list the page sat on LIVE with
+// "Need 34.6 more pts" until the diver reloaded. All of them refetch
+// rather than patch, since the next dive, queue and targets change too.
+const EVENT_NEWS = ['score_received', 'state_update', 'score_corrected', 'event_status_changed']
+function onEventNews(payload) {
+  if (payload?.event_id && String(payload.event_id) !== String(eventId.value)) return
   scheduleRefetch()
 }
 
@@ -88,21 +88,26 @@ function joinRoom() {
   socket.emit('subscribe_event', { event_id: eventId.value })
 }
 
+// A phone's socket drops when the screen locks, and whatever went out
+// meanwhile is gone (the finish included). So a reconnect re-reads the
+// bundle as well as rejoining. The first connect needn't: load() on mount
+// is already doing it.
+function onConnect() {
+  joinRoom()
+  if (data.value) scheduleRefetch()
+}
+
 onMounted(() => {
   load()
   if (socket.connected) joinRoom()
-  socket.on('connect',          joinRoom)
-  socket.on('score_received',   onScoreReceived)
-  socket.on('state_update',     onStateUpdate)
-  socket.on('score_corrected',  onScoreCorrected)
+  socket.on('connect', onConnect)
+  for (const name of EVENT_NEWS) socket.on(name, onEventNews)
 })
 
 onBeforeUnmount(() => {
   clearTimeout(refetchTimer)
-  socket.off('connect',         joinRoom)
-  socket.off('score_received',  onScoreReceived)
-  socket.off('state_update',    onStateUpdate)
-  socket.off('score_corrected', onScoreCorrected)
+  socket.off('connect', onConnect)
+  for (const name of EVENT_NEWS) socket.off(name, onEventNews)
 })
 
 watch(() => route.params.eventId, () => {
@@ -255,7 +260,13 @@ const eventNotLive = computed(() => {
             <div class="md-total">{{ data.standing.total.toFixed(1) }}</div>
             <div class="md-total-sub">points</div>
           </div>
-          <div v-if="data.standing.rank > 1" class="md-gap-block">
+          <!-- No total of their own yet (before the start, or before
+               their first dive), so no place to be behind or ahead in.
+               A null rank used to fall through to "in the lead". -->
+          <div v-if="data.standing.rank == null" class="md-gap-block md-gap-none">
+            <div class="md-gap-sub">{{ $t('meet_day.no_score_yet') }}</div>
+          </div>
+          <div v-else-if="data.standing.rank > 1" class="md-gap-block">
             <div class="md-gap">{{ data.standing.behind_leader.toFixed(1) }}</div>
             <div class="md-gap-sub">behind leader</div>
           </div>

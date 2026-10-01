@@ -1244,7 +1244,8 @@
   "meet_day": {
     "page_label": "Araw ng meet",
     "next_dive": "Susunod na sisid",
-    "waiting": "Naghihintay na maging Live ang event…"
+    "waiting": "Naghihintay na maging Live ang event…",
+    "no_score_yet": "Wala pang iskor"
   },
   "score_audit": {
     "title": "Audit ng iskor",

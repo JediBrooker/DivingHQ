@@ -1244,7 +1244,8 @@
   "meet_day": {
     "page_label": "Día de competición",
     "next_dive": "Próximo salto",
-    "waiting": "Esperando a que el evento se ponga en directo…"
+    "waiting": "Esperando a que el evento se ponga en directo…",
+    "no_score_yet": "Aún sin puntuación"
   },
   "score_audit": {
     "title": "Auditoría de puntuaciones",

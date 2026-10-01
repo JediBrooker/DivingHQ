@@ -1244,7 +1244,8 @@
   "meet_day": {
     "page_label": "Hari pertandingan",
     "next_dive": "Terjunan seterusnya",
-    "waiting": "Menunggu acara bermula secara langsung…"
+    "waiting": "Menunggu acara bermula secara langsung…",
+    "no_score_yet": "Belum ada markah"
   },
   "score_audit": {
     "title": "Audit markah",

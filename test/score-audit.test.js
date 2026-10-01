@@ -3,7 +3,7 @@
 
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
-const { isValidScore, scoreBodyError, insertScoreAudit } = require("../lib/score-audit");
+const { isValidScore, scoreBodyError, insertScoreAudit, rescoreReason } = require("../lib/score-audit");
 
 test("isValidScore: 0 to 10 in half points", () => {
   for (const ok of [0, 0.5, 5, 7.5, 10, "8.5", "0"]) assert.equal(isValidScore(ok), true, String(ok));
@@ -80,4 +80,16 @@ test("isValidScore / scoreBodyError: blanks and non-numbers aren't a 0", () => {
     assert.equal(scoreBodyError(bad, "score"), "score must be between 0 and 10", JSON.stringify(bad));
   }
   for (const ok of [0, "0", " 7.5 ", "10"]) assert.equal(isValidScore(ok), true, JSON.stringify(ok));
+});
+
+// A write over a row the referee set aside for a redive is logged even when
+// the mark is unchanged, and its reason says so. Anything the write already
+// had to say (a referee hold, the operator's note) is kept after it.
+test("rescoreReason: marks the re-score after a redive, keeps any other note", () => {
+  assert.equal(rescoreReason({ wasRedive: false, note: null }), null);
+  assert.equal(rescoreReason({ wasRedive: false, note: "referee:failed: award of 7 held to 0" }),
+    "referee:failed: award of 7 held to 0");
+  assert.equal(rescoreReason({ wasRedive: true }), "re-scored after redive");
+  assert.equal(rescoreReason({ wasRedive: true, note: "manual entry (P5 fallback)" }),
+    "re-scored after redive; manual entry (P5 fallback)");
 });

@@ -277,6 +277,9 @@ module.exports = function createCompetitorRouter({
       const entryId = isMine.rows[0].competitor_id;
 
       // 2. My dive list, joined to directory, with completion flag.
+      //    A dive is done once the whole panel's marks are in. Marks the
+      //    referee set aside for a redive don't count: the diver goes
+      //    again. The queue below reads the dive on the board the same way.
       const myDivesRes = await pool.query(
         `SELECT cdl.round_number, cdl.dive_id,
                 d.dive_code, d.position::text AS position,
@@ -291,6 +294,7 @@ module.exports = function createCompetitorRouter({
               WHERE s.event_id = cdl.event_id
                 AND s.competitor_id = cdl.competitor_id
                 AND s.round_number = cdl.round_number
+                AND s.status IS DISTINCT FROM 'redive'
            ) score_count ON true
           WHERE cdl.event_id = $1 AND cdl.competitor_id = $2
             AND cdl.withdrawn_at IS NULL
@@ -339,7 +343,17 @@ module.exports = function createCompetitorRouter({
       const meRow = ranked.find(s => s.competitor_id === entryId);
       const myRank  = meRow ? meRow.rank  : null;
       const myTotal = meRow ? Number(meRow.total) : 0;
-      const totalCompetitors = ranked.length;
+      // The field, not just whoever has a total yet. Counting only the
+      // ranked rows put "0 divers" on the card until the first score.
+      // Reserves aren't in it; a diver who withdrew after scoring still
+      // is, they keep their place in the standings.
+      const fieldRes = await pool.query(
+        `SELECT COUNT(DISTINCT competitor_id)::int AS n
+           FROM competitor_dive_lists
+          WHERE event_id = $1 AND withdrawn_at IS NULL AND NOT is_reserve`,
+        [eventId],
+      );
+      const totalCompetitors = Math.max(ranked.length, fieldRes.rows[0]?.n || 0);
       const leaderTotal = ranked[0] ? Number(ranked[0].total) : 0;
 
       // Top three distinct totals: these are the gold/silver/
@@ -378,10 +392,17 @@ module.exports = function createCompetitorRouter({
       const ddProxy = nextDive ? nextDive.dd : null;
       const remaining = remainingDives;
 
+      // A place is only "achieved" by a diver with a total of their own.
+      // Before the rehearsal caught it, a place nobody held yet (no
+      // scores at all, or fewer distinct totals than medals) came back as
+      // reached, so a diver who hadn't dived read "in the lead" with all
+      // three medals "Already achieved". Now a place nobody holds is null
+      // (nothing to chase yet) unless the diver has a total, in which case
+      // they're one of the fewer-than-three and do hold it for now.
       function targetFor(targetTotal) {
-        if (targetTotal == null || myTotal >= targetTotal) {
-          return { gap: 0, needs_avg: 0, possible: true, achieved: true };
-        }
+        const achieved = { gap: 0, needs_avg: 0, possible: true, achieved: true };
+        if (targetTotal == null) return meRow ? achieved : null;
+        if (meRow && myTotal >= targetTotal) return achieved;
         const gap = targetTotal - myTotal;
         if (!remaining || !ddProxy) {
           return { gap, needs_avg: null, possible: null, achieved: false };
@@ -415,38 +436,59 @@ module.exports = function createCompetitorRouter({
         activeName  = active.full_name || active.diverName || null;
         activeRound = active.round_number != null ? parseInt(active.round_number) : null;
       }
-      // How many divers in nextDive's round are ahead of me by
-      // display_order. Without an active diver we report null,
-      // so the SPA renders "Pre-event" instead of a misleading 0.
+      // How many dives go before my next one: every dive between the one
+      // on the board and mine in dive order (round, then place in the
+      // round), plus the one on the board until its panel is in, unless
+      // it's mine. Across a round change that's whoever is left in the
+      // round on the board and whoever is ahead of me in the next. It used
+      // to stop at my own place in the order once the board was a round
+      // behind, so a diver 4th in the order read "4 divers" with 3 ahead,
+      // and nobody left in the earlier round was counted. Without an
+      // active diver it's null, so the SPA renders "Pre-event" instead of
+      // a misleading 0.
       let diversUntilMe = null;
       let myPositionInRound = null;
       if (nextDive) {
+        const nextRound = nextDive.round_number;
         const meOrderRes = await pool.query(
           `SELECT display_order
              FROM competitor_dive_lists
             WHERE event_id = $1 AND competitor_id = $2 AND round_number = $3`,
-          [eventId, entryId, nextDive.round_number],
+          [eventId, entryId, nextRound],
         );
         const myOrder = meOrderRes.rows[0]?.display_order;
+        const activeId = active ? (active.competitor_id || active.id) : null;
         if (myOrder != null) {
           myPositionInRound = myOrder;
-          if (active && activeRound === nextDive.round_number) {
-            const activeId = active.competitor_id || active.id;
-            if (activeId) {
-              const activeOrderRes = await pool.query(
-                `SELECT display_order FROM competitor_dive_lists
-                  WHERE event_id = $1 AND competitor_id = $2 AND round_number = $3`,
-                [eventId, activeId, nextDive.round_number],
-              );
-              const activeOrder = activeOrderRes.rows[0]?.display_order;
-              if (activeOrder != null) {
-                diversUntilMe = Math.max(0, myOrder - activeOrder);
-              }
+          if (activeId && activeRound != null && activeRound <= nextRound) {
+            const boardRes = await pool.query(
+              `SELECT a.display_order AS active_order,
+                      (SELECT COUNT(*) FROM scores s
+                        WHERE s.event_id = a.event_id AND s.competitor_id = a.competitor_id
+                          AND s.round_number = a.round_number
+                          AND s.status IS DISTINCT FROM 'redive') >= $6 AS done,
+                      (SELECT COUNT(*)::int FROM competitor_dive_lists c
+                        WHERE c.event_id = a.event_id
+                          AND c.withdrawn_at IS NULL AND NOT c.is_reserve
+                          AND c.display_order IS NOT NULL
+                          AND (c.round_number, c.display_order) > (a.round_number, a.display_order)
+                          AND (c.round_number, c.display_order) < ($4::int, $5::int)) AS between_n
+                 FROM competitor_dive_lists a
+                WHERE a.event_id = $1 AND a.competitor_id = $2 AND a.round_number = $3`,
+              [eventId, activeId, activeRound, nextRound, myOrder, numJudges],
+            );
+            const board = boardRes.rows[0];
+            if (!board || board.active_order == null) {
+              // Can't place the dive on the board in the order. A round
+              // behind, my own place in mine is the best guess left.
+              if (activeRound < nextRound) diversUntilMe = myOrder;
+            } else if (activeRound === nextRound && board.active_order >= myOrder) {
+              // Mine is the one on the board, or the order's gone past it.
+              diversUntilMe = 0;
+            } else {
+              const onBoard = !board.done && String(activeId) !== String(entryId) ? 1 : 0;
+              diversUntilMe = board.between_n + onBoard;
             }
-          } else if (activeRound != null && activeRound < nextDive.round_number) {
-            // Active is in a prior round, so the count of remaining
-            // divers in this round is just my position.
-            diversUntilMe = myOrder;
           }
         }
       }

@@ -1255,7 +1255,8 @@
   "meet_day": {
     "page_label": "Dzień zawodów",
     "next_dive": "Następny skok",
-    "waiting": "Oczekiwanie na rozpoczęcie konkurencji na żywo…"
+    "waiting": "Oczekiwanie na rozpoczęcie konkurencji na żywo…",
+    "no_score_yet": "Jeszcze bez punktów"
   },
   "score_audit": {
     "title": "Audyt ocen",

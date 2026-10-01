@@ -748,6 +748,37 @@
  */
 
 /**
+ * @typedef {Object} MeetDayTarget
+ * One medal row of GET /api/events/:id/me-meet-day targets.
+ *
+ * @property {number}       gap        Points behind that place's total, 0 when achieved.
+ * @property {number|null}  needs_avg  Per-judge average needed on every remaining dive,
+ *                                     rounded up to a half; null with no dives left.
+ * @property {boolean|null} possible   False when that average is over 10.
+ * @property {boolean}      achieved   The diver holds that place or better right now.
+ */
+
+/**
+ * @typedef {Object} MeetDayBundle
+ * GET /api/events/:id/me-meet-day, the diver's /me/meet/<event> page.
+ * Fields not listed here are the event, next dive and dive counts the
+ * page prints as they come.
+ *
+ * @property {{ rank: number|null, total: number, total_competitors: number, behind_leader: number }} standing
+ *   rank is null until the diver has a total of their own (it doesn't mean
+ *   "first"). total_competitors is the entered field, reserves left out.
+ * @property {{ gold: MeetDayTarget|null, silver: MeetDayTarget|null, bronze: MeetDayTarget|null }} targets
+ *   A target is null while nobody holds that place and the diver has no
+ *   total either: nothing to chase yet. The page leaves it out.
+ * @property {{ active_diver_name: string|null, active_round: number|null,
+ *   divers_until_me: number|null, my_position_in_round: number|null }} queue
+ *   divers_until_me counts the dives before the diver's next one in dive
+ *   order, across a round change too: the one on the board until its panel
+ *   is in, then everyone between. 0 is "you're up"; null before anyone is
+ *   on the board.
+ */
+
+/**
  * @typedef {Object} ScoreboardPanelRow
  * One judge row from /api/scoreboard/:eventId.panel.
  *

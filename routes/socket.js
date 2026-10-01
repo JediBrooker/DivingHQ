@@ -33,7 +33,7 @@ const createIdempotency = require("../lib/idempotency");
 const { readSessionCookie } = require("../lib/session-cookie");
 const { trustProxyHops } = require("../lib/trust-proxy");
 const { announceRecords } = require("../lib/records");
-const { insertScoreAudit, isValidScore } = require("../lib/score-audit");
+const { insertScoreAudit, isValidScore, rescoreReason } = require("../lib/score-audit");
 const { isUuid } = require("../lib/uuid");
 const { isSessionClaims } = require("../lib/middleware");
 const { canSeeEvent } = require("../lib/event-visibility");
@@ -912,7 +912,7 @@ module.exports = function attachSocket({
         }
 
         const prior = await client.query(
-          `SELECT id, score, score_source FROM scores
+          `SELECT id, score, score_source, status FROM scores
            WHERE event_id=$1 AND competitor_id=$2 AND round_number=$3 AND judge_id=$4
            FOR UPDATE`,
           [data.event_id, data.competitor_id, round, judgeId],
@@ -920,6 +920,12 @@ module.exports = function attachSocket({
         const existing = prior.rows[0] || null;
         isInsert = !existing;
         oldScore = existing ? Number(existing.score) : null;
+        // A row the referee set aside for a redive. Scoring it again is a
+        // change even when the mark comes out the same: the row goes back
+        // to active and the new dive counts. Without this a judge who gave
+        // the same 7.5 twice left nothing on the audit log after the
+        // referee's marker, as if they'd never scored the new dive.
+        const wasRedive = existing?.status === "redive";
 
         // Manual-fallback reconciliation (P5). If an operator
         // already typed this judge's score during an outage, the
@@ -932,15 +938,20 @@ module.exports = function attachSocket({
         //                judge's digital sync is rejected with a
         //                conflict_pending event so the review tray
         //                surfaces the mismatch for the referee.
+        //
+        // Not on a row the referee set aside, though. The operator's mark
+        // there was for the dive that got thrown out, so there's nothing
+        // to reconcile: the judge is scoring the new dive, and that goes
+        // in through the upsert below like any other re-score. This used
+        // to refuse a different mark as a clash and leave the row set
+        // aside, so the dive never finished.
         let reconciledManual = false;
-        if (existing && existing.score_source === "manual_entry") {
+        if (existing && existing.score_source === "manual_entry" && !wasRedive) {
           if (oldScore === score) {
             // Same value, reconcile by flipping the source.
-            // status back to active too: this is the judge scoring again
-            // after a redive, same as the upsert below.
             await client.query(
               `UPDATE scores SET score_source = 'manual_then_reconciled',
-                                 actor_local_time = $2, status = 'active'
+                                 actor_local_time = $2
                WHERE id = $1`,
               [existing.id, actorLocalTime],
             );
@@ -1017,23 +1028,31 @@ module.exports = function attachSocket({
         // Skip the UPSERT when we already handled the reconciliation
         // branch above (the row exists with the correct value;
         // we just flipped score_source).
+        //
+        // Over a set-aside row the mark is the judge's own from here on,
+        // so the source goes back to judge_direct even if the operator
+        // typed the old one. Left as manual_entry, the judge's next fix
+        // would be refused as a clash with the operator, whose mark is
+        // long gone by then.
         if (!reconciledManual) {
           const upsert = await client.query(
             `INSERT INTO scores (event_id, competitor_id, judge_id, dive_id, round_number, score, actor_local_time)
              VALUES ($1, $2, $3, $4, $5, $6, $7)
              ON CONFLICT (event_id, competitor_id, round_number, judge_id)
              DO UPDATE SET score = EXCLUDED.score, status = 'active',
-                           actor_local_time = EXCLUDED.actor_local_time
+                           actor_local_time = EXCLUDED.actor_local_time,
+                           score_source = CASE WHEN $8::boolean THEN 'judge_direct'
+                                               ELSE scores.score_source END
              RETURNING id`,
             [
               data.event_id, data.competitor_id, judgeId,
-              resolvedDiveId, round, score, actorLocalTime,
+              resolvedDiveId, round, score, actorLocalTime, wasRedive,
             ],
           );
           scoreId = upsert.rows[0].id;
         }
 
-        if (isInsert || oldScore !== score || reconciledManual) {
+        if (isInsert || oldScore !== score || reconciledManual || wasRedive) {
           // Audit row records both clocks (migration 054). For
           // legacy online-only clients actor_local_time is NULL and
           // server_committed_at is now(), those rows look like the
@@ -1049,7 +1068,7 @@ module.exports = function attachSocket({
             oldScore, newScore: score,
             actorId: socket.userId, ip: clientIp(socket),
             userAgent: socket.handshake.headers["user-agent"] || null,
-            reason: refereeNote,
+            reason: rescoreReason({ wasRedive, note: refereeNote }),
             actorLocalTime, committedNow: true,
           });
         }

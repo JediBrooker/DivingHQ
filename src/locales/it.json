@@ -1255,7 +1255,8 @@
   "meet_day": {
     "page_label": "Giorno gara",
     "next_dive": "Prossimo tuffo",
-    "waiting": "In attesa che l'evento vada in diretta…"
+    "waiting": "In attesa che l'evento vada in diretta…",
+    "no_score_yet": "Nessun punteggio ancora"
   },
   "score_audit": {
     "title": "Audit dei voti",

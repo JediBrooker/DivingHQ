@@ -5,7 +5,7 @@
 // real meet on the live site with real phones as judges, and then takes
 // every trace of it out again.
 //
-//   node scripts/rehearsal.js seed    [--country ESH] [--email you@example.com] [--start 2026-10-04T10:00+10:00]
+//   node scripts/rehearsal.js seed    [--country ESH] [--email you@example.com] [--start 2026-10-04T10:00+10:00] [--judges 5]
 //   node scripts/rehearsal.js status  [--country ESH]
 //   node scripts/rehearsal.js cleanup [--country ESH] [--dry-run]
 //
@@ -24,9 +24,12 @@
 // WHAT COUNTS AS THE REHEARSAL
 // ----------------------------
 // An organisation with slug 'rehearsal-<country>' and claim_state
-// 'unclaimed', plus the eleven accounts seed made in it (by exact
-// username, the prefix alone could be anyone's). Nothing else is ever
-// touched. The country defaults to Western Sahara
+// 'unclaimed', plus the accounts seed made in it: by exact username (the
+// prefix alone could be anyone's), and made in the same transaction as
+// the org. The panel can be 3 to 11 judges (--judges), so a judge name
+// seed didn't use this time is free for anyone to sign up with; the
+// creation time is what tells our rehearsal-judge4 from theirs. Nothing
+// else is ever touched. The country defaults to Western Sahara
 // (ESH): lib/countries.json leaves the uninhabited territories out
 // (Antarctica, Bouvet, Heard Island), ESH is in the catalogue, has no
 // World Aquatics federation, and no test in test/ uses the code. It has to
@@ -91,10 +94,6 @@ const LOCK_KEY = "divinghq:rehearsal";
 // Names cover the PDF fonts: Latin with accents, Chinese (fonts-noto-cjk),
 // Cyrillic (fonts-noto-core) and an apostrophe for the escaping. Everyone
 // is an adult so no guardian flow gets in the way.
-const JUDGES = [1, 2, 3, 4, 5].map((n) => ({
-  key: `judge${n}`, username: `${USER_PREFIX}judge${n}`, full_name: `Rehearsal Judge ${n}`,
-  role: "judge", judge_number: n,
-}));
 const DIVERS = [
   { key: "diver1", username: `${USER_PREFIX}diver1`, full_name: "Zoë Ångström", gender: "female",
     date_of_birth: "2001-03-14", dives: ["105B", "205C", "5132D"] },
@@ -105,17 +104,35 @@ const DIVERS = [
   { key: "diver4", username: `${USER_PREFIX}diver4`, full_name: "Liam O'Connor", gender: "male",
     date_of_birth: "2002-05-30", dives: ["107C", "205B", "405C"] },
 ].map((d) => ({ ...d, role: "diver" }));
+
+// Panel sizes the events table allows (its CHECK constraint). Five is
+// the usual; three is for one person rehearsing with a phone and a few
+// browsers (docs/rehearsal.md, "Rehearsing alone").
+const PANEL_SIZES = [3, 5, 7, 9, 11];
+const DEFAULT_JUDGES = 5;
+function judgesFor(n) {
+  return Array.from({ length: n }, (_, i) => i + 1).map((k) => ({
+    key: `judge${k}`, username: `${USER_PREFIX}judge${k}`, full_name: `Rehearsal Judge ${k}`,
+    role: "judge", judge_number: k,
+  }));
+}
+const JUDGES = judgesFor(DEFAULT_JUDGES);
 const ADMIN = { key: "admin", username: `${USER_PREFIX}admin`, full_name: "Rehearsal Club Admin", role: "club_admin" };
 const REFEREE = { key: "referee", username: `${USER_PREFIX}referee`, full_name: "Rehearsal Referee", role: "referee" };
-const ACCOUNTS = [ADMIN, ...JUDGES, REFEREE, ...DIVERS];
-// Cleanup takes these exact names and nothing else. The prefix alone
-// isn't ours to trust: anyone can sign up as rehearsal-bob, and if they
-// picked Western Sahara they'd land in the rehearsal org.
-const ACCOUNT_USERNAMES = ACCOUNTS.map((a) => a.username);
+function accountsFor(judges = DEFAULT_JUDGES) {
+  return [ADMIN, ...judgesFor(judges), REFEREE, ...DIVERS];
+}
+const ACCOUNTS = accountsFor(DEFAULT_JUDGES);
+// Every name seed can make, whatever the panel. Cleanup takes these exact
+// names and nothing else, and only the ones made with the org (see the
+// top). The prefix alone isn't ours to trust: anyone can sign up as
+// rehearsal-bob, and if they picked Western Sahara they'd land in the
+// rehearsal org.
+const ACCOUNT_USERNAMES = accountsFor(Math.max(...PANEL_SIZES)).map((a) => a.username);
 
 const EVENT = {
   name: EVENT_NAME, gender: "Mixed", height: "3m", board_height_m: 3.0,
-  number_of_judges: JUDGES.length, total_rounds: 3,
+  number_of_judges: DEFAULT_JUDGES, total_rounds: 3,
 };
 
 class UsageError extends Error {}
@@ -132,7 +149,9 @@ class RefusedError extends Error {
 // ------------------------------------------------------------------
 
 function parseArgs(argv) {
-  const out = { command: null, country: null, email: null, start: null, dryRun: false, json: false, help: false };
+  const out = {
+    command: null, country: null, email: null, start: null, judges: null, dryRun: false, json: false, help: false,
+  };
   const args = [...argv];
   while (args.length) {
     const a = args.shift();
@@ -144,6 +163,7 @@ function parseArgs(argv) {
     else if (a === "--country") out.country = value();
     else if (a === "--email") out.email = value();
     else if (a === "--start") out.start = value();
+    else if (a === "--judges") out.judges = value();
     else if (a === "--dry-run" || a === "--dry") out.dryRun = true;
     else if (a === "--json") out.json = true;
     else if (a.startsWith("--")) throw new UsageError(`Unknown option ${a}`);
@@ -154,13 +174,23 @@ function parseArgs(argv) {
   if (!["seed", "status", "cleanup"].includes(out.command)) {
     throw new UsageError(out.command ? `Unknown command ${out.command}` : "Pick a command: seed, status or cleanup");
   }
-  if (out.command !== "seed" && (out.email || out.start)) {
-    throw new UsageError("--email and --start only go with seed");
+  if (out.command !== "seed" && (out.email || out.start || out.judges != null)) {
+    throw new UsageError("--email, --start and --judges only go with seed");
   }
   if (out.command !== "cleanup" && out.dryRun) throw new UsageError("--dry-run only goes with cleanup");
   if (out.country != null) out.country = resolveCountry(out.country).a3;
   if (out.email != null) out.email = checkEmail(out.email);
+  if (out.judges != null) out.judges = panelSize(out.judges);
   return out;
+}
+
+// The events table only takes an odd panel from 3 to 11.
+function panelSize(raw) {
+  const n = Number(raw);
+  if (!/^\d+$/.test(String(raw).trim()) || !PANEL_SIZES.includes(n)) {
+    throw new UsageError(`--judges ${raw} has to be one of ${PANEL_SIZES.join(", ")}`);
+  }
+  return n;
 }
 
 // Catalogue codes only, alpha-3, same as signup (lib/countries.js).
@@ -230,9 +260,10 @@ function defaultStart(now = new Date()) {
 }
 
 // --start has to say its offset. The script runs on the box, and Node
-// reads a bare 2026-10-04T10:00 in the box's zone, which is UTC on a stock
-// container: for someone in Sydney that's the event listed at 9pm.
-// Refusing is kinder than a schedule that's quietly ten hours out.
+// reads a bare 2026-10-04T10:00 in the box's zone: Sydney on the live box,
+// UTC on a stock container, where for someone in Sydney that's the event
+// listed at 9pm. Neither is necessarily the venue's. Refusing is kinder
+// than a schedule that's quietly hours out.
 const START_FORMAT = /^(\d{4}-\d{2}-\d{2})T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2})$/i;
 
 function parseStart(raw) {
@@ -252,7 +283,8 @@ function localDate(d) {
 }
 
 // The day on the meet: the one written in --start (the venue's day, which
-// the box's UTC clock can put a day early), else the box's own date.
+// the box's clock can put a day out when the box and the venue are in
+// different zones), else the box's own date.
 function meetDate(raw, start) {
   return raw == null ? localDate(start) : START_FORMAT.exec(String(raw).trim())[1];
 }
@@ -370,7 +402,9 @@ async function resolveDives(db) {
   return byCode;
 }
 
-async function seed(client, { country, email, start, day = null, bcrypt, password }) {
+async function seed(client, { country, email, start, day = null, bcrypt, password, judges = DEFAULT_JUDGES }) {
+  const panel = judgesFor(judges);
+  const cast = accountsFor(judges);
   await begin(client);
   try {
     const existing = await rehearsalOrgs(client);
@@ -391,7 +425,7 @@ async function seed(client, { country, email, start, day = null, bcrypt, passwor
     }
     const clash = await client.query(
       "SELECT username FROM users WHERE username = ANY($1::text[]) ORDER BY username",
-      [ACCOUNTS.map((a) => a.username)],
+      [cast.map((a) => a.username)],
     );
     if (clash.rows.length) {
       throw new RefusedError("username_taken",
@@ -420,7 +454,7 @@ async function seed(client, { country, email, start, day = null, bcrypt, passwor
 
     const ids = {};
     const accounts = [];
-    for (const a of ACCOUNTS) {
+    for (const a of cast) {
       const row = await one(
         `INSERT INTO users (username, password, full_name, email, org_id, club_id,
                             email_verified_at, gender, date_of_birth)
@@ -460,8 +494,8 @@ async function seed(client, { country, email, start, day = null, bcrypt, passwor
         );
       }
     };
-    for (const a of ACCOUNTS) await grant(ids[a.key], "spectator", null);
-    for (const j of JUDGES) await grant(ids[j.key], "judge", ids.admin);
+    for (const a of cast) await grant(ids[a.key], "spectator", null);
+    for (const j of panel) await grant(ids[j.key], "judge", ids.admin);
     for (const d of DIVERS) await grant(ids[d.key], "diver", ids.admin);
     await grant(ids.referee, "referee", sysadmin.id);
 
@@ -482,7 +516,7 @@ async function seed(client, { country, email, start, day = null, bcrypt, passwor
                            enforce_referee_signoff, is_rehearsal)
        VALUES ($1, $2, $3, $4, 'Open', $5, $6, $7, 'individual', 'final', $8, TRUE, FALSE)
        RETURNING *`,
-      [org.id, meet.id, EVENT.name, EVENT.gender, EVENT.height, EVENT.number_of_judges,
+      [org.id, meet.id, EVENT.name, EVENT.gender, EVENT.height, panel.length,
        EVENT.total_rounds, start.toISOString()],
     );
     // The creator of an event becomes its first manager (POST /api/events).
@@ -490,7 +524,7 @@ async function seed(client, { country, email, start, day = null, bcrypt, passwor
       "INSERT INTO event_managers (event_id, user_id, added_by) VALUES ($1, $2, $2)",
       [event.id, ids.admin],
     );
-    for (const j of JUDGES) {
+    for (const j of panel) {
       await client.query(
         "INSERT INTO event_judges (event_id, judge_id, judge_number) VALUES ($1, $2, $3)",
         [event.id, ids[j.key], j.judge_number],
@@ -517,6 +551,7 @@ async function seed(client, { country, email, start, day = null, bcrypt, passwor
     return {
       country: { a3: country.a3, name: country.name },
       org_id: org.id, club_id: club.id, meet_id: meet.id, event_id: event.id,
+      judges: panel.length,
       meet_date: meetDay, scheduled_at: start.toISOString(),
       sysadmin_for_referee: sysadmin.username,
       password,
@@ -534,8 +569,13 @@ async function seed(client, { country, email, start, day = null, bcrypt, passwor
 // ours. Reads only.
 async function collect(db, org) {
   const col = async (sql, params) => (await db.query(sql, params)).rows.map((r) => r.id);
+  // Ours: one of the names seed can make, created in seed's transaction
+  // (now() is the same for every row in it, so the org's created_at to
+  // the microsecond). Compared in SQL, a JS Date would round it to the ms.
+  const ours = "u.username = ANY($2::text[]) AND u.created_at = o.created_at";
   const users = await col(
-    "SELECT id FROM users WHERE org_id = $1 AND username = ANY($2::text[])",
+    `SELECT u.id FROM users u JOIN organisations o ON o.id = u.org_id
+      WHERE u.org_id = $1 AND ${ours}`,
     [org.id, ACCOUNT_USERNAMES],
   );
   const clubs = await col("SELECT id FROM clubs WHERE org_id = $1", [org.id]);
@@ -545,14 +585,15 @@ async function collect(db, org) {
     "SELECT id FROM events WHERE org_id = $1 OR meet_id = ANY($2::uuid[])",
     [org.id, meets],
   );
-  // A user in the org that seed didn't make, or one from elsewhere sitting
-  // in our club. Soft-deleted accounts count: their row is still somebody's.
+  // A user in the org that seed didn't make (whatever they're called), or
+  // one from elsewhere sitting in our club. Soft-deleted accounts count:
+  // their row is still somebody's.
   const foreign = (await db.query(
-    `SELECT id, username, full_name, org_id, deleted_at, created_at
-       FROM users
-      WHERE (org_id = $1 AND NOT username = ANY($2::text[]))
-         OR (club_id = ANY($3::uuid[]) AND org_id <> $1)
-      ORDER BY created_at`,
+    `SELECT u.id, u.username, u.full_name, u.org_id, u.deleted_at, u.created_at
+       FROM users u CROSS JOIN (SELECT created_at FROM organisations WHERE id = $1) o
+      WHERE (u.org_id = $1 AND NOT (${ours}))
+         OR (u.club_id = ANY($3::uuid[]) AND u.org_id <> $1)
+      ORDER BY u.created_at`,
     [org.id, ACCOUNT_USERNAMES, clubs],
   )).rows;
   // Places the rehearsal reaches into something real. users.id cascades
@@ -880,6 +921,14 @@ function seedReport(res, target) {
     rows.push([a.username, role, a.full_name, a.email]);
   }
   const lists = res.dive_lists.map((d) => `  ${d.username.padEnd(18)} ${d.dives.join("  ")}`).join("\n");
+  const panel = res.accounts.filter((a) => a.role === "judge");
+  const first = panel[0].username;
+  const last = panel[panel.length - 1].username;
+  // Three judges is the one-person rehearsal: one phone and a few
+  // browsers on a laptop, so say where that's written up.
+  const solo = panel.length === 3
+    ? `\n     On your own? docs/rehearsal.md, "Rehearsing alone", says which browser is who.`
+    : "";
   return `Rehearsal seeded in ${res.country.name} (${res.country.a3}) on ${target}.
 Meet day ${res.meet_date}, event scheduled for ${res.scheduled_at} (UTC).
 
@@ -895,8 +944,9 @@ ${lists}
 Next steps (docs/rehearsal.md has the full checklist):
   1. Laptop: sign in as ${ADMIN.username} at ${u.login}, then open the Control Room:
        ${u.control_room}
-  2. Five phones: sign in as ${JUDGES[0].username} to ${JUDGES[JUDGES.length - 1].username}, then open ${u.judge}
-     (judge1 sits as J1 and so on).
+  2. ${panel.length} judges, a phone each (or a browser each: private windows in one browser share a sign-in):
+     sign in as ${first} to ${last}, then open ${u.judge}
+     (judge1 sits as J1 and so on).${solo}
   3. Referee phone: sign in as ${REFEREE.username}. The dive order sign-off has to come from them:
      send the request from the Control Room, or they type the handoff code at ${u.sign_off_codes}
   4. A spectator phone, signed out: ${u.scoreboard}
@@ -954,7 +1004,7 @@ function cleanupReport(res, target) {
 }
 
 const USAGE = `Usage:
-  node scripts/rehearsal.js seed    [--country ESH] [--email you@example.com] [--start 2026-10-04T10:00+10:00]
+  node scripts/rehearsal.js seed    [--country ESH] [--email you@example.com] [--start 2026-10-04T10:00+10:00] [--judges 5]
   node scripts/rehearsal.js status  [--country ESH]
   node scripts/rehearsal.js cleanup [--country ESH] [--dry-run]
 
@@ -965,6 +1015,8 @@ const USAGE = `Usage:
   --start    when the event is scheduled, with the venue's UTC offset (a bare time
              would be read in the box's zone). Default: the next quarter hour,
              30+ minutes out
+  --judges   the panel: ${PANEL_SIZES.join(", ")} (default ${DEFAULT_JUDGES}). 3 is for rehearsing on
+             your own with one phone and a laptop's browsers
   --dry-run  cleanup reports what it would delete and rolls back
   --json     one JSON object on stdout instead of the report
 
@@ -1015,6 +1067,7 @@ async function main(argv = process.argv.slice(2)) {
       const country = resolveCountry(opts.country || DEFAULT_COUNTRY);
       const res = await seed(client, {
         country, email: opts.email, start, day: meetDate(opts.start, start),
+        judges: opts.judges || DEFAULT_JUDGES,
         bcrypt: require("bcrypt"), password: generatePassword(),
       });
       emit({ ok: true, database: target, ...res }, seedReport(res, target));
@@ -1054,8 +1107,9 @@ async function main(argv = process.argv.slice(2)) {
 
 module.exports = {
   DEFAULT_COUNTRY, USER_PREFIX, ACCOUNTS, ACCOUNT_USERNAMES, JUDGES, DIVERS, ADMIN, REFEREE, EVENT, CLUB_CODE,
+  PANEL_SIZES, DEFAULT_JUDGES, judgesFor, accountsFor,
   UsageError, RefusedError,
-  parseArgs, resolveCountry, plusAddress, accountEmail, orgSlug, isRehearsalOrg,
+  parseArgs, panelSize, resolveCountry, plusAddress, accountEmail, orgSlug, isRehearsalOrg, seedReport, statusReport,
   generatePassword, defaultStart, parseStart, localDate, meetDate, splitDive, urlsFor, describeTarget,
   bind, seed, cleanup, status,
 };

@@ -344,6 +344,49 @@ test("POST /api/scores/manual-entry updates on re-post (operator typo fix)", asy
   assert.equal(row.rows[0].score_source, "manual_entry");
 });
 
+// Same gap as the judge's own submit (see integration.test.js): after a
+// redive, the operator typing the same mark back in for a judge flipped
+// the row back to active and left nothing on the audit log.
+test("POST /api/scores/manual-entry logs the same mark typed back in after a redive", async (t) => {
+  if (!dbReachable || !migrationsApplied) { t.skip(); return; }
+  const round = 4;
+  const enter = (score) => httpPost(
+    "/api/scores/manual-entry",
+    {
+      event_id: testEventId, competitor_id: testCompetitorId,
+      round_number: round, judge_id: testJudgeId, score,
+    },
+    { userId: testOperatorId, roles: ["org_admin"] },
+  );
+  const trail = async () => (await pool.query(
+    `SELECT action::text AS action, old_score::float AS old, new_score::float AS new, reason
+       FROM score_audit_log WHERE event_id = $1 AND round_number = $2 ORDER BY created_at`,
+    [testEventId, round],
+  )).rows;
+
+  // A round of its own, so the other tests' round 1 rows stay out of it.
+  await pool.query(
+    `INSERT INTO competitor_dive_lists (event_id, competitor_id, dive_id, round_number)
+     VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING`,
+    [testEventId, testCompetitorId, testDiveId, round],
+  );
+  const first = await enter(6.5);
+  assert.equal(first.status, 200);
+  // What referee_redive does to the panel's rows.
+  await pool.query("UPDATE scores SET status = 'redive' WHERE id = $1", [first.body.score_id]);
+  const again = await enter(6.5);
+  assert.equal(again.status, 200);
+  const row = await pool.query("SELECT status FROM scores WHERE id = $1", [first.body.score_id]);
+  assert.equal(row.rows[0].status, "active");
+  const rows = await trail();
+  assert.deepEqual(rows.map((r) => [r.action, r.old, r.new]), [["insert", null, 6.5], ["update", 6.5, 6.5]]);
+  assert.match(rows[1].reason, /redive/i);
+
+  // Typed in again with nothing in between is still a no-op.
+  assert.equal((await enter(6.5)).status, 200);
+  assert.equal((await trail()).length, 2);
+});
+
 test("POST /api/scores/manual-entry rejects values outside 0.0-10.0", async (t) => {
   if (!dbReachable || !migrationsApplied) { t.skip(); return; }
   const r = await httpPost(

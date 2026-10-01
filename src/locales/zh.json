@@ -1244,7 +1244,8 @@
   "meet_day": {
     "page_label": "比赛日",
     "next_dive": "下一跳",
-    "waiting": "等待项目转入实况…"
+    "waiting": "等待项目转入实况…",
+    "no_score_yet": "尚无得分"
   },
   "score_audit": {
     "title": "分数审计",

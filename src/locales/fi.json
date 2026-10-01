@@ -1255,7 +1255,8 @@
   "meet_day": {
     "page_label": "Kilpailupäivä",
     "next_dive": "Seuraava hyppy",
-    "waiting": "Odotetaan kilpailun käynnistymistä…"
+    "waiting": "Odotetaan kilpailun käynnistymistä…",
+    "no_score_yet": "Ei vielä pisteitä"
   },
   "score_audit": {
     "title": "Pisteytyksen tarkastus",

@@ -1244,7 +1244,8 @@
   "meet_day": {
     "page_label": "大会当日",
     "next_dive": "次の演技",
-    "waiting": "種目がライブになるのを待っています…"
+    "waiting": "種目がライブになるのを待っています…",
+    "no_score_yet": "まだ得点がありません"
   },
   "score_audit": {
     "title": "点数監査",

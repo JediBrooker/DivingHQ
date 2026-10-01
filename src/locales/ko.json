@@ -1244,7 +1244,8 @@
   "meet_day": {
     "page_label": "대회 당일",
     "next_dive": "다음 다이빙",
-    "waiting": "종목이 라이브로 전환되기를 기다리는 중…"
+    "waiting": "종목이 라이브로 전환되기를 기다리는 중…",
+    "no_score_yet": "아직 점수 없음"
   },
   "score_audit": {
     "title": "점수 감사",

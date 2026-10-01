@@ -1345,7 +1345,8 @@
   "meet_day": {
     "page_label": "Meet day",
     "next_dive": "Next dive",
-    "waiting": "This event hasn't started yet. Waiting for the event to go Live…"
+    "waiting": "This event hasn't started yet. Waiting for the event to go Live…",
+    "no_score_yet": "No score yet"
   },
   "score_audit": {
     "title": "Score Audit",

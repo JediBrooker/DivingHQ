@@ -16,7 +16,7 @@ const { countryByCode } = require("../lib/countries");
 
 test("parseArgs: commands, defaults and the options each one takes", () => {
   assert.deepEqual(r.parseArgs(["seed"]), {
-    command: "seed", country: null, email: null, start: null, dryRun: false, json: false, help: false,
+    command: "seed", country: null, email: null, start: null, judges: null, dryRun: false, json: false, help: false,
   });
   const s = r.parseArgs(["seed", "--country", "esh", "--email", "  me@example.com ", "--json"]);
   assert.equal(s.country, "ESH");
@@ -36,6 +36,8 @@ test("parseArgs: commands, defaults and the options each one takes", () => {
     ["seed", "--dry-run"],               // dry run is cleanup only
     ["seed", "--email", "not-an-email"],
     ["seed", "extra"],
+    ["status", "--judges", "3"],         // the panel is seed only
+    ["cleanup", "--judges", "3"],
   ];
   for (const argv of bad) {
     assert.throws(() => r.parseArgs(argv), r.UsageError, `expected a usage error for ${JSON.stringify(argv)}`);
@@ -181,4 +183,51 @@ test("urls hang off APP_BASE_URL, with or without a trailing slash", () => {
   assert.equal(r.urlsFor({ eventId: "E", meetId: "M" }, {}).judge, "https://divinghq.app/judge");
   assert.equal(r.describeTarget({ DATABASE_URL: "postgres://u:secret@db.box:5432/diving_app" }), "diving_app on db.box");
   assert.equal(r.describeTarget({ DB_DATABASE: "diving_app" }), "diving_app on localhost");
+});
+
+// One person can rehearse with a 3-judge panel (docs/rehearsal.md,
+// "Rehearsing alone"). The events table only takes 3, 5, 7, 9 or 11.
+test("--judges: the panel sizes the events table takes, default five", () => {
+  assert.deepEqual(r.PANEL_SIZES, [3, 5, 7, 9, 11]);
+  assert.equal(r.DEFAULT_JUDGES, 5);
+  for (const n of r.PANEL_SIZES) assert.equal(r.parseArgs(["seed", "--judges", String(n)]).judges, n);
+  for (const bad of ["4", "1", "13", "0", "three", "3.0", "-3", " "]) {
+    assert.throws(() => r.parseArgs(["seed", "--judges", bad]), r.UsageError, bad);
+  }
+  assert.throws(() => r.parseArgs(["seed", "--judges"]), r.UsageError);
+
+  const three = r.judgesFor(3);
+  assert.deepEqual(three.map((j) => [j.username, j.judge_number]), [
+    ["rehearsal-judge1", 1], ["rehearsal-judge2", 2], ["rehearsal-judge3", 3],
+  ]);
+  assert.equal(r.accountsFor(3).length, 9);
+  assert.deepEqual(r.accountsFor(5).map((a) => a.username), r.ACCOUNTS.map((a) => a.username));
+  for (const n of r.PANEL_SIZES) {
+    const names = r.accountsFor(n).map((a) => a.username);
+    assert.equal(new Set(names).size, names.length, `${n} judges`);
+    // Cleanup knows every name seed can make, whatever the panel.
+    for (const name of names) assert.ok(r.ACCOUNT_USERNAMES.includes(name), name);
+    for (const name of names) assert.ok(name.length <= 50, name);
+  }
+  assert.equal(r.ACCOUNT_USERNAMES.length, 17);
+});
+
+test("the seed report tells you the panel you got", () => {
+  const report = (judges) => r.seedReport({
+    country: { a3: r.DEFAULT_COUNTRY, name: "Western Sahara" },
+    meet_date: "2026-10-04", scheduled_at: "2026-10-04T00:00:00.000Z",
+    password: "abcd-efgh-2345", sysadmin_for_referee: "root",
+    accounts: r.accountsFor(judges).map((a) => ({ ...a, email: `${a.username}@example.invalid` })),
+    dive_lists: r.DIVERS.map((d) => ({ username: d.username, full_name: d.full_name, dives: d.dives })),
+    urls: r.urlsFor({ eventId: "E", meetId: "M" }, {}),
+  }, "test db");
+  const three = report(3);
+  assert.match(three, /3 judges, a phone each/);
+  assert.match(three, /rehearsal-judge1 to rehearsal-judge3/);
+  assert.match(three, /Rehearsing alone/);
+  assert.doesNotMatch(three, /rehearsal-judge4/);
+  const five = report(5);
+  assert.match(five, /5 judges, a phone each/);
+  assert.match(five, /rehearsal-judge1 to rehearsal-judge5/);
+  assert.doesNotMatch(five, /Rehearsing alone/);
 });

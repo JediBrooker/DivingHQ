@@ -181,6 +181,12 @@ test("diver meet-day view: 3-round walkthrough end-to-end", async ({
   await expect(page.getByText("R1/3")).toBeVisible();
   // Rank is "—" until any score lands.
   await expect(page.locator('.md-rank').first()).toContainText('—');
+  // And no lead or medals claimed on no score: a null rank used to fall
+  // through to "in the lead", and every medal read "Already achieved".
+  await expect(page.locator('.md-gap-none')).toContainText(/no score yet/i);
+  await expect(page.getByText(/in the lead/i)).toHaveCount(0);
+  await expect(page.locator('.md-targets')).toHaveCount(0);
+  await expect(page.getByText("3 divers")).toBeVisible();
   await pauseForViewer(page);
 
   // ===========================================================
@@ -362,6 +368,8 @@ test("diver meet-day view: pre-event renders without scores", async ({
   const bundle = await apiRes.json();
   expect(bundle.standing.rank).toBeNull();
   expect(bundle.standing.total).toBe(0);
+  expect(bundle.standing.total_competitors).toBe(1);
+  expect(bundle.targets).toEqual({ gold: null, silver: null, bronze: null });
   expect(bundle.completed_dives).toBe(0);
   expect(bundle.remaining_dives).toBe(3);
   expect(bundle.next_dive.round_number).toBe(1);
@@ -375,6 +383,9 @@ test("diver meet-day view: pre-event renders without scores", async ({
   await page.goto(`/me/meet/${event.id}`);
   await expect(page.getByText(/this event hasn't started yet/i)).toBeVisible({ timeout: 10_000 });
   await expect(page.getByText("R1/3")).toBeVisible();
+  await expect(page.locator('.md-gap-none')).toContainText(/no score yet/i);
+  await expect(page.getByText(/in the lead/i)).toHaveCount(0);
+  await expect(page.getByText(/already achieved/i)).toHaveCount(0);
 
   await setup.deleteOrg(orgId);
 });
