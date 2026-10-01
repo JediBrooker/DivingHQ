@@ -549,6 +549,28 @@
  *   after any referee call
  */
 
+// ---- /api/events/:id/dive-panel ----------------------------------
+
+/**
+ * @typedef {Object} ControlDivePanel
+ * GET /api/events/:id/dive-panel?competitor_id=&round_number=
+ * (routes/control-room.js). The same dive's stored scores for the Control
+ * Room, which puts them back on the live pool's tiles after a reload, a
+ * reconnect or an undone finalise (restoreLiveScores in
+ * src/composables/useLivePools.js). Roster gate: org admins, meet
+ * managers, referees and the event's delegates. Re-dive set-asides are
+ * left out, same SQL as JudgeDiveScores (DIVE_PANEL_SCORES_SQL).
+ *
+ * @property {string} event_id
+ * @property {string} competitor_id
+ * @property {number} round_number
+ * @property {'failed'|'cap'|null} referee_call  the call on the dive (migration 102)
+ * @property {number|null} referee_cap           the declared maximum for a cap
+ * @property {Array<{ judge_id: string, judge_number: number, score: number }>} scores
+ *   one per judge who has scored, by judge_number; the value stored, after
+ *   any referee call. judge_id keys them like a live score_received.
+ */
+
 /**
  * @typedef {Object} RosterImportRoundPreview
  * @property {number} round_number

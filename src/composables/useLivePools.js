@@ -27,6 +27,13 @@ export function makePoolState() {
     scoresThisRound: {}, // judge_id -> numeric score
     judgeTiles: [], // [{ judgeIndex, judgeId, score, scored, signaled }]
     advanceArmed: false, // set when the active dive's last score lands
+    // True when advanceArmed came from putting stored scores back
+    // (restoreLiveScores) rather than from the last score landing live.
+    // The card doesn't run its auto-next countdown off that.
+    armedByRestore: false,
+    // A referee Failed / Cap seen on the live dive, { call, cap }, so
+    // scores put back afterwards are held to it too.
+    refereeCall: null,
     rediveSeq: 0, // bumped on a re-dive so the card restarts its clock
   }
 }
@@ -75,6 +82,8 @@ export function selectDiver(pool, idx, numberOfJudges, diveDescription) {
   pool.judgeTiles = initJudgeTiles(numberOfJudges)
   pool.activeInfo = buildActiveInfo(pool.currentActive, diveDescription)
   pool.advanceArmed = false
+  pool.armedByRestore = false
+  pool.refereeCall = null
   return true
 }
 
@@ -241,7 +250,68 @@ export function applyScore(pool, data, numberOfJudges) {
   const totalJudges = parseInt(numberOfJudges) || 0
   const scoresIn = Object.keys(pool.scoresThisRound).length
   const allScoresIn = totalJudges > 0 && scoresIn >= totalJudges
-  if (allScoresIn) pool.advanceArmed = true
+  if (allScoresIn && !pool.advanceArmed) {
+    pool.advanceArmed = true
+    pool.armedByRestore = false
+  }
+  return { matched: true, allScoresIn }
+}
+
+// Put the scores the server already has for the live dive back on ONE
+// pool. selectDiver starts every dive with empty tiles and only a live
+// score_received used to fill them, so a Control Room that stood a pool up
+// again (a reload, a second laptop, a socket that dropped while judges
+// scored, an undone finalise) sat on "Waiting for 5 more judge scores"
+// with all five stored. The judges' keypads are shut by then, so Next or
+// Finalise never armed and Skip was the only way out.
+//
+// `dive` is GET /api/events/:id/dive-panel: { event_id, competitor_id,
+// round_number, referee_call, referee_cap, scores: [{ judge_id,
+// judge_number, score }] }, re-dive set-asides already left out. Scores
+// are keyed by judge_id like applyScore's, so a judge whose score also
+// comes in live isn't counted twice, and each lands on its own seat's
+// tile (synchro Exec / Sync groups go by seat number). Nothing already on
+// the pool is taken away: a score that arrived live while the fetch was
+// out stays. A referee call, from the server or one this pool saw while
+// the fetch was out, holds what comes back. A full panel arms the pool
+// but marks it armedByRestore, so the card leaves its auto-next countdown
+// alone; the operator presses Next (or Finalise) themselves.
+// Returns { matched, allScoresIn } like applyScore.
+export function restoreLiveScores(pool, dive, numberOfJudges) {
+  const a = pool && pool.currentActive
+  if (!a || !dive) return { matched: false, allScoresIn: false }
+  if (String(dive.event_id) !== String(a.event_id)) return { matched: false, allScoresIn: false }
+  if (String(dive.competitor_id) !== String(a.competitor_id)) return { matched: false, allScoresIn: false }
+  if (Number(dive.round_number) !== Number(a.round_number)) return { matched: false, allScoresIn: false }
+
+  if (dive.referee_call) pool.refereeCall = { call: dive.referee_call, cap: dive.referee_cap }
+  const call = pool.refereeCall
+  if (!pool.scoresThisRound) pool.scoresThisRound = {}
+  for (const s of Array.isArray(dive.scores) ? dive.scores : []) {
+    if (!s || s.judge_id == null) continue
+    const v = heldAward(parseFloat(s.score), call?.call, call?.cap)
+    if (!Number.isFinite(v)) continue
+    if (pool.scoresThisRound[s.judge_id] != null) continue
+    pool.scoresThisRound[s.judge_id] = v
+    const seat = parseInt(s.judge_number)
+    let tile = Number.isFinite(seat)
+      ? pool.judgeTiles.find((t) => t.judgeIndex === seat)
+      : pool.judgeTiles.find((t) => t.judgeId === s.judge_id)
+    if (!tile) tile = pool.judgeTiles.find((t) => !t.scored)
+    if (tile && !tile.scored) {
+      tile.judgeId = s.judge_id
+      tile.scored = true
+      tile.score = v.toFixed(1)
+    }
+  }
+
+  const totalJudges = parseInt(numberOfJudges) || 0
+  const scoresIn = Object.keys(pool.scoresThisRound).length
+  const allScoresIn = totalJudges > 0 && scoresIn >= totalJudges
+  if (allScoresIn && !pool.advanceArmed) {
+    pool.advanceArmed = true
+    pool.armedByRestore = true
+  }
   return { matched: true, allScoresIn }
 }
 
@@ -259,6 +329,9 @@ export function applyRedive(pool, data, numberOfJudges) {
   pool.scoresThisRound = {}
   pool.judgeTiles = initJudgeTiles(numberOfJudges)
   pool.advanceArmed = false
+  pool.armedByRestore = false
+  // A re-dive is a fresh dive: the server clears the call on it too.
+  pool.refereeCall = null
   pool.rediveSeq = (pool.rediveSeq || 0) + 1
   return true
 }
@@ -277,6 +350,8 @@ export function applyRefereeCall(pool, data, call) {
   if (String(data.competitor_id) !== String(a.competitor_id)) return false
   if (Number(data.round_number) !== Number(a.round_number)) return false
   const held = (v) => heldAward(v, call, data.cap_value)
+  // Remembered for scores put back after this (restoreLiveScores).
+  pool.refereeCall = { call, cap: data.cap_value }
   for (const id of Object.keys(pool.scoresThisRound || {})) {
     pool.scoresThisRound[id] = held(pool.scoresThisRound[id])
   }

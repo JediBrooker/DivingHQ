@@ -27,6 +27,7 @@ const {
   compStandingsCte,
   eventRepCodesCte,
   PUBLIC_PANEL_SQL,
+  DIVE_PANEL_SCORES_SQL,
   ownStageScores,
   stageMembers,
   carriedStageScores,
@@ -900,6 +901,18 @@ test("compStandingsCte: name, source and event placeholder are the caller's", ()
   assert.ok(sql.includes("event_rep_code($2, u.id, o.country_code)"));
   assert.ok(sql.includes("WHERE id = $2) <> 'team'"));
   assert.ok(!sql.includes("$1"));
+});
+
+// One dive's stored panel, shared by the judge's keypad and the Control
+// Room's live tiles. A re-dive's set-aside rows stay out of both.
+test("DIVE_PANEL_SCORES_SQL: one dive, seated judges, re-dive set-asides left out", () => {
+  assert.ok(DIVE_PANEL_SCORES_SQL.includes("JOIN event_judges ej ON ej.event_id = s.event_id AND ej.judge_id = s.judge_id"));
+  assert.ok(DIVE_PANEL_SCORES_SQL.includes("WHERE s.event_id = $1 AND s.competitor_id = $2 AND s.round_number = $3"));
+  assert.ok(DIVE_PANEL_SCORES_SQL.includes("s.status IS DISTINCT FROM 'redive'"));
+  assert.ok(DIVE_PANEL_SCORES_SQL.trim().endsWith("ORDER BY ej.judge_number"));
+  for (const col of ["s.judge_id", "ej.judge_number", "s.score"]) {
+    assert.ok(DIVE_PANEL_SCORES_SQL.includes(col), `panel keeps ${col}`);
+  }
 });
 
 test("PUBLIC_PANEL_SQL: judge chips, approved clubs only, panel order", () => {

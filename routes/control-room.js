@@ -2,6 +2,7 @@
 // pre-meet roster screen and during-meet queue management.
 //
 //   GET    /api/events/:id/roster                roster + dive lists
+//   GET    /api/events/:id/dive-panel            one dive's stored scores
 //   PUT    /api/dive-lists/:id/order             single-row reorder
 //   PUT    /api/events/:id/dive-lists/reorder    bulk drag-and-drop
 //   POST   /api/events/:id/dive-lists/randomize  shuffle pre-meet
@@ -30,7 +31,8 @@ const express = require("express");
 const { publicId } = require("../lib/public-id");
 const { recordAudit, auditFromReq } = require("../lib/audit");
 const createIdempotency = require("../lib/idempotency");
-const { perDiveSelect, eventRepCodesCte } = require("../lib/scoring-sql");
+const { perDiveSelect, eventRepCodesCte, DIVE_PANEL_SCORES_SQL } = require("../lib/scoring-sql");
+const { isUuid } = require("../lib/uuid");
 const { PUBLIC_CLUB_JOIN } = require("../lib/club-approvals");
 const { canSeeEvent } = require("../lib/event-visibility");
 const { customDivesOutOfRange } = require("../lib/custom-dive-dd");
@@ -492,6 +494,55 @@ module.exports = function createControlRoomRouter({
     } catch (err) {
       console.error("[Roster Error]", err.message);
       res.status(500).json([]);
+    }
+  });
+
+  // -------------------------------------------------------------
+  // GET /api/events/:id/dive-panel?competitor_id=&round_number=
+  // What the server has for one dive right now, so a Control Room that
+  // stands a pool up again (a reload, a second laptop, a socket that
+  // dropped while the judges scored, an undone finalise) can put the
+  // live dive's tiles back. Without it the pool only counted the
+  // score_received broadcasts it heard itself, Next never armed on a
+  // dive whose judges had already scored, and Skip was the only way on.
+  // judge_id rides along so the pool keys these the same way as a live
+  // score_received and nobody gets counted twice. The referee's call on
+  // the dive comes too (migration 102); the scores already carry it, it's
+  // there for the call that lands while this is on its way.
+  // Same gate as the roster: the people who run this event.
+  // -------------------------------------------------------------
+  router.get("/api/events/:id/dive-panel", requireMeetController, async (req, res) => {
+    const competitorId = req.query.competitor_id;
+    const round = Number(req.query.round_number);
+    if (!isUuid(competitorId) || !Number.isInteger(round) || round < 1) {
+      return res.status(400).json({ error: "competitor_id and round_number are required" });
+    }
+    try {
+      if (!(await ensureEventOrgGate(req, res, "id"))) return;
+      const [scores, call] = await Promise.all([
+        pool.query(DIVE_PANEL_SCORES_SQL, [req.params.id, competitorId, round]),
+        pool.query(
+          `SELECT referee_call, referee_cap FROM competitor_dive_lists
+            WHERE event_id = $1 AND competitor_id = $2 AND round_number = $3`,
+          [req.params.id, competitorId, round],
+        ),
+      ]);
+      const cap = call.rows[0]?.referee_cap;
+      res.json({
+        event_id: req.params.id,
+        competitor_id: competitorId,
+        round_number: round,
+        referee_call: call.rows[0]?.referee_call || null,
+        referee_cap: cap == null ? null : Number(cap),
+        scores: scores.rows.map((row) => ({
+          judge_id: row.judge_id,
+          judge_number: row.judge_number,
+          score: Number(row.score),
+        })),
+      });
+    } catch (err) {
+      console.error("[Dive Panel Error]", err.message);
+      res.status(500).json({ error: "Failed to load the dive's scores" });
     }
   });
 

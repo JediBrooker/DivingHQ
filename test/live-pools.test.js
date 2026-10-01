@@ -419,3 +419,137 @@ test('resumeIndex: the furthest dive only part judged was still going, so it goe
   ]
   assert.deepEqual(resumeIndex(roster, history, 3), { index: 1, announce: true })
 })
+
+// The Control Room forgot the live dive's scores whenever it stood a pool
+// up again: a reload, a second laptop, a socket that dropped while judges
+// scored, an undone finalise. selectDiver clears the tiles and only a live
+// score_received could fill them, so with every score stored Next (or
+// Finalise) never armed and Skip was the only way on. restoreLiveScores
+// puts back what the server has for the dive on the stage.
+function stored(competitorId, round, marks, extra = {}) {
+  return {
+    event_id: 'A',
+    competitor_id: competitorId,
+    round_number: round,
+    referee_call: null,
+    referee_cap: null,
+    scores: marks.map((score, i) => ({ judge_id: `j${i + 1}`, judge_number: i + 1, score })),
+    ...extra,
+  }
+}
+
+function livePool(n, active = { event_id: 'A', competitor_id: 'd', round_number: 2 }) {
+  const pool = makePoolState()
+  pool.currentActive = active
+  pool.judgeTiles = initJudgeTiles(n)
+  return pool
+}
+
+test('restoreLiveScores: a full panel on the server arms the pool, quietly', async () => {
+  const { restoreLiveScores } = await import('../src/composables/useLivePools.js')
+  const pool = livePool(5)
+  const res = restoreLiveScores(pool, stored('d', 2, [7, 7.5, 8, 8.5, 9]), 5)
+  assert.deepEqual(res, { matched: true, allScoresIn: true })
+  assert.deepEqual(pool.judgeTiles.map((t) => t.score), ['7.0', '7.5', '8.0', '8.5', '9.0'])
+  assert.ok(pool.judgeTiles.every((t) => t.scored))
+  assert.deepEqual(pool.scoresThisRound, { j1: 7, j2: 7.5, j3: 8, j4: 8.5, j5: 9 })
+  assert.equal(pool.advanceArmed, true)
+  // Armed by a restore, not by a dive finishing in front of the operator,
+  // so the card doesn't start its auto-next countdown off a reload.
+  assert.equal(pool.armedByRestore, true)
+})
+
+test('restoreLiveScores: part of the panel back, the rest live, and nobody counted twice', async () => {
+  const { restoreLiveScores } = await import('../src/composables/useLivePools.js')
+  const pool = livePool(5)
+  const res = restoreLiveScores(pool, stored('d', 2, [9, 7]), 5)
+  assert.deepEqual(res, { matched: true, allScoresIn: false })
+  assert.equal(pool.advanceArmed, false)
+  assert.deepEqual(pool.judgeTiles.map((t) => t.score), ['9.0', '7.0', '—', '—', '—'])
+
+  // J1's outbox sends the same score again after the reload: still two in.
+  applyScore(pool, { event_id: 'A', competitor_id: 'd', round_number: 2, judge_id: 'j1', judge_number: 1, score: 9 }, 5)
+  assert.equal(Object.keys(pool.scoresThisRound).length, 2)
+  for (let j = 3; j <= 5; j++) {
+    applyScore(pool, { event_id: 'A', competitor_id: 'd', round_number: 2, judge_id: `j${j}`, judge_number: j, score: 7 + j / 2 }, 5)
+  }
+  assert.equal(pool.advanceArmed, true)
+  // That one finished live, so the countdown may run as usual.
+  assert.equal(pool.armedByRestore, false)
+})
+
+test('restoreLiveScores: scores that arrived live during the fetch stay put', async () => {
+  const { restoreLiveScores } = await import('../src/composables/useLivePools.js')
+  const pool = livePool(3)
+  applyScore(pool, { event_id: 'A', competitor_id: 'd', round_number: 2, judge_id: 'j3', judge_number: 3, score: 6 }, 3)
+  // The answer was put together before J3's score landed.
+  const res = restoreLiveScores(pool, stored('d', 2, [7, 7.5]), 3)
+  assert.deepEqual(res, { matched: true, allScoresIn: true })
+  assert.deepEqual(pool.judgeTiles.map((t) => t.score), ['7.0', '7.5', '6.0'])
+})
+
+test('restoreLiveScores: another dive\'s scores never land on the stage', async () => {
+  const { restoreLiveScores } = await import('../src/composables/useLivePools.js')
+  const pool = livePool(3)
+  assert.equal(restoreLiveScores(pool, stored('d', 1, [7, 7, 7]), 3).matched, false)
+  assert.equal(restoreLiveScores(pool, stored('x', 2, [7, 7, 7]), 3).matched, false)
+  assert.equal(restoreLiveScores(pool, { ...stored('d', 2, [7, 7, 7]), event_id: 'B' }, 3).matched, false)
+  assert.equal(restoreLiveScores(pool, null, 3).matched, false)
+  assert.equal(restoreLiveScores(makePoolState(), stored('d', 2, [7]), 3).matched, false)
+  assert.ok(pool.judgeTiles.every((t) => !t.scored))
+  assert.equal(pool.advanceArmed, false)
+  // Ids and rounds off the wire may be strings.
+  assert.equal(restoreLiveScores(pool, { ...stored('d', '2', [7, 7, 7]) }, 3).matched, true)
+})
+
+test('restoreLiveScores: a referee call already made on the dive holds what comes back', async () => {
+  const { restoreLiveScores, applyRefereeCall } = await import('../src/composables/useLivePools.js')
+  const failed = livePool(3)
+  restoreLiveScores(failed, stored('d', 2, [7, 8, 9], { referee_call: 'failed' }), 3)
+  assert.deepEqual(failed.judgeTiles.map((t) => t.score), ['0.0', '0.0', '0.0'])
+  assert.deepEqual(failed.scoresThisRound, { j1: 0, j2: 0, j3: 0 })
+
+  const capped = livePool(3)
+  restoreLiveScores(capped, stored('d', 2, [1.5, 8, 9], { referee_call: 'cap', referee_cap: '2.0' }), 3)
+  assert.deepEqual(capped.judgeTiles.map((t) => t.score), ['1.5', '2.0', '2.0'])
+
+  // The call came over the socket while the fetch was out, so the answer
+  // still has the awards from before it.
+  const raced = livePool(3)
+  applyRefereeCall(raced, { event_id: 'A', competitor_id: 'd', round_number: 2 }, 'failed')
+  restoreLiveScores(raced, stored('d', 2, [7, 8, 9]), 3)
+  assert.deepEqual(raced.judgeTiles.map((t) => t.score), ['0.0', '0.0', '0.0'])
+
+  // A new diver forgets the call.
+  raced.roster = [{ event_id: 'A', competitor_id: 'e', round_number: 2 }]
+  selectDiver(raced, 0, 3)
+  assert.equal(raced.refereeCall, null)
+  restoreLiveScores(raced, stored('e', 2, [7, 8, 9]), 3)
+  assert.deepEqual(raced.judgeTiles.map((t) => t.score), ['7.0', '8.0', '9.0'])
+})
+
+test('restoreLiveScores: synchro seats keep their own tiles, whatever order they come in', async () => {
+  const { restoreLiveScores } = await import('../src/composables/useLivePools.js')
+  const pool = livePool(9)
+  // Exec A 1-2, Exec B 3-4, Sync 5-9 (synchroJudgeGroups for 9). Sent
+  // out of order, two seats still to score.
+  const scores = [9, 3, 6, 1, 7].map((jn) => ({ judge_id: `j${jn}`, judge_number: jn, score: jn }))
+  const res = restoreLiveScores(pool, { ...stored('d', 2, []), scores }, 9)
+  assert.deepEqual(res, { matched: true, allScoresIn: false })
+  assert.deepEqual(
+    pool.judgeTiles.map((t) => (t.scored ? t.score : '—')),
+    ['1.0', '—', '3.0', '—', '—', '6.0', '7.0', '—', '9.0'],
+  )
+  assert.equal(pool.judgeTiles[8].judgeId, 'j9')
+})
+
+test('a re-dive drops a restore-armed state and the call with it', async () => {
+  const { restoreLiveScores, applyRedive } = await import('../src/composables/useLivePools.js')
+  const pool = livePool(3)
+  restoreLiveScores(pool, stored('d', 2, [7, 8, 9], { referee_call: 'cap', referee_cap: 2 }), 3)
+  assert.equal(pool.advanceArmed, true)
+  applyRedive(pool, { event_id: 'A', competitor_id: 'd', round_number: 2 }, 3)
+  assert.equal(pool.advanceArmed, false)
+  assert.equal(pool.armedByRestore, false)
+  assert.equal(pool.refereeCall, null)
+})

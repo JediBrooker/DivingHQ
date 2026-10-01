@@ -16,6 +16,7 @@
 
 const express = require("express");
 const { isUuid } = require("../lib/uuid");
+const { DIVE_PANEL_SCORES_SQL } = require("../lib/scoring-sql");
 
 module.exports = function createEventStaffRouter({
   pool,
@@ -227,15 +228,7 @@ module.exports = function createEventStaffRouter({
         [eventId, req.user.id],
       );
       if (!seat.rows.length) return res.status(404).json({ error: "Not assigned to this event" });
-      const r = await pool.query(
-        `SELECT ej.judge_number, s.score
-           FROM scores s
-           JOIN event_judges ej ON ej.event_id = s.event_id AND ej.judge_id = s.judge_id
-          WHERE s.event_id = $1 AND s.competitor_id = $2 AND s.round_number = $3
-            AND s.status IS DISTINCT FROM 'redive'
-          ORDER BY ej.judge_number`,
-        [eventId, competitorId, round],
-      );
+      const r = await pool.query(DIVE_PANEL_SCORES_SQL, [eventId, competitorId, round]);
       res.json({
         judge_number: seat.rows[0].judge_number,
         scores: r.rows.map((row) => ({ judge_number: row.judge_number, score: Number(row.score) })),

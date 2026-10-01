@@ -39,7 +39,7 @@ import { useSocket } from '@/composables/useSocket'
 import { useSocketEvent } from '@/composables/useSocketEvent'
 import {
   useLivePools, selectDiver, rosterIndexForActive, competingQueue, rebaseQueue, nextQueueIndex,
-  applyRedive, applyRefereeCall, historyNewestFirst, resumeIndex,
+  applyRedive, applyRefereeCall, historyNewestFirst, resumeIndex, restoreLiveScores,
 } from '@/composables/useLivePools'
 import { annotateJudgeRows } from '@/composables/useScoreTrim'
 import { synchroJudgeGroups } from '@/composables/useScoreCategories'
@@ -213,6 +213,34 @@ function seedPoolFromServer(eventId) {
     selectDiver(pool, idx, numberOfJudgesFor(eventId), diveDescription)
   }
   pendingSeed.delete(eventId)
+  // Whoever is up may well have scores in already (a reload mid-dive).
+  restoreLiveDive(eventId)
+}
+
+// Put back what the server has stored for the dive a pool is on (see
+// restoreLiveScores). Called wherever a pool lands on a dive without
+// having watched it: the server's diver on load, a pick-up from the
+// history, a reconnect, an undone finalise. A re-dive called while the
+// fetch was out means the answer is the old panel's, so it's dropped;
+// a different diver by then is caught by the helper's own match.
+// Resolves to true when the server answered.
+async function restoreLiveDive(eventId) {
+  const pool = pools[eventId]
+  const a = pool?.currentActive
+  if (!a) return false
+  const seq = pool.rediveSeq
+  let dive
+  try {
+    const qs = new URLSearchParams({ competitor_id: a.competitor_id, round_number: a.round_number })
+    dive = await auth.apiFetch(`/api/events/${eventId}/dive-panel?${qs}`)
+  } catch {
+    return false
+  }
+  if (unmounted || pool.rediveSeq !== seq) return false
+  const res = restoreLiveScores(pool, dive, numberOfJudgesFor(eventId))
+  // A dive that finished out of sight still changed History and Standings.
+  if (res.allScoresIn) loadPoolPanels(eventId)
+  return true
 }
 
 const events = ref([])
@@ -439,14 +467,40 @@ async function announceFocused() {
 // is short, but Space, the arrow key and the card's Skip all land here,
 // so the same gates live here too: nothing moves during a hold, and
 // moving past a dive that's short of a full panel (none at all included,
-// a no-show) always asks first.
+// a no-show) always asks first. One advance per pool at a time: a short
+// panel waits on the server before it asks (advancePoolOnce), and a
+// second Space or click in that gap would otherwise have skipped two
+// divers.
+const advancing = new Set()
+
 async function advancePool(ev) {
-  if (!ev) return
+  if (!ev || advancing.has(ev.id)) return
+  advancing.add(ev.id)
+  try {
+    await advancePoolOnce(ev)
+  } finally {
+    advancing.delete(ev.id)
+  }
+}
+
+async function advancePoolOnce(ev) {
   const p = pools[ev.id]
   if (!p) return
   if (holdStore[String(ev.id)]) {
     showInfo(`"${ev.name}" is on hold. Resume it before moving on.`)
     return
+  }
+  // Short of a full panel on this screen: ask the server what it has
+  // before saying anything about it. The Skip dialog used to tell the
+  // operator no score was recorded for a dive whose scores were all
+  // stored, it only knew what had reached this screen. Two seconds at
+  // most, so a dead connection doesn't hold the button up.
+  let checked = true
+  if (!p.advanceArmed && p.currentActive) {
+    checked = await Promise.race([
+      restoreLiveDive(ev.id),
+      new Promise((resolve) => setTimeout(() => resolve(false), 2000)),
+    ])
   }
   const totalJudges = numberOfJudgesFor(ev.id) || 0
   const scoresIn = Object.keys(p.scoresThisRound || {}).length
@@ -459,10 +513,11 @@ async function advancePool(ev) {
   const short = !p.advanceArmed && !!p.currentActive
   if (short) {
     const name = p.currentActive.full_name || 'this diver'
+    const unchecked = checked ? '' : ' The server couldn\'t be asked, so some may not have reached this screen.'
     const ok = scoresIn > 0
       ? await confirmAction({
         title: 'Skip ahead with partial scores?',
-        body: `Only ${scoresIn} of ${totalJudges || '?'} judges have submitted for this dive in "${ev.name}".`,
+        body: `Only ${scoresIn} of ${totalJudges || '?'} judges have submitted for this dive in "${ev.name}".${unchecked}`,
         consequences: [
           'The dive will close with whatever scores arrived',
           'Missing judges can still amend via score correction afterwards',
@@ -472,9 +527,11 @@ async function advancePool(ev) {
       })
       : await confirmAction({
         title: `Skip ${name}?`,
-        body: `No judge scores have reached this screen for this dive in "${ev.name}".`,
+        body: checked
+          ? `No judge has scored this dive in "${ev.name}".`
+          : `No judge scores have reached this screen for this dive in "${ev.name}".${unchecked}`,
         consequences: [
-          'No score is recorded for this dive',
+          checked ? 'No score is recorded for this dive' : 'Any score the server already has for it is kept',
           'Use it for a no-show or a diver who can\'t dive',
         ],
         confirmLabel: 'Skip diver',
@@ -711,6 +768,11 @@ useSocketEvent(socket, 'connect', () => {
     delete holdStore[String(ev.id)]
     joinPoolRooms(ev.id)
     socket.emit('get_active_diver', { event_id: ev.id })
+    // Scores sent while we were away only went to the room, so they never
+    // reached this pool. Ask for the live dive's, and re-read History and
+    // Standings for any dive that finished meanwhile.
+    restoreLiveDive(ev.id)
+    loadPoolPanels(ev.id)
   }
 })
 
@@ -774,6 +836,10 @@ async function resumeFromHistory(ev, pool) {
     selectDiver(pool, index, numberOfJudgesFor(ev.id), diveDescription)
   }
   if (announce && socket.isConnected.value) emitActiveDiver(ev)
+  // The dive it picked up on may be part or fully judged already. Every
+  // dive in and nothing after it is the undone-finalise case: this is
+  // what arms Finalise there.
+  restoreLiveDive(ev.id)
 }
 
 async function selectEvent(id) {
