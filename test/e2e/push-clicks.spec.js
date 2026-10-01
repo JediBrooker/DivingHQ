@@ -112,6 +112,16 @@ test("Approve on a request that closed while the phone wasn't listening takes th
   expect(res.status()).toBe(201);
   const { request_id: requestId } = await res.json();
 
+  // Keep reconnect checks on the phone's stale view until it answers.
+  // Otherwise a background read can retire the banner before the click
+  // and this stops exercising the expired request's response at all.
+  const statusUrl = `/api/events/${event.id}/dive-order/sign-off/request/${requestId}`;
+  await page.route(statusUrl, async (route) => {
+    const response = await route.fetch();
+    const body = await response.json();
+    await route.fulfill({ response, json: { ...body, status: "pending" } });
+  });
+
   await signIn(page, world.referee.username);
   await page.goto(`/control?event=${event.id}&signoff_request=${requestId}`);
   const banner = page.locator(".notif-referee_signoff");
@@ -129,6 +139,7 @@ test("Approve on a request that closed while the phone wasn't listening takes th
   expect(ev.rows[0].dive_order_signed_off_at).toBeNull();
 
   // Opening the link again: nothing to answer, and it says so.
+  await page.unroute(statusUrl);
   await page.reload();
   await expect(page.locator(".notify-bar")).toContainText(/no longer open/i, { timeout: 10_000 });
   await expect(banner).toHaveCount(0);
