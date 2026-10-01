@@ -8517,6 +8517,66 @@ test("a judge who gives the same mark after a redive is still on the audit log",
   }
 });
 
+// The redive sets the whole old panel aside, whoever wrote each row. J1
+// scored the first dive from the phone, the phone then died, and the
+// operator types J1's mark for the new dive. Manual entry answered 409
+// ("judge has already submitted") because the row was judge_direct, and
+// the correction it pointed at left the row set aside, so the dive could
+// never finish. A judge's row nobody set aside still gets the 409.
+test("a manual entry over a judge's set-aside row scores the redive", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const orgId = await compKit.org("redive-op");
+  const socks = [];
+  try {
+    const manager = await compKit.user(orgId, "Crossover Manager", ["meet_manager"]);
+    const referee = await compKit.user(orgId, "Crossover Referee", ["referee"]);
+    const j1 = await compKit.user(orgId, "Crossover Judge One", ["judge"]);
+    const j2 = await compKit.user(orgId, "Crossover Judge Two", ["judge"]);
+    const diver = await compKit.user(orgId, "Crossover Diver", ["diver"]);
+    const eventId = await compKit.event(orgId, { status: "Live", total_rounds: 1 });
+    await compKit.enter(eventId, diver.id, await compKit.dives(1), { display_order: 1 });
+    await compKit.panel(eventId, [j1, j2]);
+    const [rs, s1, s2] = await Promise.all([referee, j1, j2].map((u) => compKit.socket(u.token)));
+    socks.push(rs, s1, s2);
+    const dive = { event_id: eventId, competitor_id: diver.id, round_number: 1 };
+    const manual = (judge, score) => fetchJson("POST", "/api/scores/manual-entry", {
+      token: manager.token, body: { ...dive, judge_id: judge.id, score, reason: "phone died" },
+    });
+    const row = async (judge) => (await pool.query(
+      `SELECT score::float AS score, score_source, status FROM scores
+        WHERE event_id = $1 AND judge_id = $2`, [eventId, judge.id],
+    )).rows[0];
+
+    assert.equal((await compKit.ask(s1, "submit_score", { ...dive, score: 7 })).ok, true);
+    assert.equal((await compKit.ask(s2, "submit_score", { ...dive, score: 7.5 })).ok, true);
+    assert.deepEqual(await compKit.ask(rs, "referee_redive", dive), { ok: true });
+
+    const typed = await manual(j1, 6.5);
+    assert.equal(typed.status, 200, JSON.stringify(typed.body));
+    assert.deepEqual(await row(j1), { score: 6.5, score_source: "manual_entry", status: "active" },
+      "J1's mark for the new dive counts, as the operator's entry");
+    const last = (await pool.query(
+      `SELECT action::text AS action, old_score::float AS old, new_score::float AS new, reason
+         FROM score_audit_log WHERE event_id = $1 AND judge_id = $2
+        ORDER BY created_at DESC, id DESC LIMIT 1`, [eventId, j1.id],
+    )).rows[0];
+    assert.deepEqual([last.action, last.old, last.new], ["update", 7, 6.5]);
+    assert.equal(last.reason, "re-scored after redive; phone died");
+    assert.equal((await row(j2)).status, "redive", "J2 hasn't scored the new dive yet");
+
+    // J2 scores the new dive from the phone. That row isn't set aside any
+    // more, so the operator typing over it is the old 409.
+    assert.equal((await compKit.ask(s2, "submit_score", { ...dive, score: 8 })).ok, true);
+    const over = await manual(j2, 6);
+    assert.equal(over.status, 409);
+    assert.deepEqual(await row(j2), { score: 8, score_source: "judge_direct", status: "active" });
+  } finally {
+    socks.forEach((s) => s.close());
+    await compKit.cleanup(orgId);
+  }
+});
+
 // The same thing through the sockets a meet actually uses. The rehearsal
 // found "403C 0.00" in the national, club and personal books after a
 // Failed call. A dive that holds a book has to lose it the moment the call
