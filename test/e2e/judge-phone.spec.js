@@ -73,6 +73,59 @@ async function outboxEntries(page) {
   }));
 }
 
+// Every WebSocket the page opens, so a test can drop them the way a phone
+// losing signal does. Going offline in the browser doesn't close one
+// that's already open.
+async function trackSockets(page) {
+  await page.addInitScript(() => {
+    const Native = window.WebSocket;
+    window.__sockets = [];
+    window.WebSocket = class extends Native {
+      constructor(...args) {
+        super(...args);
+        window.__sockets.push(this);
+      }
+    };
+  });
+}
+
+// The judge scores 7.5 with no signal, the event is finalised meanwhile,
+// and they go to the dashboard before the phone is back. The app-wide
+// drain sends the score from there and the server refuses it, with no
+// judge screen open to hear about it.
+async function scoreRefusedOnDashboard(page, ctx, request, { adminToken, eventId }) {
+  await ctx.setOffline(true);
+  await page.evaluate(() => window.__sockets.forEach((s) => s.close()));
+  await expect(page.locator(".status-dot.connected")).toHaveCount(0, { timeout: 10_000 });
+  await page.locator(".keypad .key", { hasText: /^7$/ }).click();
+  await page.locator(".keypad .key-half").click();
+  await page.locator(".submit-btn").click();
+  await expect.poll(async () => (await outboxEntries(page)).map((e) => e.status)).toEqual(["pending"]);
+
+  await setup.setEventStatus(request, { adminToken, eventId, status: "Completed" });
+  // Leaving with a score still queued asks first.
+  page.once("dialog", (d) => d.accept());
+  await page.locator(".btn-back-judge", { hasText: "Dashboard" }).click();
+  await expect(page).toHaveURL(/\/dashboard$/);
+  await ctx.setOffline(false);
+  await expect.poll(
+    async () => (await outboxEntries(page)).map((e) => [e.status, e.last_error, !!e.acknowledged_at]),
+    { timeout: 20_000 },
+  ).toEqual([["rejected", "event_not_live", false]]);
+}
+
+// Back to the judge screen the way the dashboard's event link goes, in
+// the app. page.goto would reload, and on a fresh load the socket's connect
+// replay can put the next diver up before the outbox has even been read,
+// which is a different path from the one a judge takes.
+async function backToJudge(page, to) {
+  await page.evaluate((path) => document.querySelector("#app").__vue_app__.config.globalProperties.$router.push(path), to);
+}
+
+async function refusalsTold(page) {
+  return (await outboxEntries(page)).map((e) => [e.status, !!e.acknowledged_at]);
+}
+
 async function eventLiveRows(userId, eventId) {
   const r = await setup.pool.query(
     `SELECT status FROM notifications
@@ -605,6 +658,92 @@ test("a finalise undone with no diver, then finalised again, still lets the next
     await expect(notice).toHaveCount(0);
     await expect(page.locator(".judge-id")).toContainText("— J1");
     await expect(page.locator(".submit-btn")).toBeEnabled();
+  } finally {
+    await ctx.close();
+    await setup.deleteOrg(orgId);
+  }
+});
+
+// The screen only used to report refusals sent since it opened, and the
+// drain runs on every route now. A score refused while the judge was on
+// the dashboard was never mentioned anywhere: not on the notice, not in
+// the queued strip or the banner, which both leave a closed entry out.
+test("a score refused while the judge was off the judge screen is shown when they come back", async ({ browser, request, baseURL }) => {
+  test.setTimeout(90_000);
+  const { orgId, adminToken } = await setup.createOrgAndAdmin(request, { countryCode: "AUS", orgName: "Judge Away" });
+  const { event, divers, judges } = await liveEvent(request, {
+    orgId, adminToken, name: "Away Event", diverNames: ["OOO Away"],
+  });
+  expect(await emitAck(baseURL, adminToken, "set_active_diver", activeDiver(event, divers[0], "OOO Away")))
+    .toMatchObject({ ok: true });
+  const { ctx, page } = await phone(browser, 390, 664);
+  await trackSockets(page);
+  try {
+    await signIn(page, judges[0].username);
+    await page.goto(`/judge?event=${event.id}`);
+    await expect(page.locator(".diver-name")).toContainText("OOO Away", { timeout: 8_000 });
+    await expect(page.locator(".judge-id")).toContainText("— J1", { timeout: 6_000 });
+    await scoreRefusedOnDashboard(page, ctx, request, { adminToken, eventId: event.id });
+
+    await backToJudge(page, `/judge?event=${event.id}`);
+    const notice = page.getByTestId("judge-finished");
+    await expect(notice).toBeVisible({ timeout: 8_000 });
+    await expect(notice).toContainText(/finished/i);
+    await expect(notice).toContainText("7.5");
+    await expect(page.locator(".event-name")).toContainText("Away Event");
+    await expect(page.locator(".submit-btn")).toBeDisabled();
+    await expect(page).toHaveURL(/\/judge$/);
+
+    // Said the once. The outbox has it down as told, so the next visit
+    // doesn't bring it up again.
+    await expect.poll(() => refusalsTold(page)).toEqual([["rejected", true]]);
+    await page.reload();
+    await expect(page.locator(".diver-name")).toContainText(/Waiting/, { timeout: 8_000 });
+    await page.waitForTimeout(1_000);
+    await expect(page.locator(".judge-layout")).not.toContainText("7.5");
+    await expect(page.locator(".notify-bar")).toHaveCount(0);
+  } finally {
+    await ctx.close();
+    await setup.deleteOrg(orgId);
+  }
+});
+
+// Same refusal, but by the time the judge comes back their next panel is
+// running with a diver up. The notice goes up and the replayed diver takes
+// it straight down again, so the lost score has to go somewhere that stays
+// long enough to read.
+test("a refused score is still said when the judge comes back to a panel that's already running", async ({ browser, request, baseURL }) => {
+  test.setTimeout(90_000);
+  const { orgId, adminToken } = await setup.createOrgAndAdmin(request, { countryCode: "AUS", orgName: "Judge Away Next" });
+  const A = await liveEvent(request, { orgId, adminToken, name: "Away First", diverNames: ["QQQ Away"] });
+  const B = await setup.createEvent(request, { adminToken, name: "Away Next", total_rounds: 1, number_of_judges: 5, height: "3m" });
+  await setup.assignJudges(request, { adminToken, eventId: B.id, judgeIds: A.judges.map((j) => j.userId) });
+  const next = await setup.insertUser({ orgId, role: "diver", fullName: "RRR Next" });
+  await setup.insertDiveList({ eventId: B.id, competitorId: next.userId, dives: [{ round_number: 1, dive_id: A.diveId }] });
+  expect(await emitAck(baseURL, adminToken, "set_active_diver", activeDiver(A.event, A.divers[0], "QQQ Away")))
+    .toMatchObject({ ok: true });
+
+  const { ctx, page } = await phone(browser, 390, 664);
+  await trackSockets(page);
+  try {
+    await signIn(page, A.judges[0].username);
+    await page.goto(`/judge?event=${A.event.id}`);
+    await expect(page.locator(".diver-name")).toContainText("QQQ Away", { timeout: 8_000 });
+    await expect(page.locator(".judge-id")).toContainText("— J1", { timeout: 6_000 });
+    await scoreRefusedOnDashboard(page, ctx, request, { adminToken, eventId: A.event.id });
+
+    await setup.setEventStatus(request, { adminToken, eventId: B.id, status: "Live" });
+    expect(await emitAck(baseURL, adminToken, "set_active_diver", activeDiver({ ...B, name: "Away Next" }, next, "RRR Next")))
+      .toMatchObject({ ok: true });
+
+    // Back in through the dashboard's link to the event that finished.
+    await backToJudge(page, `/judge?event=${A.event.id}`);
+    await expect(page).toHaveURL(new RegExp(`/judge\\?event=${B.id}$`), { timeout: 8_000 });
+    await expect(page.locator(".diver-name")).toContainText("RRR Next", { timeout: 8_000 });
+    await expect(page.locator(".notify-bar-warn")).toContainText("7.5");
+    await expect(page.getByTestId("judge-finished")).toHaveCount(0);
+    await expect(page.locator(".submit-btn")).toBeEnabled();
+    await expect.poll(() => refusalsTold(page)).toEqual([["rejected", true]]);
   } finally {
     await ctx.close();
     await setup.deleteOrg(orgId);

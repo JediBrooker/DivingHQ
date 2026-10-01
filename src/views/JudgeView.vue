@@ -9,7 +9,7 @@ import { diveDescription } from '@/composables/useDiveLabel'
 import { normaliseActiveDiver } from '@/lib/activeDiver'
 import { synchroRoleForJudge } from '@/composables/useScoreCategories'
 import { heldAward } from '@/composables/useScoreTrim'
-import { showInfo } from '@/composables/useNotify'
+import { showInfo, showWarning } from '@/composables/useNotify'
 import OfflineBanner from '@/components/OfflineBanner.vue'
 import SyncStatusBadge from '@/components/SyncStatusBadge.vue'
 import BigScoreDisplay from '@/components/BigScoreDisplay.vue'
@@ -76,8 +76,9 @@ const activeDiver = ref(null)
 // Set once the event this screen is judging stops taking scores: its id
 // and name, the status it went to (null when all we know is that a score
 // came back refused), and the score of this judge's it turned away, if
-// there was one. While it's set the keypad is shut and the header says
-// why. The next diver clears it (see endJudgingEvent).
+// there was one, with when that went up (lostAt). While it's set the
+// keypad is shut and the header says why. The next diver clears it (see
+// endJudgingEvent and clearFinished).
 const finished = ref(null)
 const judgeLabel = ref(user?.full_name || 'Judge')
 // Connection state lives on the singleton socket itself
@@ -276,6 +277,8 @@ let adoptPoll = null
 function endJudgingEvent(eventId, { status = null, eventName = null, unrecorded = null } = {}) {
   const id = String(eventId)
   const prev = finished.value
+  // When the "wasn't recorded" line went up, see clearFinished.
+  const lostAt = unrecorded != null ? Date.now() : null
   if (prev?.eventId === id) {
     // Already on screen; a refused score arriving after the broadcast
     // just adds its line.
@@ -284,10 +287,14 @@ function endJudgingEvent(eventId, { status = null, eventName = null, unrecorded 
       status: status ?? prev.status,
       eventName: prev.eventName || eventName,
       unrecorded: unrecorded ?? prev.unrecorded,
+      lostAt: lostAt ?? prev.lostAt,
     }
   } else {
+    // Some other event's notice gives way to this one, and passes on a
+    // score it was showing if it hasn't been up long enough to be read.
+    clearFinished()
     const onScreen = String(activeDiver.value?.event_id) === id ? activeDiver.value : null
-    finished.value = { eventId: id, status, eventName: eventName || onScreen?.eventName || null, unrecorded }
+    finished.value = { eventId: id, status, eventName: eventName || onScreen?.eventName || null, unrecorded, lostAt }
     if (!finished.value.eventName) fillFinishedName(id)
     diveSeq++
     activeDiver.value = null
@@ -314,11 +321,30 @@ function endJudgingEvent(eventId, { status = null, eventName = null, unrecorded 
   }
 }
 
+// Takes the finished notice down: the next diver has landed, the event is
+// Live again, or another event's finish is taking its place. A score it
+// was showing as not recorded still wasn't, though. If that line has only
+// been up a moment nobody has read it, which is what happens to a judge
+// coming back to the screen after a refusal while their next panel is
+// already running: the notice goes up and the replayed diver takes it
+// straight down. So then the line moves to a toast instead of vanishing.
+const LOST_SCORE_READ_MS = 5000
+function clearFinished() {
+  const f = finished.value
+  if (!f) return
+  finished.value = null
+  if (f.unrecorded != null && Date.now() - f.lostAt < LOST_SCORE_READ_MS) warnUnrecorded(f.unrecorded)
+}
+
+function warnUnrecorded(score) {
+  showWarning(t('judge.score_not_recorded', { score: Number(score).toFixed(1) }))
+}
+
 // The finished event is Live again (an undone finalise), so it isn't
 // finished. Left up, the notice kept the keypad shut on a Live event until
 // a diver came, and a second finalise then found it "already on screen".
 function reopenFinished(eventId) {
-  if (finished.value?.eventId === String(eventId)) finished.value = null
+  if (finished.value?.eventId === String(eventId)) clearFinished()
 }
 
 // Only needed when neither the diver nor the caller had the name (a
@@ -353,16 +379,21 @@ async function checkStillLive() {
 // Scores the server turned down for good because their event isn't Live
 // any more. The outbox closes those on the first answer (FINAL_REFUSALS
 // in useHttpOutbox) rather than retrying them into a failed chip, and this
-// is where the judge hears about it. Only ones sent since this screen
-// opened: anything older was either told already or is long gone.
-const openedAt = Date.now()
+// is where the judge hears about it. That answer can come back while this
+// screen isn't open: the drain runs on every route, so a judge who scored
+// offline and then went to the dashboard gets it there. So it's every
+// refusal the outbox still has as untold (it keeps them 72h), whenever it
+// came back, and each is marked acknowledged once it's been said. The set
+// only covers the gap while that write is still going.
 const refusalsSeen = new Set()
 function noticeRefusals(entries) {
   for (const e of entries) {
     if (e.status !== 'rejected' || e.action_type !== 'submit_score') continue
-    if (e.last_error !== 'event_not_live' || refusalsSeen.has(e.idempotency_key)) continue
+    if (e.last_error !== 'event_not_live' || e.acknowledged_at) continue
+    if (refusalsSeen.has(e.idempotency_key)) continue
     refusalsSeen.add(e.idempotency_key)
-    if (Date.parse(e.last_attempt_at) >= openedAt) onScoreRefused(e.payload)
+    onScoreRefused(e.payload)
+    outboxInstance?.acknowledge(e.idempotency_key).catch(() => {})
   }
 }
 
@@ -376,7 +407,7 @@ function onScoreRefused(payload) {
   if (!current || String(current) === id || finished.value?.eventId === id) {
     endJudgingEvent(id, { unrecorded: score })
   } else {
-    showInfo(t('judge.score_not_recorded', { score: score.toFixed(1) }))
+    warnUnrecorded(score)
   }
 }
 
@@ -588,7 +619,7 @@ useSocketEvent(socket, 'state_update', async (data) => {
   // set_active_diver) mustn't reopen the keypad on it. Coming back through
   // the Live adopt, an undone finalise say, puts it back in the URL first.
   if (finished.value?.eventId === String(data.event_id) && eventIdFromUrl.value !== finished.value.eventId) return
-  finished.value = null
+  clearFinished()
   // The same dive again is a replay (the reconnect, get_active_diver on
   // a rejoin), not a new diver. Wiping the keypad on it reopened it for
   // a judge who had already scored, so only a different dive resets.

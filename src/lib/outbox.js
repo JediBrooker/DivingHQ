@@ -42,7 +42,11 @@
 //     so far. The sender marks those err.final and the entry goes
 //     straight to 'rejected', with the server's reason in last_error.
 //     No retries, no Retry button, and the offline banner leaves it
-//     out; the screen that queued it says what happened instead.
+//     out; the screen that queued it says what happened instead, and
+//     marks it acknowledge()d once it has. The refusal can come back
+//     while that screen isn't open (the drain runs on every route), so
+//     it's the entry that remembers whether anyone was told, not the
+//     screen.
 //
 //   * No Vue coupling here. Components subscribe via
 //     outbox.on('change') and re-read counts as needed. A thin
@@ -330,6 +334,7 @@ export function createOutbox({
       last_attempt_at: null,
       last_error: null,
       conflict_info: null,
+      acknowledged_at: null,
       created_at: now.toISOString(),
       synced_at: null,
       server_response: null,
@@ -509,6 +514,24 @@ export function createOutbox({
   }
 
   /**
+   * Note that whoever queued a rejected entry has been told it didn't go
+   * through, so the screen that tells them doesn't say it again the next
+   * time it opens. Returns false for anything else, or one already
+   * acknowledged.
+   *
+   * No 'change' event: no count or status moves, and the screen that
+   * calls this is usually reacting to one, so emitting would only send
+   * it round again.
+   */
+  async function acknowledge(key) {
+    const entry = await getEntry(key)
+    if (!entry || entry.status !== STATUSES.REJECTED || entry.acknowledged_at) return false
+    entry.acknowledged_at = new Date().toISOString()
+    await backend.put(entry)
+    return true
+  }
+
+  /**
    * List entries, optionally filtered by status/action_type.
    * Returns in FIFO order (oldest created_at first). Always
    * scoped to this outbox's user_fingerprint.
@@ -577,6 +600,7 @@ export function createOutbox({
     getEntry,
     resolveConflict,
     retryFailed,
+    acknowledge,
     gc,
     on: emitter.on,
     off: emitter.off,

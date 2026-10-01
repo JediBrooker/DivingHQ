@@ -71,6 +71,8 @@ Entry shape:
   last_attempt_at:    null,
   last_error:         null,         // string when status is 'failed' or 'rejected'
   conflict_info:      null,         // server payload when status==='conflict'
+  acknowledged_at:    null,         // set by acknowledge() once the screen that
+                                    // queued a 'rejected' entry has told its user
   created_at:         '2026-05-21T14:32:08.103Z',
   synced_at:          null,         // set when status flips to 'synced'
   server_response:    null,         // cached server reply when synced
@@ -103,6 +105,12 @@ Entry shape:
 Terminal states: `synced`, `failed`, `cancelled`, `conflict`, `rejected`. Each TTLs out
 after 72 hours (matches server idempotency TTL) and is garbage-collected
 on startup.
+
+A `rejected` entry can close while the screen that queued it isn't open,
+because the drain runs app-wide. So the entry records whether its user has
+been told (`acknowledged_at`, set through `acknowledge(key)`), and the judge
+screen reports every untold one when it opens, not just the ones that came
+back while it was on screen.
 
 ### Public API
 

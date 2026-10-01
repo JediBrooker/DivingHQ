@@ -564,3 +564,48 @@ test("gc() clears old rejected entries like any other finished one", async () =>
   assert.equal(await o.gc(), 1);
   assert.equal(await o.getEntry(key), null);
 });
+
+// The refusal can come back on any route (the drain is app-wide), so the
+// entry carries whether the judge has been told yet, not the screen.
+test("acknowledge() marks a rejected entry as told, once", async () => {
+  const o = newOutbox();
+  const key = await o.push('submit_score', { score: 7.5 });
+  assert.equal((await o.getEntry(key)).acknowledged_at, null, 'a new entry starts untold');
+  await o.drain({ send: async () => { throw finalRefusal(); } });
+  assert.equal((await o.getEntry(key)).acknowledged_at, null, 'refused, but nobody has said so yet');
+
+  let changes = 0;
+  o.on('change', () => { changes += 1; });
+  assert.equal(await o.acknowledge(key), true);
+  const e = await o.getEntry(key);
+  assert.ok(Date.parse(e.acknowledged_at) > 0, `acknowledged_at=${e.acknowledged_at}`);
+  assert.equal(e.status, STATUSES.REJECTED, 'still closed, only now told');
+  assert.equal(changes, 0, 'nothing a count reads has moved');
+
+  assert.equal(await o.acknowledge(key), false, 'the second time is a no-op');
+  assert.equal((await o.getEntry(key)).acknowledged_at, e.acknowledged_at);
+});
+
+test("acknowledge() leaves anything that wasn't refused for good alone", async () => {
+  const o = newOutbox();
+  const queued = await o.push('submit_score', { score: 6 });
+  assert.equal(await o.acknowledge(queued), false);
+  assert.equal((await o.getEntry(queued)).acknowledged_at, null);
+
+  await o.drain({ send: async () => ({ ok: true }) });
+  assert.equal((await o.getEntry(queued)).status, STATUSES.SYNCED);
+  assert.equal(await o.acknowledge(queued), false);
+  assert.equal((await o.getEntry(queued)).acknowledged_at, null);
+
+  assert.equal(await o.acknowledge('no-such-key'), false);
+});
+
+test("acknowledge() can't reach another user's entries", async () => {
+  const backend = createMemoryBackend();
+  const mine = createOutbox({ backend, userFingerprint: 'u1' });
+  const theirs = createOutbox({ backend, userFingerprint: 'u2' });
+  const key = await mine.push('submit_score', { score: 7 });
+  await mine.drain({ send: async () => { throw finalRefusal(); } });
+  assert.equal(await theirs.acknowledge(key), false);
+  assert.equal((await backend.get(key)).acknowledged_at, null);
+});
