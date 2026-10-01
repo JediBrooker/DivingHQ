@@ -1769,7 +1769,11 @@ onMounted(async () => {
             <span v-if="currentEvent?.created_at" class="meta-tag meta-date">{{ fmtDate(currentEvent.created_at) }}</span>
           </div>
         </div>
-        <div class="export-actions">
+        <!-- Not on /broadcast: a projector has no use for downloads (the
+             stream overlay hides them too), and the floating exit X sat
+             right on top of "Start list", so a click there left broadcast
+             mode instead. The ordinary recap keeps them. -->
+        <div v-if="!broadcastMode" class="export-actions">
           <a :href="`/api/events/${currentEventId}/results.pdf`"
              target="_blank" rel="noopener"
              class="btn btn-ghost btn-sm">PDF</a>

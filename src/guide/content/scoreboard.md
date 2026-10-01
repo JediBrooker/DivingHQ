@@ -110,7 +110,7 @@ The scoreboard subscribes to the live socket; if your wifi or 4G drops, a red ba
 
 For a back-of-house projector, add `/broadcast` to the end of the event's scoreboard URL (`/scoreboard/<event-id>/broadcast`) or click **Broadcast** in the header. This:
 
-- Hides the page chrome (header, footer, navigation)
+- Hides the page chrome (header, footer, navigation), and on the recap the PDF / CSV / Start list buttons (open the ordinary scoreboard to download those)
 - Scales fonts up so a back-row spectator can read everything
 - Tints the background a deeper black for high-contrast projection
 
