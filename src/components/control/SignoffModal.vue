@@ -8,11 +8,11 @@
  * Lifecycle contract: the parent mounts this with v-if, so a
  * fresh mount = a fresh modal session (mode reset to 'push',
  * no pending request). The referee_signoff_response socket
- * listener is registered synchronously here via useSocketEvent.
- * It only needs to live while a request can be pending, and a
- * pending request can only exist while this modal is mounted
- * (closing clears it), so scoping the listener to this component
- * preserves the pre-extraction behaviour.
+ * listener here only settles the request this session is waiting
+ * on. Closing the dialog leaves that request open on the server
+ * (the checklist shows who it's waiting on), and SetupStage keeps
+ * listening for an approval after this unmounts. Cancel withdraws
+ * it on the server instead (cancelPending).
  *
  * The socket message reaches us through our own user room (the
  * event's room is only joined once the event is Live, and sign-off
@@ -66,14 +66,36 @@ function close() {
   emit('close')
 }
 
-// Drop the request we're waiting on without closing, so the operator
-// can try another way. Nothing to tell the server: a new request or
-// code supersedes this one, and if the referee answers it anyway the
-// order still gets signed off.
-function cancelPending() {
+// Withdraw the request we're waiting on without closing, so the operator
+// can try another way. This used to only forget it here: the referee's
+// phone kept its Approve / Deny, and an Approve there still signed the
+// order off while this dialog had moved on and never heard (it drops
+// answers for a request it isn't waiting on). The server withdraws it
+// now, the referee's devices drop the banner, and a late Approve is
+// refused, so Cancel means the same on both screens. If the referee got
+// there before the Cancel did, the server says so and that answer stands.
+async function cancelPending() {
+  const requestId = pendingRequestId.value
+  const refereeName =
+    signoffWaiting.value?.referee_name || signoffCode.value?.referee_name || 'The referee'
   signoffWaiting.value = null
   signoffCode.value = null
   signoffError.value = ''
+  if (!requestId || !props.event) return
+  try {
+    const r = await auth.apiFetch(
+      `/api/events/${props.event.id}/dive-order/sign-off/request/${requestId}/cancel`,
+      { method: 'POST' },
+    )
+    if (r?.status === 'approved') {
+      emit('signed-off', { dive_order_signed_off_at: new Date().toISOString() })
+      close()
+    } else if (r?.status === 'declined') {
+      signoffError.value = `${refereeName} had already declined the request.`
+    }
+  } catch (err) {
+    signoffError.value = `Couldn't withdraw the request (${err.message}). If ${refereeName} approves it, it still counts.`
+  }
 }
 
 // Pull the referee list once when the modal opens (= mounts).
@@ -176,7 +198,7 @@ function settle(requestId, status, { by = null, at = null } = {}) {
   }
   signoffError.value = status === 'declined'
     ? `${refereeName} declined the request.`
-    : `The request ran out before ${refereeName} answered. Send a new one.`
+    : `The request closed before ${refereeName} answered: it ran out or another one replaced it. Send a new one.`
   signoffWaiting.value = null
   signoffCode.value = null
 }

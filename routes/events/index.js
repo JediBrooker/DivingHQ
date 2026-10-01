@@ -38,6 +38,7 @@ const {
   refuseIfScoresExist,
 } = require("./stage-helpers");
 const { canSeeEvent } = require("../../lib/event-visibility");
+const { isUuid } = require("../../lib/uuid");
 const { scoreAuthoritySql } = require("../../lib/middleware");
 const { customDivesOutOfRange } = require("../../lib/custom-dive-dd");
 
@@ -147,6 +148,10 @@ module.exports = function createEventsRouter({
   // create/delete stay org_admin only.
   isMeetHostAdmin,
   isEventDelegate,
+  // lib/middleware.js. The readiness checklist's gate, same as the
+  // Control Room's roster. Optional: without it readiness stays with
+  // requireEventManager.
+  requireRoleOrEventDelegate,
   requireTotpForPrivilegedRoles,
   // lib/middleware.js. The dive-offs sub-router needs it to record a
   // result; without it nobody can (it fails closed).
@@ -378,7 +383,19 @@ module.exports = function createEventsRouter({
     }
   });
 
-  router.get("/api/events/:id/readiness", requireEventManager(), async (req, res) => {
+  // The Control Room's Setup stage draws its checklist, and the drawn
+  // start order a referee signs off, from this. The Control Room is open
+  // to meet managers and referees as well as org admins, but this was
+  // org admins and the event's delegates only, so a referee who opened a
+  // sign-off request (and a meet manager running the room) got "You don't
+  // have permission" where the checklist and order belong. Same people as
+  // the roster now. getEventReadiness keeps it to the caller's own org,
+  // sysadmin aside, so another org's role holder gets the 404.
+  const requireReadinessReader = requireRoleOrEventDelegate
+    ? requireRoleOrEventDelegate(["org_admin", "meet_manager", "referee"], (req) => req.params.id)
+    : requireEventManager();
+  router.get("/api/events/:id/readiness", requireReadinessReader, async (req, res) => {
+    if (!isUuid(req.params.id)) return res.status(404).json({ error: "Event not found" });
     try {
       const readiness = await getEventReadiness(pool, {
         eventId: req.params.id,

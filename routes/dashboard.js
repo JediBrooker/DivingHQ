@@ -309,7 +309,12 @@ module.exports = function createDashboardRouter({ pool, verifyToken }) {
             pool.query(
               `SELECT rsr.id AS request_id, rsr.event_id, rsr.created_at,
                       rsr.expires_at, e.name AS event_name, e.status,
-                      e.scheduled_at, u.full_name AS requested_by_name
+                      e.scheduled_at, u.full_name AS requested_by_name,
+                      /* A handoff code has no notification behind it, so
+                         its card goes to where the code is typed rather
+                         than to a banner that isn't coming (signoffLink).
+                         The code itself stays on the operator's screen. */
+                      (rsr.handoff_code IS NOT NULL) AS by_code
                FROM referee_signoff_requests rsr
                JOIN events e ON e.id = rsr.event_id
                JOIN users u ON u.id = rsr.requested_by

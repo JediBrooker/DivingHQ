@@ -60,6 +60,26 @@
  */
 
 /**
+ * @typedef {Object} RefereeDeskSignoff
+ * One row of `referee_desk.pending_signoffs` on GET /api/dashboard: a
+ * dive-order sign-off request still waiting on this referee
+ * (routes/dashboard.js). The "Waiting for you" card and the Sign off chip
+ * link to it through signoffLink (src/lib/signoffLink.js).
+ *
+ * @property {string} request_id
+ * @property {string} event_id
+ * @property {string} event_name
+ * @property {string} status          the event's status
+ * @property {?string} scheduled_at
+ * @property {string} created_at
+ * @property {string} expires_at
+ * @property {?string} requested_by_name
+ * @property {boolean} by_code        a handoff-code request: there's no
+ *   notification (and so no Approve / Deny banner) behind it, the referee
+ *   types the code from the operator's screen at /sign-off-codes
+ */
+
+/**
  * @typedef {Object} PublicConfig
  * GET /api/public-config, public. Deployment settings the signed-out
  * pages need (routes/public-config.js).
@@ -547,6 +567,28 @@
  * @property {Array<{ judge_number: number, score: number }>} scores
  *   one per judge who has scored, by judge_number; the value stored,
  *   after any referee call
+ */
+
+// ---- /api/events/:id/dive-panel ----------------------------------
+
+/**
+ * @typedef {Object} ControlDivePanel
+ * GET /api/events/:id/dive-panel?competitor_id=&round_number=
+ * (routes/control-room.js). The same dive's stored scores for the Control
+ * Room, which rebuilds the live pool's tiles from them after a reload, a
+ * reconnect or an undone finalise (restoreLiveScores in
+ * src/composables/useLivePools.js). Roster gate: org admins, meet
+ * managers, referees and the event's delegates. Re-dive set-asides are
+ * left out, same SQL as JudgeDiveScores (DIVE_PANEL_SCORES_SQL).
+ *
+ * @property {string} event_id
+ * @property {string} competitor_id
+ * @property {number} round_number
+ * @property {'failed'|'cap'|null} referee_call  the call on the dive (migration 102)
+ * @property {number|null} referee_cap           the declared maximum for a cap
+ * @property {Array<{ judge_id: string, judge_number: number, score: number }>} scores
+ *   one per judge who has scored, by judge_number; the value stored, after
+ *   any referee call. judge_id keys them like a live score_received.
  */
 
 /**

@@ -23,10 +23,17 @@
 //   ack(id)        - mark notification 'acknowledged' on the
 //                    server + remove from the local list.
 //   recent()       - pull /api/notifications/me, merge into list.
-//   showSignoff(requestId)
+//   showSignoff(requestId, { eventId })
 //                  - put a referee sign-off request back in the
 //                    banner stack (the only place with Approve/Deny)
 //                    for a /control?signoff_request=... deep link.
+//                    Resolves false only when the server says the
+//                    request is no longer open.
+//
+// The bound socket also drops a sign-off banner when its request closes
+// anywhere (referee_signoff_response, see onSignoffClosed), and on a
+// reconnect it asks after every sign-off banner still up, for the closes
+// it missed while it was down (onReconnect).
 
 import { ref, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
@@ -51,6 +58,59 @@ let autoSubscribedFor = null
 // orphaning a closure on the old one.
 const onNotification = (n) => pushIntoList(n)
 
+// A sign-off request closed somewhere: answered on another device,
+// withdrawn by the operator, replaced by a newer request or code, or out
+// of time (routes/control-room-signoff.js tells the referee's own room
+// every time). Its banner has nothing left to answer, so it goes. It used
+// to stay up offering Approve / Deny until the referee tapped it and got
+// "Request already expired".
+const onSignoffClosed = (d) => {
+  const requestId = d?.request_id
+  if (!requestId) return
+  notifications.value = notifications.value.filter(
+    (n) => !(n.category === 'referee_signoff' && n.data?.request_id === requestId),
+  )
+}
+
+// Where one sign-off request stands, from the server: 'pending',
+// 'approved', 'declined' or 'expired', or null when it couldn't be asked.
+// It's the read the operator's dialog polls while it waits, and referees
+// are among the Control Room roles it lets in. A request that isn't on
+// that event any more (404) counts as closed.
+async function signoffRequestStatus(auth, eventId, requestId) {
+  if (!eventId || !requestId) return null
+  try {
+    const r = await auth.apiFetch(
+      `/api/events/${encodeURIComponent(eventId)}/dive-order/sign-off/request/${encodeURIComponent(requestId)}`,
+    )
+    return typeof r?.status === 'string' ? r.status : null
+  } catch (err) {
+    return err?.status === 404 ? 'expired' : null
+  }
+}
+
+// Back from a dropped socket. A referee's phone locks and its socket goes
+// with it, and a request withdrawn, replaced or answered elsewhere in that
+// time sent its referee_signoff_response to nobody: the banner came back
+// from the lock screen still offering Approve and Deny for a request that
+// was gone. So every sign-off banner still up asks after its request, and
+// the closed ones go. Nothing to ask about on most connects, so it's
+// usually free. Also runs on the first connect, harmlessly.
+const onReconnect = () => {
+  recheckSignoffBanners().catch(() => {})
+}
+
+async function recheckSignoffBanners() {
+  const banners = notifications.value.filter((n) => n?.category === 'referee_signoff' && n.data?.request_id)
+  if (!banners.length) return
+  const auth = useAuthStore()
+  if (!auth.isLoggedIn) return
+  await Promise.all(banners.map(async (n) => {
+    const status = await signoffRequestStatus(auth, n.data.event_id, n.data.request_id)
+    if (status && status !== 'pending') onSignoffClosed({ request_id: n.data.request_id })
+  }))
+}
+
 // Bind (or rebind) the socket the shared notification stream
 // listens on. The pooled socket object is different per auth
 // token, so a set-once guard would keep listening on the
@@ -60,9 +120,17 @@ const onNotification = (n) => pushIntoList(n)
 export function bindPushSocket(sock) {
   const next = sock || null
   if (next === socket) return
-  if (socket) socket.off('notification', onNotification)
+  if (socket) {
+    socket.off('notification', onNotification)
+    socket.off('referee_signoff_response', onSignoffClosed)
+    socket.off('connect', onReconnect)
+  }
   socket = next
-  if (socket) socket.on('notification', onNotification)
+  if (socket) {
+    socket.on('notification', onNotification)
+    socket.on('referee_signoff_response', onSignoffClosed)
+    socket.on('connect', onReconnect)
+  }
 }
 
 // Most browsers refuse to subscribe to push from an http:// origin.
@@ -235,7 +303,18 @@ export function usePush({ socket: sock } = {}) {
     } catch { /* silent */ }
   }
 
-  async function showSignoff(requestId) {
+  // Resolves true when the request's banner is up, false when the request
+  // itself is no longer open (answered, withdrawn, replaced or out of
+  // time), null when there's no banner for it but nothing says it's
+  // closed, or it couldn't be asked.
+  //
+  // A missing notification doesn't make the request closed. A handoff-code
+  // request never had one (the operator cancelled the push and put a code
+  // on their screen), and a referee who followed a link to it was told it
+  // was no longer open while that screen was still showing the code. So
+  // the request is asked about itself, which needs the event the link
+  // names.
+  async function showSignoff(requestId, { eventId = null } = {}) {
     if (!requestId || !auth.isLoggedIn) return false
     const match = (n) => n?.category === 'referee_signoff' && n.data?.request_id === requestId
     let n = notifications.value.find(match)
@@ -245,10 +324,16 @@ export function usePush({ socket: sock } = {}) {
         // acked it while the request itself is still waiting.
         const rows = await auth.apiFetch('/api/notifications/me?limit=50')
         n = (rows || []).find(match)
-      } catch { /* silent, same as recent() */ }
+      } catch {
+        return null
+      }
     }
-    if (n) pushIntoList(n)
-    return !!n
+    if (n) {
+      pushIntoList(n)
+      return true
+    }
+    const status = await signoffRequestStatus(auth, eventId, requestId)
+    return status && status !== 'pending' ? false : null
   }
 
   async function recent() {

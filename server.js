@@ -1072,6 +1072,7 @@ app.use(require("./routes/events")({
   payments,
   isMeetHostAdmin,
   isEventDelegate,
+  requireRoleOrEventDelegate,
   requireTotpForPrivilegedRoles,
   // Who may record a dive-off's scores (the host-org score rule).
   scoreAuthority,

@@ -4,6 +4,7 @@ import { ClipboardCheck } from '@lucide/vue'
 import GotoTile from './GotoTile.vue'
 import WorkflowCard from './WorkflowCard.vue'
 import EventRow from './EventRow.vue'
+import { signoffLink } from '@/lib/signoffLink'
 
 defineProps({
   refereeDesk: { type: Object, default: null },
@@ -25,7 +26,7 @@ function signoffMeta(req) {
       <WorkflowCard
         v-for="req in refereeDesk.pending_signoffs"
         :key="req.request_id"
-        :to="`/control?signoff_request=${req.request_id}`"
+        :to="signoffLink(req)"
         :title="req.event_name"
         :meta="signoffMeta(req)"
         :count="$t('dashboard.actions.sign_off')"

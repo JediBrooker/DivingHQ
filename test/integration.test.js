@@ -13666,3 +13666,124 @@ test("dive-scores: a panel judge reads back the dive's scores, nobody else does"
     await compKit.cleanup(orgId, otherOrg);
   }
 });
+
+// The Control Room reads the live dive's stored scores back after a
+// reload, a reconnect or an undone finalise (GET /api/events/:id/dive-panel),
+// so its tiles and Next / Finalise come back instead of sitting on
+// "Waiting for 5 more judge scores" with every score stored. Same people
+// as the roster: the event's org admins, meet managers and referees (and
+// a sysadmin). judge_id comes with each score so the pool can key them
+// like a live score_received; a re-dive's set-aside panel isn't in it; the
+// referee's call on the dive is.
+test("dive-panel: the Control Room reads back a dive's stored scores", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const orgId = await compKit.org("panel");
+  const otherOrg = await compKit.org("panelx");
+  try {
+    const j1 = await compKit.user(orgId, "DP Judge One", ["judge"]);
+    const j2 = await compKit.user(orgId, "DP Judge Two", ["judge"]);
+    const manager = await compKit.user(orgId, "DP Manager", ["meet_manager"]);
+    const referee = await compKit.user(orgId, "DP Referee", ["referee"]);
+    const admin = await compKit.user(orgId, "DP Admin", ["org_admin"]);
+    const diverRole = await compKit.user(orgId, "DP Diver Role", ["diver"]);
+    const outsider = await compKit.user(otherOrg, "DP Outsider", ["meet_manager"]);
+    const sys = await compKit.user(otherOrg, "DP Sysadmin", [], { sysadmin: true });
+    const competitor = await compKit.user(orgId, "DP Competitor", ["diver"]);
+    const eventId = await compKit.event(orgId, { status: "Live" });
+    await compKit.enter(eventId, competitor.id, await compKit.dives(2));
+    await compKit.panel(eventId, [j1, j2]);
+    await compKit.score(eventId, competitor.id, 1, j2, 7);
+    await compKit.score(eventId, competitor.id, 1, j1, 8.5);
+    await compKit.score(eventId, competitor.id, 2, j1, 6);
+    const url = (q) => `/api/events/${eventId}/dive-panel?${q}`;
+    const round1 = `competitor_id=${competitor.id}&round_number=1`;
+
+    for (const u of [manager, referee, admin, sys]) {
+      const res = await fetchJson("GET", url(round1), { token: u.token });
+      assert.equal(res.status, 200, u.full_name);
+      assert.deepEqual(res.body, {
+        event_id: eventId,
+        competitor_id: competitor.id,
+        round_number: 1,
+        referee_call: null,
+        referee_cap: null,
+        scores: [
+          { judge_id: j1.id, judge_number: 1, score: 8.5 },
+          { judge_id: j2.id, judge_number: 2, score: 7 },
+        ],
+      }, u.full_name);
+    }
+
+    // A dive nobody's scored yet is just empty.
+    await pool.query(
+      "UPDATE competitor_dive_lists SET referee_call = 'cap', referee_cap = 2 WHERE event_id = $1 AND round_number = 2",
+      [eventId],
+    );
+    const round2 = await fetchJson("GET", url(`competitor_id=${competitor.id}&round_number=2`), { token: manager.token });
+    assert.equal(round2.body.referee_call, "cap");
+    assert.equal(round2.body.referee_cap, 2);
+    assert.deepEqual(round2.body.scores, [{ judge_id: j1.id, judge_number: 1, score: 6 }]);
+
+    // A re-dive marks the old rows until each judge scores again.
+    await pool.query(
+      "UPDATE scores SET status = 'redive' WHERE event_id = $1 AND round_number = 1 AND judge_id = $2",
+      [eventId, j2.id],
+    );
+    const afterRedive = await fetchJson("GET", url(round1), { token: manager.token });
+    assert.deepEqual(afterRedive.body.scores, [{ judge_id: j1.id, judge_number: 1, score: 8.5 }]);
+
+    // A meet manager from another org, a judge, a diver, nobody signed in.
+    assert.equal((await fetchJson("GET", url(round1), { token: outsider.token })).status, 403);
+    assert.equal((await fetchJson("GET", url(round1), { token: j1.token })).status, 403);
+    assert.equal((await fetchJson("GET", url(round1), { token: diverRole.token })).status, 403);
+    assert.equal((await fetchJson("GET", url(round1))).status, 403);
+    // Junk in the query is a 400, and a junk event id a 404, never a
+    // Postgres 500.
+    for (const q of ["competitor_id=nope&round_number=1", `competitor_id=${competitor.id}&round_number=0`,
+      `competitor_id=${competitor.id}&round_number=1.5`, `competitor_id=${competitor.id}`, ""]) {
+      assert.equal((await fetchJson("GET", url(q), { token: manager.token })).status, 400, q);
+    }
+    assert.equal((await fetchJson("GET", `/api/events/not-a-uuid/dive-panel?${round1}`, { token: manager.token })).status, 404);
+  } finally {
+    await compKit.cleanup(orgId, otherOrg);
+  }
+});
+
+// The Control Room's Setup stage reads the readiness checklist, and the
+// Control Room is open to meet managers and referees as well as org
+// admins. Readiness was org admins and event delegates only, so a referee
+// following a sign-off request into the Control Room (and a meet manager
+// running it) got "You don't have permission" where the checklist and the
+// start order belong. Same people as the roster now, own org only.
+test("readiness: the Control Room's people read the checklist, nobody else", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const orgId = await compKit.org("ready");
+  const otherOrg = await compKit.org("readyx");
+  try {
+    const referee = await compKit.user(orgId, "RD Referee", ["referee"]);
+    const manager = await compKit.user(orgId, "RD Manager", ["meet_manager"]);
+    const admin = await compKit.user(orgId, "RD Admin", ["org_admin"]);
+    const judge = await compKit.user(orgId, "RD Judge", ["judge"]);
+    const diver = await compKit.user(orgId, "RD Diver", ["diver"]);
+    const outsider = await compKit.user(otherOrg, "RD Outsider", ["referee"]);
+    const sys = await compKit.user(otherOrg, "RD Sysadmin", [], { sysadmin: true });
+    const eventId = await compKit.event(orgId);
+    const url = `/api/events/${eventId}/readiness`;
+    for (const u of [referee, manager, admin, sys]) {
+      const res = await fetchJson("GET", url, { token: u.token });
+      assert.equal(res.status, 200, u.full_name);
+      assert.equal(res.body.event_id, eventId);
+      assert.ok(res.body.steps.some((s) => s.key === "sign_off"));
+    }
+    assert.equal((await fetchJson("GET", url, { token: outsider.token })).status, 404);
+    for (const u of [judge, diver]) {
+      assert.equal((await fetchJson("GET", url, { token: u.token })).status, 403, u.full_name);
+    }
+    assert.equal((await fetchJson("GET", url)).status, 403);
+    assert.equal((await fetchJson("GET", "/api/events/not-a-uuid/readiness", { token: manager.token })).status, 404);
+  } finally {
+    await compKit.cleanup(orgId, otherOrg);
+  }
+});

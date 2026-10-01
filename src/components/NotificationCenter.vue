@@ -13,7 +13,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { usePush, bindPushSocket } from '@/composables/usePush'
 import { useAuthStore } from '@/stores/auth'
 import { acquireSocket } from '@/composables/useSocket'
-import { showError } from '@/composables/useNotify'
+import { showError, showInfo } from '@/composables/useNotify'
 
 const router = useRouter()
 const route = useRoute()
@@ -28,10 +28,21 @@ const { notifications, ack, showSignoff } = usePush()
 // Two sources rather than one getter that builds an array: a fresh array
 // counts as a change every time, so any navigation (or a /me refresh)
 // would pull an already answered request back up while the query stays.
+// A request that's no longer open (answered, withdrawn by the operator,
+// replaced, out of time) has no banner left to bring back, so say so
+// rather than leave the referee looking for buttons that aren't coming.
+// Tapping a notification for one lands here too: the service worker opens
+// the app when the server turns its Approve down. Only when the server
+// says so, though (showSignoff asks the request itself): a handoff-code
+// request has no banner either, and it's still waiting for its code.
+const SIGNOFF_GONE = 'That sign-off request is no longer open. It was answered, withdrawn or replaced, or it ran out.'
 watch(
   [() => route.query.signoff_request, () => auth.user?.id],
-  ([requestId, userId]) => {
-    if (typeof requestId === 'string' && requestId && userId) showSignoff(requestId)
+  async ([requestId, userId]) => {
+    if (typeof requestId === 'string' && requestId && userId) {
+      const eventId = typeof route.query.event === 'string' ? route.query.event : null
+      if ((await showSignoff(requestId, { eventId })) === false) showInfo(SIGNOFF_GONE)
+    }
   },
   { immediate: true },
 )
@@ -121,7 +132,20 @@ async function onActionClick(n, action) {
       })
       await ack(n.id)
     } catch (err) {
-      showError(`Could not record ${action}: ${err.message}`)
+      // 409 / 404: the request isn't open any more (the socket message
+      // that would have taken this banner down didn't reach this device).
+      // Nothing was recorded, and the banner has nothing left to answer,
+      // so it goes. A late Approve on a request the operator withdrew
+      // doesn't count: the Control Room has moved on too.
+      if (err?.status === 409 || err?.status === 404) {
+        await ack(n.id)
+        const was = err.body?.status
+        showInfo(was === 'approved' || was === 'declined'
+          ? `That sign-off request was already ${was}.`
+          : SIGNOFF_GONE)
+      } else {
+        showError(`Could not record ${action}: ${err.message}`)
+      }
     }
     return
   }
@@ -239,8 +263,13 @@ async function onDismiss(n, ev) {
 .notif-actions {
   display: flex; gap: 0.4rem; margin-top: 0.7rem;
 }
+/* WCAG 2.5.5 again: these are the buttons that do the work, and a referee
+   answers them on a phone at the poolside. They were about 30px tall next
+   to the 44px ✕. */
 .notif-action {
   flex: 1; padding: 0.4rem 0.7rem;
+  min-height: 44px;
+  display: inline-flex; align-items: center; justify-content: center;
   font-family: var(--font-display, sans-serif);
   font-weight: 700; font-size: 11.5px;
   letter-spacing: 0.06em; text-transform: uppercase;

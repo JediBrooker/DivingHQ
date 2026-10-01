@@ -159,3 +159,123 @@ test("a missed socket message still lands: the dialog checks on the request itse
   await expect(dialog).toBeHidden({ timeout: 10_000 });
   await expect(primary).toContainText(/Start Event/i);
 });
+
+// The referee's phone, signed in on the dashboard where a request's
+// Approve / Deny banner turns up.
+async function refereePhone(browser) {
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const phone = await ctx.newPage();
+  await setup.bypassRoleTour(phone);
+  await signIn(phone, world.referee.username);
+  await expect(phone.locator(".topbar")).toBeVisible({ timeout: 10_000 });
+  return { ctx, phone };
+}
+
+async function sendPush(page, dialog) {
+  await dialog.locator("select.select").selectOption({ label: "Rhea Referee" });
+  const sent = page.waitForResponse((r) => r.url().includes("/dive-order/sign-off/request") && r.request().method() === "POST");
+  await dialog.getByRole("button", { name: /Send sign-off request/ }).click();
+  return (await (await sent).json()).request_id;
+}
+
+// Cancel used to only forget the request on the laptop. The referee's
+// phone kept its banner (a reload put it back), and an Approve there still
+// signed the order off behind the Control Room's back. Cancel withdraws
+// it now, on both screens.
+test("Cancel takes the request off the referee's phone, and a late Approve doesn't count", async ({ page, request, browser }) => {
+  test.setTimeout(120_000);
+  const event = await eventAtSignoff(request, "Signoff Cancel");
+  const { ctx, phone } = await refereePhone(browser);
+  const { primary, dialog } = await openSignoff(page, event);
+
+  const requestId = await sendPush(page, dialog);
+  const banner = phone.locator(".notif-referee_signoff", { hasText: "Signoff Cancel" });
+  await expect(banner).toBeVisible({ timeout: 8_000 });
+
+  await dialog.getByRole("button", { name: /Cancel request/ }).click();
+  await expect(dialog.locator(".signoff-waiting")).toHaveCount(0);
+  await expect(banner).toHaveCount(0, { timeout: 8_000 });
+  await phone.reload();
+  await expect(phone.locator(".topbar")).toBeVisible({ timeout: 10_000 });
+  await phone.waitForLoadState("networkidle");
+  await expect(banner).toHaveCount(0);
+
+  const late = await request.post(`/api/events/${event.id}/dive-order/sign-off/respond`, {
+    headers: asReferee(), data: { request_id: requestId, decision: "approve" },
+  });
+  expect(late.status()).toBe(409);
+  const row = await setup.pool.query("SELECT dive_order_signed_off_at FROM events WHERE id = $1", [event.id]);
+  expect(row.rows[0].dive_order_signed_off_at).toBeNull();
+  await page.keyboard.press("Escape");
+  await expect(primary).toContainText(/Referee Sign Off/i);
+  await ctx.close();
+});
+
+test("a second request replaces the first on the referee's phone", async ({ page, request, browser }) => {
+  test.setTimeout(120_000);
+  const event = await eventAtSignoff(request, "Signoff Again");
+  const { ctx, phone } = await refereePhone(browser);
+  const { dialog } = await openSignoff(page, event);
+
+  const first = await sendPush(page, dialog);
+  const banner = phone.locator(".notif-referee_signoff", { hasText: "Signoff Again" });
+  await expect(banner).toHaveCount(1, { timeout: 8_000 });
+  await dialog.getByRole("button", { name: /Cancel request/ }).click();
+  const second = await sendPush(page, dialog);
+  expect(second).not.toBe(first);
+  // One banner, the live one, and still one after a reload.
+  await expect(banner).toHaveCount(1, { timeout: 8_000 });
+  await phone.reload();
+  await expect(banner).toHaveCount(1, { timeout: 10_000 });
+  await banner.locator(".notif-action-approve").click();
+  await expect(dialog).toBeHidden({ timeout: 8_000 });
+  await expect(banner).toHaveCount(0);
+  await ctx.close();
+});
+
+// The dialog closed (Esc, ✕) with a request still out to the referee.
+// The request stays open on purpose, the checklist says who it's waiting
+// on, but when the referee approved, nothing on the Setup stage was
+// listening: it kept offering Referee Sign Off until a reload.
+test("the dialog closed with a request out: the referee's Approve still moves Setup on", async ({ page, request }) => {
+  test.setTimeout(90_000);
+  const event = await eventAtSignoff(request, "Signoff Closed");
+  const { primary, dialog } = await openSignoff(page, event);
+  const requestId = await sendPush(page, dialog);
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+  await expect(page.locator(".setup-step", { hasText: "Referee sign-off" })).toContainText(/Waiting for Rhea Referee/, { timeout: 6_000 });
+
+  const res = await request.post(`/api/events/${event.id}/dive-order/sign-off/respond`, {
+    headers: asReferee(), data: { request_id: requestId, decision: "approve" },
+  });
+  expect(res.status()).toBe(200);
+  await expect(primary).toContainText(/Start Event/i, { timeout: 8_000 });
+  await expect(page.locator(".setup-step", { hasText: "Referee sign-off" })).toHaveClass(/done/);
+});
+
+// A second operator asked: the answer goes to their own room and the
+// event's, never this laptop's user room. The Setup stage listens on the
+// event's room now.
+test("someone else's request, approved: this laptop's Setup moves on too", async ({ page, request }) => {
+  test.setTimeout(90_000);
+  const event = await eventAtSignoff(request, "Signoff Elsewhere");
+  const other = await setup.insertUser({ orgId: world.orgId, role: "meet_manager", fullName: "Other Operator" });
+  const otherToken = (await setup.loginAs(request, other.username)).token;
+
+  await signIn(page, world.username);
+  await page.goto(`/control?event=${event.id}`);
+  const primary = page.locator(".setup-primary");
+  await expect(primary).toContainText(/Referee Sign Off/i, { timeout: 10_000 });
+  await page.waitForLoadState("networkidle");
+
+  const asked = await request.post(`/api/events/${event.id}/dive-order/sign-off/request`, {
+    headers: { Authorization: `Bearer ${otherToken}` }, data: { referee_id: world.referee.userId },
+  });
+  expect(asked.status()).toBe(201);
+  const res = await request.post(`/api/events/${event.id}/dive-order/sign-off/respond`, {
+    headers: asReferee(), data: { request_id: (await asked.json()).request_id, decision: "approve" },
+  });
+  expect(res.status()).toBe(200);
+  await expect(primary).toContainText(/Start Event/i, { timeout: 8_000 });
+});

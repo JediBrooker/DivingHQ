@@ -85,6 +85,11 @@ test("Undo puts the last diver back up, not round 1 diver 1, and a reload keeps 
   await expect(card.locator(".cv2-live-diver")).toContainText("BBB Undo", { timeout: 10_000 });
   await page.waitForTimeout(3_000);
   expect(room.seen.state.slice(before).map((s) => s.full_name)).not.toContain("AAA Undo");
+  // And it can still be finished: the reload used to come back with empty
+  // tiles and a dead "Next Diver", so the only way out was Skip.
+  await expect(card.locator(".cv2-tile.scored")).toHaveCount(5);
+  await expect(card.locator(".cv2-primary")).toHaveClass(/is-finalise/);
+  await expect(card.locator(".cv2-primary")).toBeEnabled();
 
   room.close();
   await setup.deleteOrg(w.orgId);

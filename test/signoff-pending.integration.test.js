@@ -216,6 +216,9 @@ test("the referee desk only lists requests that are still live", async (t) => {
   const live = await get("liveRef", "/api/dashboard");
   const events = live.body.referee_desk.pending_signoffs.map((r) => r.event_id).sort();
   assert.deepEqual(events, [liveEvent, mixedEvent].sort());
+  // Pushed requests, each with a banner to answer. A handoff code's card
+  // goes to /sign-off-codes instead (by_code, see src/lib/signoffLink.js).
+  assert.ok(live.body.referee_desk.pending_signoffs.every((r) => r.by_code === false));
 });
 
 test("a fresh request on the lapsed event shows up again", async (t) => {

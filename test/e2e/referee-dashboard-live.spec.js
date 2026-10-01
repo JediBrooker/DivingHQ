@@ -48,7 +48,7 @@ test("a sign-off request shows up on the open dashboard and goes once it's answe
   await expect(chip).toBeVisible({ timeout: 8_000 });
   await expect(chip.locator(".pulse-num")).toHaveText("1");
   await expect(lane.locator(".pulse-quiet")).toHaveCount(0);
-  const card = page.locator(`a[href="/control?signoff_request=${request_id}"]`).first();
+  const card = page.locator(`a[href="/control?event=${world.event.id}&signoff_request=${request_id}"]`).first();
   await expect(card).toBeVisible();
 
   // Answered from somewhere else (the phone's notification, say).
@@ -77,4 +77,110 @@ test("a request that ran out isn't left on the desk", async ({ page, request }) 
   await signIn(page, world.referee.username);
   await expect(page.locator(".pulse-strip .pulse-quiet")).toBeVisible({ timeout: 10_000 });
   await expect(page.locator(".pulse-chip.pulse-referee")).toHaveCount(0);
+});
+
+// The rehearsal's referee tapped the Sign off card on their phone and got
+// the Control Room's "No event selected" with Approve / Deny on top:
+// nothing on the phone showed the order they were signing off. The links
+// carry the event now, and the Setup checklist and start order load for a
+// referee (they used to get "You don't have permission").
+test("the referee follows the sign-off card to the order they're signing off", async ({ page, request }) => {
+  test.setTimeout(90_000);
+  const event = await setup.createEvent(request, { adminToken: world.adminToken, name: "Order To Sign 3m" });
+  const diveId = await setup.pickDiveId({ height: 3.0, dive_code: "101", position: "B" });
+  const names = ["Ada First", "Bea Second"];
+  for (let i = 0; i < names.length; i++) {
+    const d = await setup.insertUser({ orgId: world.orgId, role: "diver", fullName: names[i] });
+    await setup.insertDiveList({ eventId: event.id, competitorId: d.userId, dives: [{ round_number: 1, dive_id: diveId }] });
+    await setup.pool.query(
+      "UPDATE competitor_dive_lists SET display_order = $3 WHERE event_id = $1 AND competitor_id = $2",
+      [event.id, d.userId, i + 1],
+    );
+  }
+  await setup.pool.query(
+    "UPDATE events SET check_in_done_at = now(), dive_order_randomised_at = now() WHERE id = $1",
+    [event.id],
+  );
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await setup.bypassRoleTour(page);
+  await signIn(page, world.referee.username);
+  const res = await request.post(`/api/events/${event.id}/dive-order/sign-off/request`, {
+    headers: { Authorization: `Bearer ${world.adminToken}` },
+    data: { referee_id: world.referee.userId },
+  });
+  expect(res.status()).toBe(201);
+  const { request_id } = await res.json();
+
+  // The "Waiting for you" card. The Sign off chip's popover item carries
+  // the same link (both come from src/lib/signoffLink.js).
+  const href = `/control?event=${event.id}&signoff_request=${request_id}`;
+  const card = page.locator(`a[href="${href}"]:not(.pulse-popover-item)`);
+  await expect(card).toBeVisible({ timeout: 8_000 });
+  await card.click();
+  await expect(page).toHaveURL(new RegExp(`event=${event.id}`));
+  await expect(page.getByText("No event selected")).toHaveCount(0);
+  await expect(page.locator(".setup-error")).toHaveCount(0);
+  await expect(page.locator(".setup-order-row")).toHaveCount(2, { timeout: 8_000 });
+  await expect(page.locator(".setup-order-row").first()).toContainText("Ada First");
+  await expect(page.locator(".setup-step", { hasText: "Referee sign-off" })).toBeVisible();
+
+  const banner = page.locator(".notif-referee_signoff", { hasText: "Order To Sign 3m" });
+  await expect(banner).toBeVisible();
+  await banner.locator(".notif-action-approve").click();
+  await expect(banner).toHaveCount(0);
+  await expect(page.locator(".setup-primary")).toContainText(/Start Event/i, { timeout: 8_000 });
+  const ev = await setup.pool.query("SELECT dive_order_signed_off_by FROM events WHERE id = $1", [event.id]);
+  expect(ev.rows[0].dive_order_signed_off_by).toBe(world.referee.userId);
+});
+
+// The fallback flow: the operator cancels the push and puts a code on
+// their screen instead. The desk lists that request as "Waiting for you"
+// too, but there's no notification behind it, and following the card used
+// to tell the referee the request was no longer open while the operator's
+// screen sat there showing the code. It goes where the code gets typed.
+test("a handoff-code request on the desk takes the referee to where the code goes", async ({ page, request }) => {
+  test.setTimeout(90_000);
+  const event = await setup.createEvent(request, { adminToken: world.adminToken, name: "Code Desk 1m" });
+  await setup.pool.query(
+    "UPDATE events SET check_in_done_at = now(), dive_order_randomised_at = now() WHERE id = $1",
+    [event.id],
+  );
+  // What POST .../sign-off/code writes (the e2e server has no APP_BASE_URL,
+  // which that endpoint wants for its QR link).
+  const code = String(100000 + Math.floor(Math.random() * 900000));
+  const ins = await setup.pool.query(
+    `INSERT INTO referee_signoff_requests (event_id, requested_by, target_referee_id, handoff_code)
+     SELECT $1, u.id, $2, $4 FROM users u WHERE u.org_id = $3 AND u.id <> $2 LIMIT 1
+     RETURNING id`,
+    [event.id, world.referee.userId, world.orgId, code],
+  );
+  const requestId = ins.rows[0].id;
+
+  await setup.bypassRoleTour(page);
+  await signIn(page, world.referee.username);
+  const card = page.locator(".workflow-card", { hasText: "Code Desk 1m" });
+  await expect(card).toBeVisible({ timeout: 10_000 });
+  await card.click();
+  await expect(page).toHaveURL(/\/sign-off-codes/);
+  await expect(page.locator(".code-input")).toBeVisible();
+  expect(await page.locator(".notify-bar").count()).toBe(0);
+
+  // A link to the request in the Control Room (an older one, say) doesn't
+  // call it closed either: it's still waiting for the code.
+  const looked = page.waitForResponse((r) => r.url().includes("/api/notifications/me"));
+  await page.goto(`/control?event=${event.id}&signoff_request=${requestId}`);
+  await expect(page.locator(".setup-step", { hasText: "Referee sign-off" })).toBeVisible({ timeout: 10_000 });
+  await looked;
+  await page.waitForTimeout(2_000);
+  // Counted once, not waited on: the toast goes by itself after a while.
+  expect(await page.locator(".notify-bar", { hasText: /no longer open/i }).count()).toBe(0);
+
+  // Typed in, it's done.
+  await page.goto("/sign-off-codes");
+  await page.locator(".code-input").fill(code);
+  await page.locator(".code-form button[type=submit]").click();
+  await expect(page.locator(".msg-success")).toBeVisible({ timeout: 8_000 });
+  const ev = await setup.pool.query("SELECT dive_order_signed_off_by FROM events WHERE id = $1", [event.id]);
+  expect(ev.rows[0].dive_order_signed_off_by).toBe(world.referee.userId);
 });

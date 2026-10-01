@@ -112,20 +112,30 @@ const activeKey = computed(() => {
   const a = props.pool?.currentActive
   return a ? `${a.competitor_id}:${a.round_number}` : null
 })
+// Not on a dive whose panel is already in: a pool put back from the
+// server's scores (a reload, an undone finalise) comes up armed, and its
+// clock ran out long ago.
 function armClockForActive() {
-  if (activeKey.value && props.event.status === 'Live' && !isHeld.value) startShotClock()
+  if (activeKey.value && props.event.status === 'Live' && !isHeld.value && !props.pool?.advanceArmed) startShotClock()
   else resetShotClock()
 }
 watch(activeKey, armClockForActive)
 
 // A completed panel stops the clock and arms THIS pool's auto-advance
-// (false->true edge only; never auto-fires finalise).
+// (false->true edge only; never auto-fires finalise). Not when the panel
+// came back from the server's stored scores (armedByRestore): nobody has
+// seen that dive finish on this screen, so the operator moves on by hand.
+// Disarmed again (a reconnect found the panel was set aside for a re-dive
+// meanwhile), a countdown off the old panel mustn't carry on and call the
+// next diver over judges who are still scoring.
 watch(
   () => props.pool?.advanceArmed,
   (armed, was) => {
     if (armed && !was) {
       stopShotClock()
-      if (!nextBtnComplete.value && !isHeld.value) startAutoAdvance(fireAdvance)
+      if (!nextBtnComplete.value && !isHeld.value && !props.pool?.armedByRestore) startAutoAdvance(fireAdvance)
+    } else if (!armed && was) {
+      cancelAutoAdvance()
     }
   },
 )
