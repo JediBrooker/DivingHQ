@@ -871,7 +871,11 @@
     "queued_label": "En file d'attente",
     "show_big": "Afficher en plein écran",
     "show_big_tip": "Remplissez l'écran avec le score afin que l'opérateur puisse le lire depuis l'autre côté de la salle",
-    "tap_to_return": "Appuyez pour revenir"
+    "tap_to_return": "Appuyez pour revenir",
+    "event_finished": "Épreuve terminée",
+    "event_not_live": "L'épreuve n'est plus en direct",
+    "waiting_next_panel": "En attente de votre prochain panel de juges…",
+    "score_not_recorded": "Votre note de {score} n'a pas été enregistrée : l'épreuve n'acceptait plus de notes."
   },
   "control": {
     "page_label": "Salle de contrôle",

@@ -331,10 +331,10 @@ test("a judge's score queued offline replays when the network returns", async ({
   await page.waitForTimeout(1500);
   expect(await scoreCount(), "still offline, nothing should have reached the server").toBe(0);
 
-  // Walk away from the judging screen while still offline, so JudgeView's
-  // own drainOutbox() is gone and the app-level hook is the only thing that
-  // can move this. That is also the path that exposes the routing: the
-  // entry's action_type is the bare 'submit_score', not 'socket:...'.
+  // Walk away from the judging screen while still offline, so nothing the
+  // judge screen does can be what moves this, only the app-level hook.
+  // That is also the path that exposes the routing: the entry's
+  // action_type is the bare 'submit_score', not 'socket:...'.
   await page.goto("/dashboard").catch(() => {});
   await page.waitForTimeout(1000);
   expect(page.url()).not.toContain("/judge");

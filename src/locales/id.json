@@ -860,7 +860,11 @@
     "queued_label": "Dalam antrean",
     "show_big": "Perbesar tampilan",
     "show_big_tip": "Isi layar dengan skor agar operator dapat membacanya dari seberang ruangan",
-    "tap_to_return": "Ketuk untuk kembali"
+    "tap_to_return": "Ketuk untuk kembali",
+    "event_finished": "Acara selesai",
+    "event_not_live": "Acara tidak lagi berlangsung",
+    "waiting_next_panel": "Menunggu panel juri Anda berikutnya…",
+    "score_not_recorded": "Skor Anda {score} tidak tercatat: acara sudah tidak menerima skor."
   },
   "control": {
     "page_label": "Ruang kontrol",

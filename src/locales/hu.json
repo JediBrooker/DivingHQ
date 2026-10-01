@@ -871,7 +871,11 @@
     "queued_label": "Sorban",
     "show_big": "Nagyméretű kijelzés",
     "show_big_tip": "Töltse ki a képernyőt az eredménnyel, hogy az üzemeltető a terem túloldaláról is el tudja olvasni",
-    "tap_to_return": "Visszalépéshez érintse meg"
+    "tap_to_return": "Visszalépéshez érintse meg",
+    "event_finished": "Az esemény véget ért",
+    "event_not_live": "Az esemény már nem élő",
+    "waiting_next_panel": "Várakozás a következő bírói panelre…",
+    "score_not_recorded": "Az Ön {score} pontos értékelését nem rögzítettük: az esemény már nem fogadott pontokat."
   },
   "control": {
     "page_label": "Vezérlőszoba",

@@ -871,7 +871,11 @@
     "queued_label": "W kolejce",
     "show_big": "Pokaż na dużym ekranie",
     "show_big_tip": "Wypełnij ekran wynikiem, aby operator mógł go odczytać z drugiego końca sali",
-    "tap_to_return": "Dotknij, aby wrócić"
+    "tap_to_return": "Dotknij, aby wrócić",
+    "event_finished": "Konkurencja zakończona",
+    "event_not_live": "Konkurencja nie jest już na żywo",
+    "waiting_next_panel": "Oczekiwanie na Twój kolejny panel sędziowski…",
+    "score_not_recorded": "Twoja ocena {score} nie została zapisana: konkurencja nie przyjmowała już ocen."
   },
   "control": {
     "page_label": "Pokój kontroli",

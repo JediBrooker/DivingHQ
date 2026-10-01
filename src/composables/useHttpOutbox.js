@@ -73,14 +73,32 @@ async function httpSend(auth, entry) {
 let _socket = null
 
 // JudgeView predates the 'socket:' prefix and pushes plain 'submit_score'
-// entries, draining them through its own sender. Now that the drain also
-// runs app-wide, a judge's queued score can be picked up here, and routing
-// it to httpSend would fire fetch(undefined) and burn the entry's retries
-// until it was marked failed. Treat the legacy name as a socket action.
+// entries, and they drain through here like everything else (it had its
+// own copy of socketSend once). Routing one to httpSend would fire
+// fetch(undefined) and burn the entry's retries until it was marked
+// failed, so the legacy name counts as a socket action.
 const LEGACY_SOCKET_ACTIONS = new Set(['submit_score'])
 
 function isSocketAction(actionType) {
   return actionType.startsWith('socket:') || LEGACY_SOCKET_ACTIONS.has(actionType)
+}
+
+// Refusals that sending again can't change, per socket event, so the
+// outbox closes the entry on the first one (err.final) instead of
+// retrying it into 'failed'. event_not_live on a score: the event has
+// finished (or gone back to Upcoming) and the server won't take marks for
+// it however many times it's asked. The judge screen tells the judge.
+//
+// Only here for submit_score on purpose. The referee calls answer
+// event_not_live too, but nothing on the Control Room explains a closed
+// entry yet, and there a parked 'failed' with its Retry is the clearer
+// thing to show.
+const FINAL_REFUSALS = {
+  submit_score: new Set(['event_not_live']),
+}
+
+function isFinalRefusal(eventName, reason) {
+  return !!FINAL_REFUSALS[eventName]?.has(reason)
 }
 
 function socketSend(entry) {
@@ -115,7 +133,9 @@ function socketSend(entry) {
         err.conflict = response.conflict
         reject(err)
       } else {
-        reject(new Error(response?.error || 'rejected'))
+        const err = new Error(response?.error || 'rejected')
+        if (isFinalRefusal(eventName, response?.error)) err.final = true
+        reject(err)
       }
     })
   })
@@ -157,6 +177,13 @@ function scheduleDrain(auth) {
   })
 }
 
+// Send whatever's queued now, for a screen that pushes onto the outbox
+// itself instead of through queueAction (the judge keypad). Same sender,
+// same lock and the same retry timer as every other drain.
+export function drainOutboxNow() {
+  scheduleDrain(useAuthStore())
+}
+
 // Manual retry for entries that ran out of attempts (the offline
 // banner's Retry button). Requeues them and drains straight away.
 export async function retryFailedActions() {
@@ -193,7 +220,7 @@ export function armOutboxDrain(auth, socket) {
 
 // Wait for one queued entry to settle. Resolves 'synced' once the server
 // took it, 'failed' once the outbox gave up on it (or parked it as a
-// conflict), and 'pending' if it's still queued when the time runs out,
+// conflict, or the server refused it for good), and 'pending' if it's still queued when the time runs out,
 // which is the offline case, or a server that keeps saying no while the
 // retries tick over. Never rejects.
 //
@@ -218,7 +245,7 @@ export function waitForOutboxEntry(key, { timeoutMs = 8000 } = {}) {
         const e = await ob.getEntry(key)
         if (!e) return
         if (e.status === 'synced') finish('synced')
-        else if (e.status === 'failed' || e.status === 'conflict' || e.status === 'cancelled') finish('failed')
+        else if (['failed', 'conflict', 'cancelled', 'rejected'].includes(e.status)) finish('failed')
       } catch { /* look again on the next change */ }
     }
     const timer = setTimeout(() => finish('pending'), timeoutMs)

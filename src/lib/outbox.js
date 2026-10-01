@@ -37,6 +37,17 @@
 //     (err.offline) doesn't, and it stops the drain so FIFO holds.
 //     retryFailed() is the manual retry the banner offers.
 //
+//   * Some answers won't change however often the action goes again:
+//     a judge's score for an event that isn't Live any more is the one
+//     so far. The sender marks those err.final and the entry goes
+//     straight to 'rejected', with the server's reason in last_error.
+//     No retries, no Retry button, and the offline banner leaves it
+//     out; the screen that queued it says what happened instead, and
+//     marks it acknowledge()d once it has. The refusal can come back
+//     while that screen isn't open (the drain runs on every route), so
+//     it's the entry that remembers whether anyone was told, not the
+//     screen.
+//
 //   * No Vue coupling here. Components subscribe via
 //     outbox.on('change') and re-read counts as needed. A thin
 //     composable wrapper (P2 work) translates events to reactive
@@ -72,7 +83,8 @@ const MAX_PAYLOAD_BYTES = 100 * 1024
 
 // State machine. Terminal states: synced, failed, cancelled,
 // conflict (the operator-decides flow takes them from conflict to
-// either synced or cancelled in P4).
+// either synced or cancelled in P4), and rejected (the server said
+// no in a way a resend can't change, see drain()).
 const STATUSES = {
   PENDING: 'pending',
   INFLIGHT: 'inflight',
@@ -80,6 +92,7 @@ const STATUSES = {
   CONFLICT: 'conflict',
   FAILED: 'failed',
   CANCELLED: 'cancelled',
+  REJECTED: 'rejected',
 }
 
 function isTerminal(status) {
@@ -87,6 +100,7 @@ function isTerminal(status) {
     || status === STATUSES.FAILED
     || status === STATUSES.CANCELLED
     || status === STATUSES.CONFLICT
+    || status === STATUSES.REJECTED
 }
 
 // ---- UUID v4 generator (no crypto.randomUUID polyfill needed) -
@@ -320,6 +334,7 @@ export function createOutbox({
       last_attempt_at: null,
       last_error: null,
       conflict_info: null,
+      acknowledged_at: null,
       created_at: now.toISOString(),
       synced_at: null,
       server_response: null,
@@ -338,15 +353,16 @@ export function createOutbox({
    *   { ok: true, response }            → mark synced
    * Or throw with err.kind === 'conflict' + err.conflict
    *   payload                            → mark conflict
+   * Or throw with err.final               → mark rejected, no retry
    * Or throw any other error              → attempt++, retry
    *   or mark failed after maxAttempts.
    *
    * @param {object} opts
    * @param {(entry: object) => Promise<{ ok: boolean, response?: any }>} opts.send
-   * @returns {Promise<{ drained: number, conflicts: number, failed: number }>}
+   * @returns {Promise<{ drained: number, conflicts: number, failed: number, rejected: number, retryInMs: number|null }>}
    */
   async function drain({ send }) {
-    if (drainLock) return { drained: 0, conflicts: 0, failed: 0, retryInMs: null }
+    if (drainLock) return { drained: 0, conflicts: 0, failed: 0, rejected: 0, retryInMs: null }
     if (typeof send !== 'function') {
       throw new Error('outbox.drain: send function required')
     }
@@ -388,6 +404,7 @@ export function createOutbox({
       let drained = 0
       let conflicts = 0
       let failed = 0
+      let rejected = 0
 
       for (const entry of pending) {
         // Mark inflight before sending so a concurrent drain in
@@ -419,6 +436,16 @@ export function createOutbox({
             entry.conflict_info = err.conflict || { message: err.message }
             await backend.put(entry)
             conflicts += 1
+          } else if (err && err.final) {
+            // The server's answer is the answer (see the header). Five
+            // more tries would only have parked it as failed, with a Retry
+            // that can't work, and on a judge's phone that looked broken.
+            // It doesn't hold the queue either: the next entry may well
+            // be fine.
+            entry.status = STATUSES.REJECTED
+            entry.last_error = String(err.message || err)
+            await backend.put(entry)
+            rejected += 1
           } else if (err && err.offline) {
             // Never left the device (socket down, fetch network error).
             // That isn't the server saying no, so it doesn't use up an
@@ -459,7 +486,7 @@ export function createOutbox({
       }
 
       emitChange()
-      return { drained, conflicts, failed, retryInMs }
+      return { drained, conflicts, failed, rejected, retryInMs }
     } finally {
       drainLock = false
     }
@@ -484,6 +511,24 @@ export function createOutbox({
     }
     if (failedEntries.length) emitChange()
     return failedEntries.length
+  }
+
+  /**
+   * Note that whoever queued a rejected entry has been told it didn't go
+   * through, so the screen that tells them doesn't say it again the next
+   * time it opens. Returns false for anything else, or one already
+   * acknowledged.
+   *
+   * No 'change' event: no count or status moves, and the screen that
+   * calls this is usually reacting to one, so emitting would only send
+   * it round again.
+   */
+  async function acknowledge(key) {
+    const entry = await getEntry(key)
+    if (!entry || entry.status !== STATUSES.REJECTED || entry.acknowledged_at) return false
+    entry.acknowledged_at = new Date().toISOString()
+    await backend.put(entry)
+    return true
   }
 
   /**
@@ -555,6 +600,7 @@ export function createOutbox({
     getEntry,
     resolveConflict,
     retryFailed,
+    acknowledge,
     gc,
     on: emitter.on,
     off: emitter.off,

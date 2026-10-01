@@ -871,7 +871,11 @@
     "queued_label": "In der Warteschlange",
     "show_big": "Groß anzeigen",
     "show_big_tip": "Füllen Sie den Bildschirm mit dem Punktestand, damit der Bediener ihn von der gegenüberliegenden Seite des Raums ablesen kann",
-    "tap_to_return": "Antippen, um zurückzukehren"
+    "tap_to_return": "Antippen, um zurückzukehren",
+    "event_finished": "Wettbewerb beendet",
+    "event_not_live": "Wettbewerb läuft nicht mehr",
+    "waiting_next_panel": "Warten auf Ihr nächstes Kampfgericht…",
+    "score_not_recorded": "Ihre Wertung von {score} wurde nicht erfasst: Der Wettbewerb nahm keine Wertungen mehr an."
   },
   "control": {
     "page_label": "Kontrollraum",

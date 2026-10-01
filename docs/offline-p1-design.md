@@ -69,8 +69,10 @@ Entry shape:
   status:             'pending',    // see state machine below
   attempts:           0,
   last_attempt_at:    null,
-  last_error:         null,         // string when status==='failed'
+  last_error:         null,         // string when status is 'failed' or 'rejected'
   conflict_info:      null,         // server payload when status==='conflict'
+  acknowledged_at:    null,         // set by acknowledge() once the screen that
+                                    // queued a 'rejected' entry has told its user
   created_at:         '2026-05-21T14:32:08.103Z',
   synced_at:          null,         // set when status flips to 'synced'
   server_response:    null,         // cached server reply when synced
@@ -90,14 +92,25 @@ Entry shape:
      │                       │
      │                       ├─ timeout →  pending  (retry)
      │                       │
+     │                       ├─ final   →  rejected (no retry: a refusal a
+     │                       │               resend can't change, e.g. a
+     │                       │               score for an event that isn't
+     │                       │               Live any more)
+     │                       │
      │                       └─ 500/4xx →  failed   (max-attempts reached)
      │
      └─ manual.cancel() →  cancelled (rare; only via debug UI)
 ```
 
-Terminal states: `synced`, `failed`, `cancelled`, `conflict`. Each TTLs out
+Terminal states: `synced`, `failed`, `cancelled`, `conflict`, `rejected`. Each TTLs out
 after 72 hours (matches server idempotency TTL) and is garbage-collected
 on startup.
+
+A `rejected` entry can close while the screen that queued it isn't open,
+because the drain runs app-wide. So the entry records whether its user has
+been told (`acknowledged_at`, set through `acknowledge(key)`), and the judge
+screen reports every untold one when it opens, not just the ones that came
+back while it was on screen.
 
 ### Public API
 

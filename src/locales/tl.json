@@ -860,7 +860,11 @@
     "queued_label": "Naka-pila",
     "show_big": "Ipakita nang malaki",
     "show_big_tip": "Punuin ang buong screen ng iskor upang mabasa ito ng operator mula sa kabilang dulo ng silid",
-    "tap_to_return": "Pindutin upang bumalik"
+    "tap_to_return": "Pindutin upang bumalik",
+    "event_finished": "Tapos na ang event",
+    "event_not_live": "Hindi na live ang event",
+    "waiting_next_panel": "Naghihintay ng susunod mong judging panel…",
+    "score_not_recorded": "Hindi naitala ang iyong iskor na {score}: hindi na tumatanggap ng iskor ang event."
   },
   "control": {
     "page_label": "Control room page",

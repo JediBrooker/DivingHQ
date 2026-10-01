@@ -860,7 +860,11 @@
     "queued_label": "Dalam antrian",
     "show_big": "Paparkan dalam saiz besar",
     "show_big_tip": "Isikan skrin dengan skor agar pengendali dapat membacanya dari seberang dewan",
-    "tap_to_return": "Ketuk untuk kembali"
+    "tap_to_return": "Ketuk untuk kembali",
+    "event_finished": "Acara tamat",
+    "event_not_live": "Acara tidak lagi berlangsung",
+    "waiting_next_panel": "Menunggu panel hakim anda seterusnya…",
+    "score_not_recorded": "Markah anda {score} tidak direkodkan: acara sudah berhenti menerima markah."
   },
   "control": {
     "page_label": "Bilik kawalan",

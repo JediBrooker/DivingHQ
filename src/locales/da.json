@@ -871,7 +871,11 @@
     "queued_label": "Sat i kø",
     "show_big": "Vis i stort format",
     "show_big_tip": "Fyld skærmen med resultatet, så operatøren kan læse det på tværs af rummet",
-    "tap_to_return": "Tryk for at vende tilbage"
+    "tap_to_return": "Tryk for at vende tilbage",
+    "event_finished": "Konkurrencen er slut",
+    "event_not_live": "Konkurrencen er ikke længere i gang",
+    "waiting_next_panel": "Venter på dit næste dommerpanel…",
+    "score_not_recorded": "Din karakter på {score} blev ikke registreret: konkurrencen tog ikke længere imod karakterer."
   },
   "control": {
     "page_label": "Kontrolrum",

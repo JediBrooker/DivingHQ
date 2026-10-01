@@ -860,7 +860,11 @@
     "queued_label": "Ve frontě",
     "show_big": "Zobrazit velké",
     "show_big_tip": "Vyplňte obrazovku známkou, aby ji operátor přečetl přes celou místnost",
-    "tap_to_return": "Klepnutím se vrátíte"
+    "tap_to_return": "Klepnutím se vrátíte",
+    "event_finished": "Disciplína skončila",
+    "event_not_live": "Disciplína už neběží živě",
+    "waiting_next_panel": "Čekání na váš další panel rozhodčích…",
+    "score_not_recorded": "Vaše známka {score} nebyla zaznamenána: disciplína už nepřijímala známky."
   },
   "control": {
     "page_label": "Řídicí místnost",

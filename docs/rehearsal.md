@@ -165,7 +165,11 @@ Seed refuses, and changes nothing, when:
    the total at all. A judge who reloads after scoring should come back to
    their score on screen, their tile filled and the keypad shut, the same as
    right after Submit.
-9. **Finish the event.** The four results emails should arrive.
+9. **Finish the event.** The four results emails should arrive, and every
+   judge phone should drop the diver, lock its keypad and say "Event
+   finished" within a second or two. One that still shows Submit lit is a
+   bug. A score tapped just as the event finishes should come back as "wasn't
+   recorded" with the score shown, not as a failed or queued chip.
 10. **Results PDF**: `/api/events/<event>/results.pdf`. 陈美玲 should print in
     Chinese and Иван Петров in Cyrillic. `?` or "Ivan Petrov" means the Noto
     fonts aren't on the box.
@@ -192,8 +196,9 @@ there, how many scores and records, and whether cleanup would refuse.
   come back.
 - **Undo on finalise.** The "Finalised" message has an Undo for 12 seconds.
   It puts the event back to Live with the last diver up again on the judges'
-  phones and the scoreboard, never round 1 diver 1, and a reload after it
-  keeps it there. Divers don't get a second "is live" email.
+  phones (after a moment on "Event finished") and the scoreboard, never
+  round 1 diver 1, and a reload after it keeps it there. Divers don't get a
+  second "is live" email.
 - **Venue Wi-Fi.** Captive portals that expire, client isolation, a network
   that drops websockets. If a phone keeps reconnecting on Wi-Fi but is fine on
   mobile data, it's the network.

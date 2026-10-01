@@ -860,7 +860,11 @@
     "queued_label": "En cola",
     "show_big": "Mostrar en grande",
     "show_big_tip": "Rellena la pantalla con la puntuación para que el operador pueda leerla desde el otro lado de la sala",
-    "tap_to_return": "Toca para volver"
+    "tap_to_return": "Toca para volver",
+    "event_finished": "Evento finalizado",
+    "event_not_live": "El evento ya no está en directo",
+    "waiting_next_panel": "Esperando tu próximo panel de jueces…",
+    "score_not_recorded": "Tu nota de {score} no se registró: el evento ya no aceptaba notas."
   },
   "control": {
     "page_label": "Sala de control",
