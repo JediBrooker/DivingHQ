@@ -548,7 +548,8 @@
     "medal_title_home_nation": "Mitalitaulukko kansakunnittain",
     "medal_title_region": "Mitalitaulukko alueittain",
     "medal_col_country": "Maa",
-    "medal_col_club": "Seura"
+    "medal_col_club": "Seura",
+    "status_upcoming": "Tulossa"
   },
   "guide": {
     "title": "Käyttöopas",

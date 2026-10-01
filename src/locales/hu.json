@@ -548,7 +548,8 @@
     "medal_title_home_nation": "Éremtáblázat országonként (UK)",
     "medal_title_region": "Éremtáblázat régiónként",
     "medal_col_country": "Ország",
-    "medal_col_club": "Klub"
+    "medal_col_club": "Klub",
+    "status_upcoming": "Hamarosan"
   },
   "guide": {
     "title": "Felhasználói útmutató",

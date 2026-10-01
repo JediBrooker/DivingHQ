@@ -537,7 +537,8 @@
     "medal_title_home_nation": "Jadual pingat mengikut negara (UK)",
     "medal_title_region": "Jadual pingat mengikut rantau",
     "medal_col_country": "Negara",
-    "medal_col_club": "Kelab"
+    "medal_col_club": "Kelab",
+    "status_upcoming": "Akan datang"
   },
   "guide": {
     "title": "Panduan pengguna",

@@ -537,7 +537,8 @@
     "medal_title_home_nation": "Πίνακας μεταλλίων ανά χώρα του ΗΒ",
     "medal_title_region": "Πίνακας μεταλλίων ανά περιφέρεια",
     "medal_col_country": "Χώρα",
-    "medal_col_club": "Σύλλογος"
+    "medal_col_club": "Σύλλογος",
+    "status_upcoming": "Επερχόμενος"
   },
   "guide": {
     "title": "Οδηγός χρήσης",

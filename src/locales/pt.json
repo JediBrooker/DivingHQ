@@ -548,7 +548,8 @@
     "medal_title_home_nation": "Quadro de medalhas por nação",
     "medal_title_region": "Quadro de medalhas por região",
     "medal_col_country": "País",
-    "medal_col_club": "Clube"
+    "medal_col_club": "Clube",
+    "status_upcoming": "Em breve"
   },
   "guide": {
     "title": "Guia do Utilizador",

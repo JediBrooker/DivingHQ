@@ -548,7 +548,8 @@
     "medal_title_home_nation": "Medagliere per nazione",
     "medal_title_region": "Medagliere per regione",
     "medal_col_country": "Paese",
-    "medal_col_club": "Società"
+    "medal_col_club": "Società",
+    "status_upcoming": "Prossimamente"
   },
   "guide": {
     "title": "Guida utente",

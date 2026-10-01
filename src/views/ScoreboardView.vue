@@ -1261,8 +1261,13 @@ onMounted(async () => {
             <span class="sb-crumb-sep" aria-hidden="true">›</span>
             <span class="sb-crumb-current">{{ currentEvent?.name || (isCompleted ? 'Event Recap' : 'Broadcast Feed') }}</span>
           </nav>
+          <!-- Only a Live event gets the red badge. The meets list links to
+               upcoming events too, and an early spectator was told the
+               event was live next to "Waiting...". Anything else (an
+               event missing from the list, say) gets no badge at all. -->
           <div v-if="isCompleted" class="status-badge done-badge">{{ $t('scoreboard.status_completed') }}</div>
-          <div v-else class="status-badge live-badge">{{ $t('scoreboard.status_live') }}</div>
+          <div v-else-if="currentEvent?.status === 'Live'" class="status-badge live-badge">{{ $t('scoreboard.status_live') }}</div>
+          <div v-else-if="currentEvent?.status === 'Upcoming'" class="status-badge upcoming-badge">{{ $t('scoreboard.status_upcoming') }}</div>
         </div>
       </template>
       <div style="display:flex;gap:0.4rem;align-items:center">

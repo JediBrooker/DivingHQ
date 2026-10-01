@@ -537,7 +537,8 @@
     "medal_title_home_nation": "Klasemen medali per bangsa",
     "medal_title_region": "Klasemen medali per wilayah",
     "medal_col_country": "Negara",
-    "medal_col_club": "Klub"
+    "medal_col_club": "Klub",
+    "status_upcoming": "Akan datang"
   },
   "guide": {
     "title": "Panduan pengguna",

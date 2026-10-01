@@ -537,7 +537,8 @@
     "medal_title_home_nation": "Tablica medalja po nacijama",
     "medal_title_region": "Tablica medalja po regijama",
     "medal_col_country": "Zemlja",
-    "medal_col_club": "Klub"
+    "medal_col_club": "Klub",
+    "status_upcoming": "Nadolazeće"
   },
   "guide": {
     "title": "Korisnički vodič",

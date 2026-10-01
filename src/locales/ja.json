@@ -537,7 +537,8 @@
     "medal_title_home_nation": "構成国別メダル表",
     "medal_title_region": "地域別メダル表",
     "medal_col_country": "国",
-    "medal_col_club": "クラブ"
+    "medal_col_club": "クラブ",
+    "status_upcoming": "開始前"
   },
   "guide": {
     "title": "ユーザーガイド",
