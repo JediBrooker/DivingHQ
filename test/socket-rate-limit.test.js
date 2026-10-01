@@ -527,3 +527,96 @@ test("an array holding a UUID isn't an id on any socket event", async () => {
   assert.deepEqual(h.broadcasts.map((b) => b.name), ["judge_signal"]);
   assert.ok(!pool.writes.some((sql) => /INSERT INTO scores/.test(sql)));
 });
+
+// A spectator scoreboard opened (or reloaded, or reconnected) mid-dive never
+// showed the judges already in: its pills only came from score_received.
+// get_active_diver asked with an ack now answers with the dive's stored
+// scores, after the state_update, under the scoreboard's visibility rule.
+// Asked without one (the judge keypad, the Control Room) it's the old
+// room-join plus replay, no DB read.
+function liveScoresPool({ status = "Live", orgId = "org-host", participating = [] } = {}) {
+  const calls = [];
+  return {
+    calls,
+    query: async (sql, params) => {
+      calls.push({ sql, params });
+      if (/FROM events WHERE id/.test(sql)) return { rows: [{ id: params[0], org_id: orgId, status }] };
+      if (/event_participating_orgs/.test(sql)) return { rows: participating.includes(params[1]) ? [{ "?column?": 1 }] : [] };
+      if (/FROM scores s/.test(sql)) {
+        return { rows: [{ judge_number: 3, score: "6.0" }, { judge_number: 4, score: "6.5" }] };
+      }
+      return { rows: [] };
+    },
+  };
+}
+const DIVER_ID = "22222222-2222-4222-8222-222222222222";
+const onTheBoard = () => ({
+  [VALID_ID]: { event_id: VALID_ID, competitor_id: DIVER_ID, round_number: 2, diverName: "On The Board" },
+});
+
+test("get_active_diver with an ack answers with the live dive's stored scores", async () => {
+  const pool = liveScoresPool();
+  const h = makeHarness({ deps: { pool, activeDivers: onTheBoard() } });
+  const c = await h.connect("198.51.100.50");
+  const reply = await c.ask("get_active_diver", { event_id: VALID_ID });
+  assert.deepEqual(reply, {
+    ok: true, event_id: VALID_ID, competitor_id: DIVER_ID, round_number: 2,
+    scores: [{ judge_number: 3, score: 6 }, { judge_number: 4, score: 6.5 }],
+  });
+  // The diver went first, so the page knows the dive when the scores land.
+  assert.deepEqual(c.emitted.map((e) => e.name), ["state_update"]);
+  assert.ok(c.rooms.has(`event:${VALID_ID}`));
+  const read = pool.calls.find((q) => /FROM scores s/.test(q.sql));
+  assert.deepEqual(read.params, [VALID_ID, DIVER_ID, 2]);
+  assert.match(read.sql, /status IS DISTINCT FROM 'redive'/);
+
+  // Without an ack nothing is read.
+  const before = pool.calls.length;
+  await c.fire("get_active_diver", { event_id: VALID_ID });
+  assert.equal(pool.calls.length, before);
+  assert.equal(c.emitted.filter((e) => e.name === "state_update").length, 2);
+});
+
+test("get_active_diver's stored scores follow the scoreboard's visibility rule", async () => {
+  // Before the event is Live its scores are try-outs: an anonymous socket
+  // gets the diver it already got, but no scores.
+  const early = liveScoresPool({ status: "Upcoming", participating: ["org-guest"] });
+  const h = makeHarness({ deps: { pool: early, activeDivers: onTheBoard() } });
+  const anon = await h.connect("198.51.100.51");
+  assert.deepEqual(await anon.ask("get_active_diver", { event_id: VALID_ID }), { ok: false, error: "not_found" });
+  assert.ok(!early.calls.some((q) => /FROM scores s/.test(q.sql)));
+  const stranger = await h.connect("198.51.100.52", jwt.sign({ id: uid("stranger"), org_id: "org-other", org_roles: [] }, "test-secret"));
+  assert.equal((await stranger.ask("get_active_diver", { event_id: VALID_ID })).error, "not_found");
+  // The host org, a participating org and a sysadmin see them.
+  for (const claims of [
+    { id: uid("host"), org_id: "org-host", org_roles: ["meet_manager"] },
+    { id: uid("guest"), org_id: "org-guest", org_roles: [] },
+    { id: uid("sys"), org_id: "org-other", org_roles: [], is_system_admin: true },
+  ]) {
+    const s = await h.connect("198.51.100.53", jwt.sign(claims, "test-secret"));
+    const reply = await s.ask("get_active_diver", { event_id: VALID_ID });
+    assert.equal(reply.ok, true, JSON.stringify(claims));
+    assert.equal(reply.scores.length, 2);
+  }
+});
+
+test("get_active_diver with nobody on the board reads nothing, and the reads are capped per socket", async () => {
+  const pool = liveScoresPool();
+  const empty = makeHarness({ deps: { pool, activeDivers: {} } });
+  const c = await empty.connect("198.51.100.54");
+  assert.deepEqual(await c.ask("get_active_diver", { event_id: VALID_ID }), { ok: true, scores: null });
+  assert.equal(pool.calls.length, 0);
+
+  const busy = liveScoresPool();
+  const h = makeHarness({ deps: { pool: busy, activeDivers: onTheBoard() } });
+  const looper = await h.connect("198.51.100.55");
+  for (let i = 0; i < 20; i++) {
+    assert.equal((await looper.ask("get_active_diver", { event_id: VALID_ID })).ok, true, `ask ${i + 1}`);
+  }
+  const reads = busy.calls.length;
+  assert.deepEqual(await looper.ask("get_active_diver", { event_id: VALID_ID }), { ok: false, error: "rate_limited" });
+  assert.equal(busy.calls.length, reads, "a capped ask doesn't touch the pool");
+  // The cap is per socket: someone else on the same venue Wi-Fi still gets in.
+  const neighbour = await h.connect("198.51.100.55");
+  assert.equal((await neighbour.ask("get_active_diver", { event_id: VALID_ID })).ok, true);
+});

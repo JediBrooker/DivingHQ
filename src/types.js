@@ -549,6 +549,25 @@
  *   after any referee call
  */
 
+// ---- socket get_active_diver ack ---------------------------------
+
+/**
+ * @typedef {Object} LiveDiveScores
+ * The ack of socket `get_active_diver` (routes/socket.js), when the caller
+ * passes one: the scores already stored for the dive on the board, read by
+ * lib/dive-scores.js like JudgeDiveScores. The spectator scoreboard puts its
+ * judge pills back from it after opening mid-dive or reconnecting.
+ * `scores` is null when nobody is on the board. A refusal is
+ * `{ ok: false, error: 'not_found' | 'rate_limited' }`.
+ *
+ * @property {boolean} ok
+ * @property {string}  [event_id]
+ * @property {string}  [competitor_id]
+ * @property {number}  [round_number]
+ * @property {Array<{ judge_number: number, score: number }>|null} [scores]
+ * @property {string}  [error]
+ */
+
 /**
  * @typedef {Object} RosterImportRoundPreview
  * @property {number} round_number

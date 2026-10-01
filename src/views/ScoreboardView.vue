@@ -259,6 +259,9 @@ const activeDiver = ref(null)
 // the inline pills under the Current Performer block, replacing
 // the older fullscreen score-overlay UX.
 const liveJudgeScores = ref([])
+// The get_active_diver ask whose answer (the live dive's stored scores)
+// hasn't landed yet, see askActiveDiver.
+let pendingAsk = null
 // Completed-event archive payload, only populated when the selected
 // event has status === 'Completed'. Drives the dive breakdown,
 // podium and event-stats panels.
@@ -586,10 +589,11 @@ function selectEvent(id, { pushUrl = true } = {}) {
   payloadRecords.value = []
   liveRecords.value = []
   refreshData()
-  // Pull the current active diver from the server. socket.io
-  // buffers the emit until the connection is up, so this works
-  // whether the socket has already connected or not.
-  socket.emit('get_active_diver', { event_id: id })
+  // Pull the current active diver from the server, and the scores
+  // already in for their dive. socket.io buffers the emit until the
+  // connection is up, so this works whether the socket has already
+  // connected or not.
+  askActiveDiver(id)
   // Pull the current hold state too, covers the case where the page
   // loads after a hold has already been set.
   socket.emit('get_meet_hold', { event_id: id })
@@ -603,8 +607,10 @@ function selectEvent(id, { pushUrl = true } = {}) {
 
 function resetToEventPicker({ pushUrl = true } = {}) {
   // Invalidate any in-flight refreshData so a late response can't
-  // repopulate the panels we're about to clear.
+  // repopulate the panels we're about to clear, and the same for a
+  // live-scores answer still on its way.
   refreshSeq++
+  pendingAsk = null
   currentEventId.value = null
   activeDiver.value = null
   historyItems.value = []
@@ -816,6 +822,55 @@ function recordMarksFor(d) {
   return marks.length ? marks : null
 }
 
+// The scores already stored for the dive on the board. The pills only ever
+// came from score_received, so a board opened or reloaded mid-dive showed
+// nothing for the judges already in, and with pills missing the panel
+// never looked complete: no trim and no Dive Total until the next diver. A
+// phone whose socket dropped for a few seconds lost the scores sent
+// meanwhile the same way. So every time we ask who's up (opening an event,
+// each reconnect) we ask with an ack, and the server answers with what it
+// has stored for that dive (get_active_diver in routes/socket.js).
+//
+// What lands while the answer is on its way is newer than it. A score keeps
+// its live value; a referee Failed or Cap is applied over the stored values
+// as well (holding a held award again changes nothing); a re-dive means the
+// answer may be the old panel, so it's thrown away. The judge screen's
+// restoreDiveScores works the same way.
+function askActiveDiver(eventId) {
+  const ask = { eventId, arrived: new Set(), call: null, redive: false }
+  pendingAsk = ask
+  socket.emit('get_active_diver', { event_id: eventId }, (reply) => {
+    // a later ask, or a different event, has taken over
+    if (pendingAsk !== ask) return
+    pendingAsk = null
+    restoreLiveScores(reply, ask)
+  })
+}
+
+function isActiveDive(data) {
+  const a = activeDiver.value
+  return !!a && String(data?.competitor_id) === String(a.competitor_id)
+    && Number(data?.round_number) === Number(a.round_number)
+}
+
+function restoreLiveScores(reply, ask) {
+  if (!reply?.ok || !Array.isArray(reply.scores)) return
+  if (ask.eventId !== currentEventId.value || ask.redive || !isActiveDive(reply)) return
+  const byJudge = new Map()
+  for (const s of reply.scores) {
+    const stored = Number(s.score)
+    byJudge.set(Number(s.judge_number), ask.call ? heldAward(stored, ask.call.call, ask.call.cap) : stored)
+  }
+  for (const p of liveJudgeScores.value) {
+    if (ask.arrived.has(p.judge_number)) byJudge.set(p.judge_number, p.value)
+  }
+  liveJudgeScores.value = [...byJudge]
+    .map(([judge_number, value]) => ({ value, judge_number }))
+    .sort((a, b) => a.judge_number - b.judge_number)
+  // A full panel means the dive has its total, same as the live path.
+  if (liveJudgeScores.value.length >= panelSize.value) scheduleRefresh()
+}
+
 // All listeners below go through useSocketEvent so they're torn
 // down with the view rather than relying on the spectator pool's
 // refcount happening to hit zero.
@@ -870,6 +925,8 @@ useSocketEvent(socket, 'score_received', data => {
   if (idx >= 0) liveJudgeScores.value[idx] = next
   else liveJudgeScores.value = [...liveJudgeScores.value, next]
   liveJudgeScores.value.sort((a, b) => a.judge_number - b.judge_number)
+  // newer than the stored copy we may be waiting for
+  pendingAsk?.arrived.add(data.judge_number)
   // The panel's complete, so the dive has a total: standings and
   // Completed Dives both change.
   if (liveJudgeScores.value.length >= panelSize.value) scheduleRefresh()
@@ -879,10 +936,9 @@ useSocketEvent(socket, 'score_received', data => {
 // the pills (and any dive total they'd added up to) go too.
 useSocketEvent(socket, 'referee_action_redive', (data) => {
   if (!currentEventId.value || data?.event_id !== currentEventId.value) return
-  const a = activeDiver.value
-  if (a && String(data.competitor_id) === String(a.competitor_id)
-      && Number(data.round_number) === Number(a.round_number)) {
+  if (isActiveDive(data)) {
     liveJudgeScores.value = []
+    if (pendingAsk) pendingAsk.redive = true
   }
   scheduleRefresh()
 })
@@ -896,10 +952,9 @@ useSocketEvent(socket, 'referee_action_redive', (data) => {
 // above the declared maximum for a cap, WA 8.4.7).
 function applyRefereeCallToPills(data, call) {
   if (!currentEventId.value || data?.event_id !== currentEventId.value) return
-  const a = activeDiver.value
-  if (!a || String(data.competitor_id) !== String(a.competitor_id)
-      || Number(data.round_number) !== Number(a.round_number)) return
+  if (!isActiveDive(data)) return
   liveJudgeScores.value = liveJudgeScores.value.map((s) => ({ ...s, value: heldAward(s.value, call, data.cap_value) }))
+  if (pendingAsk) pendingAsk.call = { call, cap: data.cap_value }
 }
 useSocketEvent(socket, 'referee_action_failed', (data) => applyRefereeCallToPills(data, 'failed'))
 useSocketEvent(socket, 'referee_action_cap', (data) => applyRefereeCallToPills(data, 'cap'))
@@ -918,11 +973,22 @@ useSocketEvent(socket, 'event_status_changed', (data) => {
 // On (re)connect, re-request the current active diver if an
 // event is already selected. Covers the case where the socket
 // drops mid-session and the in-memory state was unchanged on
-// the server but our local state went stale.
+// the server but our local state went stale. The answer brings back the
+// scores sent while we were away, too.
+//
+// Anything else broadcast meanwhile (a correction, a dive announced) is
+// lost as well, so a reconnect also re-pulls the standings. Not on the
+// first connect of a fresh page, selectEvent has just fetched them; the
+// pooled socket may already be up when this view mounts, and then every
+// connect we see is a reconnect.
+let connectedBefore = !!socket.connected
 useSocketEvent(socket, 'connect', () => {
+  const reconnect = connectedBefore
+  connectedBefore = true
   if (currentEventId.value) {
-    socket.emit('get_active_diver', { event_id: currentEventId.value })
+    askActiveDiver(currentEventId.value)
     socket.emit('get_meet_hold',    { event_id: currentEventId.value })
+    if (reconnect) scheduleRefresh()
   }
 })
 
