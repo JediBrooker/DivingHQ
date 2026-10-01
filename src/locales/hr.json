@@ -1242,7 +1242,8 @@
   "meet_day": {
     "page_label": "Dan natjecanja",
     "next_dive": "Sljedeći skok",
-    "waiting": "Čekanje da događaj krene uživo…"
+    "waiting": "Čekanje da događaj krene uživo…",
+    "no_score_yet": "Još nema bodova"
   },
   "score_audit": {
     "title": "Revizija ocjena",

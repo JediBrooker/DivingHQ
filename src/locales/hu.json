@@ -1253,7 +1253,8 @@
   "meet_day": {
     "page_label": "Versenynap",
     "next_dive": "Következő ugrás",
-    "waiting": "Várakozás a versenyszám élő indítására…"
+    "waiting": "Várakozás a versenyszám élő indítására…",
+    "no_score_yet": "Még nincs pontszám"
   },
   "score_audit": {
     "title": "Pontaudit",

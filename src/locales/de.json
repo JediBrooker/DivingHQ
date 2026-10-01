@@ -1253,7 +1253,8 @@
   "meet_day": {
     "page_label": "Wettkampftag",
     "next_dive": "Nächster Sprung",
-    "waiting": "Warte auf den Live-Start des Events…"
+    "waiting": "Warte auf den Live-Start des Events…",
+    "no_score_yet": "Noch keine Wertung"
   },
   "score_audit": {
     "title": "Wertungs-Audit",

@@ -38,6 +38,7 @@ const socket  = useSocket()
 
 const eventId = computed(() => route.params.eventId)
 
+/** @type {import('vue').Ref<import('@/types').MeetDayBundle|null>} */
 const data    = ref(null)
 const loading = ref(true)
 const error   = ref('')
@@ -255,7 +256,13 @@ const eventNotLive = computed(() => {
             <div class="md-total">{{ data.standing.total.toFixed(1) }}</div>
             <div class="md-total-sub">points</div>
           </div>
-          <div v-if="data.standing.rank > 1" class="md-gap-block">
+          <!-- No total of their own yet (before the start, or before
+               their first dive), so no place to be behind or ahead in.
+               A null rank used to fall through to "in the lead". -->
+          <div v-if="data.standing.rank == null" class="md-gap-block md-gap-none">
+            <div class="md-gap-sub">{{ $t('meet_day.no_score_yet') }}</div>
+          </div>
+          <div v-else-if="data.standing.rank > 1" class="md-gap-block">
             <div class="md-gap">{{ data.standing.behind_leader.toFixed(1) }}</div>
             <div class="md-gap-sub">behind leader</div>
           </div>

@@ -1242,7 +1242,8 @@
   "meet_day": {
     "page_label": "Hari kompetisi",
     "next_dive": "Loncatan berikutnya",
-    "waiting": "Menunggu nomor mulai langsung…"
+    "waiting": "Menunggu nomor mulai langsung…",
+    "no_score_yet": "Belum ada skor"
   },
   "score_audit": {
     "title": "Audit skor",

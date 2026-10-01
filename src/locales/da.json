@@ -1253,7 +1253,8 @@
   "meet_day": {
     "page_label": "Stævnedag",
     "next_dive": "Næste spring",
-    "waiting": "Venter på, at stævnet går live…"
+    "waiting": "Venter på, at stævnet går live…",
+    "no_score_yet": "Ingen point endnu"
   },
   "score_audit": {
     "title": "Karakterrevision",

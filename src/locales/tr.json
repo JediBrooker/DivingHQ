@@ -1242,7 +1242,8 @@
   "meet_day": {
     "page_label": "Yarışma günü",
     "next_dive": "Sıradaki atlama",
-    "waiting": "Etkinliğin canlıya geçmesi bekleniyor…"
+    "waiting": "Etkinliğin canlıya geçmesi bekleniyor…",
+    "no_score_yet": "Henüz puan yok"
   },
   "score_audit": {
     "title": "Puan Denetimi",

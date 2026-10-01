@@ -1253,7 +1253,8 @@
   "meet_day": {
     "page_label": "Tävlingsdag",
     "next_dive": "Nästa hopp",
-    "waiting": "Väntar på att tävlingen ska gå live…"
+    "waiting": "Väntar på att tävlingen ska gå live…",
+    "no_score_yet": "Inga poäng än"
   },
   "score_audit": {
     "title": "Poänggranskning",

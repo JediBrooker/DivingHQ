@@ -1343,7 +1343,8 @@
   "meet_day": {
     "page_label": "Den závodu",
     "next_dive": "Další skok",
-    "waiting": "Tato disciplína ještě nezačala. Čekání na spuštění disciplíny naživo…"
+    "waiting": "Tato disciplína ještě nezačala. Čekání na spuštění disciplíny naživo…",
+    "no_score_yet": "Zatím bez bodů"
   },
   "score_audit": {
     "title": "Audit známek",

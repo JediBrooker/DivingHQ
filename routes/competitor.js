@@ -339,7 +339,17 @@ module.exports = function createCompetitorRouter({
       const meRow = ranked.find(s => s.competitor_id === entryId);
       const myRank  = meRow ? meRow.rank  : null;
       const myTotal = meRow ? Number(meRow.total) : 0;
-      const totalCompetitors = ranked.length;
+      // The field, not just whoever has a total yet. Counting only the
+      // ranked rows put "0 divers" on the card until the first score.
+      // Reserves aren't in it; a diver who withdrew after scoring still
+      // is, they keep their place in the standings.
+      const fieldRes = await pool.query(
+        `SELECT COUNT(DISTINCT competitor_id)::int AS n
+           FROM competitor_dive_lists
+          WHERE event_id = $1 AND withdrawn_at IS NULL AND NOT is_reserve`,
+        [eventId],
+      );
+      const totalCompetitors = Math.max(ranked.length, fieldRes.rows[0]?.n || 0);
       const leaderTotal = ranked[0] ? Number(ranked[0].total) : 0;
 
       // Top three distinct totals: these are the gold/silver/
@@ -378,10 +388,17 @@ module.exports = function createCompetitorRouter({
       const ddProxy = nextDive ? nextDive.dd : null;
       const remaining = remainingDives;
 
+      // A place is only "achieved" by a diver with a total of their own.
+      // Before the rehearsal caught it, a place nobody held yet (no
+      // scores at all, or fewer distinct totals than medals) came back as
+      // reached, so a diver who hadn't dived read "in the lead" with all
+      // three medals "Already achieved". Now a place nobody holds is null
+      // (nothing to chase yet) unless the diver has a total, in which case
+      // they're one of the fewer-than-three and do hold it for now.
       function targetFor(targetTotal) {
-        if (targetTotal == null || myTotal >= targetTotal) {
-          return { gap: 0, needs_avg: 0, possible: true, achieved: true };
-        }
+        const achieved = { gap: 0, needs_avg: 0, possible: true, achieved: true };
+        if (targetTotal == null) return meRow ? achieved : null;
+        if (meRow && myTotal >= targetTotal) return achieved;
         const gap = targetTotal - myTotal;
         if (!remaining || !ddProxy) {
           return { gap, needs_avg: null, possible: null, achieved: false };

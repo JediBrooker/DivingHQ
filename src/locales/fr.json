@@ -1253,7 +1253,8 @@
   "meet_day": {
     "page_label": "Jour de compétition",
     "next_dive": "Prochain plongeon",
-    "waiting": "En attente du passage en direct de l'événement…"
+    "waiting": "En attente du passage en direct de l'événement…",
+    "no_score_yet": "Pas encore de note"
   },
   "score_audit": {
     "title": "Audit des notes",
