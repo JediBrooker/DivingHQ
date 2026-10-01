@@ -32,13 +32,16 @@ const { notifications, ack, showSignoff } = usePush()
 // replaced, out of time) has no banner left to bring back, so say so
 // rather than leave the referee looking for buttons that aren't coming.
 // Tapping a notification for one lands here too: the service worker opens
-// the app when the server turns its Approve down.
+// the app when the server turns its Approve down. Only when the server
+// says so, though (showSignoff asks the request itself): a handoff-code
+// request has no banner either, and it's still waiting for its code.
 const SIGNOFF_GONE = 'That sign-off request is no longer open. It was answered, withdrawn or replaced, or it ran out.'
 watch(
   [() => route.query.signoff_request, () => auth.user?.id],
   async ([requestId, userId]) => {
     if (typeof requestId === 'string' && requestId && userId) {
-      if ((await showSignoff(requestId)) === false) showInfo(SIGNOFF_GONE)
+      const eventId = typeof route.query.event === 'string' ? route.query.event : null
+      if ((await showSignoff(requestId, { eventId })) === false) showInfo(SIGNOFF_GONE)
     }
   },
   { immediate: true },

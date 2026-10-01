@@ -60,6 +60,26 @@
  */
 
 /**
+ * @typedef {Object} RefereeDeskSignoff
+ * One row of `referee_desk.pending_signoffs` on GET /api/dashboard: a
+ * dive-order sign-off request still waiting on this referee
+ * (routes/dashboard.js). The "Waiting for you" card and the Sign off chip
+ * link to it through signoffLink (src/lib/signoffLink.js).
+ *
+ * @property {string} request_id
+ * @property {string} event_id
+ * @property {string} event_name
+ * @property {string} status          the event's status
+ * @property {?string} scheduled_at
+ * @property {string} created_at
+ * @property {string} expires_at
+ * @property {?string} requested_by_name
+ * @property {boolean} by_code        a handoff-code request: there's no
+ *   notification (and so no Approve / Deny banner) behind it, the referee
+ *   types the code from the operator's screen at /sign-off-codes
+ */
+
+/**
  * @typedef {Object} PublicConfig
  * GET /api/public-config, public. Deployment settings the signed-out
  * pages need (routes/public-config.js).

@@ -133,3 +133,54 @@ test("the referee follows the sign-off card to the order they're signing off", a
   const ev = await setup.pool.query("SELECT dive_order_signed_off_by FROM events WHERE id = $1", [event.id]);
   expect(ev.rows[0].dive_order_signed_off_by).toBe(world.referee.userId);
 });
+
+// The fallback flow: the operator cancels the push and puts a code on
+// their screen instead. The desk lists that request as "Waiting for you"
+// too, but there's no notification behind it, and following the card used
+// to tell the referee the request was no longer open while the operator's
+// screen sat there showing the code. It goes where the code gets typed.
+test("a handoff-code request on the desk takes the referee to where the code goes", async ({ page, request }) => {
+  test.setTimeout(90_000);
+  const event = await setup.createEvent(request, { adminToken: world.adminToken, name: "Code Desk 1m" });
+  await setup.pool.query(
+    "UPDATE events SET check_in_done_at = now(), dive_order_randomised_at = now() WHERE id = $1",
+    [event.id],
+  );
+  // What POST .../sign-off/code writes (the e2e server has no APP_BASE_URL,
+  // which that endpoint wants for its QR link).
+  const code = String(100000 + Math.floor(Math.random() * 900000));
+  const ins = await setup.pool.query(
+    `INSERT INTO referee_signoff_requests (event_id, requested_by, target_referee_id, handoff_code)
+     SELECT $1, u.id, $2, $4 FROM users u WHERE u.org_id = $3 AND u.id <> $2 LIMIT 1
+     RETURNING id`,
+    [event.id, world.referee.userId, world.orgId, code],
+  );
+  const requestId = ins.rows[0].id;
+
+  await setup.bypassRoleTour(page);
+  await signIn(page, world.referee.username);
+  const card = page.locator(".workflow-card", { hasText: "Code Desk 1m" });
+  await expect(card).toBeVisible({ timeout: 10_000 });
+  await card.click();
+  await expect(page).toHaveURL(/\/sign-off-codes/);
+  await expect(page.locator(".code-input")).toBeVisible();
+  expect(await page.locator(".notify-bar").count()).toBe(0);
+
+  // A link to the request in the Control Room (an older one, say) doesn't
+  // call it closed either: it's still waiting for the code.
+  const looked = page.waitForResponse((r) => r.url().includes("/api/notifications/me"));
+  await page.goto(`/control?event=${event.id}&signoff_request=${requestId}`);
+  await expect(page.locator(".setup-step", { hasText: "Referee sign-off" })).toBeVisible({ timeout: 10_000 });
+  await looked;
+  await page.waitForTimeout(2_000);
+  // Counted once, not waited on: the toast goes by itself after a while.
+  expect(await page.locator(".notify-bar", { hasText: /no longer open/i }).count()).toBe(0);
+
+  // Typed in, it's done.
+  await page.goto("/sign-off-codes");
+  await page.locator(".code-input").fill(code);
+  await page.locator(".code-form button[type=submit]").click();
+  await expect(page.locator(".msg-success")).toBeVisible({ timeout: 8_000 });
+  const ev = await setup.pool.query("SELECT dive_order_signed_off_by FROM events WHERE id = $1", [event.id]);
+  expect(ev.rows[0].dive_order_signed_off_by).toBe(world.referee.userId);
+});

@@ -23,11 +23,12 @@
 //   ack(id)        - mark notification 'acknowledged' on the
 //                    server + remove from the local list.
 //   recent()       - pull /api/notifications/me, merge into list.
-//   showSignoff(requestId)
+//   showSignoff(requestId, { eventId })
 //                  - put a referee sign-off request back in the
 //                    banner stack (the only place with Approve/Deny)
 //                    for a /control?signoff_request=... deep link.
-//                    Resolves false when the request is no longer open.
+//                    Resolves false only when the server says the
+//                    request is no longer open.
 //
 // The bound socket also drops a sign-off banner when its request closes
 // anywhere (referee_signoff_response, see onSignoffClosed).
@@ -150,6 +151,23 @@ export async function unsubscribePush(auth) {
   }
 }
 
+// Where one sign-off request stands, from the server: 'pending',
+// 'approved', 'declined' or 'expired', or null when it couldn't be asked.
+// It's the read the operator's dialog polls while it waits, and referees
+// are among the Control Room roles it lets in. A request that isn't on
+// that event any more (404) counts as closed.
+async function signoffRequestStatus(auth, eventId, requestId) {
+  if (!eventId || !requestId) return null
+  try {
+    const r = await auth.apiFetch(
+      `/api/events/${encodeURIComponent(eventId)}/dive-order/sign-off/request/${encodeURIComponent(requestId)}`,
+    )
+    return typeof r?.status === 'string' ? r.status : null
+  } catch (err) {
+    return err?.status === 404 ? 'expired' : null
+  }
+}
+
 function pushIntoList(n) {
   if (!n?.id) return
   // Dedup by id so a SW message + socket emit for the same row
@@ -259,11 +277,18 @@ export function usePush({ socket: sock } = {}) {
     } catch { /* silent */ }
   }
 
-  // Resolves true when the request's banner is up, false when the server
-  // has no open notification for it (answered, withdrawn, replaced or out
-  // of time: those are retired with the request), null when it couldn't
-  // be asked.
-  async function showSignoff(requestId) {
+  // Resolves true when the request's banner is up, false when the request
+  // itself is no longer open (answered, withdrawn, replaced or out of
+  // time), null when there's no banner for it but nothing says it's
+  // closed, or it couldn't be asked.
+  //
+  // A missing notification doesn't make the request closed. A handoff-code
+  // request never had one (the operator cancelled the push and put a code
+  // on their screen), and a referee who followed a link to it was told it
+  // was no longer open while that screen was still showing the code. So
+  // the request is asked about itself, which needs the event the link
+  // names.
+  async function showSignoff(requestId, { eventId = null } = {}) {
     if (!requestId || !auth.isLoggedIn) return false
     const match = (n) => n?.category === 'referee_signoff' && n.data?.request_id === requestId
     let n = notifications.value.find(match)
@@ -277,8 +302,12 @@ export function usePush({ socket: sock } = {}) {
         return null
       }
     }
-    if (n) pushIntoList(n)
-    return !!n
+    if (n) {
+      pushIntoList(n)
+      return true
+    }
+    const status = await signoffRequestStatus(auth, eventId, requestId)
+    return status && status !== 'pending' ? false : null
   }
 
   async function recent() {

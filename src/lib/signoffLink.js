@@ -6,9 +6,17 @@
 // to approve. routes/control-room-signoff.js writes the same link into the
 // notification it sends.
 //
+// A handoff-code request (by_code on the referee desk's rows) has no
+// notification and so no banner: the operator cancelled the push and put a
+// code on their screen instead. Its link goes to /sign-off-codes, where the
+// referee types that code. It used to open the Control Room like the
+// others, find no banner, and tell the referee the request was no longer
+// open while the operator's screen was still showing the code.
+//
 // Plain JS, no Vue, so the node:test suite can import it straight.
 
-export function signoffLink({ event_id: eventId, request_id: requestId } = {}) {
+export function signoffLink({ event_id: eventId, request_id: requestId, by_code: byCode = false } = {}) {
+  if (byCode) return '/sign-off-codes'
   const q = new URLSearchParams()
   if (eventId) q.set('event', String(eventId))
   if (requestId) q.set('signoff_request', String(requestId))
