@@ -1156,3 +1156,10 @@
 // Force this file to be a module so import('@/types') works in
 // editors that need an export to consider it an importable module.
 export {}
+
+/**
+ * Short-lived admission credential for the native websocket only. Never persist.
+ * @typedef {Object} NativeSocketTicket
+ * @property {string} ticket
+ * @property {string} user_id
+ */

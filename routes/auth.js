@@ -16,7 +16,7 @@ const jwt     = require("jsonwebtoken");
 const rateLimit = require("express-rate-limit");
 const crypto  = require("node:crypto");
 const totp    = require("../lib/totp");
-const { SESSION_COOKIE, cookieOptions } = require("../lib/session-cookie");
+const { SESSION_COOKIE, cookieOptions, nativeCookieOptions } = require("../lib/session-cookie");
 const { ADMIN_ORG_ID } = require("../lib/admin-org");
 const { countryByCode } = require("../lib/countries");
 const { materializeRegions } = require("../lib/regions");
@@ -30,6 +30,7 @@ const notices = require("../lib/notices");
 const { recordAudit } = require("../lib/audit");
 const createAuthLinks = require("../lib/auth-links");
 const { isUuid } = require("../lib/uuid");
+const { mintSocketTicket } = require("../lib/socket-ticket");
 
 // Loose on purpose, something@something.tld: the verification link is what
 // actually proves the address. Register, register-org and the email change
@@ -38,8 +39,11 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // Plant the JWT in the httpOnly session cookie. This is the SPA's
 // session of record, browser JS can neither read nor exfiltrate it.
-function setSessionCookie(res, token) {
-  res.cookie(SESSION_COOKIE, token, cookieOptions());
+function setSessionCookie(req, res, token) {
+  const options = req.get("x-divinghq-native") === "1"
+    ? nativeCookieOptions(jwt.decode(token).exp)
+    : cookieOptions();
+  res.cookie(SESSION_COOKIE, token, options);
 }
 
 // Decide whether to include the bearer token in a JSON auth response.
@@ -54,7 +58,7 @@ function setSessionCookie(res, token) {
 // forbidden header), so its presence is a reliable "this is a browser"
 // signal; absence safely falls back to the legacy token-in-body shape.
 function includeBodyToken(req) {
-  return !req.get("sec-fetch-site");
+  return !req.get("sec-fetch-site") && req.get("x-divinghq-native") !== "1";
 }
 
 // Someone picking a username that's taken is an everyday mistake, not a
@@ -338,7 +342,7 @@ module.exports = function createAuthRouter({
   async function sendSession(req, res, userId, { before = {}, after = {}, withExtras = false } = {}) {
     const payload = await buildTokenPayload(userId);
     const token = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRY });
-    setSessionCookie(res, token);
+    setSessionCookie(req, res, token);
     if (withExtras) await addSessionExtras(pool, payload, userId);
     const resBody = { ...before, user: payload, ...payload, ...after };
     if (includeBodyToken(req)) resBody.token = token;
@@ -365,6 +369,17 @@ module.exports = function createAuthRouter({
     } catch (err) {
       console.error("[Auth Me Error]", err.message);
       res.status(500).json({ error: "Failed to load session" });
+    }
+  });
+
+  // Read-only credential exchange: native HTTP owns the session cookie. A
+  // ticket can only authenticate a socket and is never cached or persisted.
+  router.get("/api/auth/socket-ticket", verifyToken, (req, res) => {
+    res.set("Cache-Control", "no-store");
+    try {
+      res.json({ ticket: mintSocketTicket(req.user, JWT_SECRET), user_id: req.user.id });
+    } catch {
+      res.status(401).json({ error: "Please sign in again" });
     }
   });
 

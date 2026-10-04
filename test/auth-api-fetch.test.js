@@ -154,3 +154,17 @@ test("an empty 200 body resolves to null too", { skip: !hooked }, async () => {
   const auth = signedInStore();
   assert.equal(await auth.apiFetch("/api/thing", { method: "POST" }), null);
 });
+
+
+test("a late session refresh cannot replace a newly signed-in account", { skip: !hooked }, async () => {
+  let finish;
+  const delayed = new Promise(resolve => { finish = resolve; });
+  stubFetch({ "GET /api/auth/me": () => delayed });
+  const auth = signedInStore();
+  const refresh = auth.fetchMe();
+  const replacement = { ...SIGNED_IN, id: "aaaaaaaa-2222-3333-4444-555555555555", locale: "en" };
+  auth.saveSession({ user: replacement });
+  finish(jsonResponse(200, { user: SIGNED_IN }));
+  await refresh;
+  assert.equal(auth.user.id, replacement.id);
+});

@@ -26,3 +26,19 @@ test("readSessionCookie treats bad percent-encoding as no cookie instead of thro
     assert.equal(readSessionCookie(`${SESSION_COOKIE}=${bad}`), null, bad);
   }
 });
+
+
+test("native cookies persist only until signed expiry while browser cookies remain session-only", () => {
+  const { cookieOptions, nativeCookieOptions } = require("../lib/session-cookie");
+  const now = 1800000000000;
+  const expiry = now / 1000 + 3600;
+  const native = nativeCookieOptions(expiry, now);
+  assert.equal(native.maxAge, 3600000);
+  assert.equal(native.httpOnly, true);
+  assert.equal(native.sameSite, "lax");
+  assert.equal(native.secure, cookieOptions().secure);
+  assert.equal(cookieOptions().maxAge, undefined);
+  assert.equal(cookieOptions().expires, undefined);
+  assert.throws(() => nativeCookieOptions(now / 1000, now));
+  assert.throws(() => nativeCookieOptions(NaN, now));
+});

@@ -21,6 +21,9 @@ module.exports = [
     ignores: [
       "node_modules/**",
       "dist/**",
+      "dist-native/**",
+      "ios/**",
+      "android/**",
       "playwright-report/**",
       "test-results/**",
       "coverage/**",

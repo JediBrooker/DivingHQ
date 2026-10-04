@@ -59,3 +59,16 @@ scripts/.dr-cache/
 # wedge deploy.sh's strict dirty-tree check on the next deploy.
 backup-before-reset-*.sql
 
+
+# Native bundles, build caches and signing material (source projects are tracked).
+dist-native/
+*.keystore
+*.jks
+*.mobileprovision
+*.p12
+google-services.json
+GoogleService-Info.plist
+
+# Local simulator TLS proof only; never ship a test trust anchor.
+android/app/src/debug/res/raw/divinghq_local_ca.pem
+android/app/src/debug/res/xml/divinghq_proof_network_security.xml

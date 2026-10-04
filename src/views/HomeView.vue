@@ -274,13 +274,16 @@ onMounted(() => {
 /* ── Top nav ── */
 .nav {
   position: sticky; top: 0; z-index: 50;
+  /* The public landing page has no AppShell to clear a device's status area. */
+  padding-top: env(safe-area-inset-top, 0px);
   background: var(--surface);
   border-bottom: 1px solid var(--border);
 }
 .nav-in {
   max-width: 1200px; margin: 0 auto;
   height: 60px; display: flex; align-items: center; justify-content: space-between;
-  gap: 1rem; padding: 0 1.5rem;
+  gap: 1rem;
+  padding: 0 max(1.5rem, env(safe-area-inset-right, 0px)) 0 max(1.5rem, env(safe-area-inset-left, 0px));
 }
 .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
 .brand img { display: block; }

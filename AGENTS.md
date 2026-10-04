@@ -120,6 +120,25 @@ ship code (or docs) that misrepresents the rule.
   through `test/support/test-db.js` and refuses one whose name doesn't
   contain `test`.
 
+### Native app prototype
+
+`ios/` and `android/` are the Capacitor source projects; `capacitor.config.json`
+points at the separate `dist-native/` bundle. Build/sync with
+`VITE_NATIVE_API_ORIGIN=https://your-staging-host npm run native:sync`, then
+`npm run native:ios` or `npm run native:android`. The HTTPS origin must be explicit;
+never put a production `server.url` remote wrapper in the config. See
+`docs/native-apps.md` for commands, platform requirements and outstanding beta work.
+
+`src/native-main.js` installs native HTTP before the shared app loads. Only the
+configured API origin gets the native cookie jar; API redirects are refused,
+Set-Cookie response headers are stripped, and browser service workers/Web Push
+are disabled. Native cookies stay HttpOnly and persist only to the signed JWT
+expiry; browser cookies remain session-only. No bearer belongs in JS storage or
+Preferences. Native sockets exchange that HTTP session for a short-lived,
+socket-only ticket (`lib/socket-ticket.js`); HTTP middleware must keep rejecting
+those tickets. Existing per-event role and token-version gates remain mandatory.
+Do not broaden CORS or add release cleartext allowances to make a device test pass.
+
 ---
 
 ## Invariants you must not break

@@ -1,3 +1,4 @@
+import { isNativeApp } from '@/lib/native-platform'
 // Service-worker registration + Web Push subscribe flow + a
 // single shared inbox stream the SPA can listen to for in-app
 // notifications.
@@ -137,7 +138,7 @@ export function bindPushSocket(sock) {
 // Skip the whole flow when serviceWorker / PushManager are missing.
 function pushApiAvailable() {
   return typeof window !== 'undefined'
-    && 'serviceWorker' in navigator
+    && !isNativeApp() && 'serviceWorker' in navigator
     && 'PushManager' in window
     && (location.protocol === 'https:' || location.hostname === 'localhost')
 }
@@ -213,7 +214,7 @@ export function usePush({ socket: sock } = {}) {
 
   // Service worker postMessage, fired when the user taps a
   // system notification while the SPA tab is open.
-  if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && !initialised) {
+  if (typeof navigator !== 'undefined' && !isNativeApp() && 'serviceWorker' in navigator && !initialised) {
     initialised = true
     navigator.serviceWorker.addEventListener('message', (ev) => {
       const m = ev.data

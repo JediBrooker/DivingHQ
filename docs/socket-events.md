@@ -5,7 +5,7 @@ expected payload shape, and the broadcast scope. If you add a new
 event, add it here in the same commit — agents reviewing the wire
 should be able to see the whole surface in one file.
 
-The handshake auth is **soft**: spectators connect with no token (the SPA
+The browser/API handshake auth is **soft**: spectators connect with no token (the SPA
 authenticates off the httpOnly session cookie; a `token` in the handshake
 auth also works) and that's intentional, but every privileged event has to
 check the caller before mutating anything. How that's done today:
@@ -23,6 +23,18 @@ check the caller before mutating anything. How that's done today:
   panel, token version).
 - `notification:ack` needs no role and asks `socketMaintenanceBlocked`
   directly.
+
+The bundled native apps use `auth.ticket`, obtained with their native HTTP
+session cookie from `GET /api/auth/socket-ticket` (`verifyToken`, no-store).
+The ticket has a dedicated type and audience, expires within 30 seconds and
+cannot authenticate an HTTP request. Every native reconnect obtains a fresh
+ticket; malformed, expired or revoked tickets reject the handshake instead of
+silently connecting as a spectator. The original session expiry bounds the
+native socket's lifetime, and the same per-action token-version and role gates
+still apply. Sessions longer than Node's timer limit reconnect after roughly
+24.8 days to reauthenticate, avoiding timer overflow; the default eight-hour
+session is unchanged. `auth.token: 'spectator'` explicitly opts out of both cookie and
+ticket authentication. See `docs/native-apps.md` for the transport boundary.
 
 Maintenance mode is the one check, `socketMaintenanceBlocked`, which
 `socketRequireRole` and `socketCanManageEvent` both run (details below the

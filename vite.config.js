@@ -1,10 +1,35 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
+import { createHash } from 'node:crypto'
+import { validateApiOrigin } from './src/lib/native-boundary.mjs'
 import vue from '@vitejs/plugin-vue'
 import VueI18nPlugin from '@intlify/unplugin-vue-i18n/vite'
 import { resolve } from 'path'
 
-export default defineConfig({
+export default defineConfig(({ mode }) => {
+  const native = mode === 'native'
+  const env = loadEnv(mode, process.cwd(), 'VITE_')
+  const origin = native ? validateApiOrigin(env.VITE_NATIVE_API_ORIGIN) : null
+  return {
   plugins: [
+    ...(native ? [{
+      name: 'native-shell',
+      transformIndexHtml: {
+        order: 'pre',
+        handler: (html) => html.replace('/src/main.js', '/src/native-main.js'),
+      },
+    }, {
+      name: 'native-content-security-policy',
+      transformIndexHtml: {
+        order: 'post',
+        handler(html) {
+          const hashes = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)]
+            .filter((match) => match[1].trim())
+            .map((match) => `'sha256-${createHash('sha256').update(match[1]).digest('base64')}'`)
+          const policy = `default-src 'self'; script-src 'self' ${hashes.join(' ')}; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' ${origin} ${origin.replace('https:', 'wss:')}; object-src 'none'; base-uri 'self'; form-action 'self'`
+          return { html, tags: [{ tag: 'meta', attrs: { 'http-equiv': 'Content-Security-Policy', content: policy }, injectTo: 'head-prepend' }] }
+        },
+      },
+    }] : []),
     // Every component is <script setup>, so the Options API runtime is
     // dead weight in vendor-vue. A component that uses data()/methods
     // would silently do nothing with this off.
@@ -35,7 +60,7 @@ export default defineConfig({
     },
   },
   build: {
-    outDir: 'dist',
+    outDir: native ? 'dist-native' : 'dist',
     rollupOptions: {
       output: {
         manualChunks: {
@@ -52,4 +77,5 @@ export default defineConfig({
       },
     },
   },
+  }
 })

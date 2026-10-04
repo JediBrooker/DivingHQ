@@ -1,0 +1,14 @@
+{
+  "appId": "app.divinghq.mobile",
+  "appName": "DivingHQ",
+  "webDir": "dist-native",
+  "loggingBehavior": "none",
+  "server": {
+    "androidScheme": "https",
+    "iosScheme": "capacitor"
+  },
+  "plugins": {
+    "CapacitorHttp": { "enabled": false },
+    "CapacitorCookies": { "enabled": false }
+  }
+}

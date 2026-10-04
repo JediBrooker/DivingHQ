@@ -16,6 +16,9 @@ export const useAuthStore = defineStore('auth', () => {
   // cookie on every request, so `user` is display/routing state, never
   // a credential. Tampering with it changes UI hints only, never access.
   const user = ref(null)
+  // Native resume/session checks may overlap logout and a new login. A late
+  // response from the old account must not replace the newly saved identity.
+  let sessionGeneration = 0
 
   // Same identity, mirrored so a reload with no network can still tell who
   // is signed in. It is NOT a credential: the cookie is, and the server
@@ -75,12 +78,14 @@ export const useAuthStore = defineStore('auth', () => {
     // swapping in the new one. Keeps disk usage bounded across sign-in/out
     // cycles on a shared device, even though cache keys are per-fingerprint.
     idbClear().catch(() => {})
+    sessionGeneration += 1
     user.value = next
     cacheIdentity(next)
     adoptAccountLocale()
   }
 
   function clearSession() {
+    sessionGeneration += 1
     user.value = null
     cacheIdentity(null)
     // Clear the httpOnly cookie server-side since JS can't delete it.
@@ -115,10 +120,13 @@ export const useAuthStore = defineStore('auth', () => {
   //                      is still in the jar; the first request that
   //                      reaches the server settles it either way.
   async function fetchMe() {
+    const generation = sessionGeneration
     try {
       const res = await fetch('/api/auth/me', { credentials: 'same-origin' })
+      if (generation !== sessionGeneration) return
       if (res.ok) {
         const body = await res.json().catch(() => null)
+        if (generation !== sessionGeneration) return
         user.value = body?.user || null
         cacheIdentity(user.value)
         return
@@ -131,6 +139,7 @@ export const useAuthStore = defineStore('auth', () => {
       user.value = readCachedIdentity()
     } catch {
       // Network unreachable. Same reasoning as a 5xx.
+      if (generation !== sessionGeneration) return
       user.value = readCachedIdentity()
     }
   }

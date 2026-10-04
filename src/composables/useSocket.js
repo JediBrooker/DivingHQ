@@ -1,3 +1,5 @@
+import { nativeSocketOptions } from '@/lib/native-platform'
+import { createNativeSocketRecovery } from '@/lib/native-socket.mjs'
 import { ref, getCurrentInstance, onUnmounted } from 'vue'
 import { io } from 'socket.io-client'
 import { useAuthStore } from '@/stores/auth'
@@ -23,6 +25,7 @@ import { useAuthStore } from '@/stores/auth'
 // Public surface stays exactly the same: returns a socket-like
 // object with `.isConnected` (a Vue ref) plus the original
 // socket.io methods (.on, .off, .emit, .connected, etc.).
+let nativePaused = false
 const pool = new Map() // key -> { socket, isConnected, refs }
 
 function poolKey({ spectator, userId }) {
@@ -33,16 +36,25 @@ function acquire({ spectator, userId }) {
   const key = poolKey({ spectator, userId })
   let entry = pool.get(key)
   if (!entry) {
-    const socket = io({ auth: spectator ? { token: 'spectator' } : {} })
+    const native = nativeSocketOptions({ spectator, userId })
+    const socket = native ? io(native.url, { ...native.options, autoConnect: !nativePaused }) : io({ auth: spectator ? { token: 'spectator' } : {} })
     // Initialise from the socket's real state, since io() connects
     // asynchronously, so a hardcoded `true` would report
     // "connected" before the first connect event ever fires.
     const isConnected = ref(socket.connected)
+    const recovery = native ? createNativeSocketRecovery({
+      socket,
+      isCurrent: () => pool.get(key)?.socket === socket,
+      isPaused: () => nativePaused,
+      onSessionExpired: () => {
+        if (userId) window.dispatchEvent(new CustomEvent('dhq:native-session-expired', { detail: userId }))
+      },
+    }) : null
     socket.on('connect',       () => { isConnected.value = true })
     socket.on('disconnect',    () => { isConnected.value = false })
     socket.on('connect_error', () => { isConnected.value = false })
     socket.isConnected = isConnected
-    entry = { socket, isConnected, refs: 0 }
+    entry = { socket, isConnected, refs: 0, recovery }
     pool.set(key, entry)
   }
   entry.refs += 1
@@ -54,6 +66,7 @@ function release(key) {
   if (!entry) return
   entry.refs -= 1
   if (entry.refs <= 0) {
+    entry.recovery?.dispose()
     try { entry.socket.disconnect() } catch { /* ignore */ }
     pool.delete(key)
   }
@@ -93,4 +106,15 @@ export function useSocket({ spectator = false } = {}) {
   }
 
   return entry.socket
+}
+
+// Native suspension drops leases on the wire, while retaining the pool and
+// listeners. Reconnect drives each view's existing restore/rejoin handlers.
+export function pauseNativeSockets() {
+  nativePaused = true
+  for (const { socket, recovery } of pool.values()) { recovery?.cancel(); socket.disconnect() }
+}
+export function resumeNativeSockets() {
+  nativePaused = false
+  for (const { socket } of pool.values()) socket.connect()
 }

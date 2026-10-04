@@ -1,3 +1,5 @@
+import { isNativeApp, installNativeLifecycle } from './lib/native-platform'
+import { pauseNativeSockets, resumeNativeSockets } from './composables/useSocket'
 import { createApp, defineAsyncComponent } from 'vue'
 import { createPinia } from 'pinia'
 import App from './App.vue'
@@ -70,13 +72,24 @@ Promise.all([
   .finally(() => {
     app.use(router)
     app.mount('#app')
+    if (isNativeApp()) {
+      window.addEventListener('dhq:native-session-expired', async ({ detail: userId }) => {
+        const auth = useAuthStore()
+        if (auth.user?.id !== userId) return
+        await auth.fetchMe()
+        if (!auth.isLoggedIn) router.replace('/login')
+      })
+    }
+    router.isReady().then(() => installNativeLifecycle(router, {
+      pauseSockets: pauseNativeSockets, resumeSockets: resumeNativeSockets,
+    })).catch(() => {})
   })
 
 // Register the service worker only in production builds, FYI the Vite
 // dev server's HMR conflicts with cached assets otherwise. Skips
 // silently in older Safari / in-app webviews that don't support
 // service workers.
-if ('serviceWorker' in navigator && import.meta.env.PROD) {
+if (!isNativeApp() && 'serviceWorker' in navigator && import.meta.env.PROD) {
   navigator.serviceWorker.register('/sw.js').catch(() => {
     // Non-fatal, the app still works fine without offline support.
   })

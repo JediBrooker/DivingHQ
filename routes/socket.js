@@ -28,6 +28,7 @@
 // event_managers row. Rate limiting is per-(action, user) so a
 // single role-holder can't spam meet_hold cycles.
 
+const { verifySocketTicket, nativeSocketLifetimeMs } = require("../lib/socket-ticket");
 const jwt = require("jsonwebtoken");
 const createIdempotency = require("../lib/idempotency");
 const { readSessionCookie } = require("../lib/session-cookie");
@@ -151,17 +152,22 @@ module.exports = function attachSocket({
     // means the connection carries on as an anonymous spectator.
     try {
       const authToken = socket.handshake.auth?.token;
+      const ticket = socket.handshake.auth?.ticket;
+      const nativeTicket = ticket != null && authToken !== "spectator";
       const raw = authToken === "spectator"
         ? null
         : (authToken || readSessionCookie(socket.handshake.headers?.cookie));
-      if (raw) {
-        const decoded = jwt.verify(raw, JWT_SECRET, { algorithms: ["HS256"] });
+      if (raw || nativeTicket) {
+        const decoded = nativeTicket
+          ? verifySocketTicket(ticket, JWT_SECRET)
+          : jwt.verify(raw, JWT_SECRET, { algorithms: ["HS256"] });
         // Sessions only, verifyToken's own test: the 2FA step-up,
         // password-reset and email-verify tokens share the secret but
         // carry `type` and no `id`.
         // Validate tv via the same 30s cache the HTTP path uses.
         // A revoked session must lose its socket privileges too.
-        const tvOk = isSessionClaims(decoded) && await isTokenVersionCurrent(decoded.id, decoded.tv);
+        const tvOk = (nativeTicket || isSessionClaims(decoded)) && await isTokenVersionCurrent(decoded.id, decoded.tv);
+        if (nativeTicket && !tvOk) return next(new Error("Session revoked"));
         if (tvOk) {
           socket.userId = decoded.id;
           socket.userOrgId = decoded.org_id;
@@ -171,9 +177,13 @@ module.exports = function attachSocket({
           // re-check it on every privileged action (catches role
           // revocation / 2FA-bump on a long-lived websocket).
           socket.userTokenVersion = decoded.tv != null ? Number(decoded.tv) : null;
+          if (nativeTicket) socket.nativeSessionExpires = decoded.session_exp;
         }
       }
     } catch {
+      if (socket.handshake.auth?.ticket != null && socket.handshake.auth?.token !== "spectator") {
+        return next(new Error("Invalid socket ticket"));
+      }
       // Invalid token (or a DB wobble on the tv check), treat as
       // anonymous (spectator).
     }
@@ -409,6 +419,14 @@ module.exports = function attachSocket({
   // Connection
   // -----------------------------------------------------------
   io.on("connection", (socket) => {
+    if (socket.nativeSessionExpires) {
+      // Ticket expiry limits admission; the original session bounds connection
+      // lifetime. Existing per-action token-version checks still revoke roles.
+      const expiry = setTimeout(() => socket.disconnect(true),
+        nativeSocketLifetimeMs(socket.nativeSessionExpires));
+      expiry.unref?.();
+      socket.once("disconnect", () => clearTimeout(expiry));
+    }
     // Every async listener below goes through this. socket.io drops the
     // promise a listener returns, so a throw anywhere in a handler
     // (a DB error, a bad cast) became an unhandled rejection, and on
