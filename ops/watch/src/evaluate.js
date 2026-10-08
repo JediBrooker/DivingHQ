@@ -72,6 +72,8 @@ export const STATE_VERSION = 1;
 
 export const LIMITS = Object.freeze({
   DEBOUNCE_RUNS: 2,
+  // A day of runs, the most DOWN_ALERT_AFTER_MIN can hold an alert back.
+  MAX_DEBOUNCE_RUNS: 720,
   DOWN_REMIND_MS: 60 * MINUTE,
   DB_REMIND_MS: 60 * MINUTE,
   BACKUP_MAX_AGE_MS: 26 * HOUR,
@@ -184,8 +186,10 @@ export function normalizeState(prev) {
     if (!isObj(src)) continue;
     for (const key of Object.keys(s[name])) s[name][key] = coerce(s[name][key], src[key]);
   }
-  s.down.fails = Math.min(s.down.fails, LIMITS.DEBOUNCE_RUNS);
-  s.db.fails = Math.min(s.db.fails, LIMITS.DEBOUNCE_RUNS);
+  // The streak can be longer than two runs when DOWN_ALERT_AFTER_MIN asks
+  // for it, so only clamp junk, not the setting.
+  s.down.fails = Math.min(s.down.fails, LIMITS.MAX_DEBOUNCE_RUNS);
+  s.db.fails = Math.min(s.db.fails, LIMITS.MAX_DEBOUNCE_RUNS);
   s.outbox = normalizeOutbox(prev.outbox);
   s.flaky = normalizeFlaky(prev.flaky);
   return s;
@@ -313,8 +317,8 @@ function streakRule(sec, failing, ctx, remindMs, text) {
   const now = ctx.now;
   if (failing) {
     if (sec.fails === 0 || toMs(sec.since) === null) sec.since = toIso(now);
-    sec.fails = Math.min(sec.fails + 1, LIMITS.DEBOUNCE_RUNS);
-    if (sec.fails < LIMITS.DEBOUNCE_RUNS) return;
+    sec.fails = Math.min(sec.fails + 1, ctx.debounceRuns);
+    if (sec.fails < ctx.debounceRuns) return;
     if (!sec.alerted) {
       text.first();
       sec.alerted = true;
@@ -330,6 +334,11 @@ function streakRule(sec, failing, ctx, remindMs, text) {
   sec.since = null;
   sec.alerted = false;
   sec.lastAlertAt = null;
+}
+
+function checksInARow(ctx) {
+  const n = ctx.debounceRuns;
+  return n === 2 ? "two checks in a row" : `${n} checks in a row (about ${n * 2} minutes)`;
 }
 
 function downDiagnosis(health, st) {
@@ -352,7 +361,7 @@ function checkDown(s, health, st, ctx) {
   streakRule(s.down, !health.ok, ctx, LIMITS.DOWN_REMIND_MS, {
     first: () =>
       fire(ctx, "down", "DOWN", "DivingHQ is down", [
-        `${url} failed on two checks in a row (latest: ${health.detail}).`,
+        `${url} failed on ${checksInARow(ctx)} (latest: ${health.detail}).`,
         `First failed check: ${ctx.when(toMs(s.down.since))}. Checks run every 2 minutes, so it went down shortly before that.`,
         ...downDiagnosis(health, st),
         BOX_CHECKS,
@@ -380,7 +389,7 @@ function checkDb(s, st, ctx) {
   streakRule(s.db, failing, ctx, LIMITS.DB_REMIND_MS, {
     first: () =>
       fire(ctx, "db", "database down", "The database check is failing", [
-        "/api/ops/status has said ok: false on two checks in a row, which means the app couldn't run a trivial query.",
+        `/api/ops/status has said ok: false on ${checksInARow(ctx)}, which means the app couldn't run a trivial query.`,
         `First failing check: ${ctx.when(toMs(s.db.since))}.`,
         whatToCheck,
         "You'll get a reminder every hour while it stays down, and a note when it's back.",
@@ -654,8 +663,10 @@ function checkFlaky(s, obs, health, ctx) {
     return ms > cutoff && ms <= ctx.now + LIMITS.FUTURE_SKEW_MS;
   });
   // Not while DOWN is out: an outage isn't a flaky line. checkDown has
-  // already run, so the run that sets DOWN off isn't counted either.
-  if (!s.down.alerted && lostOnTheWay(obs)) {
+  // already run, so the run that sets DOWN off isn't counted either. Nor
+  // once a streak is two runs long, which is an outage even when
+  // DOWN_ALERT_AFTER_MIN holds the alert back for longer.
+  if (!s.down.alerted && s.down.fails < LIMITS.DEBOUNCE_RUNS && lostOnTheWay(obs)) {
     sec.runs = [...sec.runs, toIso(ctx.now)].slice(-LIMITS.FLAKY_MAX_RUNS);
   }
   // And it only speaks up on a run where health passes, so the note never
@@ -697,7 +708,8 @@ function checkBlind(s, health, st, ctx) {
  * @param {any} prevState          whatever was in KV (null on the first run)
  * @param {Observations} observations
  * @param {number|Date|string} now
- * @param {{timeZone?: string, target?: string}} [options]
+ * @param {{timeZone?: string, target?: string, debounceRuns?: number}} [options]
+ *   debounceRuns: failed runs in a row before DOWN / DB alert (default 2)
  * @returns {{state: object, alerts: Alert[]}}
  */
 export function evaluate(prevState, observations, now, options = {}) {
@@ -712,6 +724,7 @@ export function evaluate(prevState, observations, now, options = {}) {
     now: t,
     target: String(options.target || "https://divinghq.app").replace(/\/+$/, ""),
     alerts: [],
+    debounceRuns: Math.min(LIMITS.MAX_DEBOUNCE_RUNS, Math.max(LIMITS.DEBOUNCE_RUNS, Math.floor(options.debounceRuns) || 0)),
     when: (ms) => formatWhen(ms, tz),
     ago: (ms) => formatAgo(ms, t, tz),
   };

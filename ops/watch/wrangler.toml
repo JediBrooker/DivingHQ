@@ -22,6 +22,12 @@ TARGET = "https://divinghq.app"
 # stays out of this public repo: `npx wrangler@4 secret put ALERT_TO`.
 ALERT_FROM = "alerts@divinghq.app"
 ALERT_FROM_NAME = "DivingHQ watch"
+# Minutes the site (or its database) has to stay down before DOWN / DB
+# alerts go out. Gatus on the home network (CT 121) already pushes outages
+# to ntfy within a couple of minutes, so this Worker only emails about the
+# long ones, plus the home line itself going down, which Gatus can't report.
+# Leave it out for the old 2-checks-in-a-row behaviour.
+DOWN_ALERT_AFTER_MIN = "15"
 # ntfy server to push alerts to. Only used once the NTFY_TOPIC secret is
 # set (`npx wrangler@4 secret put NTFY_TOPIC`), and then it replaces email
 # entirely. The topic is a secret because on ntfy.sh anyone who knows it

@@ -823,8 +823,14 @@ describe("clock edges and stored state", () => {
     }
     // An over-large streak is clamped, so one more failure alerts rather
     // than being lost.
-    const clamped = normalizeState({ version: 1, down: { fails: 99, since: iso(T0), alerted: false } });
-    assert.equal(clamped.down.fails, LIMITS.DEBOUNCE_RUNS);
+    // (normalizeState only clamps at a day of runs, since
+    // DOWN_ALERT_AFTER_MIN can ask for a long streak; the run clamps to
+    // whatever it's been told.)
+    const clamped = normalizeState({ version: 1, down: { fails: 99999, since: iso(T0), alerted: false } });
+    assert.equal(clamped.down.fails, LIMITS.MAX_DEBOUNCE_RUNS);
+    const next = evaluate({ version: 1, down: { fails: 99, since: iso(T0), alerted: false } }, siteDown(), T0 + RUN);
+    assert.deepEqual(next.alerts.map((a) => a.id), ["down"]);
+    assert.equal(next.state.down.fails, LIMITS.DEBOUNCE_RUNS);
   });
 
   test("prevState is never mutated", () => {

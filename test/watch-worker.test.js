@@ -587,6 +587,34 @@ describe("ntfy", () => {
   });
 });
 
+describe("DOWN_ALERT_AFTER_MIN", () => {
+  test("a short outage sends nothing; one past the limit sends DOWN, then back up", async () => {
+    const e = env({ DOWN_ALERT_AFTER_MIN: "15" });
+    // 8 runs is 16 minutes. 7 failed runs then a pass: no email at all.
+    for (let i = 0; i < 7; i++) await watch.runCheck(e, deps(site("down"), T0 + i * 2 * MIN));
+    await watch.runCheck(e, deps(site("up", T0 + 14 * MIN), T0 + 14 * MIN));
+    assert.equal(e.ALERT_EMAIL.sent.length, 0);
+
+    const t1 = T0 + 60 * MIN;
+    for (let i = 0; i < 8; i++) await watch.runCheck(e, deps(site("down"), t1 + i * 2 * MIN));
+    assert.equal(e.ALERT_EMAIL.sent.length, 1);
+    assert.match(e.ALERT_EMAIL.sent[0].raw, /Subject: \[DivingHQ\] DOWN\r\n/);
+    assert.match(e.ALERT_EMAIL.sent[0].raw.replace(/\r\n /g, " "), /8 checks in a row \(about 16 minutes\)/);
+    await watch.runCheck(e, deps(site("up", t1 + 20 * MIN), t1 + 20 * MIN));
+    assert.equal(e.ALERT_EMAIL.sent.length, 2);
+    assert.match(e.ALERT_EMAIL.sent[1].raw, /Subject: \[DivingHQ\] back up after/);
+  });
+
+  test("unset or junk keeps two checks in a row", async () => {
+    for (const v of [undefined, "", "soon", "1"]) {
+      const e = env({ DOWN_ALERT_AFTER_MIN: v });
+      await watch.runCheck(e, deps(site("down"), T0));
+      await watch.runCheck(e, deps(site("down"), T0 + 2 * MIN));
+      assert.equal(e.ALERT_EMAIL.sent.length, 1, String(v));
+    }
+  });
+});
+
 describe("composePush", () => {
   let ntfy;
   before(async () => {

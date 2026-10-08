@@ -1,9 +1,18 @@
 # divinghq-watch: external uptime and ops alerts
 
 A Cloudflare Worker that checks divinghq.app from outside every 2 minutes
-and tells you when something needs a person: as an ntfy push when
-`NTFY_TOPIC` is set (see [Alerts by ntfy](#alerts-by-ntfy)), by email
-when it isn't. It lives off the box on
+and emails you when something needs a person (or pushes to ntfy, see
+[Alerts by ntfy](#alerts-by-ntfy), though that's off on the live Worker).
+
+**Gatus does the quick up/down pushes.** Gatus on the home network (CT
+121 on the Proxmox host, `/opt/monitoring/gatus/config.yaml`) checks
+`/api/health` and `/api/ops/status` every minute through Cloudflare and
+pushes to ntfy after 3 failures, posting from the home IP where ntfy.sh's
+quota is fine. So this Worker runs with `DOWN_ALERT_AFTER_MIN = "15"`: a
+blip is Gatus's to report, and the Worker only emails about DOWN or the
+database once an outage passes 15 minutes. That's also the case Gatus can't
+handle, the home line itself being down. Backups, deploys, errors and the
+rest are the Worker's alone and email straight away, as before. It lives off the box on
 purpose. A box that's down, out of disk or wedged can't report on
 itself, and a backup job that silently stopped running never says a word.
 
@@ -32,7 +41,7 @@ more, 5 s apart, before the run counts it as failed. Then it runs these rules:
 
 | Rule | Fires when | Then |
 |---|---|---|
-| **DOWN** | `/api/health` isn't a 200 with `ok: true` (or times out) on 2 runs in a row | Reminder hourly while down, one "back up after N min" note when it passes again |
+| **DOWN** | `/api/health` isn't a 200 with `ok: true` (or times out) on 2 runs in a row (or for `DOWN_ALERT_AFTER_MIN` minutes when that's set; DB too) | Reminder hourly while down, one "back up after N min" note when it passes again |
 | **DB** | `/api/ops/status` says `ok: false` on 2 runs in a row | Same as DOWN |
 | **BACKUP** | `backup.last_ok` is false, or `last_success_at` is older than 26 h | At most every 12 h, a "backups OK again" note once a good one lands |
 | **OFFSITE** | `backup.offsite` is `failed` | At most every 12 h, a note when it's `ok` again |

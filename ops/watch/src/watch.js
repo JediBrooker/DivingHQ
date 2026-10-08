@@ -43,6 +43,11 @@ export function config(env = {}) {
     ntfyTopic: env.NTFY_TOPIC || null,
     ntfyToken: env.NTFY_TOKEN || null,
     channel: env.NTFY_TOPIC ? "ntfy" : "email",
+    // How long DOWN / DB wait before alerting. Gatus on the home network
+    // pushes the short outages to ntfy, so this one can hold off and be
+    // the backstop: a long outage, or the home line itself being down
+    // (when Gatus can't tell anyone). One run is 2 minutes.
+    debounceRuns: Math.ceil((Number(env.DOWN_ALERT_AFTER_MIN) || 0) / 2),
   };
 }
 
@@ -218,6 +223,7 @@ export async function runCheck(env, deps = {}) {
   const { state, alerts } = evaluate(prevRaw, { health, status }, now, {
     timeZone: cfg.timeZone,
     target: cfg.target,
+    debounceRuns: cfg.debounceRuns,
   });
 
   const pending = [...state.outbox, ...alerts];
