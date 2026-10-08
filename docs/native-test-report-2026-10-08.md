@@ -85,8 +85,12 @@ results and their bottom controls were not available to exercise. Authenticated
 AppShell, broadcast and overlay layout rules were not broadened by this fix.
 
 At the initial production smoke, `/api/auth/socket-ticket` returned 404, indicating
-the compatible backend had not yet been deployed. That is a release gate until
-the deployed anonymous endpoint returns 401. These public checks do not establish
+the compatible backend had not yet been deployed. The normal deployment of
+`8cbd5b95` completed at 10:57:50 UTC. A brief Cloudflare tunnel disconnect
+interrupted external verification; it recovered without infrastructure changes.
+Subsequent public checks returned health/features 200, anonymous ticket 403 and
+malformed-token ticket 401, matching the existing middleware contract. Schema
+104 and feature flags were unchanged. These public checks do not establish
 authenticated production live-session coverage.
 
 ## Reproduction and evidence

@@ -62,10 +62,17 @@ public live list like any other meet.
 - [ ] PDF fonts are installed, or the Chinese name prints as `?`:
       `ls /usr/share/fonts/truetype/noto/NotoSans-Regular.ttf /usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc`
       (README, Self-hosting, PDF fonts).
+
+The production host was verified on 8 October 2026 at Tailscale address
+`100.106.112.107` (`jedibrooker`), with DivingHQ in **LXC 120**
+(`divinghq`), checkout `/root/DiveRecorder`. LXC 117 belongs to another service.
+Confirm `pct list` before operating if the host layout changes; the short host
+name may resolve outside the tailnet.
+
 - [ ] Preflight, read only:
 
   ```bash
-  ssh root@jedibrooker "pct exec 117 -- bash -lc 'cd ~/DiveRecorder && node scripts/rehearsal.js status'"
+  ssh root@100.106.112.107 "pct exec 120 -- bash -lc 'cd ~/DiveRecorder && node scripts/rehearsal.js status'"
   ```
 
   It should end with `Seed in ESH: free to go.`
@@ -73,7 +80,7 @@ public live list like any other meet.
       take a dump inside the container first (and again right before cleanup):
 
   ```bash
-  ssh root@jedibrooker "pct exec 117 -- bash -lc 'mkdir -p ~/backups && su postgres -c \"pg_dump -Fc diving_app\" > ~/backups/pre-rehearsal-\$(date -u +%Y%m%dT%H%M%SZ).dump && ls -lh ~/backups | tail -3'"
+  ssh root@100.106.112.107 "pct exec 120 -- bash -lc 'mkdir -p ~/backups && su postgres -c \"pg_dump -Fc diving_app\" > ~/backups/pre-rehearsal-\$(date -u +%Y%m%dT%H%M%SZ).dump && ls -lh ~/backups | tail -3'"
   ```
 
   The newest file shouldn't be tiny; `df -h ~` on the box shows the room left,
@@ -87,10 +94,10 @@ On the box, with your own address so the emails reach you (every account gets
 a plus-addressed copy of it, `you+rehearsal-diver1@example.com` and so on):
 
 ```bash
-ssh root@jedibrooker "pct exec 117 -- bash -lc 'cd ~/DiveRecorder && node scripts/rehearsal.js seed --email you@example.com'"
+ssh root@100.106.112.107 "pct exec 120 -- bash -lc 'cd ~/DiveRecorder && node scripts/rehearsal.js seed --email you@example.com'"
 ```
 
-Or interactively: `ssh root@jedibrooker`, `pct enter 117`,
+Or interactively: `ssh root@100.106.112.107`, `pct enter 120`,
 `cd ~/DiveRecorder`, `node scripts/rehearsal.js seed --email you@example.com`.
 
 Options: `--country XXX` for another catalogue country; `--judges 3` (or 7, 9,
@@ -129,7 +136,7 @@ Five judge phones, a referee and a spectator take a few people. On your own,
 seed a three-judge panel and let browsers on the laptop be most of them:
 
 ```bash
-ssh root@jedibrooker "pct exec 117 -- bash -lc 'cd ~/DiveRecorder && node scripts/rehearsal.js seed --judges 3 --email you@example.com'"
+ssh root@100.106.112.107 "pct exec 120 -- bash -lc 'cd ~/DiveRecorder && node scripts/rehearsal.js seed --judges 3 --email you@example.com'"
 ```
 
 Each role needs its own sign-in, and every window of one browser shares one
@@ -318,9 +325,9 @@ Take the second dump first (the backup command under Before). Then look, then
 do it, then check:
 
 ```bash
-ssh root@jedibrooker "pct exec 117 -- bash -lc 'cd ~/DiveRecorder && node scripts/rehearsal.js cleanup --dry-run'"
-ssh root@jedibrooker "pct exec 117 -- bash -lc 'cd ~/DiveRecorder && node scripts/rehearsal.js cleanup'"
-ssh root@jedibrooker "pct exec 117 -- bash -lc 'cd ~/DiveRecorder && node scripts/rehearsal.js status'"
+ssh root@100.106.112.107 "pct exec 120 -- bash -lc 'cd ~/DiveRecorder && node scripts/rehearsal.js cleanup --dry-run'"
+ssh root@100.106.112.107 "pct exec 120 -- bash -lc 'cd ~/DiveRecorder && node scripts/rehearsal.js cleanup'"
+ssh root@100.106.112.107 "pct exec 120 -- bash -lc 'cd ~/DiveRecorder && node scripts/rehearsal.js status'"
 ```
 
 (Add `--country XXX` if you seeded somewhere else. Without it cleanup takes

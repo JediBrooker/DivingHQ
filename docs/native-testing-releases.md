@@ -64,13 +64,15 @@ without it. The repository contains no upload key or password.
    signatures, privacy manifests, and absence of Debug CA/trust overrides.
 2. Verify public startup on production-origin Android/iPhone/iPad builds.
 3. Deploy the matching backend through the normal `deploy.sh` workflow. An
-   unauthenticated `GET /api/auth/socket-ticket` must return 401 rather than 404;
-   native sign-in needs this endpoint for authenticated live sockets. Verify
+   anonymous `GET /api/auth/socket-ticket` must return 403 rather than 404;
+   a malformed bearer token must return 401 (the existing middleware contract).
+   Native sign-in needs this endpoint for authenticated live sockets. Verify
    production health and deployed commit, not only the local source state.
 4. Upload for processing to the existing TestFlight app and Play internal track.
    Uploading alone must not assign testers, notify people or submit a public
-   release. Distribute only after backend compatibility is confirmed and the
-   tester audience has been selected by the owner.
+   release. Publish an internal track or assign a build to an empty internal
+   group only after backend compatibility is confirmed. Add testers or send
+   invitations only after the owner selects the audience.
 
 The app uses operating-system HTTPS/TLS and declares no non-exempt encryption
 in iOS `Info.plist`. Reassess that declaration if bundled encryption changes.
@@ -87,20 +89,28 @@ App Store Connect finished processing build
 `c5516ea9-7145-421c-becd-e455c61eef81`, version **1.0 (1)**, with status **VALID**
 and audience **INTERNAL_ONLY**. It expires on 6 January 2027. The build reports
 `usesNonExemptEncryption=false`, and the `en-AU`
-What to Test text was saved. The build is ready for internal testing assignment,
-but its beta-group list is empty: no TestFlight group or testers were assigned
-and it has not been distributed.
+What to Test text was saved. After backend verification, the build was assigned
+to the **DivingHQ Internal** group (`08053825-a507-405d-b453-efdc3b687336`). API
+readback confirmed exactly this build and **zero testers**, with internal state
+`READY_FOR_BETA_TESTING` and external state `NOT_APPLICABLE`. The group has no
+public link or access to all builds. Apple silicon Mac and Apple Vision
+availability are disabled for this phone/tablet test group. No testers were
+added or invited.
 Google Play accepted bundle 1 (1.0), showing minimum API 24 and target API 36;
-release `1` was saved as a draft on internal track `4701056953067005627`.
-It was not rolled out or distributed. Neither upload is a public store release.
+release `1` was published on internal track `4701056953067005627` at 22:00 Sydney
+time on 8 October. Play reports **Available to internal testers** for 1.0 (1).
+The track remains **Inactive** because zero testers are selected. Its
+[internal opt-in link](https://play.google.com/apps/internaltest/4701056953067005627)
+does not grant access to an unselected account. Neither platform has a public
+production release, and audience selection remains pending.
 Play's release preview showed no errors, with warnings for the unselected tester
 audience and absent deobfuscation mapping. The latter is expected with the current
 `minifyEnabled false` release build.
 
-Tester distribution remains held until the matching backend is deployed and the
-owner selects the audience. At the readiness check, the production socket-ticket
-endpoint returned 404 and the normal server deployment was waiting for the
-owner's Tailscale SSH authentication check.
+The matching backend was deployed on 8 October 2026 at 10:57:50 UTC
+(`8cbd5b95`, schema 104). Public health/features returned 200 with feature flags
+unchanged; the socket-ticket endpoint rejected anonymous requests with 403 and
+malformed bearer tokens with 401. Tester audience selection remains separate.
 
 Official references: [Apple TestFlight](https://developer.apple.com/help/app-store-connect/test-a-beta-version/testflight-overview/),
 [Google Play testing](https://support.google.com/googleplay/android-developer/answer/9845334),
