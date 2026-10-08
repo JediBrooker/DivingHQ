@@ -78,6 +78,10 @@ We send service email only: confirming your address, password resets, email chan
 
 If you turn on push notifications (for example a coach's "your diver is up next" alert), your browser gives us an endpoint URL and a pair of keys. The endpoint belongs to your browser's push service (Google for Chrome and Edge, Mozilla for Firefox, Apple for Safari). Every payload is encrypted, so the push service relays it without seeing the content.
 
+The iOS app uses Apple Push Notification service (APNs); Android uses Firebase Cloud Messaging (FCM). If you enable app notifications, we store the provider-issued device token, a random installation identifier, your account association, notification preference, session expiry and delivery diagnostics. Apple or Google receives the device token, a generic DivingHQ alert and a notification identifier. App notifications contain no meet, account or message details on the lock screen; the app fetches those details securely after you open it and sign in. These native payloads use encrypted connections but are visible to the delivery provider; browser Web Push encryption is different.
+
+You can enable, disable or test notifications in Settings, or change permission in device settings. Signing out disables that installation and removes notifications already in its notification centre; if offline, server cleanup is retried when connected. An alert already queued at Apple or Google can still arrive, but contains only the generic text. Tokens also stop being used when the account session expires, is revoked or the account is suspended. Device associations are removed when the account is deleted. A hash of the installation's revoke-only key and revision remains without an account link to reject delayed registration requests; it cannot access your account or messages.
+
 ### Payments (not switched on yet)
 
 DivingHQ can take payments (entry fees, memberships, fines) through **Stripe**, but payments are switched off on the hosted service today. When they're switched on, Stripe collects and processes card details directly. We never see or store card numbers; we keep a record of each payment (amount, currency, status and Stripe's reference). We'll update this policy before payments go live.
@@ -96,6 +100,7 @@ DivingHQ keeps a few things in your browser or the app’s embedded browser:
 | localStorage | `divinghq.records.last_book`, `dashboard.gettingStarted.*` | The record book you last opened, so the records page reopens it; which parts of a club admin's "Get started" panel you've hidden or opened (stored per account, so the name includes your user ID, and not cleared when you sign out) |
 | IndexedDB | `dive-recorder-cache` | Copies of recent pages so the app works offline. Kept per user and cleared when you sign out |
 | IndexedDB | `divinghq-outbox` | Scores and other meet-day actions waiting to be sent while offline |
+| Native Preferences | `divinghq.native-push.v1` | Random installation ID, notification opt-in, account ID and a revoke-only key that can disable delivery but cannot read data or sign in; pending offline cleanup survives app restart |
 | Service worker cache | `divinghq-shell-*` | The app's own code and assets, so it opens offline once installed |
 
 The iOS and Android apps keep the same sign-in cookie in the device's app cookie
@@ -106,9 +111,14 @@ apps also keep the offline queue and interface preferences listed above. Their
 code is bundled with the installation rather than stored by a browser service
 worker.
 
-Native push notifications are not enabled in the current iOS and Android test
-builds. Notices can still arrive inside the app while it is open and connected.
-The test builds use the same hosted accounts and competition data as the website.
+When you export a PDF, CSV or calendar file, the app temporarily writes it to its
+private cache so the operating system can offer Save or Share. These temporary
+files are removed at the next app launch or account change, and after one hour
+while the app is running. Files you explicitly save or share outside DivingHQ
+remain in the destination you choose. Shared page links use the public DivingHQ
+address and never contain your sign-in cookie.
+
+Native notification delivery requires device permission and configured Apple or Google delivery credentials. Settings displays whether delivery is available for the installed build. Notices also arrive inside the app while it is open and connected. The test builds use the same hosted accounts and competition data as the website.
 
 No third-party cookies, no analytics scripts, no ad pixels.
 
@@ -123,7 +133,7 @@ We use the data above to:
 - run your account: sign-in, password reset, email confirmation, 2FA (**to provide the service you signed up for**);
 - run meets: events, dive lists, judging panels, scoring, results and archives (**to provide the service**, for you and for the organisations running the meets);
 - publish results and keep the sporting record (**legitimate interest** in accurate, public competition results, the same as any printed programme);
-- send the service emails and push notifications described in §4 (**to provide the service**; push only with your **consent**, which you can withdraw in your browser);
+- send the service emails and push notifications described in §4 (**to provide the service**; push only with your **consent**, which you can withdraw in browser or app settings);
 - produce PDFs and CSV exports (programmes, start lists, score sheets, results);
 - give divers, coaches and judges their analytics dashboards;
 - keep an audit trail of privileged actions for disputes and integrity (**legitimate interest**);
@@ -177,6 +187,7 @@ These providers process data for us, only to run the service:
 | Cloudflare Email Sending | Delivering our service emails | Your name, email address and the email's content |
 | Cloudflare R2 | Storing encrypted copies of our database backups | Nothing it can read: the backups are encrypted before upload and Cloudflare doesn't have the key |
 | Google Fonts | The typefaces the pages use (IBM Plex Sans, DM Mono), loaded from Google's servers | Your IP address and browser details when your browser fetches the fonts |
+| Apple APNs / Google FCM (native apps) | Delivering app notifications you turn on | Device token, generic alert and notification identifier; no notification details |
 | Your browser's push service (Google, Mozilla or Apple) | Delivering push notifications you turned on | An encrypted payload it can't read |
 | Stripe (only once payments are switched on) | Taking payments | What you enter on Stripe's payment page |
 

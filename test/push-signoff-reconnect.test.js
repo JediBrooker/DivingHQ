@@ -94,3 +94,30 @@ test("a reconnect drops the banners of requests that closed, and keeps the rest"
   bindPushSocket(null);
   assert.equal(sock.count("connect"), 0, "unbinding takes the reconnect listener off too");
 });
+
+test('late inbox and sign-off reads cannot restore a signed-out account banners', { skip: !hooked }, async () => {
+  const auth = useAuthStore();
+  auth.user = { ...USER };
+  auth.apiFetch = async () => [];
+  const push = usePush();
+  await settle();
+  let finish;
+  auth.apiFetch = () => new Promise(resolve => { finish = resolve; });
+  const pending = push.recent();
+  auth.user = null;
+  await settle();
+  finish([{ ...banner('old-account'), status: 'sent' }]);
+  await pending;
+  assert.equal(push.notifications.value.some(n => n.data.request_id === 'old-account'), false);
+
+  auth.apiFetch = async () => [];
+  auth.user = { ...USER };
+  await settle();
+  auth.apiFetch = () => new Promise(resolve => { finish = resolve; });
+  const signoff = push.showSignoff('late-signoff', { eventId: 'e1' });
+  auth.user = null;
+  await settle();
+  finish([banner('late-signoff')]);
+  assert.equal(await signoff, false);
+  assert.equal(push.notifications.value.some(n => n.data.request_id === 'late-signoff'), false);
+});

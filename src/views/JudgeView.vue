@@ -14,6 +14,8 @@ import OfflineBanner from '@/components/OfflineBanner.vue'
 import SyncStatusBadge from '@/components/SyncStatusBadge.vue'
 import BigScoreDisplay from '@/components/BigScoreDisplay.vue'
 import { useOutbox } from '@/composables/useOutbox'
+import { isNativeApp } from '@/lib/native-platform'
+import { setPoolsideAwake, poolsideHaptic } from '@/lib/poolside'
 import { drainOutboxNow } from '@/composables/useHttpOutbox'
 
 const { t } = useI18n()
@@ -22,18 +24,22 @@ const { t } = useI18n()
 // face-up on a table for an entire round. Two helpers here:
 //
 //   1. Screen wake lock so the OS doesn't dim the display
-//      mid-dive. Falls back silently on browsers that don't
-//      expose the API (older Safari, in-app webviews).
+//      mid-dive. Native builds use the OS idle timer; browsers use
+//      Screen Wake Lock when available.
 //   2. Haptic feedback on score submit + signal so the judge
 //      gets a confirmation pulse without having to glance back
-//      at the screen. `navigator.vibrate` is a no-op on
-//      desktop / iOS Safari anyway.
+//      at the screen. Native builds use Capacitor Haptics; browsers
+//      use vibration where available.
 //
 // Wake lock releases on unmount and reacquires on visibility
 // change (the OS drops it when the tab backgrounds, so we
 // reacquire on focus to avoid the re-tap dance).
 const wakeLock = ref(null)
 async function acquireWakeLock() {
+  if (isNativeApp()) {
+    await setPoolsideAwake(Boolean(eventIdFromUrl.value && !finished.value && document.visibilityState === 'visible')).catch(() => {})
+    return
+  }
   if (!('wakeLock' in navigator)) return
   try {
     wakeLock.value = await navigator.wakeLock.request('screen')
@@ -41,7 +47,10 @@ async function acquireWakeLock() {
   } catch { /* permission denied or unsupported */ }
 }
 function onVisibilityChange() {
-  if (document.visibilityState !== 'visible') return
+  if (document.visibilityState !== 'visible') {
+    if (isNativeApp()) setPoolsideAwake(false).catch(() => {})
+    return
+  }
   if (!wakeLock.value) acquireWakeLock()
   // A phone that slept through the start, or the finish: go and look
   // (adoptOwnLiveEvent and checkStillLive further down, each a no-op
@@ -49,13 +58,7 @@ function onVisibilityChange() {
   adoptOwnLiveEvent()
   checkStillLive()
 }
-function buzz(pattern) {
-  // pattern can be a single number (ms) or an array of on/off
-  // timings, defaults to a short single pulse
-  if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
-    try { navigator.vibrate(pattern || 30) } catch { /* ignore */ }
-  }
-}
+function buzz(pattern) { poolsideHaptic(pattern).catch(() => {}) }
 
 const route = useRoute()
 const router = useRouter()
@@ -80,6 +83,7 @@ const activeDiver = ref(null)
 // keypad is shut and the header says why. The next diver clears it (see
 // endJudgingEvent and clearFinished).
 const finished = ref(null)
+watch([eventIdFromUrl, finished], () => { if (isNativeApp()) acquireWakeLock() })
 const judgeLabel = ref(user?.full_name || 'Judge')
 // Connection state lives on the singleton socket itself
 // (`socket.isConnected`, a ref), so a parallel `connStatus` ref
@@ -489,6 +493,7 @@ onMounted(() => {
   }, ADOPT_POLL_MS)
   acquireWakeLock()
   document.addEventListener('visibilitychange', onVisibilityChange)
+  window.addEventListener('focus', onVisibilityChange)
   window.addEventListener('beforeunload', onJudgeBeforeUnload)
 })
 
@@ -496,6 +501,8 @@ onBeforeUnmount(() => {
   clearInterval(adoptPoll)
   offQueuedEntries?.()
   document.removeEventListener('visibilitychange', onVisibilityChange)
+  window.removeEventListener('focus', onVisibilityChange)
+  if (isNativeApp()) setPoolsideAwake(false).catch(() => {})
   window.removeEventListener('beforeunload', onJudgeBeforeUnload)
   try { wakeLock.value?.release?.() } catch { /* ignore */ }
   wakeLock.value = null

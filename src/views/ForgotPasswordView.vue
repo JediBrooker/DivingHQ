@@ -1,4 +1,5 @@
 <script setup>
+import AuthLayout from '@/components/AuthLayout.vue'
 import { ref } from 'vue'
 import { RouterLink } from 'vue-router'
 
@@ -42,6 +43,7 @@ async function submit() {
 </script>
 
 <template>
+  <AuthLayout>
   <div class="reset-wrap">
     <div class="reset-mark brand-wordmark">DIVING<span>HQ</span></div>
     <h1>{{ $t('auth.forgot.title') }}</h1>
@@ -73,17 +75,11 @@ async function submit() {
       <RouterLink to="/login" class="back-link">{{ $t('auth.forgot.back_to_sign_in') }}</RouterLink>
     </form>
   </div>
+  </AuthLayout>
 </template>
 
 <style scoped>
-:global(body) {
-  display: flex; align-items: center; justify-content: center;
-  /* dvh: see LoginView for the iOS Safari rationale.
-     vh fallback for browsers older than ~Q4-2022. */
-  min-height: 100vh;
-  min-height: 100dvh;
-  padding: 1.5rem;
-}
+
 .reset-wrap { width: 100%; max-width: 420px; animation: fadeUp 0.4s ease; }
 .reset-mark {
   font-family: var(--font-display); font-size: 13px; font-weight: 700;

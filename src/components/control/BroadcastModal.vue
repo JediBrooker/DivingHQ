@@ -1,4 +1,5 @@
 <script setup>
+import { publicAppOrigin } from '@/lib/documents'
 /* BroadcastModal: the Control Room broadcast chooser, extracted
  * from the old all-in-one ControlView. Covers the five operator scenarios,
  * operator broadcast (this screen), single-event audience window,
@@ -73,7 +74,7 @@ const obsOverlayUrl = computed(() => {
   // Needs to be an absolute URL since OBS resolves it from
   // outside this app's context, so build it off window.location.
   const origin = typeof window !== 'undefined' && window.location
-    ? window.location.origin
+    ? publicAppOrigin()
     : ''
   return buildOverlayUrl({
     origin,
@@ -109,7 +110,7 @@ const daktronicsInstructionsOpen = ref(false)
 const daktronicsCopyState = ref('') // '' | 'dry' | 'udp' | 'json' | 'snapshot' | 'failed'
 const bridgeAppUrl = computed(() => (
   typeof window !== 'undefined' && window.location
-    ? window.location.origin
+    ? publicAppOrigin()
     : ''
 ))
 const venueStateUrl = computed(() => {

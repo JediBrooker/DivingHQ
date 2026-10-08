@@ -1,4 +1,6 @@
 <script setup>
+import { isNativeApp } from '@/lib/native-platform'
+import { saveDocument, printDocument } from '@/lib/documents'
 // A member's own payment history. Read-only list of every payment
 // they've made, with CSV + PDF download. All strings are i18n ($t);
 // the description and status get composed client-side from the raw
@@ -140,18 +142,13 @@ function stamp() {
   return new Date().toISOString().slice(0, 10)
 }
 
-function downloadCsv() {
+async function downloadCsv() {
   const header = [t('payments.col_date'), t('payments.col_description'), t('payments.col_amount'), t('payments.col_status')]
   const lines = [header, ...rows.value.map((r) => [r.dateStr, r.description, r.amountStr, r.statusText])]
   const csv = lines.map((l) => l.map(csvCell).join(',')).join('\r\n')
   // Leading BOM so Excel reads the UTF-8 (accents / non-Latin scripts) right.
   const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `payment-history-${stamp()}.csv`
-  a.click()
-  URL.revokeObjectURL(url)
+  await saveDocument(blob, `payment-history-${stamp()}.csv`)
 }
 
 function esc(s) {
@@ -162,9 +159,9 @@ function esc(s) {
 // already-translated document and trigger print (the user saves it
 // as PDF themselves). No extra dependency needed, and it inherits
 // whatever language the page happens to be in.
-function downloadPdf() {
-  const w = window.open('', '_blank')
-  if (!w) {
+async function downloadPdf() {
+  const w = isNativeApp() ? null : window.open('', '_blank')
+  if (!isNativeApp() && !w) {
     showError(t('payments.popup_blocked'))
     return
   }
@@ -186,6 +183,10 @@ function downloadPdf() {
     + `<table><thead><tr>${th.map((h) => `<th>${esc(h)}</th>`).join('')}</tr></thead>`
     + `<tbody>${bodyRows}</tbody></table>`
     + `</body></html>`
+  if (isNativeApp()) {
+    try { await printDocument({ html: doc, name: title }) } catch (error) { showError(error.message) }
+    return
+  }
   w.document.open()
   w.document.write(doc)
   w.document.close()

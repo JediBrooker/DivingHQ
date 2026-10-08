@@ -1,4 +1,5 @@
 <script setup>
+import AuthLayout from '@/components/AuthLayout.vue'
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
 import { isValidPassword } from '@/lib/passwordPolicy'
@@ -61,6 +62,7 @@ async function submit() {
 </script>
 
 <template>
+  <AuthLayout>
   <div class="reset-wrap">
     <div class="reset-mark brand-wordmark">DIVING<span>HQ</span></div>
     <h1>{{ $t('auth.reset.title') }}</h1>
@@ -95,17 +97,11 @@ async function submit() {
       </RouterLink>
     </template>
   </div>
+  </AuthLayout>
 </template>
 
 <style scoped>
-:global(body) {
-  display: flex; align-items: center; justify-content: center;
-  /* dvh, not vh: iOS Safari toolbar collapse. See RegisterView.
-     vh fallback for browsers older than ~Q4-2022. */
-  min-height: 100vh;
-  min-height: 100dvh;
-  padding: 1.5rem;
-}
+
 .reset-wrap { width: 100%; max-width: 420px; animation: fadeUp 0.4s ease; }
 .password-hint {
   margin: 0.35rem 0 0;

@@ -1,4 +1,5 @@
 <script setup>
+import { openExternal } from '@/lib/documents'
 // Notifications inbox.
 //
 // Until now, push notifications were transient: once a user dismissed
@@ -19,7 +20,7 @@
 //
 // Filter chips: All / Unread / By category. Pagination via
 // ?before_id=<uuid> (the last id of the page already loaded).
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
@@ -86,14 +87,27 @@ const CATEGORY_LANES = {
   f_seeded:                 'ops',
 }
 
+let loadGeneration = 0
+let disposed = false
+onBeforeUnmount(() => { disposed = true; loadGeneration++ })
+watch(() => auth.user?.id, (id) => {
+  loadGeneration++
+  rows.value = []
+  if (id) load()
+})
+
 async function load() {
+  const owner = auth.user?.id, generation = ++loadGeneration
+  const current = () => !disposed && auth.user?.id === owner && generation === loadGeneration
+  if (!owner) return
   loading.value = true
   try {
-    rows.value = await auth.apiFetch('/api/notifications/me?limit=100')
+    const result = await auth.apiFetch('/api/notifications/me?limit=100')
+    if (current()) rows.value = result
   } catch (err) {
-    showError(t('inbox.load_failed', { error: err.message }))
+    if (current()) showError(t('inbox.load_failed', { error: err.message }))
   } finally {
-    loading.value = false
+    if (current()) loading.value = false
   }
 }
 
@@ -182,7 +196,7 @@ function clickRow(row) {
   if (row.action_url.startsWith('/')) {
     router.push(row.action_url)
   } else {
-    window.open(row.action_url, '_blank', 'noopener')
+    openExternal(row.action_url)
   }
 }
 

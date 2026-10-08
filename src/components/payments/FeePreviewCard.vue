@@ -1,4 +1,5 @@
 <script setup>
+import { openExternal } from '@/lib/documents'
 // End-user preview of an upcoming fee. Fetches the resolved fee from
 // `loadUrl` (server makes it member/tier/discipline-aware) and renders
 // the price with a DISABLED pay action plus a ComingSoonBanner while
@@ -95,7 +96,7 @@ async function pay() {
     const body = { ...props.checkoutBody }
     if (props.subjectUserId) body.subject_user_id = props.subjectUserId
     const { url } = await auth.apiFetch(props.checkoutUrl, { method: 'POST', body: JSON.stringify(body) })
-    window.location.href = url
+    await openExternal(url, { replace: true })
   } catch (e) {
     showError(e.message || t('payments.fee_card.error_checkout'))
     busy.value = false

@@ -2,6 +2,9 @@
 import { ref, computed, onMounted, onUnmounted, watch, defineAsyncComponent } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
+import { isNativeApp, nativeShareUrl } from '@/lib/native-platform'
+import { showError } from '@/composables/useNotify'
+import { Share2 } from '@lucide/vue'
 import { useAuthStore } from '@/stores/auth'
 import { useSocket } from '@/composables/useSocket'
 import { useSocketEvent } from '@/composables/useSocketEvent'
@@ -28,6 +31,13 @@ import JargonTip from '@/components/JargonTip.vue'
 import MeetsBrowser from '@/components/scoreboard/MeetsBrowser.vue'
 import SponsorRotation from '@/components/scoreboard/SponsorRotation.vue'
 import RecordChip from '@/components/scoreboard/RecordChip.vue'
+
+const native = isNativeApp()
+async function shareResultLink() {
+  try {
+    await nativeShareUrl(currentEventId.value ? `/scoreboard/${currentEventId.value}` : '/scoreboard', currentEvent.value?.name || 'DivingHQ results')
+  } catch (error) { showError(error.message || 'Could not share this result link.') }
+}
 
 // The judge ranking table only renders once someone expands it on a
 // recap, so it isn't worth shipping to every live board, projector and
@@ -1345,7 +1355,8 @@ onMounted(async () => {
           <div v-else-if="currentEvent?.status === 'Upcoming'" class="status-badge upcoming-badge">{{ $t('scoreboard.status_upcoming') }}</div>
         </div>
       </template>
-      <div style="display:flex;gap:0.4rem;align-items:center">
+      <div style="display:flex;gap:0.4rem;align-items:center;flex-wrap:wrap">
+        <button v-if="native" class="btn btn-ghost btn-sm" type="button" @click="shareResultLink"><Share2 :size="18" aria-hidden="true" />Share</button>
         <!-- Results Archive: historical results mined from DiveRecorder.
              Shown while browsing (list mode) so the archive is
              reachable from the public Scoreboard. -->

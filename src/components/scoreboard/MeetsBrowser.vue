@@ -1,4 +1,5 @@
 <script setup>
+import { saveDocument } from '@/lib/documents'
 /* MeetsBrowser: meets-first browse surface for /scoreboard.
  *
  * Renders the cache banner, the LIVE-now strip (grouped by meet),
@@ -285,7 +286,7 @@ function clearFilters() {
 // CSV export of the currently-filtered meets list. Useful for
 // federations doing year-end reporting: pick a year + status
 // in the filter, click Export.
-function exportMeetsCsv() {
+async function exportMeetsCsv() {
   const headers = [
     'Name', 'Org', 'Country', 'Status', 'Date',
     'Gender', 'Height', 'Type', 'Rounds', 'Judges',
@@ -311,14 +312,7 @@ function exportMeetsCsv() {
   ].map(escape).join(','))
   const csv = [headers.join(','), ...rows].join('\n')
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
-  const url  = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `dive-recorder-meets-${new Date().toISOString().slice(0, 10)}.csv`
-  document.body.appendChild(a)
-  a.click()
-  a.remove()
-  URL.revokeObjectURL(url)
+  await saveDocument(blob, `dive-recorder-meets-${new Date().toISOString().slice(0, 10)}.csv`)
 }
 
 // Drop the club filter if the user picks a country whose clubs

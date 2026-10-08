@@ -31,6 +31,8 @@
  * caller.
  */
 import { ref, computed } from 'vue'
+import { openExternal } from '@/lib/documents'
+import { isNativeApp } from '@/lib/native-platform'
 
 const NEW_WINDOW_OPTS = 'width=1600,height=900,menubar=no,toolbar=no,location=no'
 
@@ -59,7 +61,8 @@ export function useBroadcastChooser({ closeHeaderMenu = () => {} } = {}) {
     // No noopener here so the new window can still read the auth
     // session from the same origin (the broadcast page itself is
     // anonymous-friendly anyway, so there's no real risk).
-    window.open(path, '_blank', NEW_WINDOW_OPTS)
+    if (isNativeApp()) openExternal(path)
+    else window.open(path, '_blank', NEW_WINDOW_OPTS)
     broadcastChoiceOpen.value = false
     broadcastPickerOpen.value = false
     obsInstructionsOpen.value = false

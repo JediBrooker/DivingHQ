@@ -1,4 +1,5 @@
 <script setup>
+import { publicAppOrigin } from '@/lib/documents'
 // One club's invite link and short code, on My club.
 //
 // The link is /register?country=<alpha-3>&club=<id>: RegisterView reads
@@ -34,7 +35,7 @@ const copyState = ref('idle')   // 'idle' | 'copied' | 'error'
 const inviteUrl = computed(() => {
   if (!setup.value?.country_code || typeof window === 'undefined') return ''
   const q = new URLSearchParams({ country: setup.value.country_code, club: setup.value.id })
-  return `${window.location.origin}/register?${q}`
+  return `${publicAppOrigin()}/register?${q}`
 })
 // Both sides upper-cased: a code stored before the rule ('sdc') isn't
 // an edit nobody made.

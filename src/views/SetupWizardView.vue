@@ -1,4 +1,5 @@
 <script setup>
+import { publicAppOrigin } from '@/lib/documents'
 // First-run org setup wizard. Walks a brand-new org admin
 // through the minimum config needed to make their dashboard
 // productive: create a club, invite users, create their first
@@ -88,7 +89,7 @@ async function createClub() {
 // then the admin approves their role from User Manager.
 const registerUrl = computed(() => {
   if (typeof window === 'undefined') return ''
-  return `${window.location.origin}/register`
+  return `${publicAppOrigin()}/register`
 })
 const copyState = ref('idle')   // 'idle' | 'copied' | 'error'
 async function copyRegisterUrl() {
@@ -295,16 +296,23 @@ onMounted(() => {
 
 <style scoped>
 .wizard-shell {
-  /* dvh: see LoginView for the iOS Safari rationale.
-     vh fallback first for browsers older than ~Q4-2022. */
-  min-height: 100vh;
-  min-height: 100dvh;
+  /* Own the viewport: entry from sign-in must not inherit a centered
+     body layout, and every step must clear the native status/gesture areas. */
+  position: fixed;
+  inset: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-left: env(safe-area-inset-left, 0px);
   background: var(--bg);
   display: flex; flex-direction: column;
 }
 
 .wizard-header {
   display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-shrink: 0;
   padding: 1.25rem 2rem;
   border-bottom: 1px solid var(--border);
 }
@@ -319,6 +327,7 @@ onMounted(() => {
 .wizard-logo span { color: var(--cyan); }
 .wizard-skip-link {
   background: transparent; border: 0;
+  min-height: 44px;
   font-family: var(--font-display);
   font-size: 11px; font-weight: 600;
   letter-spacing: 0.18em; text-transform: uppercase;
@@ -329,7 +338,7 @@ onMounted(() => {
 .wizard-skip-link:hover { color: var(--text); }
 
 .wizard-frame {
-  flex: 1;
+  flex: 1 0 auto; min-width: 0;
   width: 100%; max-width: 720px;
   margin: 0 auto;
   padding: 2.5rem 2rem 4rem;
@@ -350,7 +359,7 @@ onMounted(() => {
   display: flex; flex-direction: column; align-items: center;
   gap: 6px;
   background: transparent; border: 0;
-  padding: 0; min-width: 78px;
+  padding: 0; min-width: 0; min-height: 44px; flex: 1;
   cursor: pointer;
   color: inherit;
 }
@@ -377,7 +386,7 @@ onMounted(() => {
 }
 .wizard-step-future .wizard-step-label { color: var(--text-3); }
 .wizard-step-divider {
-  flex: 0 0 auto; width: 36px; height: 2px;
+  flex: 0 1 36px; min-width: 8px; height: 2px;
   background: var(--border);
   margin: 13px 4px 0;
   border-radius: 1px;
@@ -393,7 +402,15 @@ onMounted(() => {
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
 }
 @media (max-width: 540px) {
-  .wizard-card { padding: 1.5rem 1.5rem; }
+  .wizard-header { padding: 8px 14px; }
+  .wizard-frame { padding: 20px 14px 24px; }
+  .wizard-stepper { margin-bottom: 24px; }
+  .wizard-step { font-size: 10px; overflow-wrap: anywhere; }
+  .wizard-card { padding: 20px; }
+  .wizard-title { font-size: 25px; }
+  .wizard-invite-row { flex-wrap: wrap; }
+  .wizard-invite-url { min-width: 0; width: 100%; flex-basis: 100%; }
+  .wizard-shell .btn { min-height: 44px; }
 }
 
 .wizard-eyebrow {

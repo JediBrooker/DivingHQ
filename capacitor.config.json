@@ -8,7 +8,14 @@
     "iosScheme": "capacitor"
   },
   "plugins": {
-    "CapacitorHttp": { "enabled": false },
-    "CapacitorCookies": { "enabled": false }
+    "CapacitorHttp": {
+      "enabled": false
+    },
+    "CapacitorCookies": {
+      "enabled": false
+    },
+    "PushNotifications": {
+      "presentationOptions": []
+    }
   }
 }

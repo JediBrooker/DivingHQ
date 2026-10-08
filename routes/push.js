@@ -14,6 +14,7 @@
 //   app.use(require('./routes/push')({ verifyToken, push }))
 
 const express = require("express");
+const { rateLimit } = require("express-rate-limit");
 const { isUuid } = require("../lib/uuid");
 
 module.exports = function createPushRouter({ verifyToken, push }) {
@@ -113,6 +114,18 @@ module.exports = function createPushRouter({ verifyToken, push }) {
       res.status(500).json({ error: "Failed to acknowledge" });
     }
   });
+
+  // Native tokens never share browser subscriptions. Mutations use the same
+  // auth perimeter; the revoke-only capability cannot enable or read anything.
+  const nativeHandler = fn => async (req, res) => {
+    try { res.json(await fn(req) || { ok: true }); }
+    catch (err) { res.status(err.status || 500).json({ error: err.status ? err.message : 'Notification service unavailable' }); }
+  };
+  router.get('/api/push/native/:id', verifyToken, nativeHandler(req => push.native.status(req.user.id, req.params.id)));
+  router.post('/api/push/native', verifyToken, nativeHandler(req => push.native.register(req.user, req.body)));
+  router.post('/api/push/native/revoke', rateLimit({ windowMs: 60000, limit: 60, standardHeaders: true, legacyHeaders: false }), nativeHandler(req => push.native.revoke(req.body)));
+  router.post('/api/push/native/:id/test', verifyToken, nativeHandler(req => push.native.test(req.user, req.params.id)));
+  router.get('/api/notifications/:id', verifyToken, nativeHandler(req => push.native.notification(req.user.id, req.params.id)));
 
   return router;
 };

@@ -1,4 +1,5 @@
 <script setup>
+import { saveDocument } from '@/lib/documents'
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
@@ -81,7 +82,7 @@ function actionClass(a) {
   return ''
 }
 
-function exportCsv() {
+async function exportCsv() {
   const rows = [
     ['Time', 'Action', 'Competitor', 'Judge', 'Judge #', 'Round', 'Old Score', 'New Score', 'Actor', 'IP', 'User Agent'],
     ...filtered.value.map(e => [
@@ -100,12 +101,7 @@ function exportCsv() {
   ]
   const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n')
   const blob = new Blob([csv], { type: 'text/csv' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `audit_${eventInfo.value?.name?.replace(/[^a-z0-9]+/gi, '_').toLowerCase() || 'event'}.csv`
-  a.click()
-  URL.revokeObjectURL(url)
+  await saveDocument(blob, `audit_${eventInfo.value?.name?.replace(/[^a-z0-9]+/gi, '_').toLowerCase() || 'event'}.csv`)
 }
 
 onMounted(load)

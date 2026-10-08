@@ -15,7 +15,7 @@
     <key>provisioningProfiles</key>
     <dict>
         <key>app.divinghq.mobile</key>
-        <string>DivingHQ App Store</string>
+        <string>DivingHQ App Store Native</string>
     </dict>
     <key>manageAppVersionAndBuildNumber</key>
     <false/>

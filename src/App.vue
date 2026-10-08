@@ -3,10 +3,11 @@
 // shell. It only wraps the authenticated routes that opt in via
 // `meta.appShell` (migrated screen-by-screen); every other route
 // still renders standalone with its own header.
-import { computed } from 'vue'
+import { computed, defineAsyncComponent } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import AppShell from '@/components/AppShell.vue'
+// Public screens do not need the authenticated phone/tablet navigation bundle.
+const AppShell = defineAsyncComponent(() => import('@/components/AppShell.vue'))
 // Global maintenance-mode notice. Sits above every route so it shows on the
 // dashboard and the standalone screens alike. Deliberately suppressed in the
 // chromeless broadcast/overlay modes below, where any banner would bleed into

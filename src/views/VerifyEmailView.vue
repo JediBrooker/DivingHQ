@@ -1,4 +1,5 @@
 <script setup>
+import AuthLayout from '@/components/AuthLayout.vue'
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
@@ -74,6 +75,7 @@ onMounted(verify)
 </script>
 
 <template>
+  <AuthLayout>
   <div class="verify-wrap">
     <div class="verify-mark brand-wordmark">DIVING<span>HQ</span></div>
     <h1>{{ $t('auth.verify_email.title') }}</h1>
@@ -107,15 +109,11 @@ onMounted(verify)
       </RouterLink>
     </template>
   </div>
+  </AuthLayout>
 </template>
 
 <style scoped>
-:global(body) {
-  display: flex; align-items: center; justify-content: center;
-  min-height: 100vh;
-  min-height: 100dvh;
-  padding: 1.5rem;
-}
+
 .verify-wrap { width: 100%; max-width: 420px; animation: fadeUp 0.4s ease; }
 .verify-mark {
   font-family: var(--font-display); font-size: 13px; font-weight: 700;

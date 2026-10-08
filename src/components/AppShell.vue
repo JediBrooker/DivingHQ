@@ -6,7 +6,7 @@
 //
 // Nav is role-gated against the auth store (system admins see
 // everything). Collapse state and theme live in the Pinia ui store.
-import { ref, computed, nextTick, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter, useRoute, RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useUiStore } from '@/stores/ui'
@@ -15,13 +15,15 @@ import { useI18n } from 'vue-i18n'
 import LogoMark from '@/components/LogoMark.vue'
 import ThemeToggle from '@/components/ThemeToggle.vue'
 import { openCommandPalette } from '@/composables/useAppChannel'
+import { isNativeApp } from '@/lib/native-platform'
+import { useMobileViewport } from '@/composables/useMobileViewport'
 import { signOut as signOutAndLeave } from '@/composables/useSignOut'
 import {
   LayoutDashboard, Trophy, MonitorPlay, Calculator, ChartColumn, Waves, GraduationCap,
   ListChecks, BookOpen, Users, Building2, ScrollText,
   PanelLeftClose, PanelLeftOpen, ChevronRight, Search, CircleHelp,
   Bell, User, Inbox, LogOut, EllipsisVertical, CreditCard, Award, Gavel,
-  History, Receipt, Heart, Layers, Wallet, UserCheck, SlidersHorizontal, Scale, Medal,
+  History, Receipt, Heart, Layers, Wallet, UserCheck, SlidersHorizontal, Scale, Medal, Settings, Menu, X, ArrowLeft,
 } from '@lucide/vue'
 
 const router = useRouter()
@@ -30,6 +32,8 @@ const auth = useAuthStore()
 const ui = useUiStore()
 const features = useFeaturesStore()
 const { t } = useI18n()
+const native = isNativeApp()
+const { keyboardOpen, viewportHeight } = useMobileViewport()
 
 // Nav model. `roles` gates visibility, omit it for items every
 // signed-in user can reach.
@@ -108,6 +112,11 @@ const NAV = [
   // Platform operator only. English labels on purpose: adding en.json keys
   // means translating them into every locale (test/i18n-parity.test.js), and
   // nobody is running the box in Filipino.
+  { key: 'account', group: 'Account', icon: User, items: [
+    { to: '/profile', label: 'My profile', labelKey: 'dashboard.my_profile', icon: User },
+    { to: '/inbox', label: 'Inbox', labelKey: 'dashboard.inbox', icon: Inbox },
+    { to: '/settings', label: 'Settings', icon: Settings },
+  ] },
   { key: 'admin', group: 'Admin', icon: SlidersHorizontal, sysadminOnly: true, items: [
     { to: '/admin/features', label: 'Feature Flags', icon: SlidersHorizontal, sysadminOnly: true },
   ] },
@@ -152,6 +161,27 @@ const visibleGroups = computed(() =>
     .filter((g) => g.items.length),
 )
 
+// The complete menu uses exactly the same permissions as the sidebar.
+const navSearch = ref('')
+const displayedGroups = computed(() => {
+  const query = navSearch.value.trim().toLocaleLowerCase()
+  return visibleGroups.value.map(g => ({ ...g, items: g.items.filter(it =>
+    !query || `${navLabel(it)} ${groupLabel(g)}`.toLocaleLowerCase().includes(query),
+  ) })).filter(g => g.items.length)
+})
+const primaryWork = computed(() => {
+  const items = visibleGroups.value.flatMap(g => g.items)
+  // The most immediate poolside task; every other role stays one Menu tap away.
+  const destinations = ['/control', '/judge', '/competitor', '/coach', '/scoreboard']
+  return destinations.map(to => items.find(it => it.to === to)).find(Boolean)
+})
+const primaryRoots = ['/dashboard', '/control', '/judge', '/competitor', '/coach', '/scoreboard', '/inbox', '/settings']
+const showBack = computed(() => native && !primaryRoots.includes(route.path))
+function goBack() {
+  if (window.history.state?.back) router.back()
+  else router.push('/dashboard')
+}
+
 function isActive(to) {
   return route.path === to || route.path.startsWith(to + '/')
 }
@@ -187,6 +217,7 @@ const roleLabel = computed(() => {
 const menuOpen = ref(false)
 function goProfile() { menuOpen.value = false; router.push('/profile') }
 function goInbox() { menuOpen.value = false; router.push('/inbox') }
+function goSettings() { menuOpen.value = false; router.push('/settings') }
 function signOut() {
   menuOpen.value = false
   signOutAndLeave(auth, router)
@@ -210,18 +241,22 @@ function syncViewport() {
 onMounted(() => { syncViewport(); window.addEventListener('resize', syncViewport) })
 onBeforeUnmount(() => window.removeEventListener('resize', syncViewport))
 
-const collapsed = computed(() => (isMobile.value ? !mobileOpen.value : ui.sidebarCollapsed))
+const collapsed = computed(() => (isMobile.value ? !mobileOpen.value : (native ? false : ui.sidebarCollapsed)))
 // Desktop collapse = a slim icon rail (not hidden): each group condenses
 // to one icon whose hover/focus flyout lists its items. Mobile keeps the
 // off-canvas overlay, so the rail is desktop-only.
-const railMode = computed(() => ui.sidebarCollapsed && !isMobile.value)
+const railMode = computed(() => !native && ui.sidebarCollapsed && !isMobile.value)
 // The closed drawer is only slid off-screen, so it's also made inert
 // (template) or its links sat in the tab order and the a11y tree while
 // invisible. That means focus has to be walked in and out by hand.
 const sidebarEl = ref(null)
 const toggleBtn = ref(null)
+let drawerOpener = null
 function toggleSidebar() {
+  if (native && !isMobile.value) return
   if (!isMobile.value) { ui.toggleSidebar(); return }
+  if (!mobileOpen.value) drawerOpener = document.activeElement
+  navSearch.value = ''
   mobileOpen.value = !mobileOpen.value
   // inert only comes off on the next render, focus() before that is a no-op.
   if (mobileOpen.value) nextTick(() => sidebarEl.value?.querySelector('a[href], button')?.focus())
@@ -231,12 +266,37 @@ function toggleSidebar() {
 function closeMobile(restoreFocus = false) {
   if (!mobileOpen.value) return
   mobileOpen.value = false
-  if (restoreFocus) nextTick(() => toggleBtn.value?.focus())
+  if (restoreFocus) nextTick(() => (drawerOpener?.isConnected ? drawerOpener : toggleBtn.value)?.focus())
 }
+
+function onDrawerKeydown(event) {
+  if (!isMobile.value || !mobileOpen.value || event.key !== 'Tab') return
+  const items = [...sidebarEl.value.querySelectorAll('a[href], button, input')]
+    .filter(el => !el.disabled && el.offsetParent !== null)
+  const first = items[0]
+  const last = items[items.length - 1]
+  if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus() }
+  else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus() }
+}
+function onDeviceBack(event) {
+  if (!mobileOpen.value) return
+  event.preventDefault()
+  closeMobile(true)
+}
+onMounted(() => window.addEventListener('dhq:back', onDeviceBack))
+onBeforeUnmount(() => window.removeEventListener('dhq:back', onDeviceBack))
+watch(() => route.fullPath, async () => {
+  closeMobile()
+  menuOpen.value = false
+  navSearch.value = ''
+  await nextTick()
+  const content = document.getElementById('main-content')
+  if (content) { content.scrollTop = 0; content.focus({ preventScroll: true }) }
+})
 </script>
 
 <template>
-  <div class="app-shell" :class="{ collapsed, mobile: isMobile, 'mobile-open': isMobile && mobileOpen }">
+  <div class="app-shell" :class="{ collapsed, mobile: isMobile, native, 'keyboard-open': keyboardOpen, 'mobile-open': isMobile && mobileOpen }" :style="viewportHeight ? { height: `${viewportHeight}px` } : undefined">
     <a class="skip-link" href="#main-content">Skip to main content</a>
     <!-- Sidebar -->
     <aside
@@ -244,18 +304,27 @@ function closeMobile(restoreFocus = false) {
       class="sidebar"
       :inert="isMobile && !mobileOpen"
       @keydown.esc="closeMobile(true)"
+      @keydown="onDrawerKeydown"
+      :role="isMobile && mobileOpen ? 'dialog' : undefined"
+      :aria-modal="isMobile && mobileOpen ? true : undefined"
+      aria-label="App menu"
     >
-      <RouterLink to="/dashboard" class="sb-brand">
+      <RouterLink to="/dashboard" class="sb-brand" @click="closeMobile()">
         <LogoMark :size="28" />
         <span class="wm brand-wordmark">DIVING<span>HQ</span></span>
       </RouterLink>
 
+      <div v-if="isMobile" class="mobile-menu-tools">
+        <label class="menu-search"><Search aria-hidden="true" /><input v-model="navSearch" type="search" placeholder="Find a tool…" aria-label="Find a tool" /></label>
+        <button type="button" class="icon-btn" aria-label="Close menu" @click="closeMobile(true)"><X /></button>
+      </div>
+      <p v-if="isMobile && !displayedGroups.length" class="menu-empty">No tools match. Try a different name.</p>
       <nav class="sb-nav" :class="{ rail: railMode }" aria-label="Primary">
         <!-- COLLAPSED ICON RAIL: one button per group; the flyout (hover
              or keyboard focus) lists that group's items. Single-item
              groups (Dashboard) link directly. -->
         <template v-if="railMode">
-          <div v-for="g in visibleGroups" :key="g.key" class="sb-rail-group">
+          <div v-for="g in displayedGroups" :key="g.key" class="sb-rail-group">
             <RouterLink
               v-if="!g.group"
               :to="g.items[0].to"
@@ -288,7 +357,7 @@ function closeMobile(restoreFocus = false) {
         </template>
         <!-- EXPANDED: full labelled list. -->
         <template v-else>
-        <template v-for="g in visibleGroups" :key="g.group || 'root'">
+        <template v-for="g in displayedGroups" :key="g.group || 'root'">
           <div v-if="g.group" class="sb-group">{{ groupLabel(g) }}</div>
           <RouterLink
             v-for="it in g.items"
@@ -319,6 +388,7 @@ function closeMobile(restoreFocus = false) {
           <div v-if="menuOpen" class="sb-menu">
             <button class="sb-menu-item" type="button" @click="goProfile"><User class="mi-ic" />{{ $t('dashboard.my_profile') }}</button>
             <button class="sb-menu-item" type="button" @click="goInbox"><Inbox class="mi-ic" />{{ $t('dashboard.inbox') }}</button>
+            <button class="sb-menu-item" type="button" @click="goSettings"><Settings class="mi-ic" />Settings</button>
             <div class="sb-menu-div"></div>
             <button class="sb-menu-item danger" type="button" @click="signOut"><LogOut class="mi-ic" />{{ $t('dashboard.sign_out') }}</button>
           </div>
@@ -330,9 +400,10 @@ function closeMobile(restoreFocus = false) {
     <div v-if="isMobile && mobileOpen" class="shell-scrim" @click="closeMobile(true)"></div>
 
     <!-- Main column -->
-    <div class="shell-main">
+    <div class="shell-main" :inert="isMobile && mobileOpen">
       <header class="topbar">
-        <button ref="toggleBtn" class="icon-btn" type="button" :aria-label="collapsed ? 'Expand sidebar' : 'Collapse sidebar to icons'" :aria-expanded="isMobile ? mobileOpen : undefined" @click="toggleSidebar">
+        <button v-if="showBack" class="icon-btn" type="button" aria-label="Back" @click="goBack"><ArrowLeft /></button>
+        <button v-if="!native || isMobile" ref="toggleBtn" class="icon-btn" type="button" :aria-label="isMobile ? 'Open app menu' : collapsed ? 'Expand sidebar' : 'Collapse sidebar to icons'" :aria-expanded="isMobile ? mobileOpen : undefined" @click="toggleSidebar">
           <PanelLeftOpen v-if="collapsed" />
           <PanelLeftClose v-else />
         </button>
@@ -347,14 +418,22 @@ function closeMobile(restoreFocus = false) {
           <kbd>⌘K</kbd>
         </button>
         <div class="spacer"></div>
-        <ThemeToggle compact />
-        <RouterLink to="/guide" class="icon-btn" aria-label="Help & user guide" v-tip:bottom.fixed="'Help & user guide'"><CircleHelp /></RouterLink>
-        <RouterLink to="/inbox" class="icon-btn" aria-label="Notifications" v-tip:bottom.fixed="'Notifications'"><Bell /></RouterLink>
+        <ThemeToggle v-if="!isMobile" compact />
+        <button v-if="isMobile" class="icon-btn" type="button" aria-label="Search" @click="openSearch"><Search /></button>
+        <RouterLink v-if="!isMobile" to="/guide" class="icon-btn" aria-label="Help & user guide" v-tip:bottom.fixed="'Help & user guide'"><CircleHelp /></RouterLink>
+        <RouterLink v-if="!isMobile" to="/inbox" class="icon-btn" aria-label="Notifications" v-tip:bottom.fixed="'Notifications'"><Bell /></RouterLink>
       </header>
 
       <main id="main-content" class="shell-content" tabindex="-1" :aria-label="currentLabel">
         <slot />
       </main>
+      <nav v-if="isMobile && !keyboardOpen" class="mobile-tabs" aria-label="App tabs">
+        <RouterLink to="/dashboard" :class="{ active: isActive('/dashboard') }"><LayoutDashboard /><span>Home</span></RouterLink>
+        <RouterLink v-if="primaryWork" :to="primaryWork.to" :class="{ active: isActive(primaryWork.to) }" :aria-label="navLabel(primaryWork)"><component :is="primaryWork.icon" /><span>{{ primaryWork.to === '/scoreboard' ? 'Results' : 'Work' }}</span></RouterLink>
+        <RouterLink to="/inbox" :class="{ active: isActive('/inbox') }"><Inbox /><span>Inbox</span></RouterLink>
+        <button type="button" :aria-expanded="mobileOpen" @click="toggleSidebar"><Menu /><span>Menu</span></button>
+        <RouterLink to="/settings" :class="{ active: isActive('/settings') }"><Settings /><span>Settings</span></RouterLink>
+      </nav>
     </div>
   </div>
 </template>
@@ -516,7 +595,7 @@ function closeMobile(restoreFocus = false) {
 .sb-menu-div { height: 1px; background: var(--border); margin: 5px 4px; }
 
 /* ── Main column ── */
-.shell-main { display: flex; flex-direction: column; min-width: 0; height: 100dvh; overflow: hidden; }
+.shell-main { display: flex; flex-direction: column; min-width: 0; min-height: 0; height: 100%; overflow: hidden; }
 .topbar {
   /* Grows by the status-bar inset in the installed iOS app, where the
      page runs up under the clock. The band is a border in the brand
@@ -562,7 +641,7 @@ function closeMobile(restoreFocus = false) {
 @media (max-width: 720px) { .topbar-search { display: none; } }
 .spacer { flex: 1; }
 
-.shell-content { flex: 1; overflow-y: auto; background: var(--bg); }
+.shell-content { flex: 1; min-height: 0; overflow-y: auto; background: var(--bg); }
 
 /* Full-width on desktop: the converted views constrain their
    content with `max-width: …; margin: 0 auto`. Inside the shell
@@ -597,5 +676,33 @@ function closeMobile(restoreFocus = false) {
     box-shadow: var(--shadow-lg);
   }
   .app-shell.mobile-open .sidebar { transform: translateX(0); }
+  .topbar { gap: 6px; padding: 0 10px; }
+  .crumb { min-width: 0; overflow: hidden; }
+  .crumb .here { overflow: hidden; text-overflow: ellipsis; }
+  .icon-btn, .sb-item, .sb-menu-item { min-height: 44px; }
+  .icon-btn { min-width: 44px; }
+  .sidebar { width: min(340px, 100vw); padding-bottom: env(safe-area-inset-bottom, 0px); }
+  .sb-user { min-height: 48px; }
+  .shell-content { overscroll-behavior-y: contain; scroll-padding-bottom: 20px; }
+  .shell-content :deep(input:not([type=checkbox]):not([type=radio])),
+  .shell-content :deep(select), .shell-content :deep(textarea) { font-size: 16px; }
+  .shell-content :deep(.btn) { min-height: 44px; }
+  .shell-content :deep(.page-header), .shell-content :deep(.header-inner) { flex-wrap: wrap; gap: 10px; }
+
+}
+.mobile-menu-tools { display: flex; align-items: center; gap: 8px; padding: 12px; }
+.menu-search { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg); padding: 0 10px; }
+.menu-search svg { width: 18px; flex-shrink: 0; color: var(--fg-3); }
+.menu-search input { min-width: 0; width: 100%; height: 44px; background: transparent; border: 0; color: var(--fg); font-size: 16px; }
+.menu-empty { padding: 0 16px; color: var(--fg-2); }
+.mobile-tabs { display: flex; flex-shrink: 0; border-top: 1px solid var(--border); background: var(--surface); padding: 4px 4px calc(4px + env(safe-area-inset-bottom, 0px)); }
+.mobile-tabs a, .mobile-tabs button { flex: 1; min-width: 0; min-height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: var(--fg-2); text-decoration: none; border: 0; border-radius: var(--radius); background: transparent; font-family: inherit; font-size: 11px; cursor: pointer; }
+.mobile-tabs svg { width: 22px; height: 22px; }
+.mobile-tabs .active { color: var(--accent); background: var(--accent-soft); font-weight: 700; }
+.native .sb-item, .native .sb-menu-item, .native .sb-user { min-height: 44px; }
+.native .icon-btn { width: 44px; height: 44px; }
+.native .sb-foot { padding-bottom: max(10px, env(safe-area-inset-bottom, 0px)); }
+@media (prefers-reduced-motion: reduce) {
+  .app-shell, .sidebar, .skip-link { transition: none; }
 }
 </style>

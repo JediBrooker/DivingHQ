@@ -1,10 +1,14 @@
-# Native app prototype
+# Native apps
 
 DivingHQ now has Capacitor 8 projects for iOS and Android. Both bundle the same
-Vue application, routes and role-based navigation as the website. iOS targets
+Vue application and server permission model, with mobile navigation and native
+notification, document, sharing and link integrations. iOS targets
 iPhone and iPad (`TARGETED_DEVICE_FAMILY = 1,2`); Android has no phone-only size
-or orientation restriction. This is the first engineering prototype, not a
-store release or a claim that every workflow has passed native-device testing.
+or orientation restriction. The original 1.0 (1) prototype is available in
+owner-only internal testing. The corrective 1.1 (2) implementation is separate
+from provider provisioning, release publication and physical-device acceptance;
+see the [corrective plan](mobile-corrective-plan.md) and the verification ledger
+below before treating a capability as verified.
 
 ## Build and run
 
@@ -84,29 +88,36 @@ Use the guarded test database, never production accounts or meet data.
   failures retry with backoff. The existing per-user IndexedDB caches and durable
   outbox remain the shared implementation; no scoring rules changed.
 - Browser service workers and Web Push registration are disabled in native.
-  In-app socket notifications continue while connected. Native push is not yet
-  implemented.
+  In-app socket notifications continue while connected. Native APNs/FCM delivery,
+  explicit permission controls, installation revocation and authenticated taps
+  are implemented separately; [notification setup](native-notifications.md)
+  records the required credentials and real-device acceptance checks.
 
-## Prototype limits and next milestones
+## Implemented capabilities and remaining proof
 
 | Area | Current state / next proof |
 |---|---|
-| Broad role access | Existing routes and permissions are included; complete a device-by-role workflow inventory during beta. Feature flags still apply. |
-| Phones and tablets | Both native targets support them; verify portrait, landscape, keyboard, safe areas and tablet multitasking. More tablet-specific layout work remains. |
+| Broad role access | Existing routes and permissions are included with Home, Work, Inbox, searchable Menu and Settings navigation. Automated role/delegate checks pass; complete physical device-by-role workflows during beta. Feature flags still apply. |
+| Phones and tablets | Narrow layouts use bottom tabs, wide native layouts use a labelled sidebar; member forms and coaching cards adapt to available width. Browser geometry and populated workflow checks are recorded in the corrective plan. Physical keyboard, safe areas, accessibility and tablet multitasking require separate acceptance. |
 | Authentication | Cookie transport, 2FA, logout and ticket exchange are implemented. Native cookie persistence is configured up to the existing JWT expiry and was observed across an iPhone simulator restart and Android emulator process restart; physical-device restart, expiry, revocation and shared-device switching still require beta verification. |
 | Live/offline behaviour | Existing outbox/reconnect logic is reused. Test screen lock, OS suspension, force termination, airplane mode and interrupted writes on devices before meet use. Native abort stops response delivery but cannot guarantee cancellation of a write already sent; existing idempotency stays essential. |
-| Notifications | APNs/FCM token registration, permission UX, server delivery and notification taps remain. No new push provider is configured. |
-| App links | The App listener validates the exact configured origin and known routes. Universal Link/Android App Link domain association, entitlements and cold-launch delivery remain to be configured and tested. |
-| Downloads/sharing | API byte downloads work through the transport, but browser `window.open`, PDF/CSV save, printing and native share sheets require a workflow audit and platform adapters. |
-| Payments/external navigation | Browser checkout/Connect redirects and return-to-app flows are not validated. API redirects are blocked; use the website for these workflows during the prototype. |
+| Notifications | APNs/FCM registration, permission/settings UX, provider delivery, generic private payloads, authenticated taps and offline revocation are implemented and contract-tested. Provider credentials and observed store-installed delivery are separate gates; do not infer delivery from a simulator alert or provider acceptance alone. |
+| App links | Exact origin/route validation, protected-route login continuation, cold/warm handlers, association endpoints and platform entitlements are implemented. Associations must be deployed and verified against the installed signed release. |
+| Downloads/sharing | PDF/CSV/ICS exports, private cache files, native Save/Share, result links and platform printing are implemented. Session changes cancel pending exports. Physical Files/Downloads destinations, cancellation and account switching need platform acceptance. See [native integrations](native-integrations.md). |
+| Payments/external navigation | External HTTPS and checkout/Connect handoffs use the system browser; valid associated returns use normal route guards. Feature flags remain unchanged. Real payment transactions and store-installed return flows are unverified. |
 | File uploads | Multipart requests fail explicitly rather than being silently mis-encoded. There are no current FormData callers; implement native upload handling before adding one. |
 | Release compatibility | Define minimum API/app version negotiation and upgrade policy before distributing versions that can outlive backend releases. |
-| Stores/accessibility | Real-device accessibility, signing, privacy declarations, screenshots, TestFlight/Play testing and store review remain. |
+| Stores/accessibility | The original 1.0 (1) internal builds remain distinct from corrective 1.1 (2). Publication of a replacement and real-device VoiceOver/TalkBack acceptance must be recorded explicitly. |
 
 ## Verification
 
-The [8 October emulator report](native-test-report-2026-10-08.md) records the
-latest authenticated Android and anonymous production-origin device checks.
+The [original 8 October emulator report](native-test-report-2026-10-08.md) records
+the 1.0 prototype's authenticated Android and anonymous production-origin checks.
+It does not verify the corrective notification and integration features. The
+[corrective test report](native-corrective-test-report-2026-10-08.md),
+[corrective plan](mobile-corrective-plan.md), [native integrations](native-integrations.md)
+and [notification guide](native-notifications.md) distinguish implementation,
+automated evidence and outstanding physical-device acceptance.
 
 Measured on 5 October 2026 against a local HTTPS proxy and the guarded test DB:
 

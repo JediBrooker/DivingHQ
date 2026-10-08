@@ -65,7 +65,12 @@ function main() {
     stdio: "inherit",
     // No web push from a test run, whatever keys .env has. dotenv leaves
     // an existing empty var alone, so this wins over the file.
-    env: { ...process.env, VAPID_PUBLIC_KEY: "", VAPID_PRIVATE_KEY: "" },
+    env: {
+      ...process.env,
+      VAPID_PUBLIC_KEY: "", VAPID_PRIVATE_KEY: "",
+      // Test fixtures must never send native alerts using local credentials.
+      APNS_KEY_PATH: "", FCM_SERVICE_ACCOUNT_PATH: "",
+    },
   });
   process.exit(result.status === null ? 1 : result.status);
 }

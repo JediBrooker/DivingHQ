@@ -1,4 +1,5 @@
 <script setup>
+import { openExternal } from '@/lib/documents'
 // Club admin: Stripe payout onboarding, balance, automatic-withdrawal
 // settings, and withdrawal history for THIS club's class-enrolment revenue.
 // Talks to /api/clubs/:clubId/payments/status|connect/onboard|
@@ -77,7 +78,7 @@ async function startOnboarding() {
   onboarding.value = true
   try {
     const { url } = await auth.apiFetch(`/api/clubs/${props.clubId}/connect/onboard`, { method: 'POST', body: JSON.stringify({}) })
-    window.location.href = url // hand off to Stripe-hosted onboarding
+    await openExternal(url, { replace: true }) // hand off to Stripe-hosted onboarding
   } catch (e) {
     showError(e.message || t('classes.payouts.error_onboard'))
     onboarding.value = false

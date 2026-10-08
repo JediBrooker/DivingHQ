@@ -1,4 +1,5 @@
 <script setup>
+import { publicAppOrigin } from '@/lib/documents'
 // Session Scheduler: Phases 1, 2 & 3.
 //
 // Phase 1 (already shipped): vertical timeline (30-min gridlines)
@@ -277,7 +278,7 @@ const webcalUrl = computed(() => {
   // undefined during SSR (the SchedulerView isn't SSR'd today,
   // but the guard costs nothing).
   if (typeof window === 'undefined') return '#'
-  const { host } = window.location
+  const { host } = new URL(publicAppOrigin())
   return `webcal://${host}/api/meets/${meetId.value}/schedule.ics`
 })
 

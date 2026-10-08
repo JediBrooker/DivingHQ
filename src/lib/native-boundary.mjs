@@ -23,7 +23,7 @@ export function nativeApiUrl(value, localBase, apiOrigin) {
 export function nativeLinkPath(value, apiOrigin) {
   try {
     const url = new URL(value);
-    if (url.origin !== apiOrigin || url.username || url.password || url.pathname.startsWith('/api/')
+    if (url.origin !== apiOrigin || url.username || url.password || /[\\\x00-\x20]/.test(value) || /%2e|%00|%0a|%0d/i.test(value.split('?')[0]) || url.pathname.startsWith('/api/')
         || url.pathname.startsWith('/socket.io') || url.pathname.startsWith('//')
         || /%2f|%5c|\\/i.test(url.pathname)) return null;
     return `${url.pathname}${url.search}${url.hash}`;

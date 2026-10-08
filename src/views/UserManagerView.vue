@@ -1,4 +1,5 @@
 <script setup>
+import { saveDocument } from '@/lib/documents'
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 import { RouterLink } from 'vue-router'
@@ -921,7 +922,7 @@ async function applyBulkRole(action) {
 // CSV export of the *currently filtered* users, respects search,
 // role chips and org filter. Handy for offline triage and for
 // onboarding emails.
-function exportCsv() {
+async function exportCsv() {
   const rows = filteredUsers.value
   const headers = ['Name', 'Username', 'Organisation', 'Country', 'Club', 'Club Code', 'Roles', 'System Admin']
   const lines = [headers.join(',')]
@@ -939,14 +940,7 @@ function exportCsv() {
     ].join(','))
   }
   const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `members_${new Date().toISOString().slice(0, 10)}.csv`
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
-  URL.revokeObjectURL(url)
+  await saveDocument(blob, `members_${new Date().toISOString().slice(0, 10)}.csv`)
 }
 
 function pageNums() {
@@ -1216,9 +1210,13 @@ onUnmounted(() => {
         <button class="btn btn-ghost btn-sm" @click="collapseAllOrgs">{{ $t('user_manager.collapse_all') }}</button>
       </div>
 
+      <label class="mobile-select-all">
+        <input type="checkbox" :checked="allVisibleSelected" :disabled="!visibleIds.length" @change="toggleSelectAllVisible">
+        Select all visible members
+      </label>
       <!-- Users table -->
       <div class="card" style="padding:0;overflow:hidden">
-        <div class="table-wrap"><table class="data-table">
+        <div class="table-wrap"><table class="data-table members-table">
           <thead>
             <tr>
               <th class="select-col">
@@ -1244,12 +1242,13 @@ onUnmounted(() => {
                 :class="['user-row', 'clickable', rowState[user.id] || '', selectedIds.has(user.id) ? 'selected' : '']"
                 @click="openDrawer(user.id)">
               <td class="select-col" @click.stop>
-                <input type="checkbox"
+                <label class="member-select"><input type="checkbox"
+                       :aria-label="`Select ${user.full_name}`"
                        :checked="selectedIds.has(user.id)"
-                       @change="toggleSelect(user.id)">
+                       @change="toggleSelect(user.id)"></label>
               </td>
               <td>
-                <span class="user-name">{{ user.full_name }}</span>
+                <button type="button" class="user-name member-open" @click.stop="openDrawer(user.id)">{{ user.full_name }}</button>
                 <span v-if="user.is_system_admin" class="sys-badge sys-badge-inline">{{ $t('user_manager.sys_badge_short') }}</span>
               </td>
               <td class="dim">
@@ -1308,12 +1307,13 @@ onUnmounted(() => {
                       :class="['user-row', 'clickable', rowState[user.id] || '', selectedIds.has(user.id) ? 'selected' : '']"
                       @click="openDrawer(user.id)">
                     <td class="select-col" @click.stop>
-                      <input type="checkbox"
-                             :checked="selectedIds.has(user.id)"
-                             @change="toggleSelect(user.id)">
+                      <label class="member-select"><input type="checkbox"
+                             :aria-label="`Select ${user.full_name}`"
+                       :checked="selectedIds.has(user.id)"
+                             @change="toggleSelect(user.id)"></label>
                     </td>
                     <td>
-                      <span class="user-name">{{ user.full_name }}</span>
+                      <button type="button" class="user-name member-open" @click.stop="openDrawer(user.id)">{{ user.full_name }}</button>
                       <span v-if="user.is_system_admin" class="sys-badge sys-badge-inline">{{ $t('user_manager.sys_badge_short') }}</span>
                     </td>
                     <td class="dim">
@@ -1862,6 +1862,9 @@ onUnmounted(() => {
 }
 .drawer {
   position: fixed; top: 0; inset-inline-end: 0; bottom: 0; z-index: 100;
+  border-top: env(safe-area-inset-top, 0px) solid var(--status-band);
+  padding-right: env(safe-area-inset-right, 0px);
+  padding-left: env(safe-area-inset-left, 0px);
   width: min(420px, 100vw);
   display: flex; flex-direction: column;
   background: var(--surface);
@@ -2128,4 +2131,30 @@ onUnmounted(() => {
 .audit-actor { color: var(--text-3); }
 .audit-actor-system { font-style: italic; }
 .audit-note { color: var(--text-3); }
+.mobile-select-all { display: none; }
+.member-select { display: flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; cursor: pointer; }
+.member-open { border: 0; background: none; padding: 0; text-align: start; cursor: pointer; }
+.member-open:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+@media (max-width: 600px) {
+  .main { padding: 14px; }
+  .stats-strip { gap: 12px; padding: 14px; }
+  .stat-sep { display: none; }
+  .chip { min-height: 40px; }
+  .mobile-select-all { display: flex; align-items: center; gap: 12px; min-height: 44px; margin-bottom: 8px; color: var(--fg-2); }
+  .mobile-select-all input, .select-col input { width: 22px; height: 22px; }
+  .members-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .members-table thead input { visibility: hidden; }
+  .members-table, .members-table tbody { display: block; width: 100%; }
+  .members-table .user-row { display: grid; grid-template-columns: 44px minmax(0, 1fr); padding: 12px 8px; border-bottom: 1px solid var(--border); }
+  .members-table .user-row td { display: block; grid-column: 2; border: 0; width: auto; padding: 4px 8px; white-space: normal; overflow-wrap: anywhere; }
+  .members-table .user-row .select-col { grid-column: 1; grid-row: 1 / span 5; padding-top: 10px; display: flex; align-items: flex-start; justify-content: center; }
+  .members-table .member-open { min-height: 44px; font-size: 17px; }
+  .members-table .user-row .status-col:empty { display: none; }
+  .members-table .role-edit-hint { opacity: 1; }
+  .members-table .group-head { display: block; }
+  .members-table .group-head td { display: block; }
+  .request-card { flex-wrap: wrap; }
+  .request-actions { width: 100%; flex-wrap: wrap; }
+  .profile-grid { grid-template-columns: minmax(0, 1fr); }
+}
 </style>

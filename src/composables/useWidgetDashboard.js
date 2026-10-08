@@ -1,3 +1,5 @@
+import { printDocument } from '../lib/documents.js'
+import { showError } from './useNotify.js'
 // The self-serve widget dashboard shared by the diver profile and the
 // judge analysis page: which widgets are on and in what order, the
 // Customise modal's drag-to-reorder list, the date-range filter and the
@@ -140,7 +142,11 @@ export function useWidgetDashboard({ auth, catalog, defaults, saveUrl, profile, 
     }
     window.addEventListener('afterprint', cleanup)
     // Next frame, so the class lands before the print snapshot.
-    requestAnimationFrame(() => window.print())
+    requestAnimationFrame(async () => {
+      try { await printDocument({ name: 'DivingHQ profile' }) }
+      catch (error) { showError(error.message || 'Could not print this profile') }
+      finally { cleanup() }
+    })
   }
 
   return {

@@ -1,4 +1,5 @@
 <script setup>
+import { saveRemoteDocument } from '@/lib/documents'
 /* MeetReadinessModal shows the per-meet readiness report
  * (blockers, hard conflicts, late-arrival / synchro pendings,
  * per-federation splits). Extracted from ManagerView.vue, opened
@@ -48,24 +49,8 @@ loadReadinessReport()
 async function downloadMeetReadinessCsv() {
   readinessCsvBusy.value = true
   try {
-    const res = await fetch(
-      `/api/meets/${props.meet.id}/readiness-report?format=csv`,
-      { headers: auth.getHeaders() },
-    )
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}))
-      throw new Error(body.error || res.statusText)
-    }
-    const blob = await res.blob()
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `meet-readiness-${props.meet.id}.csv`
-    document.body.appendChild(a)
-    a.click()
-    a.remove()
-    URL.revokeObjectURL(url)
-    showSuccess('Readiness CSV downloaded')
+    const saved = await saveRemoteDocument(`/api/meets/${props.meet.id}/readiness-report?format=csv`, `meet-readiness-${props.meet.id}.csv`)
+    if (saved) showSuccess('Readiness CSV downloaded')
   } catch (err) {
     showError(err.message || 'Failed to download readiness CSV')
   } finally {

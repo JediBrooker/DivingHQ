@@ -168,3 +168,73 @@ test("a late session refresh cannot replace a newly signed-in account", { skip: 
   await refresh;
   assert.equal(auth.user.id, replacement.id);
 });
+
+test("an old account's delayed 401 probe cannot clear a new login", { skip: !hooked }, async () => {
+  let finishProbe, signalProbe;
+  const started = new Promise(resolve => { signalProbe = resolve; });
+  stubFetch({
+    "GET /api/coach/dashboard": () => jsonResponse(401, { error: "Session expired" }),
+    "GET /api/auth/me": () => { signalProbe(); return new Promise(resolve => { finishProbe = resolve; }); },
+  });
+  const auth = signedInStore();
+  const request = auth.apiFetch("/api/coach/dashboard");
+  await started;
+  const replacement = { ...SIGNED_IN, id: "aaaaaaaa-2222-3333-4444-555555555555", locale: "en" };
+  auth.saveSession({ user: replacement });
+  finishProbe(jsonResponse(401, { error: "Old cookie expired" }));
+  await assert.rejects(request, err => err.code === "session_changed");
+  assert.equal(auth.user.id, replacement.id);
+  assert.equal(window.location.href, "/profile");
+  assert.ok(!calls.includes("POST /api/auth/logout"));
+});
+
+test("new account 401s do not reuse the previous account's pending probe", { skip: !hooked }, async () => {
+  let finishOld, signalOld;
+  const started = new Promise(resolve => { signalOld = resolve; });
+  let probeCount = 0;
+  stubFetch({
+    "GET /api/coach/dashboard": () => jsonResponse(401, { error: "Refused" }),
+    "GET /api/auth/me": () => {
+      probeCount++;
+      if (probeCount === 1) { signalOld(); return new Promise(resolve => { finishOld = resolve; }); }
+      return jsonResponse(200, { user: SIGNED_IN });
+    },
+  });
+  const auth = signedInStore();
+  const oldRequest = auth.apiFetch("/api/coach/dashboard");
+  await started;
+  auth.saveSession({ user: { ...SIGNED_IN, id: "aaaaaaaa-2222-3333-4444-555555555555", locale: "en" } });
+  await assert.rejects(auth.apiFetch("/api/coach/dashboard"), err => err.status === 401);
+  assert.equal(probeCount, 2);
+  finishOld(jsonResponse(401, { error: "Old cookie expired" }));
+  await assert.rejects(oldRequest, err => err.code === "session_changed");
+  assert.ok(auth.isLoggedIn);
+});
+
+test("a private response body arriving after account change is discarded", { skip: !hooked }, async () => {
+  let finishBody, signalBody;
+  const started = new Promise(resolve => { signalBody = resolve; });
+  stubFetch({ "GET /api/private": () => ({ ok: true, status: 200, text: () => {
+    signalBody(); return new Promise(resolve => { finishBody = resolve; });
+  } }) });
+  const auth = signedInStore();
+  const request = auth.apiFetch("/api/private");
+  await started;
+  auth.saveSession({ user: { ...SIGNED_IN, id: "aaaaaaaa-2222-3333-4444-555555555555", locale: "en" } });
+  finishBody('{"private":"old account"}');
+  await assert.rejects(request, err => err.code === "session_changed");
+});
+
+test("session expiry discovered by refresh discards already pending private responses", { skip: !hooked }, async () => {
+  let finish;
+  stubFetch({
+    "GET /api/private": () => new Promise(resolve => { finish = resolve; }),
+    "GET /api/auth/me": () => jsonResponse(401, { error: "Session expired" }),
+  });
+  const auth = signedInStore();
+  const request = auth.apiFetch("/api/private");
+  await auth.fetchMe();
+  finish(jsonResponse(200, { private: "old account" }));
+  await assert.rejects(request, err => err.code === "session_changed");
+  assert.equal(auth.isLoggedIn, false);
+});

@@ -1,4 +1,5 @@
 <script setup>
+import { openExternal } from '@/lib/documents'
 // "What I owe" page (/charges) for any signed-in user. Lists outstanding
 // scratch / no-show penalty charges (divers) and disciplinary fines, each
 // with a Pay action and the contextual "coming soon" preview. Fines can
@@ -92,7 +93,7 @@ async function pay(charge) {
     const { url } = await auth.apiFetch(`/api/entry-charges/${charge.id}/checkout`, {
       method: 'POST', body: JSON.stringify({}),
     })
-    window.location.href = url
+    await openExternal(url, { replace: true })
   } catch (e) {
     showError(e.message || t('payments.charges_view.error_checkout'))
     payingId.value = ''
@@ -104,7 +105,7 @@ async function payFine(f) {
   payingFineId.value = f.id
   try {
     const { url } = await auth.apiFetch(`/api/fines/${f.id}/checkout`, { method: 'POST', body: JSON.stringify({}) })
-    window.location.href = url
+    await openExternal(url, { replace: true })
   } catch (e) {
     showError(e.message || t('payments.charges_view.error_checkout'))
     payingFineId.value = ''

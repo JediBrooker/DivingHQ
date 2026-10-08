@@ -1,4 +1,5 @@
 <script setup>
+import { openExternal } from '@/lib/documents'
 // Dedicated Payments section for a federation (org_admin). Tabs:
 //   Overview        : at-a-glance balance / payout / auto-withdraw + how it works
 //   Account details : Stripe payout onboarding (where we send your money)
@@ -96,7 +97,7 @@ async function startOnboarding() {
   onboarding.value = true
   try {
     const { url } = await auth.apiFetch(`/api/orgs/${orgId.value}/connect/onboard`, { method: 'POST', body: JSON.stringify({}) })
-    window.location.href = url // hand off to Stripe-hosted onboarding
+    await openExternal(url, { replace: true }) // hand off to Stripe-hosted onboarding
   } catch (e) {
     showError(e.message || t('payments.admin.error_start_onboarding'))
     onboarding.value = false

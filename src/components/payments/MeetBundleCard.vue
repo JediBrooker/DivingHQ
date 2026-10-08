@@ -1,4 +1,5 @@
 <script setup>
+import { openExternal } from '@/lib/documents'
 // Buyer-facing meet-bundle card on the public meet page. Shows the discounted
 // price plus which events it covers, with a coming-soon Buy action until
 // online payments are switched on. Stays hidden until a federation sets a bundle.
@@ -41,7 +42,7 @@ async function pay() {
   busy.value = true
   try {
     const { url } = await auth.apiFetch(`/api/meets/${props.meetId}/bundle/checkout`, { method: 'POST', body: JSON.stringify({}) })
-    window.location.href = url
+    await openExternal(url, { replace: true })
   } catch (e) {
     showError(e.message || 'Could not start checkout')
     busy.value = false

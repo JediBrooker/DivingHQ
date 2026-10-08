@@ -1,4 +1,5 @@
 <script setup>
+import AuthLayout from '@/components/AuthLayout.vue'
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute, RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
@@ -51,7 +52,8 @@ function safeNextPath() {
   // URLs (//evil.example), and javascript: schemes, since every
   // attacker-controllable target starts with a non-"/" or with
   // "//".
-  if (!raw.startsWith('/') || raw.startsWith('//')) return '/dashboard'
+  if (!raw.startsWith('/') || raw.startsWith('//') || /[\\\x00-\x20]|%2f|%5c|%2e/i.test(raw)) return '/dashboard'
+  if (!router.resolve(raw).matched.some(record => !record.path.includes(':pathMatch'))) return '/dashboard'
   return raw
 }
 
@@ -201,6 +203,7 @@ async function handleTotpSubmit() {
 </script>
 
 <template>
+  <AuthLayout>
   <div class="login-wrap">
     <div class="login-top">
       <div class="login-mark brand-wordmark">DIVING<span>HQ</span></div>
@@ -297,23 +300,11 @@ async function handleTotpSubmit() {
       @claimed="onClaimDone"
     />
   </div>
+  </AuthLayout>
 </template>
 
 <style scoped>
-:global(body) {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  /* dvh, not vh: iOS Safari's collapsing URL bar makes 100vh
-     equal the large viewport, so on iPhone SE-class screens
-     with the bar expanded the Sign In button ends up below the
-     visible area. dvh tracks the live viewport instead. vh fallback
-     goes first so browsers older than ~Q4-2022 still get a sane
-     min-height; modern browsers just ignore it and use dvh. */
-  min-height: 100vh;
-  min-height: 100dvh;
-  padding: 1.5rem;
-}
+
 .login-wrap {
   width: 100%;
   max-width: 420px;

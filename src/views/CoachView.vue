@@ -721,9 +721,9 @@ const hasMultipleMeets = computed(() => groupedByMeet.value.length > 1)
 .diver-card-head { display: flex; align-items: baseline; gap: 0.5rem; }
 .diver-card-name {
   font-family: var(--font-sans); font-size: 18px; font-weight: 600;
-  font-style: normal; color: var(--fg); line-height: 1.1;
+  font-style: normal; color: var(--fg); line-height: 1.3;
   flex: 1; min-width: 0;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  overflow-wrap: anywhere; white-space: normal;
 }
 .diver-card-ctry {
   font-family: var(--font-mono); font-size: 9px; font-weight: 700;
@@ -845,6 +845,8 @@ const hasMultipleMeets = computed(() => groupedByMeet.value.length > 1)
 }
 
 @media (max-width: 720px) {
+  .diver-card-foot { flex-wrap: wrap; gap: 8px; }
+  .diver-card-foot a { min-height: 44px; display: inline-flex; align-items: center; }
   .coach-wrap { padding: 1rem; }
   .diver-grid { grid-template-columns: 1fr; }
   .up-next-card { flex: 0 0 200px; }

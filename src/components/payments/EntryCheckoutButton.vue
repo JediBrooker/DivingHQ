@@ -1,4 +1,5 @@
 <script setup>
+import { openExternal } from '@/lib/documents'
 // Diver-facing "Pay & enter" control for an event. Mount it on the
 // competitor view, e.g.:
 //   <EntryCheckoutButton :event-id="event.id" />
@@ -51,7 +52,7 @@ async function pay() {
       method: 'POST',
       body: JSON.stringify({}),
     })
-    window.location.href = url // hand off to Stripe Checkout
+    await openExternal(url, { replace: true }) // hand off to Stripe Checkout
   } catch (e) {
     showError(e.message || 'Could not start checkout')
     busy.value = false

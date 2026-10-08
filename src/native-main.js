@@ -3,8 +3,11 @@ import { createSocketTicketAuth } from './lib/native-socket.mjs'
 import { createNativeFetch } from './lib/native-fetch.mjs'
 import { Capacitor, CapacitorHttp, CapacitorCookies } from '@capacitor/core'
 import { App } from '@capacitor/app'
+import { registerPlugin } from '@capacitor/core'
+import { createNativeIntegrations } from './lib/native-integrations.mjs'
+import { showError } from './composables/useNotify'
 import { setNativeRuntime } from './lib/native-platform'
-import { validateApiOrigin, nativeLinkPath } from './lib/native-boundary.mjs'
+import { validateApiOrigin } from './lib/native-boundary.mjs'
 
 const apiOrigin = validateApiOrigin(import.meta.env.VITE_NATIVE_API_ORIGIN)
 if (!Capacitor.isNativePlatform()) throw new Error('Native bundles must run in the iOS or Android app')
@@ -16,7 +19,12 @@ window.fetch = createNativeFetch({
   clearCookies: () => CapacitorCookies.clearAllCookies(),
 })
 
+const integrations = createNativeIntegrations({ apiOrigin, localBase: window.location.href, reportError: error => showError(error.message || 'Could not open this link') })
+const DocumentPrinter = registerPlugin('DocumentPrinter')
 setNativeRuntime({
+  apiOrigin,
+  ...integrations,
+  printDocument: options => DocumentPrinter.printDocument(options || {}),
   socketOptions({ spectator, userId }) {
     return {
       url: apiOrigin,
@@ -31,11 +39,8 @@ setNativeRuntime({
     }
   },
   async installLifecycle(router, { pauseSockets, resumeSockets }) {
-    const open = (url) => {
-      const path = nativeLinkPath(url, apiOrigin)
-      if (path && router.resolve(path).matched.length) router.push(path).catch(() => {})
-    }
-    await App.addListener('appUrlOpen', ({ url }) => open(url))
+    integrations.install(router)
+    await App.addListener('appUrlOpen', ({ url }) => integrations.openLink(url).catch(error => showError(error.message)))
     await App.addListener('appStateChange', ({ isActive }) => {
       if (isActive) {
         resumeSockets()
@@ -44,11 +49,12 @@ setNativeRuntime({
       } else pauseSockets()
     })
     await App.addListener('backButton', ({ canGoBack }) => {
+      if (!window.dispatchEvent(new Event('dhq:back', { cancelable: true }))) return
       if (canGoBack) router.back()
       else App.minimizeApp()
     })
     const launch = await App.getLaunchUrl()
-    if (launch?.url) open(launch.url)
+    if (launch?.url) await integrations.openLink(launch.url)
   },
 })
 

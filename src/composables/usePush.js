@@ -179,6 +179,10 @@ export function dropNotifications(ids) {
 // browser. Needs the session cookie for the DELETE, so sign-out has to
 // call it before clearing the session (see useSignOut). Never throws.
 export async function unsubscribePush(auth) {
+  if (isNativeApp()) {
+    const native = await import('@/lib/native-push')
+    return native.disableNativePush()
+  }
   if (!pushApiAvailable()) return
   try {
     const reg = await navigator.serviceWorker.getRegistration('/sw.js')
@@ -210,7 +214,13 @@ function pushIntoList(n) {
 export function usePush({ socket: sock } = {}) {
   const auth = useAuthStore()
   if (sock) bindPushSocket(sock)
-  permission.value = readPermission()
+  if (isNativeApp()) {
+    import('@/lib/native-push').then(async (native) => {
+      await native.initNativePush(auth, pushIntoList)
+      watch(() => native.nativePushState.permission, value => { permission.value = value }, { immediate: true })
+      ready.value = true
+    }).catch(() => { ready.value = true })
+  } else permission.value = readPermission()
 
   // Service worker postMessage, fired when the user taps a
   // system notification while the SPA tab is open.
@@ -250,6 +260,11 @@ export function usePush({ socket: sock } = {}) {
   // Subscribe to push. Safe to call multiple times, duplicates
   // just collapse on the endpoint UNIQUE.
   async function subscribe() {
+    if (isNativeApp()) {
+      const native = await import('@/lib/native-push')
+      await native.initNativePush(auth, pushIntoList)
+      return native.enableNativePush()
+    }
     if (!pushApiAvailable() || !auth.isLoggedIn) {
       ready.value = true
       return { ok: false, reason: 'unavailable' }
@@ -317,6 +332,7 @@ export function usePush({ socket: sock } = {}) {
   // names.
   async function showSignoff(requestId, { eventId = null } = {}) {
     if (!requestId || !auth.isLoggedIn) return false
+    const owner = auth.user?.id
     const match = (n) => n?.category === 'referee_signoff' && n.data?.request_id === requestId
     let n = notifications.value.find(match)
     if (!n) {
@@ -324,6 +340,7 @@ export function usePush({ socket: sock } = {}) {
         // Acknowledged rows count too: opening the inbox row may have
         // acked it while the request itself is still waiting.
         const rows = await auth.apiFetch('/api/notifications/me?limit=50')
+        if (auth.user?.id !== owner) return false
         n = (rows || []).find(match)
       } catch {
         return null
@@ -339,8 +356,10 @@ export function usePush({ socket: sock } = {}) {
 
   async function recent() {
     if (!auth.isLoggedIn) return
+    const owner = auth.user?.id
     try {
       const rows = await auth.apiFetch('/api/notifications/me?limit=20')
+      if (auth.user?.id !== owner) return
       // filter out anything already acknowledged, those don't
       // belong in the live banner
       const fresh = (rows || []).filter(r => r.status !== 'acknowledged')
@@ -356,10 +375,11 @@ export function usePush({ socket: sock } = {}) {
   watch(() => auth.user?.id, (id, prev) => {
     // A different person (or nobody) now: the old list isn't theirs.
     if (prev && id !== prev) clearNotifications()
+    if (isNativeApp()) import('@/lib/native-push').then(n => n.nativePushAccountChanged(id)).catch(() => {})
     if (!id) { autoSubscribedFor = null; return }
     if (prev || id === autoSubscribedFor) return
     autoSubscribedFor = id
-    subscribe().catch(() => {})
+    if (!isNativeApp()) subscribe().catch(() => {})
     recent().catch(() => {})
   }, { immediate: true })
 

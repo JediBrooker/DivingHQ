@@ -9,6 +9,12 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
 
+        <!-- Explicit opt-in: no FCM token generation or Analytics collection at startup.
+             https://firebase.google.com/docs/cloud-messaging/android/get-started -->
+        <meta-data android:name="firebase_messaging_auto_init_enabled" android:value="false" />
+        <meta-data android:name="firebase_analytics_collection_enabled" android:value="false" />
+        <meta-data android:name="com.google.firebase.messaging.default_notification_icon" android:resource="@drawable/ic_stat_divinghq" />
+        <meta-data android:name="com.google.firebase.messaging.default_notification_channel_id" android:value="divinghq_updates" />
         <activity
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation|density"
             android:name=".MainActivity"
@@ -17,6 +23,117 @@
             android:launchMode="singleTask"
             android:exported="true">
 
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="divinghq.app" />
+                <data android:path="/" />
+                <data android:path="/login" />
+                <data android:pathPrefix="/login/" />
+                <data android:path="/register" />
+                <data android:pathPrefix="/register/" />
+                <data android:path="/register-org" />
+                <data android:pathPrefix="/register-org/" />
+                <data android:path="/forgot-password" />
+                <data android:pathPrefix="/forgot-password/" />
+                <data android:path="/reset-password" />
+                <data android:pathPrefix="/reset-password/" />
+                <data android:path="/verify-email" />
+                <data android:pathPrefix="/verify-email/" />
+                <data android:path="/confirm-email-change" />
+                <data android:pathPrefix="/confirm-email-change/" />
+                <data android:path="/dashboard" />
+                <data android:pathPrefix="/dashboard/" />
+                <data android:path="/manager" />
+                <data android:pathPrefix="/manager/" />
+                <data android:path="/control" />
+                <data android:pathPrefix="/control/" />
+                <data android:path="/judge" />
+                <data android:pathPrefix="/judge/" />
+                <data android:path="/coach" />
+                <data android:pathPrefix="/coach/" />
+                <data android:path="/competitor" />
+                <data android:pathPrefix="/competitor/" />
+                <data android:path="/profile" />
+                <data android:pathPrefix="/profile/" />
+                <data android:path="/judge-profile" />
+                <data android:pathPrefix="/judge-profile/" />
+                <data android:path="/judges" />
+                <data android:pathPrefix="/judges/" />
+                <data android:path="/scoreboard" />
+                <data android:pathPrefix="/scoreboard/" />
+                <data android:path="/meet" />
+                <data android:pathPrefix="/meet/" />
+                <data android:path="/records" />
+                <data android:pathPrefix="/records/" />
+                <data android:path="/judge-analysis" />
+                <data android:pathPrefix="/judge-analysis/" />
+                <data android:path="/results-archive" />
+                <data android:pathPrefix="/results-archive/" />
+                <data android:path="/broadcast" />
+                <data android:pathPrefix="/broadcast/" />
+                <data android:path="/inbox" />
+                <data android:pathPrefix="/inbox/" />
+                <data android:path="/notifications" />
+                <data android:pathPrefix="/notifications/" />
+                <data android:path="/settings" />
+                <data android:pathPrefix="/settings/" />
+                <data android:path="/me" />
+                <data android:pathPrefix="/me/" />
+                <data android:path="/events" />
+                <data android:pathPrefix="/events/" />
+                <data android:path="/users" />
+                <data android:pathPrefix="/users/" />
+                <data android:path="/club" />
+                <data android:pathPrefix="/club/" />
+                <data android:path="/clubs" />
+                <data android:pathPrefix="/clubs/" />
+                <data android:path="/region" />
+                <data android:pathPrefix="/region/" />
+                <data android:path="/claims" />
+                <data android:pathPrefix="/claims/" />
+                <data android:path="/teams" />
+                <data android:pathPrefix="/teams/" />
+                <data android:path="/assign-judges" />
+                <data android:pathPrefix="/assign-judges/" />
+                <data android:path="/audit" />
+                <data android:pathPrefix="/audit/" />
+                <data android:path="/admin" />
+                <data android:pathPrefix="/admin/" />
+                <data android:path="/dive-directory" />
+                <data android:pathPrefix="/dive-directory/" />
+                <data android:path="/sign-off-codes" />
+                <data android:pathPrefix="/sign-off-codes/" />
+                <data android:path="/compare" />
+                <data android:pathPrefix="/compare/" />
+                <data android:path="/setup" />
+                <data android:pathPrefix="/setup/" />
+                <data android:path="/payments" />
+                <data android:pathPrefix="/payments/" />
+                <data android:path="/payment-history" />
+                <data android:pathPrefix="/payment-history/" />
+                <data android:path="/membership" />
+                <data android:pathPrefix="/membership/" />
+                <data android:path="/guardians" />
+                <data android:pathPrefix="/guardians/" />
+                <data android:path="/accreditation" />
+                <data android:pathPrefix="/accreditation/" />
+                <data android:path="/charges" />
+                <data android:pathPrefix="/charges/" />
+                <data android:path="/fines" />
+                <data android:pathPrefix="/fines/" />
+                <data android:path="/classes" />
+                <data android:pathPrefix="/classes/" />
+                <data android:path="/donate" />
+                <data android:pathPrefix="/donate/" />
+                <data android:path="/guide" />
+                <data android:pathPrefix="/guide/" />
+                <data android:path="/privacy" />
+                <data android:pathPrefix="/privacy/" />
+                <data android:path="/terms" />
+                <data android:pathPrefix="/terms/" />
+            </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

@@ -1,3 +1,4 @@
+import { clearPendingNativeNavigation } from '@/lib/native-platform'
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { idbClear, cachedFetch } from '@/lib/idbCache'
@@ -79,12 +80,14 @@ export const useAuthStore = defineStore('auth', () => {
     // cycles on a shared device, even though cache keys are per-fingerprint.
     idbClear().catch(() => {})
     sessionGeneration += 1
+    if (user.value?.id !== next.id) clearPendingNativeNavigation()?.catch(() => {})
     user.value = next
     cacheIdentity(next)
     adoptAccountLocale()
   }
 
   function clearSession() {
+    clearPendingNativeNavigation()?.catch(() => {})
     sessionGeneration += 1
     user.value = null
     cacheIdentity(null)
@@ -127,11 +130,17 @@ export const useAuthStore = defineStore('auth', () => {
       if (res.ok) {
         const body = await res.json().catch(() => null)
         if (generation !== sessionGeneration) return
+        if (user.value?.id !== body?.user?.id) {
+          sessionGeneration += 1
+          clearPendingNativeNavigation()?.catch(() => {})
+        }
         user.value = body?.user || null
         cacheIdentity(user.value)
         return
       }
       if (res.status === 401 || res.status === 403) {
+        sessionGeneration += 1
+        clearPendingNativeNavigation()?.catch(() => {})
         user.value = null
         cacheIdentity(null)
         return
@@ -236,23 +245,33 @@ export const useAuthStore = defineStore('auth', () => {
   // If the probe can't reach the server we keep the session, same call
   // fetchMe() makes: the next request that gets through settles it.
   let sessionProbe = null
-  function sessionIsDead() {
-    if (!sessionProbe) {
-      sessionProbe = fetch('/api/auth/me', { credentials: 'same-origin' })
+  function sessionIsDead(generation) {
+    if (!sessionProbe || sessionProbe.generation !== generation) {
+      const probe = { generation }
+      probe.result = fetch('/api/auth/me', { credentials: 'same-origin' })
         .then((r) => r.status === 401 || r.status === 403)
         .catch(() => false)
-        .finally(() => { sessionProbe = null })
+        .finally(() => { if (sessionProbe === probe) sessionProbe = null })
+      sessionProbe = probe
     }
-    return sessionProbe
+    return sessionProbe.result
+  }
+
+  function requireCurrentSession(generation) {
+    if (generation !== sessionGeneration) {
+      throw Object.assign(new Error('Account changed while the request was in progress'), { code: 'session_changed' })
+    }
   }
 
   async function apiFetch(url, options = {}) {
+    const generation = sessionGeneration
     const res = await fetch(url, {
       ...options,
       // Send the session cookie on every request.
       credentials: 'same-origin',
       headers: { ...getHeaders(), ...(options.headers ?? {}) },
     })
+    requireCurrentSession(generation)
     // 401 with a dead cookie (expired or revoked): clear the session so
     // the router guard sends the user back to /login instead of every
     // page throwing red errors. Skip it for viewers who weren't signed in
@@ -260,14 +279,21 @@ export const useAuthStore = defineStore('auth', () => {
     // genuinely refusing them, not a session-expiry signal. The second
     // isLoggedIn check is for a sibling request that already cleared it
     // while we were waiting on the probe.
-    if (res.status === 401 && isLoggedIn.value && await sessionIsDead() && isLoggedIn.value) {
+    const dead = res.status === 401 && isLoggedIn.value && await sessionIsDead(generation)
+    // A previous account's probe must never clear the next account's cookie.
+    requireCurrentSession(generation)
+    if (dead && isLoggedIn.value) {
       clearSession()
       if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
         window.location.href = '/login'
       }
     }
     if (!res.ok) {
+      // Clearing a genuinely expired session above changes the generation too;
+      // only a further identity change while reading this error supersedes it.
+      const errorGeneration = sessionGeneration
       const body = await res.json().catch(() => ({}))
+      requireCurrentSession(errorGeneration)
       // A write refused because the server just went into maintenance mode.
       // The banner is driven by the features store, which only reloads at
       // boot, so flip it here: this is usually the first a non-admin hears of
@@ -299,6 +325,7 @@ export const useAuthStore = defineStore('auth', () => {
     // landed, so the caller reported a failure and skipped its refresh.
     if (res.status === 204) return null
     const text = await res.text()
+    requireCurrentSession(generation)
     return text ? JSON.parse(text) : null
   }
 

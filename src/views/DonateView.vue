@@ -1,4 +1,5 @@
 <script setup>
+import { openExternal } from '@/lib/documents'
 // Supporter-facing donation page (/donate). Shows the federation's suggested
 // amounts (or a custom amount), with a contextual "coming soon" preview until
 // online payments get switched on. Reads GET /api/orgs/:orgId/donation.
@@ -55,7 +56,7 @@ async function donate() {
     const { url } = await auth.apiFetch(`/api/orgs/${orgId.value}/donate/checkout`, {
       method: 'POST', body: JSON.stringify({ amount_cents: cents }),
     })
-    window.location.href = url
+    await openExternal(url, { replace: true })
   } catch (e) {
     showError(e.message || t('payments.donate_view.error_checkout'))
     busy.value = false

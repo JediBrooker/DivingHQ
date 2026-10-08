@@ -1,4 +1,5 @@
 <script setup>
+import AuthLayout from '@/components/AuthLayout.vue'
 import { ref, computed, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
@@ -167,6 +168,7 @@ async function handleSubmit() {
 </script>
 
 <template>
+  <AuthLayout>
   <div class="wrap">
     <div class="login-mark brand-wordmark">DIVING<span>HQ</span></div>
 
@@ -281,17 +283,13 @@ async function handleSubmit() {
     <p v-if="!registered" class="footer-link">{{ $t('auth.register_org.already_registered') }} <RouterLink to="/login">{{ $t('auth.register_org.sign_in_link') }}</RouterLink></p>
     </template>
   </div>
+  </AuthLayout>
 </template>
 
 <style scoped>
 /* dvh: see RegisterView.vue for the iOS Safari rationale.
    vh fallback first for browsers older than ~Q4-2022. */
-:global(body) {
-  display: flex; align-items: center; justify-content: center;
-  min-height: 100vh;
-  min-height: 100dvh;
-  padding: 1.5rem;
-}
+
 .wrap { width: 100%; max-width: 520px; animation: fadeUp 0.4s ease; }
 .login-mark {
   font-family: var(--font-display); font-size: 13px; font-weight: 700;

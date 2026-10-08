@@ -362,6 +362,7 @@ async function sendSpaShell(req, res, next) {
   }
 }
 app.get("/", sendSpaShell);
+require("./lib/app-associations").installAppAssociations(app);
 
 // Crawler files. Both name https://divinghq.app, so they go through
 // renderCrawlerFile on the way out and a self-hosted copy points crawlers
@@ -597,6 +598,7 @@ const MAINTENANCE_SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 const MAINTENANCE_ALLOW_PREFIXES = [
   "/api/auth/login",
   "/api/auth/logout",
+  "/api/push/native/revoke", // revoke-only cleanup remains available during maintenance
   "/api/health",
   "/webhooks/",
 ];

@@ -1,4 +1,5 @@
 <script setup>
+import { openExternal } from '@/lib/documents'
 // Diver: their OWN enrolments (never anyone else's), plus browsing +
 // self-enrolling into their own club's active classes. Backed by
 // /api/me/classes and /api/me/available-classes, both scoped
@@ -60,7 +61,7 @@ async function payNow(e) {
       // Keep the button disabled while the browser navigates to Stripe.
       // A finally-reset here re-enabled it mid-redirect, which invited a
       // second click and a confusing second request.
-      window.location.href = res.url
+      await openExternal(res.url, { replace: true })
       return
     }
     // Fully covered by a discount, so it's activated directly, no Stripe redirect.

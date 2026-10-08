@@ -233,6 +233,9 @@ module.exports = defineConfig({
       // sysadmin, so a run with the .env VAPID keys buzzed real phones.
       VAPID_PUBLIC_KEY: "",
       VAPID_PRIVATE_KEY: "",
+      // Native provider credentials follow the same no-delivery boundary.
+      APNS_KEY_PATH: "",
+      FCM_SERVICE_ACCOUNT_PATH: "",
     },
   },
 });

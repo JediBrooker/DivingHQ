@@ -371,6 +371,11 @@ const routes = [
     // Notifications inbox: every push notification + in-app banner
     // sent to the signed-in user. Available to any authenticated user
     // (each row is scoped server-side).
+    path: '/settings',
+    component: () => import('@/views/SettingsView.vue'),
+    meta: { requiresAuth: true, appShell: true },
+  },
+  {
     path: '/inbox',
     component: () => import('@/views/InboxView.vue'),
     meta: { requiresAuth: true, appShell: true, titleKey: 'inbox.title' },

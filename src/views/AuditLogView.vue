@@ -1,4 +1,5 @@
 <script setup>
+import { saveDocument } from '@/lib/documents'
 // Federation-wide audit log. Three tabs:
 //
 //   1. Recent activity: the last 7 days of score + role events
@@ -336,7 +337,7 @@ function activitySummary(r) {
 }
 
 // ----- CSV export -----
-function exportCsv(rows, kind) {
+async function exportCsv(rows, kind) {
   if (!rows.length) return
   let header, body
   if (kind === 'score') {
@@ -384,12 +385,7 @@ function exportCsv(rows, kind) {
     .map(row => row.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(','))
     .join('\n')
   const blob = new Blob([csv], { type: 'text/csv' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `audit_${kind}_${new Date().toISOString().slice(0, 10)}.csv`
-  a.click()
-  URL.revokeObjectURL(url)
+  await saveDocument(blob, `audit_${kind}_${new Date().toISOString().slice(0, 10)}.csv`)
 }
 
 // ----- Mount -----
