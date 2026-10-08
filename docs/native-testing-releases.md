@@ -83,8 +83,13 @@ physical-device reliability, or readiness for use at a live meet.
 
 The signed version 1.0/build 1 candidates passed local artifact review; exact
 hashes and verification results are in the [test report](native-test-report-2026-10-08.md).
-The App Store Connect upload was committed and was awaiting build discovery and
-processing at this checkpoint. No TestFlight group or testers were assigned.
+App Store Connect finished processing build
+`c5516ea9-7145-421c-becd-e455c61eef81`, version **1.0 (1)**, with status **VALID**
+and audience **INTERNAL_ONLY**. It expires on 6 January 2027. The build reports
+`usesNonExemptEncryption=false`, and the `en-AU`
+What to Test text was saved. The build is ready for internal testing assignment,
+but its beta-group list is empty: no TestFlight group or testers were assigned
+and it has not been distributed.
 Google Play accepted bundle 1 (1.0), showing minimum API 24 and target API 36;
 release `1` was saved as a draft on internal track `4701056953067005627`.
 It was not rolled out or distributed. Neither upload is a public store release.
