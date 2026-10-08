@@ -193,9 +193,18 @@ Priorities, so only an outage really buzzes:
 | 3 default | back-up notes, overdue backups or restore checks, the test alert |
 | 2 low | FLAKY, status endpoint unreachable, offsite copy not configured |
 
-A push ntfy refuses (a 4xx, a timeout) waits in the outbox and goes out
-with the next run, same as a failed email. To go back to email,
+A push ntfy refuses (a 4xx, a timeout) goes out by email instead, as long
+as `ALERT_TO` is still set; only when that fails too does it wait in the
+outbox for the next run. To go back to email for good,
 `npx wrangler@4 secret delete NTFY_TOPIC`.
+
+**Use a token on ntfy.sh.** Anonymous posts count against the sender's IP,
+and Workers send from IPs shared with every other Worker, so the free
+daily quota is often used up by strangers before the watcher posts
+anything (the first deploy got `429 daily message quota reached`). Sign
+up for a free ntfy.sh account, create an access token under Account,
+Access tokens, and `npx wrangler@4 secret put NTFY_TOKEN`. Posts then
+count against your account instead.
 
 ## Change the recipient
 

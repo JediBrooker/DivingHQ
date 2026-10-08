@@ -540,8 +540,19 @@ describe("ntfy", () => {
     assert.equal(f.pushes[0].init.headers.authorization, undefined, "no token, no header");
   });
 
-  test("a refused push waits in the outbox like a failed email", async () => {
+  test("a refused push goes out by email instead", async () => {
     const e = ntfyEnv();
+    await watch.runCheck(e, deps(siteAndNtfy("down"), T0));
+    const f = siteAndNtfy("down", T0, { ntfyStatus: 429 });
+    const r = await watch.runCheck(e, deps(f, T0 + 2 * MIN));
+    assert.equal(f.pushes.length, 1, "tried ntfy first");
+    assert.equal(e.ALERT_EMAIL.sent.length, 1);
+    assert.equal(r.subject, "[DivingHQ] DOWN");
+    assert.deepEqual(e.WATCH_STATE.state.outbox, []);
+  });
+
+  test("with no email to fall back on, a refused push waits in the outbox", async () => {
+    const e = ntfyEnv({ ALERT_TO: undefined });
     await watch.runCheck(e, deps(siteAndNtfy("down"), T0));
     await assert.rejects(watch.runCheck(e, deps(siteAndNtfy("down", T0, { ntfyStatus: 403 }), T0 + 2 * MIN)), /ntfy answered HTTP 403: topic is reserved/);
     assert.equal(e.WATCH_STATE.state.outbox.length, 1);
@@ -553,7 +564,7 @@ describe("ntfy", () => {
   });
 
   test("a topic ntfy wouldn't accept is a failed send, never a request", async () => {
-    const e = ntfyEnv({ NTFY_TOPIC: "not a/topic" });
+    const e = ntfyEnv({ NTFY_TOPIC: "not a/topic", ALERT_TO: undefined });
     await watch.runCheck(e, deps(siteAndNtfy("down"), T0));
     const f = siteAndNtfy("down");
     await assert.rejects(watch.runCheck(e, deps(f, T0 + 2 * MIN)), /valid ntfy topic/);

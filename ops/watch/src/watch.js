@@ -150,12 +150,28 @@ function keepForRetry(alerts, now) {
 
 // Returns the subject (or push title), for the logs and /test-alert.
 async function sendAlerts(env, io, cfg, alerts, now) {
-  if (cfg.channel === "ntfy") {
-    const push = composePush(alerts, { now, timeZone: cfg.timeZone, target: cfg.target });
+  if (cfg.channel !== "ntfy") return sendEmail(env, io.EmailMessage, cfg, alerts, now);
+  const push = composePush(alerts, { now, timeZone: cfg.timeZone, target: cfg.target });
+  try {
     await sendPush(cfg, push, io.fetch);
     return push.title;
+  } catch (err) {
+    // A watcher that can't reach anyone is worse than an email. ntfy.sh
+    // counts anonymous posts per IP and Workers share their egress IPs, so
+    // the daily quota can be gone before we've sent a thing (first deploy,
+    // 9 Oct: HTTP 429). Email is still wired up, so fall back to it, and
+    // only fail the run (outbox retry) when that doesn't work either.
+    if (!cfg.to) throw err;
+    console.error("divinghq-watch: ntfy failed, sending by email instead", err && err.message);
+    try {
+      return await sendEmail(env, io.EmailMessage, cfg, alerts, now);
+    } catch (mailErr) {
+      throw new Error(`${err.message}; the email fallback failed too: ${mailErr && mailErr.message}`);
+    }
   }
-  const { EmailMessage } = io;
+}
+
+async function sendEmail(env, EmailMessage, cfg, alerts, now) {
   if (!cfg.to) throw new Error("ALERT_TO isn't set, so there's nobody to email");
   if (!env.ALERT_EMAIL || typeof env.ALERT_EMAIL.send !== "function") {
     throw new Error("the ALERT_EMAIL send_email binding is missing");
