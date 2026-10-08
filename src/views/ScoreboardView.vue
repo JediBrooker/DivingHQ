@@ -1265,7 +1265,7 @@ onMounted(async () => {
 
 <template>
   <div class="sb-layout"
-       :class="{ 'broadcast-mode': broadcastMode, ...overlayClasses(overlay) }"
+       :class="{ 'broadcast-mode': broadcastMode, 'public-layout': !auth.isLoggedIn && !broadcastMode && !overlayMode, ...overlayClasses(overlay) }"
        :style="overlayMode ? { background: overlayBg } : null">
     <!-- Floating exit button when in broadcast mode: small,
          positioned in the corner, nearly invisible until hover. Lets

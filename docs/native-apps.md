@@ -10,7 +10,8 @@ store release or a claim that every workflow has passed native-device testing.
 
 Use the repository's Node 22 environment, Xcode for iOS, and JDK 21 plus an
 Android SDK for Android. Install dependencies with `npm ci`. The app identifier
-is provisionally `app.divinghq.mobile`; confirm ownership before store setup.
+is `app.divinghq.mobile`, registered to the existing DivingHQ store accounts.
+See [testing releases](native-testing-releases.md) for distribution signing.
 
 Choose an explicit HTTPS staging API origin. There is deliberately no default
 production endpoint and no cleartext HTTP exception:
@@ -32,20 +33,26 @@ For command-line simulator/debug builds:
 
 ```sh
 xcodebuild -project ios/App/App.xcodeproj -scheme App \
-  -sdk iphonesimulator -configuration Debug \
-  -derivedDataPath /tmp/divinghq-ios-build CODE_SIGNING_ALLOWED=NO build
+  -sdk iphonesimulator -configuration Debug CODE_SIGNING_ALLOWED=NO build
 cd android
 ./gradlew assembleDebug
 ```
 
 Set `ANDROID_HOME`/`ANDROID_SDK_ROOT` to your SDK and `JAVA_HOME` to JDK 21 if
-your shell uses a different Java. Device distribution needs the usual Apple
-team signing or Android signing configuration; no keys are checked in. Native
+your shell uses a different Java. Release signing uses the registered Apple
+team/profile and an external Android upload-signing properties file; follow the
+[testing release commands](native-testing-releases.md). No keys are checked in. Native
 generated web bundles, local SDK paths, caches and signing files are ignored.
 `node scripts/native-icons.js` regenerates launcher icons from `public/icon.svg`.
 
+Reuse existing iOS simulators and Android emulators. Their default device storage
+and Xcode's default DerivedData are on `/Volumes/Storage` in this workspace.
+Do not set `ANDROID_AVD_HOME`, use `simctl --set`, or put DerivedData in the repo.
+Create a device only when the required model or OS version is absent, and delete
+only those newly created devices after testing.
+
 For local device testing use a temporary HTTPS proxy to the local test backend
-and a CA trusted only by dedicated test simulators. Android can reach that
+and temporary CA trust on the selected existing test simulators. Android can reach that
 proxy using `adb reverse tcp:3443 tcp:3443`. A test CA/network-security override
 must stay in temporary Debug configuration and must never enter release builds.
 Use the guarded test database, never production accounts or meet data.
@@ -84,9 +91,9 @@ Use the guarded test database, never production accounts or meet data.
 
 | Area | Current state / next proof |
 |---|---|
-| Broad role access | Existing routes and permissions are included; complete a device-by-role workflow inventory before beta. Feature flags still apply. |
+| Broad role access | Existing routes and permissions are included; complete a device-by-role workflow inventory during beta. Feature flags still apply. |
 | Phones and tablets | Both native targets support them; verify portrait, landscape, keyboard, safe areas and tablet multitasking. More tablet-specific layout work remains. |
-| Authentication | Cookie transport, 2FA, logout and ticket exchange are implemented. Native cookie persistence is configured up to the existing JWT expiry and was observed across an iPhone simulator restart. Android persistence remains unverified; physical-device restart, expiry, revocation and shared-device switching still require beta verification. |
+| Authentication | Cookie transport, 2FA, logout and ticket exchange are implemented. Native cookie persistence is configured up to the existing JWT expiry and was observed across an iPhone simulator restart and Android emulator process restart; physical-device restart, expiry, revocation and shared-device switching still require beta verification. |
 | Live/offline behaviour | Existing outbox/reconnect logic is reused. Test screen lock, OS suspension, force termination, airplane mode and interrupted writes on devices before meet use. Native abort stops response delivery but cannot guarantee cancellation of a write already sent; existing idempotency stays essential. |
 | Notifications | APNs/FCM token registration, permission UX, server delivery and notification taps remain. No new push provider is configured. |
 | App links | The App listener validates the exact configured origin and known routes. Universal Link/Android App Link domain association, entitlements and cold-launch delivery remain to be configured and tested. |
@@ -97,6 +104,9 @@ Use the guarded test database, never production accounts or meet data.
 | Stores/accessibility | Real-device accessibility, signing, privacy declarations, screenshots, TestFlight/Play testing and store review remain. |
 
 ## Verification
+
+The [8 October emulator report](native-test-report-2026-10-08.md) records the
+latest authenticated Android and anonymous production-origin device checks.
 
 Measured on 5 October 2026 against a local HTTPS proxy and the guarded test DB:
 
@@ -109,10 +119,17 @@ Measured on 5 October 2026 against a local HTTPS proxy and the guarded test DB:
 - Android Debug compilation succeeded. Phone and tablet emulator runtime checks
   were blocked by available disk space: the installed API 36 Play Store image
   requires about 7.4 GB free to boot, while roughly 3.6 GB was available. Android
-  login, session persistence, live updates and layouts have not been observed.
+  runtime was unverified in that initial run; the later October 8 checks below supersede that gap.
 - `npm run verify:local` passed (lint, web build, safe tests, motion and bundle
   limits). The final targeted native/auth checks passed all 37 tests after the
   logout-response ordering fix.
+
+On 8 October 2026 the existing API 36 Android emulator passed local HTTPS
+sign-in, Control Room live connection, process-restart session persistence,
+background/resume, server-interruption recovery, online logout and offline logout
+followed by restart (the next authenticated request returned 401). Phone portrait
+and tablet-sized landscape layouts were inspected. The temporary Debug trust
+files and test fixtures were removed before production-origin builds.
 
 These observations do not establish physical-device, background-push or complete
 role/workflow parity. Temporary test certificates are not release configuration.

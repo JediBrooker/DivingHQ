@@ -1,8 +1,8 @@
 # DivingHQ Privacy Policy
 
-Last updated: 29 September 2026
+Last updated: 8 October 2026
 
-This policy explains what DivingHQ collects, why, who can see it, how long it's kept, and how to get it removed. It covers the hosted service at [divinghq.app](https://divinghq.app).
+This policy explains what DivingHQ collects, why, who can see it, how long it's kept, and how to get it removed. It covers the hosted service at [divinghq.app](https://divinghq.app) and the DivingHQ iOS and Android apps that connect to it.
 
 ## 1. The short version
 
@@ -82,9 +82,9 @@ If you turn on push notifications (for example a coach's "your diver is up next"
 
 DivingHQ can take payments (entry fees, memberships, fines) through **Stripe**, but payments are switched off on the hosted service today. When they're switched on, Stripe collects and processes card details directly. We never see or store card numbers; we keep a record of each payment (amount, currency, status and Stripe's reference). We'll update this policy before payments go live.
 
-### Browser storage
+### Browser and app storage
 
-DivingHQ keeps a few things in your browser:
+DivingHQ keeps a few things in your browser or the app’s embedded browser:
 
 | Storage | Name | Purpose |
 |---|---|---|
@@ -97,6 +97,18 @@ DivingHQ keeps a few things in your browser:
 | IndexedDB | `dive-recorder-cache` | Copies of recent pages so the app works offline. Kept per user and cleared when you sign out |
 | IndexedDB | `divinghq-outbox` | Scores and other meet-day actions waiting to be sent while offline |
 | Service worker cache | `divinghq-shell-*` | The app's own code and assets, so it opens offline once installed |
+
+The iOS and Android apps keep the same sign-in cookie in the device's app cookie
+storage. Unlike the website's session cookie, the app cookie can survive closing
+and reopening the app, but expires no later than the signed session it belongs
+to. Signing out clears the app cookie storage and the per-user page cache. The
+apps also keep the offline queue and interface preferences listed above. Their
+code is bundled with the installation rather than stored by a browser service
+worker.
+
+Native push notifications are not enabled in the current iOS and Android test
+builds. Notices can still arrive inside the app while it is open and connected.
+The test builds use the same hosted accounts and competition data as the website.
 
 No third-party cookies, no analytics scripts, no ad pixels.
 

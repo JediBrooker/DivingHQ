@@ -1,5 +1,27 @@
 apply plugin: 'com.android.application'
 
+// Keep upload credentials outside source control, following Android's signing
+// properties pattern: https://developer.android.com/studio/publish/app-signing
+def signingPropertiesPath = System.getenv('DIVINGHQ_ANDROID_SIGNING_PROPERTIES')
+def uploadSigning = new Properties()
+def repositoryRoot = rootProject.projectDir.parentFile.canonicalPath + File.separator
+if (signingPropertiesPath) {
+    def signingPropertiesFile = new File(signingPropertiesPath)
+    if (!signingPropertiesFile.isAbsolute() || !signingPropertiesFile.isFile()
+        || signingPropertiesFile.canonicalPath.startsWith(repositoryRoot)) {
+        throw new GradleException('DIVINGHQ_ANDROID_SIGNING_PROPERTIES must name an existing absolute file outside the repository')
+    }
+    signingPropertiesFile.withInputStream { uploadSigning.load(it) }
+    for (def key : ['storeFile', 'storePassword', 'keyAlias', 'keyPassword']) {
+        if (!uploadSigning[key]) throw new GradleException("Missing upload signing property: ${key}")
+    }
+    def uploadStoreFile = new File(uploadSigning['storeFile'])
+    if (!uploadStoreFile.isAbsolute() || !uploadStoreFile.isFile()
+        || uploadStoreFile.canonicalPath.startsWith(repositoryRoot)) {
+        throw new GradleException('Upload storeFile must name an existing absolute file outside the repository')
+    }
+}
+
 android {
     namespace = "app.divinghq.mobile"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -16,10 +38,32 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        if (signingPropertiesPath) {
+            upload {
+                storeFile file(uploadSigning['storeFile'])
+                storePassword uploadSigning['storePassword']
+                keyAlias uploadSigning['keyAlias']
+                keyPassword uploadSigning['keyPassword']
+            }
+        }
+    }
     buildTypes {
         release {
+            if (signingPropertiesPath) signingConfig signingConfigs.upload
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+
+// Refuse a misleading unsigned release artifact; Debug stays usable without keys.
+tasks.configureEach {
+    if (name == 'preReleaseBuild') {
+        doFirst {
+            if (!signingPropertiesPath) {
+                throw new GradleException('Set DIVINGHQ_ANDROID_SIGNING_PROPERTIES before building a release')
+            }
         }
     }
 }
