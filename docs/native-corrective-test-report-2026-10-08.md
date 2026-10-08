@@ -64,6 +64,22 @@ current-account failure (`e2e-final-inbox-corrected.log`). The first run of the
 two new tests used incorrect English selectors; they were corrected to the
 actual button/toast text before the complete 16-test file passed.
 
+### Hosted source CI
+
+[GitHub Actions run 37776991430](https://github.com/JediBrooker/DivingHQ/actions/runs/37776991430)
+completed successfully for source commit
+`48e10c4c9732a2c85768be2fd7c55c156f544f0c`. All three jobs passed: build/lint/budgets,
+Postgres tests/schema drift, and the full browser matrix. The final committed
+source passed **1,575 Node tests with 3 skips and zero failures**, and **447
+Playwright tests with 1 skip and zero failures**. Node's hosted skips are the
+workflow's English-stuck check override and two macOS-font-only checks; the
+browser suite's fee-save check requires a Stripe test key unavailable in hosted
+CI. Local verification above records its own counts and later focused runs.
+
+The hosted log is retained at `ci/hosted-source-ci.log`. Subsequent documentation
+updates only record these results and deployment evidence; this successful run
+belongs to the source commit, not to a later documentation-only workflow run.
+
 ## UI and native evidence
 
 The [corrective experience plan](mobile-corrective-plan.md) records role-specific
@@ -80,11 +96,12 @@ HTTPS/test-database fixtures, rather than the production store releases:
 |---|---|
 | Platform compilation | iOS and Android Debug builds passed, including the final Android push teardown changes. The iOS notification-settings API availability guard was corrected to iOS 16. |
 | Authentication and navigation | Native HTTPS login passed on both platforms; iPhone menu/settings and iPad labelled sidebar rendered. Android cold explicit intent to protected Settings preserved the destination through login with a different account. This does not prove verified domain association in an installed store build. |
-| Sharing and printing | Actual iPhone profile Export PDF opened native print preview. Actual iPad member CSV opened an anchored native share sheet; the 282-byte private cache file contained the two synthetic fixture users. Physical save destinations and user-selected copies remain separate checks. |
+| Sharing and printing | Actual iPhone profile Export PDF opened native print preview. Actual iPad member CSV opened an anchored native share sheet; the 282-byte private cache file contained the two synthetic fixture users. Android opened native print preview for synthetic HTML (`android-native-print.png`); this was a bridge test, not a profile PDF workflow. Physical save destinations and user-selected copies remain separate checks. |
 | Session changes | Android UI logout caused a protected API read to return 401; login with another account and force-stop/relaunch retained only the switched account. Actual offline UI logout, proxy recovery and process restart also left the protected API at 401 and redirected Settings to login. iPhone UI logout/login and process restart retained the second account (`ios-account-switch-restart.png`). iPad Inbox → Sign Out showed no stale error toast after the response-ordering fix. |
 | System settings | Android opened its exact App Notification Settings activity. On the iOS 26.5 simulator, the documented settings URLs reached the Settings root; the physical-device app-specific shortcut remains unverified. |
 | Native judge support | Android keep-awake OS flag was observed enabled and subsequently reset. This does not establish physical haptic feel. |
 | Android tablet layout | No overflow at 1067×1707 and 1707×1067 using an emulator viewport override; this was not a dedicated tablet or physical tablet. |
+| Final iPhone setup layout | Actual fresh-install portrait/landscape screenshots confirm the safe-area correction (`ios-setup-final-portrait.png`, `ios-setup-final-landscape.png`). |
 | Permission and injected notifications | A temporary iOS harness exercised real deny/grant OS prompts. An iPad simulator-injected generic notification opened the authorized Settings screen on tap. Neither result is APNs/FCM delivery evidence. |
 
 The final Android auto-init/awaited-token-deletion correction compiled on both
@@ -106,12 +123,44 @@ no keychain reset or new device creation occurred.
 No APNs/FCM delivery, physical hardware, store-installed app links or replacement
 store publication is claimed here.
 
+## Production backend deployment
+
+The normal `./deploy.sh` workflow deployed source commit
+`48e10c4c9732a2c85768be2fd7c55c156f544f0c` in LXC 120 at
+`/root/DiveRecorder`, completing successfully at **2026-10-08 12:28:56 UTC**.
+Migration 105 applied. Deploy-time safe tests passed **1,017**, with **3 skips**
+and **zero failures**. The remote checkout was clean and both its HEAD and
+`dist/.build-sha` matched the deployed source commit.
+
+Post-deploy read-only checks against `https://divinghq.app` confirmed:
+
+- Health and feature endpoints returned HTTP 200, schema **105**. Payments,
+  classes and maintenance remained off; signups remained on.
+- Apple and Android association files returned HTTP 200 JSON without redirects.
+  Apple identifies `6MY34D5RKG.app.divinghq.mobile` and includes `/settings`.
+  Android identifies `app.divinghq.mobile` with the documented Play App Signing
+  SHA-256 certificate fingerprint.
+- Anonymous native-device status, notification read and socket-ticket requests
+  returned HTTP **403**, preserving the authenticated boundary.
+- Operations status recorded a successful `48e10c4` deployment and zero server
+  errors in its 15-minute window at verification time.
+- The runtime native provider factory reported **iOS false / Android false**.
+  Provider credentials were not changed; live native delivery remains unavailable
+  until legitimate provider provisioning is completed.
+
+The deployment log and HTTP evidence are retained as
+`device-verification/production-deploy-48e10c4.log` and
+`device-verification/production-verification-48e10c4.json` under the release
+artifact directory. Serving association JSON is not proof that a store-installed
+device has verified or opened an associated link. Documentation-only commits
+after this source commit do not require a backend redeployment.
+
 ## Remaining release acceptance
 
 - Provision the legitimate APNs key and Firebase client/server credentials;
   confirm provider acceptance separately from observed device delivery.
-- Deploy migration 105 and the association endpoints before verifying installed
-  release links and native notification registration against the live service.
+- Verify installed release links and native notification registration against
+  the deployed live service after provider and signed-build provisioning.
 - Publish replacement owner-only internal builds after release validation.
 - Complete store-installed physical iPhone/iPad checks. The owner offered an iOS
   device; a physical Android device is not available for this run. Android
