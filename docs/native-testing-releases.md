@@ -91,26 +91,44 @@ and audience **INTERNAL_ONLY**. It expires on 6 January 2027. The build reports
 `usesNonExemptEncryption=false`, and the `en-AU`
 What to Test text was saved. After backend verification, the build was assigned
 to the **DivingHQ Internal** group (`08053825-a507-405d-b453-efdc3b687336`). API
-readback confirmed exactly this build and **zero testers**, with internal state
-`READY_FOR_BETA_TESTING` and external state `NOT_APPLICABLE`. The group has no
-public link or access to all builds. Apple silicon Mac and Apple Vision
-availability are disabled for this phone/tablet test group. No testers were
-added or invited.
+readback confirmed exactly this build and **one tester: the owner**, with internal
+state `IN_BETA_TESTING` and external state `NOT_APPLICABLE`. The owner was invited
+through App Store Connect; subsequent API readback reported `INSTALLED` for
+version 1.0 (1). This confirms store installation, not authenticated workflow
+testing. The group has no public link or access to all builds. Apple silicon Mac
+and Apple Vision
+availability are disabled for this phone/tablet test group. No other testers
+were added or invited.
+
 Google Play accepted bundle 1 (1.0), showing minimum API 24 and target API 36;
 release `1` was published on internal track `4701056953067005627` at 22:00 Sydney
 time on 8 October. Play reports **Available to internal testers** for 1.0 (1).
-The track remains **Inactive** because zero testers are selected. Its
+The track is **Active**, with only the **DivingHQ Owner** email list selected;
+that list contains the owner's existing Google developer account and shows one
+user. The saved selection was verified in Play Console. Its
 [internal opt-in link](https://play.google.com/apps/internaltest/4701056953067005627)
 does not grant access to an unselected account. Neither platform has a public
-production release, and audience selection remains pending.
-Play's release preview showed no errors, with warnings for the unselected tester
-audience and absent deobfuscation mapping. The latter is expected with the current
-`minifyEnabled false` release build.
+production release. Android opt-in and installation have not been independently
+verified. Play's initial release preview showed no errors; the warning about
+absent deobfuscation mapping is expected with the current `minifyEnabled false`
+release build.
 
 The matching backend was deployed on 8 October 2026 at 10:57:50 UTC
 (`8cbd5b95`, schema 104). Public health/features returned 200 with feature flags
 unchanged; the socket-ticket endpoint rejected anonymous requests with 403 and
-malformed bearer tokens with 401. Tester audience selection remains separate.
+malformed bearer tokens with 401. Testing access is limited to the owner as
+requested.
+
+## Install the owner testing build
+
+- **iPhone or iPad:** install Apple's TestFlight app, then open the DivingHQ
+  invitation sent to the owner's Apple account. Accept it and install version
+  1.0 (1), or open DivingHQ in TestFlight if it is already installed.
+- **Android phone or tablet:** sign in to Google Play with the selected owner
+  account, open the internal opt-in link above, join the test, and follow its
+  Google Play installation link.
+
+Both builds connect to `https://divinghq.app` and use live accounts and data.
 
 Official references: [Apple TestFlight](https://developer.apple.com/help/app-store-connect/test-a-beta-version/testflight-overview/),
 [Google Play testing](https://support.google.com/googleplay/android-developer/answer/9845334),
