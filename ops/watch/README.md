@@ -1,7 +1,9 @@
 # divinghq-watch: external uptime and ops alerts
 
 A Cloudflare Worker that checks divinghq.app from outside every 2 minutes
-and emails you when something needs a person. It lives off the box on
+and tells you when something needs a person: as an ntfy push when
+`NTFY_TOPIC` is set (see [Alerts by ntfy](#alerts-by-ntfy)), by email
+when it isn't. It lives off the box on
 purpose. A box that's down, out of disk or wedged can't report on
 itself, and a backup job that silently stopped running never says a word.
 
@@ -15,6 +17,7 @@ has no npm dependencies: `src/` is plain ESM that wrangler bundles as is.
 | `src/watch.js` | The I/O: probes, KV, sending, retries, `GET /` and `GET /test-alert` |
 | `src/evaluate.js` | The rules. One pure function, `evaluate(prevState, observations, now)` |
 | `src/mime.js` | Builds the plain-text email by hand (RFC 5322, CRLF, encoded subjects) |
+| `src/ntfy.js` | The same alerts as an ntfy push, with a priority per rule |
 | `src/format.js` | Durations and times for the email text |
 
 Tests: `node --test test/watch-evaluate.test.js test/watch-worker.test.js`
@@ -159,6 +162,40 @@ logs; use a throwaway value.
 
 If the test email lands in spam, add a Gmail filter for
 `from:alerts@divinghq.app` with "Never send it to Spam".
+
+## Alerts by ntfy
+
+Set `NTFY_TOPIC` and every alert goes to ntfy instead, no email at all.
+Same wording, minus the email footer, one push per run.
+
+```bash
+# Pick a topic nobody will guess: on ntfy.sh, knowing the name is all it
+# takes to read (or post to) it.
+echo "dhq-watch-$(openssl rand -hex 8)"
+
+# Subscribe to it in the ntfy app on your phone first, then:
+npx wrangler@4 secret put NTFY_TOPIC
+# Only for a self-hosted server or a reserved topic that wants a token:
+npx wrangler@4 secret put NTFY_TOKEN
+```
+
+Secrets take effect straight away. `NTFY_SERVER` in `wrangler.toml` is
+`https://ntfy.sh`; point it at your own server if you run one (that one
+needs a deploy). `GET /` says which channel is live (`"channel": "ntfy"`)
+without showing the topic, and `/test-alert` sends a test push.
+
+Priorities, so only an outage really buzzes:
+
+| Priority | Alerts |
+|---|---|
+| 5 urgent | DOWN, database down |
+| 4 high | still-down reminders, backup / offsite / restore check failed, deploy failed, 5xx spike |
+| 3 default | back-up notes, overdue backups or restore checks, the test alert |
+| 2 low | FLAKY, status endpoint unreachable, offsite copy not configured |
+
+A push ntfy refuses (a 4xx, a timeout) waits in the outbox and goes out
+with the next run, same as a failed email. To go back to email,
+`npx wrangler@4 secret delete NTFY_TOPIC`.
 
 ## Change the recipient
 

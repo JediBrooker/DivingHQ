@@ -8,6 +8,7 @@
 
 import { evaluate, normalizeState, normalizeOutbox, significant, composeEmail, testAlert, worthRetrying, LIMITS } from "./evaluate.js";
 import { buildMime } from "./mime.js";
+import { composePush, sendPush, DEFAULT_NTFY_SERVER } from "./ntfy.js";
 import { MINUTE, toMs } from "./format.js";
 
 export const STATE_KEY = "state";
@@ -36,6 +37,12 @@ export function config(env = {}) {
     fromName: env.ALERT_FROM_NAME || DEFAULT_FROM_NAME,
     to: env.ALERT_TO || null,
     timeZone: env.TIME_ZONE || "UTC",
+    // With a topic set, alerts go to ntfy and not by email at all. The
+    // up/down emails were filling the inbox; a push is easier to swipe away.
+    ntfyServer: String(env.NTFY_SERVER || DEFAULT_NTFY_SERVER).replace(/\/+$/, ""),
+    ntfyTopic: env.NTFY_TOPIC || null,
+    ntfyToken: env.NTFY_TOKEN || null,
+    channel: env.NTFY_TOPIC ? "ntfy" : "email",
   };
 }
 
@@ -141,7 +148,14 @@ function keepForRetry(alerts, now) {
   return normalizeOutbox(alerts).filter((a) => now - toMs(a.at) < LIMITS.OUTBOX_MAX_AGE_MS);
 }
 
-async function sendAlerts(env, EmailMessage, cfg, alerts, now) {
+// Returns the subject (or push title), for the logs and /test-alert.
+async function sendAlerts(env, io, cfg, alerts, now) {
+  if (cfg.channel === "ntfy") {
+    const push = composePush(alerts, { now, timeZone: cfg.timeZone, target: cfg.target });
+    await sendPush(cfg, push, io.fetch);
+    return push.title;
+  }
+  const { EmailMessage } = io;
   if (!cfg.to) throw new Error("ALERT_TO isn't set, so there's nobody to email");
   if (!env.ALERT_EMAIL || typeof env.ALERT_EMAIL.send !== "function") {
     throw new Error("the ALERT_EMAIL send_email binding is missing");
@@ -196,12 +210,12 @@ export async function runCheck(env, deps = {}) {
   let subject = null;
   if (pending.length) {
     try {
-      subject = await sendAlerts(env, deps.EmailMessage, cfg, pending, now);
-      console.log(`divinghq-watch: sent "${subject}"`);
+      subject = await sendAlerts(env, { EmailMessage: deps.EmailMessage, fetch: fetchImpl }, cfg, pending, now);
+      console.log(`divinghq-watch: sent "${subject}" by ${cfg.channel}`);
     } catch (err) {
       sendError = err;
       state.outbox = keepForRetry(pending, now);
-      console.error("divinghq-watch: email failed, will retry next run", err && (err.code || ""), err && err.message);
+      console.error(`divinghq-watch: ${cfg.channel} failed, will retry next run`, err && (err.code || ""), err && err.message);
     }
   }
 
@@ -256,7 +270,12 @@ export async function handleFetch(request, env, deps = {}) {
     } catch {
       return json({ target: cfg.target, error: "couldn't read the state from KV" }, 503);
     }
-    return json({ target: cfg.target, now: new Date(deps.now ?? Date.now()).toISOString(), state: raw ? normalizeState(raw) : null });
+    return json({
+      target: cfg.target,
+      channel: cfg.channel,
+      now: new Date(deps.now ?? Date.now()).toISOString(),
+      state: raw ? normalizeState(raw) : null,
+    });
   }
 
   if (url.pathname === "/test-alert") {
@@ -269,7 +288,9 @@ export async function handleFetch(request, env, deps = {}) {
     const now = deps.now ?? Date.now();
     const cfg = config(env);
     try {
-      const subject = await sendAlerts(env, deps.EmailMessage, cfg, [testAlert(now, cfg.target)], now);
+      const fetchImpl = deps.fetch ?? ((u, init) => fetch(u, init));
+      const io = { EmailMessage: deps.EmailMessage, fetch: fetchImpl };
+      const subject = await sendAlerts(env, io, cfg, [testAlert(now, cfg.target)], now);
       return json({ sent: true, subject });
     } catch (err) {
       return json({ sent: false, error: String((err && err.message) || err).slice(0, 200) }, 502);
@@ -289,7 +310,7 @@ export function createWorker({ EmailMessage, fetch: fetchImpl } = {}) {
       await runCheck(env, { EmailMessage, fetch: fetchImpl });
     },
     async fetch(request, env) {
-      return handleFetch(request, env, { EmailMessage });
+      return handleFetch(request, env, { EmailMessage, fetch: fetchImpl });
     },
   };
 }

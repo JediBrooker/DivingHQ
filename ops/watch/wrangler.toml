@@ -22,7 +22,13 @@ TARGET = "https://divinghq.app"
 # stays out of this public repo: `npx wrangler@4 secret put ALERT_TO`.
 ALERT_FROM = "alerts@divinghq.app"
 ALERT_FROM_NAME = "DivingHQ watch"
-# Times in the emails are shown in this zone first, then UTC.
+# ntfy server to push alerts to. Only used once the NTFY_TOPIC secret is
+# set (`npx wrangler@4 secret put NTFY_TOPIC`), and then it replaces email
+# entirely. The topic is a secret because on ntfy.sh anyone who knows it
+# can read the alerts. NTFY_TOKEN (also a secret, optional) is an access
+# token for a server or topic that needs one.
+NTFY_SERVER = "https://ntfy.sh"
+# Times in the alerts are shown in this zone first, then UTC.
 TIME_ZONE = "Australia/Sydney"
 
 # All of the Worker's memory: one JSON value under the key "state".

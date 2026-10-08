@@ -489,6 +489,124 @@ describe("fetch handler", () => {
   });
 });
 
+describe("ntfy", () => {
+  // A fake fetch that serves the site and records anything posted to ntfy.
+  function siteAndNtfy(mode, now, { ntfyStatus = 200 } = {}) {
+    const pushes = [];
+    const inner = site(mode, now);
+    const fn = async (url, init) => {
+      if (url.startsWith("https://ntfy.example/")) {
+        pushes.push({ url, init, body: JSON.parse(init.body) });
+        return new Response(ntfyStatus === 200 ? "{}" : "topic is reserved", { status: ntfyStatus });
+      }
+      return inner(url, init);
+    };
+    fn.pushes = pushes;
+    return fn;
+  }
+  const ntfyEnv = (extra = {}) => env({ NTFY_SERVER: "https://ntfy.example/", NTFY_TOPIC: "dhq-watch-Abc123", ...extra });
+
+  test("with a topic set, an outage is an urgent push and no email", async () => {
+    const e = ntfyEnv({ NTFY_TOKEN: "tk_secret" });
+    await watch.runCheck(e, deps(siteAndNtfy("down"), T0));
+    const f = siteAndNtfy("down");
+    const r = await watch.runCheck(e, deps(f, T0 + 2 * MIN));
+    assert.equal(e.ALERT_EMAIL.sent.length, 0);
+    assert.equal(f.pushes.length, 1);
+    const p = f.pushes[0];
+    assert.equal(p.url, "https://ntfy.example/");
+    assert.equal(p.init.method, "POST");
+    assert.equal(p.init.headers.authorization, "Bearer tk_secret");
+    assert.equal(p.body.topic, "dhq-watch-Abc123");
+    assert.equal(p.body.title, "DivingHQ: DOWN");
+    assert.equal(p.body.priority, 5);
+    assert.deepEqual(p.body.tags, ["rotating_light"]);
+    assert.match(p.body.message, /^DivingHQ is down\n/);
+    assert.match(p.body.message, /HTTP 530/);
+    assert.doesNotMatch(p.body.message, /This email/, "no email footer");
+    assert.equal(r.subject, "DivingHQ: DOWN");
+  });
+
+  test("the all-clear is a normal-priority tick", async () => {
+    const e = ntfyEnv();
+    await watch.runCheck(e, deps(siteAndNtfy("down"), T0));
+    await watch.runCheck(e, deps(siteAndNtfy("down"), T0 + 2 * MIN));
+    const f = siteAndNtfy("up", T0 + 20 * MIN);
+    await watch.runCheck(e, deps(f, T0 + 20 * MIN));
+    assert.equal(f.pushes.length, 1);
+    assert.match(f.pushes[0].body.title, /^DivingHQ: back up after /);
+    assert.equal(f.pushes[0].body.priority, 3);
+    assert.deepEqual(f.pushes[0].body.tags, ["white_check_mark"]);
+    assert.equal(f.pushes[0].init.headers.authorization, undefined, "no token, no header");
+  });
+
+  test("a refused push waits in the outbox like a failed email", async () => {
+    const e = ntfyEnv();
+    await watch.runCheck(e, deps(siteAndNtfy("down"), T0));
+    await assert.rejects(watch.runCheck(e, deps(siteAndNtfy("down", T0, { ntfyStatus: 403 }), T0 + 2 * MIN)), /ntfy answered HTTP 403: topic is reserved/);
+    assert.equal(e.WATCH_STATE.state.outbox.length, 1);
+    const f = siteAndNtfy("down");
+    await watch.runCheck(e, deps(f, T0 + 10 * MIN));
+    assert.equal(f.pushes.length, 1);
+    assert.match(f.pushes[0].body.message, /first attempt to send it failed/);
+    assert.deepEqual(e.WATCH_STATE.state.outbox, []);
+  });
+
+  test("a topic ntfy wouldn't accept is a failed send, never a request", async () => {
+    const e = ntfyEnv({ NTFY_TOPIC: "not a/topic" });
+    await watch.runCheck(e, deps(siteAndNtfy("down"), T0));
+    const f = siteAndNtfy("down");
+    await assert.rejects(watch.runCheck(e, deps(f, T0 + 2 * MIN)), /valid ntfy topic/);
+    assert.equal(f.pushes.length, 0);
+  });
+
+  test("/test-alert and GET / follow the channel", async () => {
+    const e = ntfyEnv({ TEST_KEY: "k" });
+    const f = siteAndNtfy("up", T0);
+    const w = watch.createWorker({ EmailMessage: FakeEmailMessage, fetch: f });
+    const res = await w.fetch(new Request("https://w.example/test-alert?key=k"), e);
+    assert.deepEqual(await res.json(), { sent: true, subject: "DivingHQ: test alert" });
+    assert.equal(f.pushes.length, 1);
+    assert.equal(e.ALERT_EMAIL.sent.length, 0);
+    const state = await (await w.fetch(new Request("https://w.example/"), e)).json();
+    assert.equal(state.channel, "ntfy");
+    assert.equal(JSON.stringify(state).includes("dhq-watch-Abc123"), false, "GET / never shows the topic");
+    const plain = await (await w.fetch(new Request("https://w.example/"), env())).json();
+    assert.equal(plain.channel, "email");
+  });
+});
+
+describe("composePush", () => {
+  let ntfy;
+  before(async () => {
+    ntfy = await import("../ops/watch/src/ntfy.js");
+  });
+  const at = new Date(T0).toISOString();
+  const alert = (id, lines = []) => ({ id, tag: id, title: id, lines, at });
+
+  test("the loudest alert in the run sets the priority", () => {
+    assert.equal(ntfy.composePush([alert("flaky")], { now: T0 }).priority, 2);
+    assert.equal(ntfy.composePush([alert("restore.stale")], { now: T0 }).priority, 3);
+    const mixed = ntfy.composePush([alert("backup.failed"), alert("offsite.failed")], { now: T0 });
+    assert.equal(mixed.priority, 4);
+    assert.deepEqual(mixed.tags, ["warning"]);
+    assert.equal(ntfy.composePush([alert("db"), alert("down")], { now: T0 }).priority, 5);
+  });
+
+  test("a long message is cut under ntfy's 4096 bytes, on a code point", () => {
+    const p = ntfy.composePush([alert("down", ["é".repeat(5000)])], { now: T0 });
+    const bytes = new TextEncoder().encode(p.message).length;
+    assert.ok(bytes <= ntfy.MAX_MESSAGE_BYTES, `${bytes} bytes`);
+    assert.match(p.message, /cut short/);
+    assert.doesNotMatch(p.message, /�/);
+  });
+
+  test("topic names follow ntfy's own rule", () => {
+    for (const t of ["dhq", "a-b_C9", "x".repeat(64)]) assert.equal(ntfy.isTopic(t), true, t);
+    for (const t of ["", "has space", "a/b", "x".repeat(65), null, undefined]) assert.equal(ntfy.isTopic(t), false, String(t));
+  });
+});
+
 describe("the Worker package", () => {
   const toml = fs.readFileSync(path.join(WATCH_DIR, "wrangler.toml"), "utf8");
   const value = (key) => {
@@ -508,6 +626,11 @@ describe("the Worker package", () => {
     // publish the key and the owner's inbox.
     assert.equal(value("TEST_KEY"), null);
     assert.equal(value("ALERT_TO"), null);
+    // Same for the ntfy topic: on ntfy.sh it's the only thing keeping the
+    // alerts private.
+    assert.equal(value("NTFY_TOPIC"), null);
+    assert.equal(value("NTFY_TOKEN"), null);
+    assert.equal(value("NTFY_SERVER"), "https://ntfy.sh");
     assert.doesNotMatch(toml, /^[^#]*@(?!divinghq\.app")[^\s"]+"/m, "no personal address in wrangler.toml");
   });
 

@@ -743,29 +743,46 @@ export function significant(state) {
 }
 
 /**
- * One run's alerts -> one email. Order is the order the rules ran, which
- * puts outages first and backup housekeeping last.
+ * The bits an email and an ntfy push share: the cleaned-up alerts, the
+ * short summary that goes in the subject / title, and one text section per
+ * alert. Order is the order the rules ran, which puts outages first and
+ * backup housekeeping last.
  * @param {Alert[]} alerts
- * @param {{now: number, timeZone?: string, target?: string, stateUrl?: string}} opts
+ * @param {{now: number, timeZone?: string, via?: string}} opts  via fills in
+ *   "the first attempt to <via> it failed" on alerts out of the outbox
  */
-export function composeEmail(alerts, opts) {
+export function alertSections(alerts, opts) {
   const list = normalizeOutbox(alerts);
-  if (!list.length) throw new Error("composeEmail: nothing to send");
+  if (!list.length) throw new Error("alertSections: nothing to send");
   const now = toMs(opts.now);
   const tz = opts.timeZone || "UTC";
+  const via = opts.via || "email";
   const tags = list.map((a) => a.tag);
   const shown = tags.length > 4 ? [...tags.slice(0, 3), `${tags.length - 3} more`] : tags;
-  const subject = `[DivingHQ] ${shown.join(", ")}`;
 
   const sections = list.map((a) => {
     const lines = [a.title, "", ...a.lines];
     const at = toMs(a.at);
     // Came out of the outbox: say so, or the times in it look wrong.
     if (at !== null && now - at >= 5 * MINUTE) {
-      lines.push(`(Raised at ${formatWhen(at, tz)}; the first attempt to email it failed.)`);
+      lines.push(`(Raised at ${formatWhen(at, tz)}; the first attempt to ${via} it failed.)`);
     }
     return lines.join("\n");
   });
+  return { list, summary: shown.join(", "), sections };
+}
+
+/**
+ * One run's alerts -> one email.
+ * @param {Alert[]} alerts
+ * @param {{now: number, timeZone?: string, target?: string, stateUrl?: string}} opts
+ */
+export function composeEmail(alerts, opts) {
+  const { summary, sections } = alertSections(alerts, { now: opts.now, timeZone: opts.timeZone });
+  const now = toMs(opts.now);
+  const tz = opts.timeZone || "UTC";
+  const subject = `[DivingHQ] ${summary}`;
+
   const footer = [
     "--",
     `Sent by the divinghq-watch Worker, checking ${opts.target || "https://divinghq.app"} every 2 minutes (ops/watch in the repo).`,
