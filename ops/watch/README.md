@@ -198,13 +198,15 @@ as `ALERT_TO` is still set; only when that fails too does it wait in the
 outbox for the next run. To go back to email for good,
 `npx wrangler@4 secret delete NTFY_TOPIC`.
 
-**Use a token on ntfy.sh.** Anonymous posts count against the sender's IP,
-and Workers send from IPs shared with every other Worker, so the free
-daily quota is often used up by strangers before the watcher posts
-anything (the first deploy got `429 daily message quota reached`). Sign
-up for a free ntfy.sh account, create an access token under Account,
-Access tokens, and `npx wrangler@4 secret put NTFY_TOKEN`. Posts then
-count against your account instead.
+**ntfy.sh needs a paid plan from a Worker.** Posts count against the
+sender's IP, and Workers send from IPs shared with every other Worker, so
+the daily quota is usually used up by strangers before the watcher posts
+anything (the first deploy got `429 daily message quota reached`). A free
+account's token doesn't change that: it still counts against the IP
+(tried 9 Oct 2026, same 429). Only a paid plan gives the account its own
+quota; then put its access token in `npx wrangler@4 secret put NTFY_TOKEN`.
+The other way out is an ntfy server of your own, set in `NTFY_SERVER`, but
+not on the box being watched: it would go down along with the site.
 
 ## Change the recipient
 
