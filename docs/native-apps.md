@@ -4,11 +4,13 @@ DivingHQ now has Capacitor 8 projects for iOS and Android. Both bundle the same
 Vue application and server permission model, with mobile navigation and native
 notification, document, sharing and link integrations. iOS targets
 iPhone and iPad (`TARGETED_DEVICE_FAMILY = 1,2`); Android has no phone-only size
-or orientation restriction. The original 1.0 (1) prototype is available in
-owner-only internal testing. The corrective 1.1 (2) implementation is separate
-from provider provisioning, release publication and physical-device acceptance;
-see the [corrective plan](mobile-corrective-plan.md) and the verification ledger
-below before treating a capability as verified.
+or orientation restriction. Corrective version **1.1 (2)** is available in
+owner-only internal testing on both stores. Both notification providers are
+configured; the owner confirmed one physical iOS background receipt and tap into
+Settings, while Android delivery was observed on an emulator. See the
+[release evidence](native-release-evidence-2026-10-09.md) and
+[corrective plan](mobile-corrective-plan.md) for the precise scope and remaining
+physical-device acceptance checks.
 
 ## Build and run
 
@@ -101,13 +103,13 @@ Use the guarded test database, never production accounts or meet data.
 | Phones and tablets | Narrow layouts use bottom tabs, wide native layouts use a labelled sidebar; member forms and coaching cards adapt to available width. Browser geometry and populated workflow checks are recorded in the corrective plan. Physical keyboard, safe areas, accessibility and tablet multitasking require separate acceptance. |
 | Authentication | Cookie transport, 2FA, logout and ticket exchange are implemented. Native cookie persistence is configured up to the existing JWT expiry and was observed across an iPhone simulator restart and Android emulator process restart; physical-device restart, expiry, revocation and shared-device switching still require beta verification. |
 | Live/offline behaviour | Existing outbox/reconnect logic is reused. Test screen lock, OS suspension, force termination, airplane mode and interrupted writes on devices before meet use. Native abort stops response delivery but cannot guarantee cancellation of a write already sent; existing idempotency stays essential. |
-| Notifications | APNs/FCM registration, permission/settings UX, provider delivery, generic private payloads, authenticated taps and offline revocation are implemented and contract-tested. Provider credentials and observed store-installed delivery are separate gates; do not infer delivery from a simulator alert or provider acceptance alone. |
+| Notifications | APNs/FCM registration, permission/settings UX, generic private payloads, authenticated taps and offline revocation are implemented and contract-tested. Both providers are configured. One physical TestFlight iOS background receipt/tap was confirmed by the owner; Android background receipt/tap and logout revocation passed on an emulator. The remaining physical-device matrix is unverified. |
 | App links | Exact origin/route validation, protected-route login continuation, cold/warm handlers, association endpoints and platform entitlements are implemented. Associations must be deployed and verified against the installed signed release. |
 | Downloads/sharing | PDF/CSV/ICS exports, private cache files, native Save/Share, result links and platform printing are implemented. Session changes cancel pending exports. Physical Files/Downloads destinations, cancellation and account switching need platform acceptance. See [native integrations](native-integrations.md). |
 | Payments/external navigation | External HTTPS and checkout/Connect handoffs use the system browser; valid associated returns use normal route guards. Feature flags remain unchanged. Real payment transactions and store-installed return flows are unverified. |
 | File uploads | Multipart requests fail explicitly rather than being silently mis-encoded. There are no current FormData callers; implement native upload handling before adding one. |
 | Release compatibility | Define minimum API/app version negotiation and upgrade policy before distributing versions that can outlive backend releases. |
-| Stores/accessibility | The original 1.0 (1) internal builds remain distinct from corrective 1.1 (2). Publication of a replacement and real-device VoiceOver/TalkBack acceptance must be recorded explicitly. |
+| Stores/accessibility | Corrective 1.1 (2) is available to the owner in TestFlight and Play internal testing. One physical iOS notification receipt/tap is confirmed; real-device VoiceOver/TalkBack and the other store-installed acceptance scenarios remain unverified. |
 
 ## Verification
 

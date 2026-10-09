@@ -29,6 +29,12 @@ A persistent revocation tombstone blocks delayed registration after logout even 
 
 ## Verification
 
+The [9 October release evidence](native-release-evidence-2026-10-09.md) records
+both providers configured, real Android emulator delivery/tap/logout revocation,
+and the owner's confirmation of one physical TestFlight 1.1 (2) iOS background
+notification whose tap opened Settings. The iOS device model was not confirmed;
+physical Android and the remaining iOS acceptance scenarios remain unverified.
+
 `node --test test/native-push-provider.test.js test/native-push-client.test.js` covers invalid credentials, production/sandbox scope, OS denial, explicit consent, resume overlap, offline logout, late registration and account changes. `DB_DATABASE=divinghq_test node --test test/native-push.integration.test.js` runs ownership/revision/token rotation/provider failure tests against the guarded test database and real HTTP auth middleware.
 
-Before declaring store delivery verified, test the store-installed build on actual iPhone/iPad and Android hardware: allow and deny permission, change OS settings and return, send a self-test in foreground/background/locked state, cold/warm tap, expire a sign-off, offline logout, switch account and retry. Record provider acceptance separately from observed device delivery. Simulator injection or emulator UI checks do not prove APNs delivery to the installed TestFlight app.
+Before declaring the full store-device matrix verified, test the store-installed build on actual iPhone/iPad and Android hardware: allow and deny permission, change OS settings and return, send a self-test in foreground/background/locked state, cold/warm tap, expire a sign-off, offline logout, switch account and retry. Record provider acceptance separately from observed device delivery. Simulator injection or emulator UI checks do not prove APNs delivery to the installed TestFlight app.

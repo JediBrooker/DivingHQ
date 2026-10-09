@@ -40,8 +40,8 @@ readback reports **VALID**, **INTERNAL_ONLY**, internal state
 The build is assigned to exactly the existing **DivingHQ Internal** group
 (`08053825-a507-405d-b453-efdc3b687336`); its tester readback still contains only
 the owner. The group has no public link or access to all builds, and Mac/Apple
-Vision availability remains disabled. This confirms availability for the owner,
-not installation of 1.1 (2) or observed push delivery.
+Vision availability remains disabled. This store readback confirms availability
+for the owner; the later owner-confirmed physical delivery check is recorded below.
 
 Evidence: `verification/asc-upload.log`, `verification/asc-build2-final.json`,
 `verification/asc-build2-group-assignment.json` and
@@ -122,11 +122,26 @@ No production user's notification was sent by that check. This key does not
 authorize sandbox delivery.
 
 Evidence: `verification/apple-apns-key-created.jpg` and
-`verification/production-apns-provider-2026-10-09.json`. Physical iOS receipt and
-tap behavior remain pending an owner-only test from the installed TestFlight
-1.1 (2) app with notifications enabled; no such result is claimed yet.
+`verification/production-apns-provider-2026-10-09.json`.
 
-Physical iPhone/iPad and Android store-installed acceptance remains separate from
-simulator/emulator verification. The earlier test evidence and the remaining
+## Owner-confirmed physical iOS delivery
+
+At **13:46 Sydney time on 9 October 2026 (02:46 UTC)**, one explicitly authorized
+test targeted the owner's single eligible production iOS installation of
+**TestFlight 1.1 (2)**. The normal notification service checked account/session
+eligibility and cooldown; APNs accepted the request with no provider error.
+The owner then confirmed: **“Arrived and opened Settings”**.
+
+This is user-reported evidence of one real background notification received on
+a physical iOS device and a successful tap into Settings. The specific device
+model was not confirmed, so the result is not labelled iPhone or iPad. Evidence
+is retained in `verification/ios-owner-push-test-2026-10-09.json`, with provider
+acceptance and the owner's confirmation recorded separately. No account name or
+contact address is included here.
+
+This does not establish denied/re-enabled permission, locked/terminated-state
+delivery, cold launch, logout/account-switching, or the complete physical-device
+matrix. Physical Android and Play-installed delivery remain unverified. The
+earlier test evidence and the remaining
 permission, account-switching, background-delivery, app-link and accessibility
 checks are preserved in the [corrective plan](mobile-corrective-plan.md#physical-store-build-acceptance).

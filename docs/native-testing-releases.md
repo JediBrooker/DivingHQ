@@ -13,6 +13,11 @@ Store or Play production release. Implemented features, emulator checks, provide
 delivery and physical store-installed acceptance are separate claims; see
 [native apps](native-apps.md) and the release evidence before relying on a workflow.
 
+On 9 October the owner confirmed one background notification received by
+TestFlight 1.1 (2) on a physical iOS device, with its tap opening Settings.
+The device model and remaining physical acceptance scenarios were not confirmed;
+Android delivery evidence is from an emulator, not a Play-installed physical device.
+
 ## Registered destinations
 
 - App identifier on both platforms: `app.divinghq.mobile`.
