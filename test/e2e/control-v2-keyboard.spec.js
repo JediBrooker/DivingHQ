@@ -105,6 +105,8 @@ test("Space presses the focused button and answers the confirm, it doesn't advan
 
   await signIn(page, username);
   await page.goto(`/control?event=${A.event.id}`);
+  await page.getByRole("button", { name: "Take control", exact: true }).first().click();
+  await expect(page.getByRole("button", { name: "Release control", exact: true }).first()).toBeVisible();
   const cardA = page.locator(`.cv2-pool[data-event-id="${A.event.id}"]`);
   await expect(cardA.locator(".cv2-live-diver")).toContainText("AAA S", { timeout: 10_000 });
   // The page's announce reaching the room means its socket is in there too
@@ -148,6 +150,8 @@ test("the hold banner and 'h' follow the focused pool", async ({ request, page, 
 
   await signIn(page, username);
   await page.goto(`/control?event=${A.event.id}`);
+  await page.getByRole("button", { name: "Take control", exact: true }).first().click();
+  await expect(page.getByRole("button", { name: "Release control", exact: true }).first()).toBeVisible();
   const cardA = page.locator(`.cv2-pool[data-event-id="${A.event.id}"]`);
   const cardB = page.locator(`.cv2-pool[data-event-id="${B.event.id}"]`);
   await expect(cardA.locator(".cv2-live-diver")).toContainText("AAA HA", { timeout: 10_000 });
@@ -183,6 +187,8 @@ test("a referee hotkey stops the focused pool's auto-next countdown", async ({ r
 
   await signIn(page, username);
   await page.goto(`/control?event=${A.event.id}`);
+  await page.getByRole("button", { name: "Take control", exact: true }).first().click();
+  await expect(page.getByRole("button", { name: "Release control", exact: true }).first()).toBeVisible();
   const cardA = page.locator(`.cv2-pool[data-event-id="${A.event.id}"]`);
   await expect(cardA.locator(".cv2-live-diver")).toContainText("AAA RF", { timeout: 10_000 });
   await expect.poll(() => room.seen.state.length, { timeout: 8_000 }).toBeGreaterThan(0);
@@ -212,6 +218,8 @@ test("Space respects a hold, and asks before skipping a diver nobody has scored"
 
   await signIn(page, username);
   await page.goto(`/control?event=${A.event.id}`);
+  await page.getByRole("button", { name: "Take control", exact: true }).first().click();
+  await expect(page.getByRole("button", { name: "Release control", exact: true }).first()).toBeVisible();
   const cardA = page.locator(`.cv2-pool[data-event-id="${A.event.id}"]`);
   const diver = cardA.locator(".cv2-live-diver");
   await expect(diver).toContainText("AAA G", { timeout: 10_000 });
@@ -257,6 +265,8 @@ test("Space after clicking a card button advances, it doesn't press that button 
 
   await signIn(page, username);
   await page.goto(`/control?event=${A.event.id}`);
+  await page.getByRole("button", { name: "Take control", exact: true }).first().click();
+  await expect(page.getByRole("button", { name: "Release control", exact: true }).first()).toBeVisible();
   const cardA = page.locator(`.cv2-pool[data-event-id="${A.event.id}"]`);
   const diver = cardA.locator(".cv2-live-diver");
   await expect(diver).toContainText("AAA K", { timeout: 10_000 });

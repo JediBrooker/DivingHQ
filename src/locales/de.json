@@ -877,7 +877,11 @@
     "event_finished": "Wettbewerb beendet",
     "event_not_live": "Wettbewerb läuft nicht mehr",
     "waiting_next_panel": "Warten auf Ihr nächstes Kampfgericht…",
-    "score_not_recorded": "Ihre Wertung von {score} wurde nicht erfasst: Der Wettbewerb nahm keine Wertungen mehr an."
+    "score_not_recorded": "Ihre Wertung von {score} wurde nicht erfasst: Der Wettbewerb nahm keine Wertungen mehr an.",
+    "choose_event": "Disziplin zum Werten auswählen",
+    "switch_event": "Disziplin wechseln",
+    "switch_pending": "Warte vor dem Wechsel, bis deine ausstehenden Wertungen synchronisiert sind.",
+    "event_unavailable": "Du bist dieser Disziplin nicht zugeteilt. Wähle eines deiner laufenden Kampfgerichte."
   },
   "control": {
     "page_label": "Kontrollraum",
@@ -972,7 +976,28 @@
       "overlay_part_upnext": "Als Nächstes-Warteschlange",
       "overlay_part_standings": "Rangliste",
       "overlay_part_history": "Abgeschlossene Sprünge"
-    }
+    },
+    "take_control": "Steuerung übernehmen",
+    "take_over": "Übernehmen",
+    "release_control": "Steuerung freigeben",
+    "observing": "Live-Ansicht. Übernimm die Steuerung, um diese Disziplin fortzusetzen.",
+    "progression_owned": "Den Ablauf steuert {operator}.",
+    "control_required": "Übernimm die Steuerung, bevor du diese Disziplin fortsetzt",
+    "timer_paused": "Uhr angehalten — vor dem Neustart mit dem Schiedsrichter abstimmen",
+    "restart_clock": "Uhr neu starten",
+    "connection_lost": "Verbindung verloren. Übernimm nach dem Verbinden erneut die Steuerung.",
+    "no_response": "Keine Antwort. Übernimm vor dem Fortfahren erneut die Steuerung.",
+    "request_refused": "Anfrage abgelehnt",
+    "take_over_title": "„{event}“ übernehmen?",
+    "take_over_body": "Das andere Fenster oder die andere Bedienperson steuert den Ablauf dieser Disziplin dann nicht mehr.",
+    "restore_roster_failed": "Die Teilnehmerliste konnte nicht wiederhergestellt werden.",
+    "restore_scores_failed": "Aktuelle Wertungen konnten nicht wiederhergestellt werden.",
+    "restore_history_failed": "Der Verlauf der Disziplin konnte nicht wiederhergestellt werden.",
+    "take_control_failed": "Steuerung von „{event}“ konnte nicht übernommen werden: {error}",
+    "progression_stopped": "Ablauf angehalten: {error}",
+    "another_window": "ein anderes Fenster",
+    "another_operator": "eine andere Bedienperson",
+    "queued_action_stopped": "Eine wartende Steuerungsaktion wurde gestoppt. Öffne den Kontrollraum, übernimm die Steuerung und wähle die Aktion erneut."
   },
   "manager": {
     "title": "Wettkampf-Manager",

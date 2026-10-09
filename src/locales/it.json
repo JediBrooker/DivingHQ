@@ -877,7 +877,11 @@
     "event_finished": "Gara conclusa",
     "event_not_live": "La gara non è più in diretta",
     "waiting_next_panel": "In attesa del suo prossimo panel di giudici…",
-    "score_not_recorded": "Il suo voto di {score} non è stato registrato: la gara non accettava più voti."
+    "score_not_recorded": "Il suo voto di {score} non è stato registrato: la gara non accettava più voti.",
+    "choose_event": "Scegli una gara da giudicare",
+    "switch_event": "Cambia gara",
+    "switch_pending": "Attendi la sincronizzazione dei voti in coda prima di cambiare gara.",
+    "event_unavailable": "Non sei assegnato a questa gara. Scegli una delle tue giurie attive."
   },
   "control": {
     "page_label": "Sala Controllo",
@@ -972,7 +976,28 @@
       "overlay_part_upnext": "Coda prossimi",
       "overlay_part_standings": "Classifica",
       "overlay_part_history": "Tuffi completati"
-    }
+    },
+    "take_control": "Prendi il controllo",
+    "take_over": "Subentra",
+    "release_control": "Rilascia il controllo",
+    "observing": "Stai seguendo in diretta. Prendi il controllo per far avanzare questa gara.",
+    "progression_owned": "L’avanzamento è controllato da {operator}.",
+    "control_required": "Prendi il controllo prima di far avanzare questa gara",
+    "timer_paused": "Cronometro fermo — consulta l’arbitro prima di riavviarlo",
+    "restart_clock": "Riavvia cronometro",
+    "connection_lost": "Connessione persa. Riprendi il controllo dopo la riconnessione.",
+    "no_response": "Nessuna risposta. Riprendi il controllo prima di continuare.",
+    "request_refused": "Richiesta rifiutata",
+    "take_over_title": "Subentrare in «{event}»?",
+    "take_over_body": "L’altra finestra o l’altro operatore smetterà di controllare l’avanzamento di questa gara.",
+    "restore_roster_failed": "Impossibile ripristinare l’elenco dei partecipanti.",
+    "restore_scores_failed": "Impossibile ripristinare i voti attuali.",
+    "restore_history_failed": "Impossibile ripristinare la cronologia della gara.",
+    "take_control_failed": "Impossibile prendere il controllo di «{event}»: {error}",
+    "progression_stopped": "Avanzamento fermato: {error}",
+    "another_window": "un’altra finestra",
+    "another_operator": "un altro operatore",
+    "queued_action_stopped": "Un’azione di controllo in coda è stata fermata. Apri la Sala di Controllo, prendi il controllo e scegli di nuovo l’azione."
   },
   "manager": {
     "title": "Gestore gare",

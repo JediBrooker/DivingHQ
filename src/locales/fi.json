@@ -877,7 +877,11 @@
     "event_finished": "Kisalaji päättyi",
     "event_not_live": "Kisalaji ei ole enää käynnissä",
     "waiting_next_panel": "Odotetaan seuraavaa tuomaripaneeliasi…",
-    "score_not_recorded": "Pisteitäsi {score} ei tallennettu: kisalaji ei enää ottanut vastaan pisteitä."
+    "score_not_recorded": "Pisteitäsi {score} ei tallennettu: kisalaji ei enää ottanut vastaan pisteitä.",
+    "choose_event": "Valitse arvosteltava laji",
+    "switch_event": "Vaihda lajia",
+    "switch_pending": "Odota jonossa olevien pisteidesi synkronointia ennen lajin vaihtamista.",
+    "event_unavailable": "Sinua ei ole määrätty tähän lajiin. Valitse jokin käynnissä olevista tuomaripaneeleistasi."
   },
   "control": {
     "page_label": "Ohjaamo",
@@ -972,7 +976,28 @@
       "overlay_part_upnext": "Seuraavana-jono",
       "overlay_part_standings": "Tilanne",
       "overlay_part_history": "Suoritetut hypyt"
-    }
+    },
+    "take_control": "Ota ohjaus",
+    "take_over": "Ota ohjaus haltuun",
+    "release_control": "Vapauta ohjaus",
+    "observing": "Seuraat suorana. Ota ohjaus jatkaaksesi tätä lajia.",
+    "progression_owned": "Etenemistä ohjaa {operator}.",
+    "control_required": "Ota ohjaus ennen tämän lajin jatkamista",
+    "timer_paused": "Kello pysäytetty — varmista ylituomarilta ennen uudelleenkäynnistystä",
+    "restart_clock": "Käynnistä kello uudelleen",
+    "connection_lost": "Yhteys katkesi. Ota ohjaus uudelleen yhteyden palauduttua.",
+    "no_response": "Ei vastausta. Ota ohjaus uudelleen ennen jatkamista.",
+    "request_refused": "Pyyntö hylätty",
+    "take_over_title": "Otetaanko ”{event}” haltuun?",
+    "take_over_body": "Toinen ikkuna tai käyttäjä lakkaa ohjaamasta tämän lajin etenemistä.",
+    "restore_roster_failed": "Osallistujaluettelon palautus epäonnistui.",
+    "restore_scores_failed": "Nykyisten pisteiden palautus epäonnistui.",
+    "restore_history_failed": "Lajin historian palautus epäonnistui.",
+    "take_control_failed": "Lajin ”{event}” ohjauksen ottaminen epäonnistui: {error}",
+    "progression_stopped": "Eteneminen pysäytetty: {error}",
+    "another_window": "toinen ikkuna",
+    "another_operator": "toinen käyttäjä",
+    "queued_action_stopped": "Jonossa oleva ohjaustoiminto pysäytettiin. Avaa ohjaushuone, ota ohjaus ja valitse toiminto uudelleen."
   },
   "manager": {
     "title": "Kilpailun hallinta",

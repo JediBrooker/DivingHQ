@@ -24,6 +24,7 @@ Before the first warmup:
 6. Ask the referee to sign off.
 7. Open **Broadcast…** for projectors, OBS, or venue hardware before the first diver is called.
 8. Click **Start Event** only when the deck is ready.
+9. On the Live pool card, choose **Take control** and check the restored diver and scores before advancing.
 
 During the day, use **Hold / Resume** for a temporary pause inside the current event. Use the **Schedule** tab when a delay affects later events or another board.
 
@@ -55,14 +56,16 @@ Below the bar, a Live event is the familiar three-column board, pared back so on
 
 ## Running multiple events at once
 
-When more than one event is Live, the Control Room shows them **side by side** rather than one at a time. The **History** and **Standings** side columns collapse into edge **drawers** (tap a drawer to peek the focused pool's history or standings), and each Live event renders as its own **pool card** in the centre — each with its own shot clock, auto-advance, **⏸ Hold**, judge tiles, and referee actions. A background pool keeps receiving scores and can auto-advance itself while you work another, so a single operator can run 3 m and 10 m (or both stages of a Super Final) from one screen.
+When more than one event is Live, the Control Room shows them **side by side** rather than one at a time. The **History** and **Standings** side columns collapse into edge **drawers** (tap a drawer to peek the focused pool's history or standings), and each Live event renders as its own **pool card** in the centre — each with its own shot clock, auto-advance, **⏸ Hold**, judge tiles, and referee actions. A non-focused pool keeps receiving scores and can auto-advance while you control it and the app remains connected and in the foreground.
 
 ![Control Room — two events at once](/guide-screenshots/control-room-simultaneous.png)
 
 - **Switch focus** by tapping an event's chip in the top bar (or pick a non-Live event from **All events**). The focused card is outlined; History/Standings and the drawers follow the focused pool.
 - **Each pool is independent** — advancing, holding, or finalising one never touches another. Scores route to the right pool by event id, so a panel for a non-focused event still fills that card's tiles without stealing your place.
-- **Dropped-change safety.** If the server rate-limits a rapid `set_active_diver`, the change is caught client-side and the pool shows a **Retry** so the judges never end up on a stale diver.
-- **Two operators on one event.** The lease is advisory: if a second operator (or a second window) opens the same event, both see a "⚠ Also being controlled by another operator" notice. It never blocks — but two people driving the same pool will clobber each other, so coordinate. One operator per event is the supported model.
+- **Take control of each event you run.** Opening the room starts in observing mode. **Take control** restores the server's current diver and scores before enabling progression. One operator may control several cards; different operators may control different events.
+- **Two operators on one event.** Only one window or device can advance or finalise an event, including when both use the same account. If another window owns it, choose **Take over** and confirm the named event. That window immediately loses progression control. **Release control** hands the event back without changing its diver or scores. Authorized referee calls and Hold / Resume remain available independently.
+- **A lost connection stops progression.** Advancing and finalising require a live response. A failed or uncertain request stops control; reconnect, take control again, and check the restored state before continuing. Old queued progression is refused rather than replayed over another operator's work. Judges' queued scores keep their original event and diver.
+- **Returning from the background.** Locking the device, switching away from the app, disconnecting, or losing control stops Auto-next and the local clock. On return, choose **Take control** again. The clock shows a dash until you deliberately restart it; a missed countdown does not advance a diver when the app wakes.
 - **Drive it from the keyboard.** Every hotkey acts on the *focused* pool, and the number keys switch focus — press **1**…**9** to pick a pool, then **Space** / **→** to advance it, **H** to hold, **L** to announce, and **F** / **R** / **C** for the referee's failed / re-dive / cap calls. Full list on the [Keyboard Shortcuts](/guide/keyboard-shortcuts) page.
 
 ## The pre-meet workflow
@@ -89,7 +92,7 @@ The button beneath the checklist always offers the one action that unblocks you 
 | **✓ Check In Divers** | Opens the check-in modal. Tick everyone present, click Continue. Uncheck anyone who didn't show up — they're hidden from the start list. |
 | **🎲 Randomise Dive Order** | Opens the draw. **Start the draw** runs a five-second reel, then shows the drawn order with **Re-shuffle** and **Confirm dive order**. After that the start order is listed under the checklist. |
 | **📋 Referee Sign Off** | Opens the sign-off modal. The referee can authorise via push notification, scan a QR code on the manager's screen with their phone (auto-submits when they land), type a 6-digit handoff code into `/sign-off-codes` on their own device, or — fallback — type their credentials directly into the manager's laptop. All paths write the same audit row. The modal closes by itself once the referee approves, and says so if they decline or the request runs out (after 5 minutes). **Cancel request** withdraws it: the Approve/Deny leaves the referee's phone and a late Approve no longer counts, so you can try another way. |
-| **▶ Start Event** | Flips status Upcoming → Live and broadcasts `state_update` to every judge's phone. The spectator scoreboards start showing the event immediately. |
+| **▶ Start Event** | Flips status Upcoming → Live. Then choose **Take control** on the pool card to restore or announce the active diver to judges and scoreboards. |
 
 Each click is **idempotent** — re-clicking just re-runs the step. You can re-check in divers (a late arrival) and re-randomise as many times as you want, until the event goes Live.
 
@@ -99,13 +102,15 @@ The checklist is the last-chance review. `▶ Start Event` only becomes the butt
 
 ### Setting the active diver
 
-The pool card advances through the dive order with its **Next Diver →** primary: the button arms once the current dive's panel completes, and clicking it (or letting Auto-next fire) makes the next diver in the order active. Judges' phones receive the new `state_update` and the audience-facing scoreboard shows the new performer.
+After **Take control**, the pool card advances through the dive order with its **Next Diver →** primary: the button arms once the current dive's panel completes, and clicking it (or letting Auto-next fire) makes the next diver in the order active. Judges' phones and the audience-facing scoreboard receive the new performer once the server accepts the change.
 
 When you reopen the Control Room mid-meet, each pool **restores the diver the server already has live** rather than resetting to the top of the order — so a reload (or a second operator opening the room) never yanks the judges back to diver 1.
 
 ### The shot clock
 
-A 60-second shot clock (the WA post-warning window) auto-starts when a pool's active diver changes, and **each Live pool runs its own** — a background pool keeps its own clock independent of the one you're focused on. The clock turns amber, then red, and flashes when it hits 0. Per WA rules, the diver must have begun their dive by then — the operator should typically not need to intervene. Holding the pool pauses its clock.
+Each controlled pool has a local 60-second clock which starts when its active diver changes. It turns amber, then red, and flashes at 0. Holding the pool stops it. Losing control or backgrounding the app stops it and replaces the time with a dash; taking control again leaves it stopped until the operator chooses **Restart clock**.
+
+This display is an operator aid, not an automatic rules decision. Under World Aquatics Articles 8.5.4 and 8.5.5, the referee issues a warning after an unreasonable delay and the one-minute limit runs from that warning. Changing the active diver in the app does not establish when that warning was given, and the app does not automatically award a failed dive when its clock reaches 0.
 
 ### Active diver status
 
@@ -114,7 +119,7 @@ A small pill sits inline at the end of the diver name row and auto-cycles based 
 | Status | When it shows |
 |---|---|
 | READY | Diver is on the board, no scores yet, shot clock still ticking |
-| DIVING | Shot clock has expired; the diver must have started |
+| DIVING | Local shot clock has expired; this label does not confirm the athlete has started |
 | JUDGING | At least one judge has submitted a score for this round |
 
 The status broadcasts to the audience-facing scoreboard so the spectator strip ticks through the same phases.
@@ -124,6 +129,8 @@ The status broadcasts to the audience-facing scoreboard so the spectator strip t
 The **Next Diver** button in the bottom action row is a split-button: clicking the wide main button advances to the next diver immediately; clicking the trailing **▾** opens an Auto-next picker (Manual / 5s / 10s / 15s / 20s / 25s / 30s). The current selection has a check-mark; click any option to switch.
 
 Manual is the default — operator clicks Next Diver themselves. Pick a delay if you want the meet to flow without input (typically 10 – 15 s for the audience to applaud and the next diver to walk up). The same delay governs the round-end **announce standings** prompt.
+
+Auto-next runs only while this window controls the event, stays connected and remains in the foreground. A hold, referee signal or loss of control cancels a pending countdown. Returning to the app does not replay it; take control again and check the current dive before continuing.
 
 ### Hold / Resume
 
@@ -237,7 +244,7 @@ The focused pool's **Standings** column shows the live leaderboard continuously;
 
 ## Finalising the event
 
-Finalising is driven from the pool card's primary button, which is **state-aware**:
+Finalising requires control of the event and is driven from the pool card's primary button, which is **state-aware**:
 
 - **During pre-meet (Upcoming)** — the centre shows the Setup workflow, not a live board; "finalise" makes no sense before anything has happened.
 - **At the natural completion moment** — when the last dive of the last round is scored, that pool card's **Next Diver** button morphs into `✓ Finalise & View Results`. Each pool finalises independently, so finishing 3 m doesn't touch a still-running 10 m.
@@ -370,7 +377,7 @@ The only thing not persisted is the per-judge ephemeral entry — judges' typed-
 - **Use Broadcast for projectors, streaming, and venue boards.** Open **Tools** (top bar) → **Broadcast…** for the chooser: kiosk this screen, open the spectator view for an event in a chromeless window for the projector, pick several Live events for a side-by-side broadcast grid, stream a chroma-key overlay to OBS (see [Scoreboard → Stream Overlay](/guide/scoreboard#stream-overlay-for-obs--live-streaming-apps)), or wire up a Daktronics venue bridge (see [Venue Integration](/guide/venue-integration#enable-from-the-control-room)). The audience windows always open chromeless so the projector image stays clean.
 - **Keep Schedule and Control Room separate.** Schedule is the public plan for boards, warmups, breaks, and delays. Control Room is the live scoring surface. If one event pauses for two minutes, Hold that pool. If the whole afternoon shifts, update and publish the schedule.
 - **Watch the connection indicator.** If wifi is patchy and the socket shows as connecting, scoring queues locally but won't reach the server — wait for it to reconnect before relying on what you see.
-- **Running several pools? Let the cards work for you.** A non-focused pool keeps scoring and (if you've set Auto-next on it) advances itself, so you can leave 10 m ticking over while you drive 3 m. Switch focus with the chips only when a pool needs a hands-on call (a referee ruling, a correction).
+- **Running several pools? Take control of each one.** A non-focused pool keeps scoring and, while you still control it with the app connected and in the foreground, can use Auto-next. Switch focus with the chips when a pool needs a hands-on call (a referee ruling, a correction).
 - **Hover any disabled button** for a tooltip explaining the gate — *"Waiting for 2 more judge scores"* on Next Diver. Saves you guessing why the click doesn't work.
 
 ## Next steps

@@ -9029,6 +9029,7 @@ test("sockets: the live diver goes out without payment or pending-club details",
     await new Promise((r) => setTimeout(r, 100));
     const heard = compKit.listen(spectator, "state_update");
     // What ControlViewV2 sends: the roster row as it came.
+    await compKit.ask(ms, "claim_event_control", { event_id: row.event_id });
     assert.deepEqual(await compKit.ask(ms, "set_active_diver", { ...row, status: "ready" }), { ok: true });
     const [payload] = await heard;
     assert.ok(payload, "the spectator hears the new diver");
@@ -9082,6 +9083,7 @@ test("sockets: a new connection only hears its own events' live state", async (t
     await compKit.panel(eventId, [judge]);
     const ms = await open(manager.token);
     const row = (await fetchJson("GET", `/api/events/${eventId}/roster`, { token: manager.token })).body[0];
+    await compKit.ask(ms, "claim_event_control", { event_id: row.event_id });
     assert.deepEqual(await compKit.ask(ms, "set_active_diver", { ...row, status: "ready" }), { ok: true });
 
     const mine = (got) => got.filter((p) => p.event_id === eventId);
@@ -9227,6 +9229,7 @@ test("venue board: the diver on the board carries the meet's representation code
     socks.push(ms);
     const row = (await fetchJson("GET", `/api/events/${eventId}/roster`, { token: manager.token })).body[0];
     assert.equal(row.country_code, code, "the roster already speaks club");
+    await compKit.ask(ms, "claim_event_control", { event_id: row.event_id });
     assert.deepEqual(await compKit.ask(ms, "set_active_diver", { ...row, status: "ready" }), { ok: true });
     const state = await fetchJson("GET", `/api/venue/scoreboard-state/${eventId}`);
     assert.equal(state.status, 200);

@@ -126,6 +126,8 @@ test("History follows a score correction and a referee Failed", async ({ request
 
   await signIn(page, username);
   await page.goto(`/control?event=${event.id}`);
+  await page.getByRole("button", { name: "Take control", exact: true }).first().click();
+  await expect(page.getByRole("button", { name: "Release control", exact: true }).first()).toBeVisible();
   await expect(page.locator(".cv2-live-diver")).toContainText("AAA Diver", { timeout: 10_000 });
   await expect.poll(() => room.seen.state.length, { timeout: 8_000 }).toBeGreaterThan(0);
 

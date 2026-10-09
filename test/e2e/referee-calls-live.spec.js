@@ -24,6 +24,7 @@ test("a Cap and then a Failed call reach the Control Room tiles, the scoreboard 
   const cpage = await cctx.newPage();
   await signIn(cpage, username);
   await cpage.goto(`/control?event=${event.id}`);
+  await setup.selectControlEvent(cpage, "Referee Calls");
   const card = cpage.locator(`.cv2-pool[data-event-id="${event.id}"]`);
   await expect(card.locator(".cv2-live-diver")).toContainText("AAA Called", { timeout: 10_000 });
   await expect.poll(() => room.seen.state.length, { timeout: 8_000 }).toBeGreaterThan(0);

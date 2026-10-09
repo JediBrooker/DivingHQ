@@ -877,7 +877,11 @@
     "event_finished": "Konkurencja zakończona",
     "event_not_live": "Konkurencja nie jest już na żywo",
     "waiting_next_panel": "Oczekiwanie na Twój kolejny panel sędziowski…",
-    "score_not_recorded": "Twoja ocena {score} nie została zapisana: konkurencja nie przyjmowała już ocen."
+    "score_not_recorded": "Twoja ocena {score} nie została zapisana: konkurencja nie przyjmowała już ocen.",
+    "choose_event": "Wybierz konkurencję do oceniania",
+    "switch_event": "Zmień konkurencję",
+    "switch_pending": "Przed zmianą konkurencji poczekaj na synchronizację oczekujących ocen.",
+    "event_unavailable": "Nie jesteś przypisany do tej konkurencji. Wybierz jeden ze swoich aktywnych paneli sędziowskich."
   },
   "control": {
     "page_label": "Pokój kontroli",
@@ -972,7 +976,28 @@
       "overlay_part_upnext": "Kolejka Następni",
       "overlay_part_standings": "Klasyfikacja",
       "overlay_part_history": "Ukończone skoki"
-    }
+    },
+    "take_control": "Przejmij sterowanie",
+    "take_over": "Przejmij od operatora",
+    "release_control": "Zwolnij sterowanie",
+    "observing": "Obserwujesz na żywo. Przejmij sterowanie, aby kontynuować tę konkurencję.",
+    "progression_owned": "Przebiegiem steruje {operator}.",
+    "control_required": "Przejmij sterowanie przed kontynuowaniem tej konkurencji",
+    "timer_paused": "Zegar zatrzymany — przed ponownym uruchomieniem skonsultuj się z sędzią głównym",
+    "restart_clock": "Uruchom zegar ponownie",
+    "connection_lost": "Utracono połączenie. Po połączeniu ponownie przejmij sterowanie.",
+    "no_response": "Brak odpowiedzi. Przed kontynuowaniem ponownie przejmij sterowanie.",
+    "request_refused": "Żądanie odrzucone",
+    "take_over_title": "Przejąć „{event}”?",
+    "take_over_body": "Drugie okno lub operator przestanie sterować przebiegiem tej konkurencji.",
+    "restore_roster_failed": "Nie udało się przywrócić listy uczestników.",
+    "restore_scores_failed": "Nie udało się przywrócić aktualnych ocen.",
+    "restore_history_failed": "Nie udało się przywrócić historii konkurencji.",
+    "take_control_failed": "Nie udało się przejąć sterowania „{event}”: {error}",
+    "progression_stopped": "Przebieg zatrzymany: {error}",
+    "another_window": "inne okno",
+    "another_operator": "inny operator",
+    "queued_action_stopped": "Zatrzymano oczekującą akcję sterowania. Otwórz Pokój Kontrolny, przejmij sterowanie i ponownie wybierz akcję."
   },
   "manager": {
     "title": "Menedżer zawodów",

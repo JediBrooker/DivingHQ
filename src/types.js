@@ -1163,3 +1163,15 @@ export {}
  * @property {string} ticket
  * @property {string} user_id
  */
+
+/**
+ * The signed-in judge's panel assignments from GET /api/judge/my-events.
+ * @typedef {Object} JudgeAssignedEvent
+ * @property {string} id
+ * @property {string} name
+ * @property {'Upcoming'|'Live'|'Completed'} status
+ * @property {number} number_of_judges
+ * @property {number} total_rounds
+ * @property {string|null} meet_id
+ * @property {string|null} meet_name
+ */

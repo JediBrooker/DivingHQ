@@ -19,6 +19,7 @@
 // Mounted via:
 //   app.use(require('./routes/events')({ … }))
 
+const { eventControl } = require("../../lib/event-control");
 const express = require("express");
 const { recordAudit, auditFromReq } = require("../../lib/audit");
 const createIdempotency = require("../../lib/idempotency");
@@ -994,6 +995,8 @@ module.exports = function createEventsRouter({
   // the in-memory state when an event finalises.
   // -------------------------------------------------------------
   router.put("/api/events/:id/status", requireEventManager(), idem("event_status_flip"), async (req, res) => {
+    req.params.id = req.params.id.toLowerCase();
+    return eventControl.run(req.params.id, async () => {
     const { status } = req.body || {};
     const validStatuses = ["Upcoming", "Live", "Completed"];
     if (!validStatuses.includes(status)) {
@@ -1002,6 +1005,19 @@ module.exports = function createEventsRouter({
         .json({ error: `Status must be one of: ${validStatuses.join(", ")}` });
     }
     try {
+      if (status !== "Live" && meetHolds[req.params.id]) {
+        return res.status(409).json({ code: "event_held", error: "Resume this event before changing its status." });
+      }
+      const currentStatus = await pool.query("SELECT status FROM events WHERE id = $1", [req.params.id]);
+      const leavingLive = currentStatus.rows[0]?.status === "Live" && status !== "Live";
+      const lease = eventControl.get(req.params.id);
+      const token = req.body?.control_token;
+      // A token sent after expiry/release must never become an unclaimed
+      // manager write. Same-account tabs have no implicit ownership.
+      if ((leavingLive || lease || token != null) && !eventControl.ownsHttp(req.params.id, { userId: req.user.id, token })) {
+        return res.status(409).json({ code: "control_required", error: "Update or reopen the Control Room and take control of this event before changing its status." });
+      }
+
       // Atomic read-prev + flip in ONE statement. The previous
       // two-query version let two concurrent flips both observe
       // the same previousStatus and double-fire emails / push /
@@ -1098,11 +1114,12 @@ module.exports = function createEventsRouter({
       // restart doesn't rehydrate dead state. Drop the venue
       // bridge sequence counter for the same reason, otherwise
       // the per-event Map grows unbounded over a meet-week.
+      if (status !== "Live") eventControl.clear(event.id);
       if (status === "Completed") {
         delete activeDivers[event.id];
         delete meetHolds[event.id];
         if (typeof persistClearAll === "function") {
-          persistClearAll(event.id);
+          await persistClearAll(event.id);
         }
         try {
           require("../../lib/venue-state").pruneSequenceForEvent(event.id);
@@ -1158,6 +1175,7 @@ module.exports = function createEventsRouter({
       console.error("[Status Update Error]", err.message);
       res.status(500).json({ error: "Internal server error" });
     }
+    });
   });
 
   async function notifyStatusFlip(event, from, to) {

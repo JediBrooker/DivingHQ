@@ -877,7 +877,11 @@
     "event_finished": "Az esemény véget ért",
     "event_not_live": "Az esemény már nem élő",
     "waiting_next_panel": "Várakozás a következő bírói panelre…",
-    "score_not_recorded": "Az Ön {score} pontos értékelését nem rögzítettük: az esemény már nem fogadott pontokat."
+    "score_not_recorded": "Az Ön {score} pontos értékelését nem rögzítettük: az esemény már nem fogadott pontokat.",
+    "choose_event": "Válasszon pontozandó versenyszámot",
+    "switch_event": "Versenyszám váltása",
+    "switch_pending": "A versenyszám váltása előtt várja meg a függőben lévő pontszámok szinkronizálását.",
+    "event_unavailable": "Ehhez a versenyszámhoz nincs beosztva. Válassza ki valamelyik folyamatban lévő versenyszámát."
   },
   "control": {
     "page_label": "Vezérlőszoba",
@@ -972,7 +976,28 @@
       "overlay_part_upnext": "Következő ugrók",
       "overlay_part_standings": "Állás",
       "overlay_part_history": "Befejezett ugrások"
-    }
+    },
+    "take_control": "Irányítás átvétele",
+    "take_over": "Átvétel",
+    "release_control": "Irányítás elengedése",
+    "observing": "Élő követés. A versenyszám folytatásához vegye át az irányítást.",
+    "progression_owned": "A haladást {operator} irányítja.",
+    "control_required": "A versenyszám folytatása előtt vegye át az irányítást",
+    "timer_paused": "Az óra leállt — újraindítás előtt egyeztessen a vezetőbíróval",
+    "restart_clock": "Óra újraindítása",
+    "connection_lost": "A kapcsolat megszakadt. Csatlakozás után vegye át újra az irányítást.",
+    "no_response": "Nincs válasz. Folytatás előtt vegye át újra az irányítást.",
+    "request_refused": "Kérés elutasítva",
+    "take_over_title": "Átveszi ezt: „{event}”?",
+    "take_over_body": "A másik ablak vagy kezelő nem fogja tovább irányítani ezt a versenyszámot.",
+    "restore_roster_failed": "Nem sikerült visszaállítani a résztvevők listáját.",
+    "restore_scores_failed": "Nem sikerült visszaállítani az aktuális pontszámokat.",
+    "restore_history_failed": "Nem sikerült visszaállítani a versenyszám előzményeit.",
+    "take_control_failed": "Nem sikerült átvenni „{event}” irányítását: {error}",
+    "progression_stopped": "A haladás leállt: {error}",
+    "another_window": "másik ablak",
+    "another_operator": "másik kezelő",
+    "queued_action_stopped": "Egy várakozó vezérlési művelet leállt. Nyissa meg a vezérlőtermet, vegye át az irányítást, és válassza ki újra a műveletet."
   },
   "manager": {
     "title": "Versenymenedzser",

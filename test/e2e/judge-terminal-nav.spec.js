@@ -34,12 +34,16 @@ test("Judge Terminal with no ?event= picks up the judge's Live panel", async ({ 
 
   const adminSocket = await setup.openSocket(baseURL, adminToken);
   adminSocket.emit("subscribe_event", { event_id: event.id });
-  adminSocket.emit("set_active_diver", {
+  const control = await new Promise(resolve => adminSocket.emit("claim_event_control", { event_id: event.id, protocol: 2 }, resolve));
+  expect(control.ok).toBe(true);
+  const active = await new Promise(resolve => adminSocket.emit("set_active_diver", {
+    control_token: control.control_token,
     event_id: event.id, competitor_id: diver.userId, round_number: 1,
     full_name: "Navvy Diver", diverName: "Navvy Diver",
     diveCode: "101B", dd: 1.5, description: "Forward Dive", position: "B",
     dive_id: diveId, eventName: "Nav Judge Meet", status: "ready",
-  });
+  }, resolve));
+  expect(active.ok).toBe(true);
 
   try {
     await setup.installClickHighlight(page);

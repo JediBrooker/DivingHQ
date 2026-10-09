@@ -33,7 +33,7 @@ export function readAutoAdvanceSeconds(store, key = AUTO_ADVANCE_KEY) {
 // callers namespace it by event id so two pools' cadences don't clobber
 // each other, defaults to the shared legacy key.
 // scheduler: optional injectable interval scheduler for tests.
-export function useAutoAdvance({ isSignaling = () => false, scheduler, storageKey = AUTO_ADVANCE_KEY } = {}) {
+export function useAutoAdvance({ isSignaling = () => false, canRun = () => true, scheduler, storageKey = AUTO_ADVANCE_KEY } = {}) {
   const setI = (scheduler && scheduler.setInterval) || ((fn, ms) => setInterval(fn, ms))
   const clearI = (scheduler && scheduler.clearInterval) || ((id) => clearInterval(id))
 
@@ -52,10 +52,11 @@ export function useAutoAdvance({ isSignaling = () => false, scheduler, storageKe
   function startAutoAdvance(callback) {
     cancelAutoAdvance()
     if (!autoAdvanceSeconds.value) return // Manual mode
-    if (isSignaling()) return // judge flagging the referee blocks the timer
+    if (!canRun() || isSignaling()) return // judge flagging the referee blocks the timer
     autoAdvanceCountdown.value = autoAdvanceSeconds.value
     fire = callback
     timer = setI(() => {
+      if (!canRun() || isSignaling()) { cancelAutoAdvance(); return }
       autoAdvanceCountdown.value--
       if (autoAdvanceCountdown.value <= 0) {
         const run = fire

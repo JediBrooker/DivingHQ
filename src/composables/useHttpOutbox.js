@@ -2,8 +2,9 @@
 //
 // Unified bridge between src/lib/outbox.js (protocol-agnostic) and
 // both HTTP write endpoints and socket-based Control Room operations.
-// Every meet-time write, whether HTTP or socket, goes through the
-// same IDB-backed outbox so actions survive offline gaps.
+// Durable meet-time writes share an IDB-backed outbox. Live progression
+// and event status changes require current control and a direct answer;
+// replaying either later could undo another operator's work.
 //
 // Two transport modes, dispatched by action_type prefix:
 //   • 'socket:<event>'  → socket.emit with ack callback
@@ -15,12 +16,42 @@
 import { useAuthStore } from '@/stores/auth'
 import { useSocket } from './useSocket'
 import { getOutbox } from './useOutbox'
+import { showWarning } from './useNotify'
+import i18n from '@/i18n'
 
 let drainScheduled = false
 let retryTimer = null
+let obsoleteProgressionNotified = false
 
 // Sockets that already carry the connect→drain hook.
 const drainHookSockets = new WeakSet()
+
+// Releases before exclusive event control persisted these operations. The
+// app-wide drain can run on any screen before Control Room mounts, so the
+// fence belongs at the shared send boundary, not in a view's cleanup.
+// A final refusal keeps evidence in the outbox without offering a retry
+// that could later revive an obsolete cursor or finalisation.
+function refuseQueuedProgression(entry, notify = false) {
+  const action = entry.action_type
+  let statusWrite = action === 'event_status_flip'
+  if (!statusWrite && !action?.startsWith('socket:')) {
+    const { method, url } = entry.payload || {}
+    if (typeof url === 'string' && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(String(method).toUpperCase())) {
+      try {
+        statusWrite = /^\/api\/events\/[^/]+\/status\/?$/.test(new URL(url, 'https://outbox.invalid').pathname)
+      } catch { /* malformed URLs follow the normal sender's refusal */ }
+    }
+  }
+  if (action !== 'socket:set_active_diver' && action !== 'set_active_diver' && !statusWrite) return
+  const message = i18n.global.t('control.queued_action_stopped')
+  if (notify && !obsoleteProgressionNotified) {
+    obsoleteProgressionNotified = true
+    showWarning(message)
+  }
+  const error = new Error(message)
+  error.final = true
+  throw error
+}
 
 // --- HTTP send ---------------------------------------------------
 
@@ -144,6 +175,7 @@ function socketSend(entry) {
 // --- Unified send ------------------------------------------------
 
 function unifiedSend(auth, entry) {
+  refuseQueuedProgression(entry, true)
   if (isSocketAction(entry.action_type)) {
     return socketSend(entry)
   }
@@ -258,6 +290,7 @@ export function waitForOutboxEntry(key, { timeoutMs = 8000 } = {}) {
 // in IndexedDB under their fingerprint for when that person is back.
 export function disarmOutboxDrain() {
   _socket = null
+  obsoleteProgressionNotified = false
   clearTimeout(retryTimer)
   retryTimer = null
 }
@@ -270,6 +303,7 @@ export function useHttpOutbox() {
   armOutboxDrain(auth, socket)
 
   async function queueAction({ method, url, body, actionType }) {
+    refuseQueuedProgression({ action_type: actionType, payload: { method, url, body } })
     const ob = getOutbox()
     const key = await ob.push(actionType, { method, url, body })
     scheduleDrain(auth)
@@ -277,6 +311,7 @@ export function useHttpOutbox() {
   }
 
   async function queueSocketAction(eventName, payload) {
+    refuseQueuedProgression({ action_type: `socket:${eventName}`, payload })
     const ob = getOutbox()
     const key = await ob.push(`socket:${eventName}`, payload)
     scheduleDrain(auth)
@@ -288,6 +323,7 @@ export function useHttpOutbox() {
 
 export function _resetHttpOutboxForTests() {
   drainScheduled = false
+  obsoleteProgressionNotified = false
   clearTimeout(retryTimer)
   retryTimer = null
 }

@@ -866,7 +866,11 @@
     "event_finished": "Tapos na ang event",
     "event_not_live": "Hindi na live ang event",
     "waiting_next_panel": "Naghihintay ng susunod mong judging panel…",
-    "score_not_recorded": "Hindi naitala ang iyong iskor na {score}: hindi na tumatanggap ng iskor ang event."
+    "score_not_recorded": "Hindi naitala ang iyong iskor na {score}: hindi na tumatanggap ng iskor ang event.",
+    "choose_event": "Pumili ng event na huhusgahan",
+    "switch_event": "Lumipat ng event",
+    "switch_pending": "Hintaying matapos ang pag-sync ng mga nakapilang puntos bago lumipat ng event.",
+    "event_unavailable": "Hindi ka nakatalaga sa event na ito. Pumili ng isa sa iyong kasalukuyang panel."
   },
   "control": {
     "page_label": "Control room page",
@@ -961,7 +965,28 @@
       "overlay_part_upnext": "Pila ng Susunod",
       "overlay_part_standings": "Talahanayan",
       "overlay_part_history": "Mga natapos na dive"
-    }
+    },
+    "take_control": "Kunin ang kontrol",
+    "take_over": "Akuin ang kontrol",
+    "release_control": "Bitawan ang kontrol",
+    "observing": "Nanonood nang live. Kunin ang kontrol upang ipagpatuloy ang event na ito.",
+    "progression_owned": "Si {operator} ang kumokontrol sa pag-usad.",
+    "control_required": "Kunin ang kontrol bago ipagpatuloy ang event na ito",
+    "timer_paused": "Huminto ang orasan — kumonsulta sa referee bago simulan muli",
+    "restart_clock": "Simulan muli ang orasan",
+    "connection_lost": "Nawala ang koneksyon. Kunin muli ang kontrol kapag nakakonekta na.",
+    "no_response": "Walang tugon. Kunin muli ang kontrol bago magpatuloy.",
+    "request_refused": "Tinanggihan ang kahilingan",
+    "take_over_title": "Akuin ang kontrol sa “{event}”?",
+    "take_over_body": "Hihinto ang kabilang window o operator sa pagkontrol sa pag-usad ng event na ito.",
+    "restore_roster_failed": "Hindi maibalik ang listahan ng mga kalahok.",
+    "restore_scores_failed": "Hindi maibalik ang kasalukuyang mga puntos.",
+    "restore_history_failed": "Hindi maibalik ang kasaysayan ng event.",
+    "take_control_failed": "Hindi makuha ang kontrol sa “{event}”: {error}",
+    "progression_stopped": "Huminto ang pag-usad: {error}",
+    "another_window": "ibang window",
+    "another_operator": "ibang operator",
+    "queued_action_stopped": "Itinigil ang nakapilang aksyon sa pagkontrol. Buksan ang Control Room, kunin ang kontrol, at piliing muli ang aksyon."
   },
   "manager": {
     "title": "Tagapamahala ng meet",

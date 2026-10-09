@@ -877,7 +877,11 @@
     "event_finished": "Prova terminada",
     "event_not_live": "A prova já não está em direto",
     "waiting_next_panel": "A aguardar o teu próximo painel de juízes…",
-    "score_not_recorded": "A tua nota de {score} não foi registada: a prova já não aceitava notas."
+    "score_not_recorded": "A tua nota de {score} não foi registada: a prova já não aceitava notas.",
+    "choose_event": "Escolher uma prova para julgar",
+    "switch_event": "Mudar de prova",
+    "switch_pending": "Aguarde a sincronização das notas pendentes antes de mudar de prova.",
+    "event_unavailable": "Não está designado para esta prova. Escolha um dos seus painéis em curso."
   },
   "control": {
     "page_label": "Sala de Controlo",
@@ -972,7 +976,28 @@
       "overlay_part_upnext": "Fila de próximos",
       "overlay_part_standings": "Classificações",
       "overlay_part_history": "Saltos concluídos"
-    }
+    },
+    "take_control": "Assumir o controlo",
+    "take_over": "Tomar o controlo",
+    "release_control": "Libertar o controlo",
+    "observing": "A acompanhar em direto. Assuma o controlo para avançar esta prova.",
+    "progression_owned": "O avanço é controlado por {operator}.",
+    "control_required": "Assuma o controlo antes de avançar esta prova",
+    "timer_paused": "Relógio parado — consulte o árbitro antes de reiniciar",
+    "restart_clock": "Reiniciar relógio",
+    "connection_lost": "Ligação perdida. Assuma novamente o controlo após ligar.",
+    "no_response": "Sem resposta. Assuma novamente o controlo antes de continuar.",
+    "request_refused": "Pedido recusado",
+    "take_over_title": "Tomar o controlo de «{event}»?",
+    "take_over_body": "A outra janela ou operador deixará de controlar o avanço desta prova.",
+    "restore_roster_failed": "Não foi possível restaurar a lista de participantes.",
+    "restore_scores_failed": "Não foi possível restaurar as notas atuais.",
+    "restore_history_failed": "Não foi possível restaurar o histórico da prova.",
+    "take_control_failed": "Não foi possível assumir o controlo de «{event}»: {error}",
+    "progression_stopped": "Avanço parado: {error}",
+    "another_window": "outra janela",
+    "another_operator": "outro operador",
+    "queued_action_stopped": "Uma ação de controlo em fila foi interrompida. Abra a Sala de Controlo, assuma o controlo e escolha a ação novamente."
   },
   "manager": {
     "title": "Gestor de Competições",

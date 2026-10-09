@@ -866,7 +866,11 @@
     "event_finished": "Event finished",
     "event_not_live": "Event no longer live",
     "waiting_next_panel": "Waiting for your next judging panel…",
-    "score_not_recorded": "Your score of {score} wasn't recorded: the event had already stopped taking scores."
+    "score_not_recorded": "Your score of {score} wasn't recorded: the event had already stopped taking scores.",
+    "choose_event": "Choose an event to judge",
+    "switch_event": "Switch event",
+    "switch_pending": "Wait for your queued scores to finish syncing before switching events.",
+    "event_unavailable": "You are not assigned to this event. Choose one of your live panels."
   },
   "control": {
     "page_label": "Control Room",
@@ -961,7 +965,28 @@
       "dak_step4_desc": "The bridge sends an initial snapshot, listens for every live score update, and repeats the latest frame once per second for RTD consumers.",
       "dak_help_note": "Fixed-digit MDP panels still need venue-specific Daktronics configuration. This bridge feeds the RTD / ERTD data source used by All Sport Pro, Data Studio, Show Control, and DMP template workflows.",
       "dak_open_guide": "Open guide ↗"
-    }
+    },
+    "take_control": "Take control",
+    "take_over": "Take over",
+    "release_control": "Release control",
+    "observing": "Watching live. Take control to advance this event.",
+    "progression_owned": "Progression is controlled by {operator}.",
+    "control_required": "Take control before advancing this event",
+    "timer_paused": "Clock stopped — check with the referee before restarting",
+    "restart_clock": "Restart clock",
+    "connection_lost": "Connection lost. Take control again when connected.",
+    "no_response": "No response. Take control again before continuing.",
+    "request_refused": "Request refused",
+    "take_over_title": "Take over “{event}”?",
+    "take_over_body": "The other window or operator will stop controlling progression for this event.",
+    "restore_roster_failed": "Could not restore the event roster.",
+    "restore_scores_failed": "Could not restore current scores.",
+    "restore_history_failed": "Could not restore event history.",
+    "take_control_failed": "Could not take control of “{event}”: {error}",
+    "progression_stopped": "Progression stopped: {error}",
+    "another_window": "another window",
+    "another_operator": "another operator",
+    "queued_action_stopped": "A queued event-control action was stopped. Open the Control Room, take control and choose the action again."
   },
   "manager": {
     "title": "Meet Manager",

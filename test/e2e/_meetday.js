@@ -84,6 +84,11 @@ async function trackSockets(page) {
 async function emitAck(baseURL, token, eventName, payload) {
   const sock = await setup.openSocket(baseURL, token);
   try {
+    if (eventName === "set_active_diver") {
+      const claim = await new Promise(resolve => sock.emit("claim_event_control", { event_id: payload.event_id, protocol: 2 }, resolve));
+      if (!claim?.ok) return claim;
+      payload = { ...payload, control_token: claim.control_token };
+    }
     return await new Promise((resolve) => {
       const timer = setTimeout(() => resolve({ ok: false, error: "ack timeout" }), 5000);
       sock.emit(eventName, payload, (res) => { clearTimeout(timer); resolve(res); });

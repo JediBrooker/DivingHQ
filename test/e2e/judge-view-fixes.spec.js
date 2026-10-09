@@ -77,6 +77,7 @@ test("a re-dive reopens the judges' keypads and resets the operator's tiles", as
   const cpage = await cctx.newPage();
   await signIn(cpage, username);
   await cpage.goto(`/control?event=${event.id}`);
+  await setup.selectControlEvent(cpage, "Redive Event");
   const card = cpage.locator(`.cv2-pool[data-event-id="${event.id}"]`);
   await expect(card.locator(".cv2-live-diver")).toContainText("AAA Redive", { timeout: 10_000 });
   await expect.poll(() => room.seen.state.length, { timeout: 8_000 }).toBeGreaterThan(0);

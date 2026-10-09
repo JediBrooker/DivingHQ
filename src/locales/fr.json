@@ -877,7 +877,11 @@
     "event_finished": "Épreuve terminée",
     "event_not_live": "L'épreuve n'est plus en direct",
     "waiting_next_panel": "En attente de votre prochain panel de juges…",
-    "score_not_recorded": "Votre note de {score} n'a pas été enregistrée : l'épreuve n'acceptait plus de notes."
+    "score_not_recorded": "Votre note de {score} n'a pas été enregistrée : l'épreuve n'acceptait plus de notes.",
+    "choose_event": "Choisir une épreuve à juger",
+    "switch_event": "Changer d’épreuve",
+    "switch_pending": "Attendez la synchronisation de vos notes en attente avant de changer d’épreuve.",
+    "event_unavailable": "Vous n’êtes pas affecté à cette épreuve. Choisissez l’un de vos panels en cours."
   },
   "control": {
     "page_label": "Salle de contrôle",
@@ -972,7 +976,28 @@
       "overlay_part_upnext": "File d'attente",
       "overlay_part_standings": "Classement",
       "overlay_part_history": "Plongeons effectués"
-    }
+    },
+    "take_control": "Prendre le contrôle",
+    "take_over": "Reprendre le contrôle",
+    "release_control": "Libérer le contrôle",
+    "observing": "Suivi en direct. Prenez le contrôle pour faire avancer cette épreuve.",
+    "progression_owned": "{operator} contrôle la progression.",
+    "control_required": "Prenez le contrôle avant de faire avancer cette épreuve",
+    "timer_paused": "Chronomètre arrêté — consultez l’arbitre avant de le redémarrer",
+    "restart_clock": "Redémarrer le chronomètre",
+    "connection_lost": "Connexion perdue. Reprenez le contrôle après la reconnexion.",
+    "no_response": "Aucune réponse. Reprenez le contrôle avant de continuer.",
+    "request_refused": "Demande refusée",
+    "take_over_title": "Reprendre le contrôle de « {event} » ?",
+    "take_over_body": "L’autre fenêtre ou opérateur cessera de contrôler la progression de cette épreuve.",
+    "restore_roster_failed": "Impossible de rétablir la liste des participants.",
+    "restore_scores_failed": "Impossible de rétablir les notes actuelles.",
+    "restore_history_failed": "Impossible de rétablir l’historique de l’épreuve.",
+    "take_control_failed": "Impossible de prendre le contrôle de « {event} » : {error}",
+    "progression_stopped": "Progression arrêtée : {error}",
+    "another_window": "une autre fenêtre",
+    "another_operator": "un autre opérateur",
+    "queued_action_stopped": "Une action de contrôle en attente a été arrêtée. Ouvrez la Salle de Contrôle, prenez le contrôle et choisissez à nouveau l’action."
   },
   "manager": {
     "title": "Gestionnaire de compétitions",

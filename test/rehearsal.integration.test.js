@@ -343,10 +343,30 @@ test("seed, sign in, rehearse, status, clean up, clean up again", async (t) => {
 
   if (baseUrl) {
     const adminToken = await login(ADMIN.username, s.password);
-    const done = await fetchJson("PUT", `/api/events/${s.event_id}/status`, {
-      token: adminToken, body: { status: "Completed" },
+    // Finalisation follows the same explicit operator lease as the Control
+    // Room, even when this rehearsal drives the API directly.
+    const operator = require("socket.io-client").io(baseUrl, {
+      auth: { token: adminToken }, transports: ["websocket"],
+      autoConnect: false, reconnection: false, forceNew: true,
     });
-    assert.equal(done.status, 200, JSON.stringify(done.body));
+    try {
+      await new Promise((resolve, reject) => {
+        operator.once("connect", resolve);
+        operator.once("connect_error", reject);
+        operator.connect();
+      });
+      const control = await new Promise((resolve, reject) => {
+        operator.timeout(5000).emit("claim_event_control", { event_id: s.event_id, protocol: 2 },
+          (err, reply) => err ? reject(err) : resolve(reply));
+      });
+      assert.equal(control.ok, true, JSON.stringify(control));
+      const done = await fetchJson("PUT", `/api/events/${s.event_id}/status`, {
+        token: adminToken, body: { status: "Completed", control_token: control.control_token },
+      });
+      assert.equal(done.status, 200, JSON.stringify(done.body));
+    } finally {
+      operator.disconnect();
+    }
     assert.ok(await n("SELECT count(*) AS n FROM audit_log WHERE entity_id = $1", [s.event_id]) >= 2);
     assert.ok(await n("SELECT count(*) AS n FROM notifications WHERE data->>'event_id' = $1", [s.event_id]) > 1,
       "going live notified the panel and the divers");

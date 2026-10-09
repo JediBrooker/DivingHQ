@@ -23,6 +23,8 @@ test("the Control Room's active diver shows on the judge screen and the scoreboa
   const page = await ctx.newPage();
   await signIn(page, username);
   await page.goto(`/control?event=${event.id}`);
+  await page.getByRole("button", { name: "Take control", exact: true }).first().click();
+  await expect(page.getByRole("button", { name: "Release control", exact: true }).first()).toBeVisible();
   await expect(page.locator(".cv2-live-diver")).toContainText("AAA Payload", { timeout: 10_000 });
 
   // Fresh event, so the room hears roster[0] once the seed grace runs out.

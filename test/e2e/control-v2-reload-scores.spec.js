@@ -74,6 +74,8 @@ async function openControl(page, eventId) {
   await page.goto(`/control?event=${eventId}`);
   const card = page.locator(`.cv2-pool[data-event-id="${eventId}"]`);
   await expect(card.locator(".cv2-live-diver")).toBeVisible({ timeout: 10_000 });
+  await card.getByRole("button", { name: "Take control", exact: true }).click();
+  await expect(card.getByRole("button", { name: "Release control", exact: true })).toBeVisible();
   return card;
 }
 
@@ -174,6 +176,8 @@ test("scores sent while the Control Room was offline are there when it reconnect
   await scoreJudges(baseURL, w, 0, w.judges.slice(0, 2), [6.5, 7]);
   expect(await storedCount(w.event.id, w.divers[0].userId)).toBe(2);
   await context.setOffline(false);
+  await card.getByRole("button", { name: "Take control", exact: true }).click();
+  await expect(card.getByRole("button", { name: "Release control", exact: true })).toBeVisible();
 
   await expect(tiles(card)).toHaveText(["6.5", "7.0", "—", "—", "—"], { timeout: 15_000 });
   await scoreJudges(baseURL, w, 0, w.judges.slice(2), [7.5, 8, 8.5]);
@@ -215,6 +219,8 @@ test("a re-dive called while the Control Room was offline takes the old panel of
   await callFromElsewhere(baseURL, "referee_redive", w);
   await scoreJudges(baseURL, w, 0, w.judges.slice(0, 2), [5, 5.5]);
   await context.setOffline(false);
+  await card.getByRole("button", { name: "Take control", exact: true }).click();
+  await expect(card.getByRole("button", { name: "Release control", exact: true })).toBeVisible();
 
   // Three judges still have their keypads open for the re-dive, so Next
   // mustn't be armed off the old panel.
@@ -230,6 +236,8 @@ test("a Failed call made while the Control Room was offline shows its zeros when
   const { w, card } = await fullPanelThenOffline(page, request, baseURL, context, "Offline Failed");
   await callFromElsewhere(baseURL, "referee_failed_dive", w);
   await context.setOffline(false);
+  await card.getByRole("button", { name: "Take control", exact: true }).click();
+  await expect(card.getByRole("button", { name: "Release control", exact: true })).toBeVisible();
 
   await expect(tiles(card)).toHaveText(["0.0", "0.0", "0.0", "0.0", "0.0"], { timeout: 15_000 });
   await expect(card.locator(".cv2-primary")).toBeEnabled();
@@ -246,6 +254,8 @@ test("a diver withdrawn while the Control Room was offline isn't called next", a
     [w.event.id, w.divers[1].userId],
   );
   await context.setOffline(false);
+  await card.getByRole("button", { name: "Take control", exact: true }).click();
+  await expect(card.getByRole("button", { name: "Release control", exact: true })).toBeVisible();
 
   // BBB was the only one left, so AAA's dive is the last and the button
   // finalises rather than calling BBB up.

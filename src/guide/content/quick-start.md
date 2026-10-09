@@ -72,7 +72,7 @@ Running several events across a day? **Schedule** (on the meet) plans boards, wa
 
 ## 5. Run it from the Control Room
 
-On the day, open the event from your dashboard's **Open Control Room** card, or from its row in Meet Manager. Judges sign in on their phones and open **Judge Terminal**; the active diver appears on their screen automatically.
+On the day, open the event from your dashboard's **Open Control Room** card, or from its row in Meet Manager. Judges sign in on their phones and open **Judge Terminal**. If assigned to several live events, they choose their panel first; the active diver then appears automatically.
 
 Before the start, the Control Room shows a **readiness checklist** with one button for the next thing to do:
 
@@ -106,3 +106,5 @@ Either way, [Roles & Permissions](/guide/roles-and-permissions#claims) explains 
 - [Session Scheduler](/guide/session-scheduler): boards, warmups, breaks, officials and delays.
 - [Running a Meet](/guide/running-a-meet): the full Control Room playbook.
 - [FAQ & Troubleshooting](/guide/faq): the questions new clubs ask most.
+
+The Control Room watches all live events independently. Choose **Take control** on the event you will operate; **Take over** asks before replacing another operator. Leaving the app or losing the connection stops automatic advancement. When you return, take control again after the live state reloads. Referee actions and holds remain available to authorized referees without taking progression control.

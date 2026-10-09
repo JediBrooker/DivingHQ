@@ -866,7 +866,11 @@
     "event_finished": "Natjecanje je završeno",
     "event_not_live": "Natjecanje više nije uživo",
     "waiting_next_panel": "Čekanje vašeg sljedećeg sudačkog panela…",
-    "score_not_recorded": "Vaša ocjena {score} nije zabilježena: natjecanje više nije primalo ocjene."
+    "score_not_recorded": "Vaša ocjena {score} nije zabilježena: natjecanje više nije primalo ocjene.",
+    "choose_event": "Odaberite disciplinu za suđenje",
+    "switch_event": "Promijeni disciplinu",
+    "switch_pending": "Pričekajte da se ocjene na čekanju sinkroniziraju prije promjene discipline.",
+    "event_unavailable": "Niste dodijeljeni ovoj disciplini. Odaberite jedno od svojih aktivnih sudačkih vijeća."
   },
   "control": {
     "page_label": "Kontrolna soba",
@@ -961,7 +965,28 @@
       "overlay_part_upnext": "Sljedeći na redu",
       "overlay_part_standings": "Poredak",
       "overlay_part_history": "Završeni skokovi"
-    }
+    },
+    "take_control": "Preuzmi upravljanje",
+    "take_over": "Preuzmi od operatera",
+    "release_control": "Otpusti upravljanje",
+    "observing": "Pratite uživo. Preuzmite upravljanje za nastavak ove discipline.",
+    "progression_owned": "Napredovanjem upravlja {operator}.",
+    "control_required": "Preuzmite upravljanje prije nastavka ove discipline",
+    "timer_paused": "Sat je zaustavljen — provjerite s glavnim sucem prije ponovnog pokretanja",
+    "restart_clock": "Ponovno pokreni sat",
+    "connection_lost": "Veza je prekinuta. Ponovno preuzmite upravljanje nakon povezivanja.",
+    "no_response": "Nema odgovora. Ponovno preuzmite upravljanje prije nastavka.",
+    "request_refused": "Zahtjev odbijen",
+    "take_over_title": "Preuzeti „{event}”?",
+    "take_over_body": "Drugi prozor ili operater prestat će upravljati napredovanjem ove discipline.",
+    "restore_roster_failed": "Nije moguće obnoviti popis sudionika.",
+    "restore_scores_failed": "Nije moguće obnoviti trenutačne ocjene.",
+    "restore_history_failed": "Nije moguće obnoviti povijest discipline.",
+    "take_control_failed": "Nije moguće preuzeti upravljanje za „{event}”: {error}",
+    "progression_stopped": "Napredovanje zaustavljeno: {error}",
+    "another_window": "drugi prozor",
+    "another_operator": "drugi operater",
+    "queued_action_stopped": "Zaustavljena je radnja upravljanja na čekanju. Otvorite kontrolnu sobu, preuzmite upravljanje i ponovno odaberite radnju."
   },
   "manager": {
     "title": "Menadžer natjecanja",

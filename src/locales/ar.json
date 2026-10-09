@@ -866,7 +866,11 @@
     "event_finished": "انتهى الحدث",
     "event_not_live": "لم يعد الحدث مباشرًا",
     "waiting_next_panel": "في انتظار لجنة التحكيم التالية الخاصة بك…",
-    "score_not_recorded": "لم تُسجَّل درجتك {score}: كان الحدث قد توقّف بالفعل عن قبول الدرجات."
+    "score_not_recorded": "لم تُسجَّل درجتك {score}: كان الحدث قد توقّف بالفعل عن قبول الدرجات.",
+    "choose_event": "اختر مسابقة للتحكيم",
+    "switch_event": "تغيير المسابقة",
+    "switch_pending": "انتظر حتى تكتمل مزامنة درجاتك المعلّقة قبل تغيير المسابقة.",
+    "event_unavailable": "لست معيّنًا للتحكيم في هذه المسابقة. اختر إحدى لجانك الجارية."
   },
   "control": {
     "page_label": "غرفة التحكم",
@@ -961,7 +965,28 @@
       "overlay_part_upnext": "قائمة التالي",
       "overlay_part_standings": "الترتيب العام",
       "overlay_part_history": "الغطسات المكتملة"
-    }
+    },
+    "take_control": "تولّي التحكم",
+    "take_over": "استلام التحكم",
+    "release_control": "ترك التحكم",
+    "observing": "مشاهدة مباشرة. تولّ التحكم للانتقال إلى التالي في هذه المسابقة.",
+    "progression_owned": "يتحكم {operator} في التقدم.",
+    "control_required": "تولّ التحكم قبل الانتقال إلى التالي في هذه المسابقة",
+    "timer_paused": "توقفت الساعة — راجع الحكم قبل إعادة تشغيلها",
+    "restart_clock": "إعادة تشغيل الساعة",
+    "connection_lost": "انقطع الاتصال. تولّ التحكم مجددًا بعد الاتصال.",
+    "no_response": "لا استجابة. تولّ التحكم مجددًا قبل المتابعة.",
+    "request_refused": "رُفض الطلب",
+    "take_over_title": "استلام التحكم في «{event}»؟",
+    "take_over_body": "ستتوقف النافذة الأخرى أو المشغّل الآخر عن التحكم في تقدم هذه المسابقة.",
+    "restore_roster_failed": "تعذّر استعادة قائمة المشاركين.",
+    "restore_scores_failed": "تعذّر استعادة الدرجات الحالية.",
+    "restore_history_failed": "تعذّر استعادة سجل المسابقة.",
+    "take_control_failed": "تعذّر تولّي التحكم في «{event}»: {error}",
+    "progression_stopped": "توقف التقدم: {error}",
+    "another_window": "نافذة أخرى",
+    "another_operator": "مشغّل آخر",
+    "queued_action_stopped": "أُوقف إجراء معلّق للتحكم في المسابقة. افتح غرفة التحكم وتولّ التحكم واختر الإجراء مجددًا."
   },
   "manager": {
     "title": "مدير البطولات",

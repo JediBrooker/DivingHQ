@@ -866,7 +866,11 @@
     "event_finished": "赛事已结束",
     "event_not_live": "赛事已不在进行中",
     "waiting_next_panel": "等待您的下一个裁判组…",
-    "score_not_recorded": "您的分数 {score} 未被记录：该赛事已停止接收分数。"
+    "score_not_recorded": "您的分数 {score} 未被记录：该赛事已停止接收分数。",
+    "choose_event": "选择要评分的项目",
+    "switch_event": "切换项目",
+    "switch_pending": "请等待排队中的分数同步完成后再切换项目。",
+    "event_unavailable": "您未被指派到此项目。请选择您正在执裁的项目。"
   },
   "control": {
     "page_label": "控制室",
@@ -961,7 +965,28 @@
       "overlay_part_upnext": "即将出场队列",
       "overlay_part_standings": "排名表",
       "overlay_part_history": "已完成动作"
-    }
+    },
+    "take_control": "取得控制权",
+    "take_over": "接管",
+    "release_control": "释放控制权",
+    "observing": "正在实时观看。取得控制权以推进此项目。",
+    "progression_owned": "{operator} 正在控制项目进度。",
+    "control_required": "推进此项目前请先取得控制权",
+    "timer_paused": "计时已停止 — 重新开始前请向裁判长确认",
+    "restart_clock": "重新开始计时",
+    "connection_lost": "连接已断开。重新连接后请再次取得控制权。",
+    "no_response": "没有响应。继续前请再次取得控制权。",
+    "request_refused": "请求被拒绝",
+    "take_over_title": "接管“{event}”吗？",
+    "take_over_body": "其他窗口或操作员将停止控制此项目的进度。",
+    "restore_roster_failed": "无法恢复参赛名单。",
+    "restore_scores_failed": "无法恢复当前分数。",
+    "restore_history_failed": "无法恢复项目历史记录。",
+    "take_control_failed": "无法取得“{event}”的控制权：{error}",
+    "progression_stopped": "进度已停止：{error}",
+    "another_window": "另一个窗口",
+    "another_operator": "另一位操作员",
+    "queued_action_stopped": "已停止排队中的项目控制操作。请打开控制室，取得控制权，然后重新选择该操作。"
   },
   "manager": {
     "title": "赛事经理",

@@ -2,6 +2,8 @@
 
 The judge view (`/judge`) is the single-purpose, phone-friendly screen that scoring panel members use during a meet. The whole UI exists to do one thing: get a half-point score from the judge into the server as fast and as reliably as possible.
 
+If you are assigned to one live event, Judge Terminal opens that panel. If several of your events are live, choose the event before scoring. Each choice shows the event and meet name. Use **Switch event** to move to another live panel; wait for queued scores to finish syncing first. An event link opens that assignment directly.
+
 ![The judge terminal on a phone, showing the active diver and the score entry pad](/guide-screenshots/judge.png)
 
 ## Before the meet

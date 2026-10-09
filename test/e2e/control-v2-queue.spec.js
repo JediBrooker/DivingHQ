@@ -25,6 +25,8 @@ test("a withdrawn diver is never put up", async ({ page, request, baseURL }) => 
 
   await signIn(page, username);
   await page.goto(`/control?event=${event.id}`);
+  await page.getByRole("button", { name: "Take control", exact: true }).first().click();
+  await expect(page.getByRole("button", { name: "Release control", exact: true }).first()).toBeVisible();
   const card = page.locator(`.cv2-pool[data-event-id="${event.id}"]`);
   await expect(card.locator(".cv2-live-diver")).toContainText("BBB Active", { timeout: 10_000 });
   await expect.poll(() => room.seen.state.length, { timeout: 8_000 }).toBeGreaterThan(0);
@@ -55,6 +57,8 @@ test("reserves stay out of the queue, so the last primary finalises", async ({ p
 
   await signIn(page, username);
   await page.goto(`/control?event=${event.id}`);
+  await page.getByRole("button", { name: "Take control", exact: true }).first().click();
+  await expect(page.getByRole("button", { name: "Release control", exact: true }).first()).toBeVisible();
   const card = page.locator(`.cv2-pool[data-event-id="${event.id}"]`);
   await expect(card.locator(".cv2-live-diver")).toContainText("P One", { timeout: 10_000 });
   // The announce proves the page's socket is up and in the room, so the
@@ -105,6 +109,8 @@ test("Skip moves past a diver with no panel, and on the last diver it offers Fin
 
   await signIn(page, username);
   await page.goto(`/control?event=${event.id}`);
+  await page.getByRole("button", { name: "Take control", exact: true }).first().click();
+  await expect(page.getByRole("button", { name: "Release control", exact: true }).first()).toBeVisible();
   const card = page.locator(`.cv2-pool[data-event-id="${event.id}"]`);
   await expect(card.locator(".cv2-live-diver")).toContainText("AAA Skip", { timeout: 10_000 });
   const confirm = page.locator('.confirm-backdrop[aria-modal="true"]');

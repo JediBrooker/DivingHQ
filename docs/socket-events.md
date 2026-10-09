@@ -66,8 +66,9 @@ the client passed an ack callback, as `{ ok: false, error }` on the ack.
 | `referee_action_rejected` | `{ reason: 'bad_round' \| 'bad_cap_value' \| 'event_not_live' \| 'server_error', message?: string }` | A `referee_failed_dive` / `referee_cap_scores` / `referee_redive` passed the gate but couldn't be applied: `event_not_live` when the event isn't Live. Sent only to the offending socket; the action's ack carries the same reason as `error`. |
 | `conflict_pending`        | `{ conflict_id, action_type: 'submit_score_vs_manual_entry', actor_id, actor_local_time, target: { event_id, competitor_id, round_number, judge_id }, existing_value: { score, source: 'manual_entry' }, proposed_value: { score, source: 'judge_direct' }, resolution_required_by: 'operator', created_at }` | A judge's (usually offline-queued) score arrived for a slot the operator already filled by manual entry, with a different value. The operator's value stands; the Control Room's review tray shows the mismatch. To room `event:<event_id>`. The judge's own socket gets a `score_received` with `superseded_by: 'manual_entry'`. Never sent for a row a `referee_redive` set aside: the operator's mark there was for the thrown-out dive, so the judge's goes in as theirs for the new one. |
 | `judge_signal`            | `{ event_id, competitor_id, round_number, judge_id, judge_number, signaled }` | A panel judge toggled "Signal Referee" on the keypad. `judge_id`/`judge_number` come from `event_judges`, never the wire. To room `event:<event_id>`; the Control Room highlights that judge's tile. |
-| `event_control_granted`   | `{ event_id }` | This socket's `claim_event_control` got the advisory lease (it was free, stale or already ours). To the claiming socket only. |
-| `event_control_conflict`  | `{ event_id, sameUser }` | Another live socket already holds the lease. To the claiming socket; `sameUser` is true when it's the same account in another window. The lease never blocks an action, it only warns. |
+| `event_control_granted`   | `{ event_id }` | This socket claimed exclusive event progression. Protocol 2 adds private `control_token` and `lease_ms` (30 seconds), sent only to the claimant. The acknowledgement also includes `active` (the canonical active diver or null). Tokens never appear in public state. |
+| `event_control_conflict`  | `{ event_id, sameUser }` | Another live socket already holds the lease. To the claiming socket; `sameUser` is true when it's the same account in another window. The claimant cannot advance this event until it explicitly takes over or the holder releases/expires. |
+| `event_control_lost` | `{ event_id }` | Explicit takeover revoked this socket's progression lease. Stop timers and require a new deliberate claim. |
 | `event_control_contested` | `{ event_id, sameUser }` | Someone else just tried to claim a lease this socket holds. To the holder only. |
 | `notification`            | `{ id, category, title, body, data, action_url, expires_at, created_at }` | `lib/push.js` `sendNotification` fanned a notification out. To room `user:<id>` (every socket joins its own user room at connect), in parallel with Web Push. `data.actions` carries any action buttons (the referee sign-off has Approve/Deny). The dashboard refetches its bundle on a `referee_signoff` one so the referee desk and its chip show the request straight away. An `event_live` notice with `data.role: 'judge'` also sends a judge screen that's still waiting for an event to look for its Live panel. |
 | `referee_signoff_response` | `{ event_id, request_id, decision: 'approved' \| 'declined' \| 'expired', by_user_id }` | A dive-order sign-off request closed. `approved` / `declined`: the referee answered (the in-app banner, the notification's own Approve/Deny, the handoff code, or signing in at the operator's laptop, which closes their pushed request too). `expired`: the operator withdrew it (Cancel, `POST /api/events/:id/dive-order/sign-off/request/:requestId/cancel`), a newer request or code replaced it, the order was signed off another way (the manager attesting with `POST /api/events/:id/dive-order/sign-off`, or a different referee signing in at the laptop), or the referee answered after it ran out or after the order no longer needed it (already signed off, or the event left Upcoming: that answer gets a 409 and changes nothing); `by_user_id` is whoever closed it. Every close goes through `closeSignoffRequests` in `routes/control-room-signoff.js`, which retires the request's notification in the same statement. Sent through `push.emitEvent` to rooms `event:<event_id>`, `user:<requested_by>` and `user:<target referee>` in one emit, so the manager's SignoffModal leaves its waiting state, every device of the referee's drops the request's Approve/Deny banner (`usePush`) and their open dashboard drops the request. A device whose socket was down when the close went out (a phone that locked) asks after every sign-off banner it still shows when it reconnects, through `GET /api/events/:id/dive-order/sign-off/request/:requestId`, and drops the closed ones. The Control Room's Setup stage joins `event:<id>` while the event is Upcoming and takes an `approved` for its event whoever asked and whether or not its dialog is open (closing the dialog leaves the request out), so the checklist moves on to Start Event without a reload. The user room is the one that matters: sign-off happens while the event is Upcoming and the Control Room only joins `event:<id>` once it's Live. The dialog also polls `GET /api/events/:id/dive-order/sign-off/request/:requestId` every 3 s (and on reconnect) while it waits, so a missed message still lands. |
@@ -117,7 +118,9 @@ directly. A refused write gets ack `{ ok: false, error: 'maintenance' }`
 | Event | Required role | Payload | Notes |
 |---|---|---|---|
 | `subscribe_event`         | none (any socket)             | `{ event_id }` | Joins room `event:<event_id>`. How a spectator, judge or Control Room gets that event's broadcasts. The id must be a UUID (anything else is ignored), and one socket sits in at most 50 event rooms: joining a 51st drops the room it touched longest ago (joins through `get_active_diver` / `get_meet_hold` count as touches). |
-| `claim_event_control`     | `socketCanManageEvent` (control roles or delegate) | `{ event_id }` | Asks for the advisory per-event lease. Answered with `event_control_granted`, or `event_control_conflict` (and `event_control_contested` to the holder). Silently ignored for anyone who couldn't drive the event; a malformed `event_id` gets `unauthorized` with reason `bad_event_id`. |
+| `claim_event_control` | `guardControl` (control roles or delegate; maintenance/token-version checked) | `{ event_id, protocol?: 2, takeover?: true }` | Claim exclusive progression; an occupied event returns `control_conflict`. `takeover: true` explicitly transfers it, emitting `event_control_lost` to the former holder. Protocol 2 returns a private token and 30-second lease; heartbeat every 10 seconds. Legacy leases last until disconnect or takeover. |
+| `renew_event_control` | `guardControl` plus owning socket/token | `{ event_id, control_token }` | Extend a current generation 30 seconds. An expired/replaced generation returns `control_lost`; never reacquires. |
+| `release_event_control` | `guardControl` plus owning socket/token | `{ event_id, control_token }` | Release the current generation. Used on hidden page, navigation and deliberate release; disconnect also frees leases. |
 | `judge_signal`            | signed in, seat on the event's panel (`event_judges`) | `{ event_id, competitor_id, round_number, signaled }` | Rate-limited per user, token version re-checked. Rebroadcast as `judge_signal` to the event room. A caller not on the panel, or a malformed `event_id` / `competitor_id`, is dropped silently. |
 | `set_active_diver`        | meet_manager / referee / org_admin / sysadmin | Roster row + `diverName`, `diveCode`, `eventName`, `status` (built by `activeDiverPayload` in `src/lib/activeDiver.js`) | The server keeps and broadcasts a public copy: `paid_entry`, `competitor_org_id`, `competitor_org_name` and `dive_list_id` are dropped, and `club_name` / `club_code` are nulled unless the diver's club is approved (`clubs.status = 'active'`). That copy goes in `activeDivers[event_id]` (and `event_live_state`) so late-joiners see it. Readers run `normaliseActiveDiver` so a replayed payload without the display fields still renders. |
 | `get_active_diver`        | none (any socket)             | `{ event_id }` | Read-only — joins the room (same rules as `subscribe_event`) and returns the current state to the asking socket only. Asked with an ack callback, it also answers with the scores already stored for the dive on the board, after the `state_update`: `{ ok: true, event_id, competitor_id, round_number, scores: [{ judge_number, score }] }` (`lib/dive-scores.js`, the same read as the judge screen's `GET /api/events/:id/dive-scores`: stored values, so already held to any referee call, and none a re-dive set aside), `{ ok: true, scores: null }` when nobody is on the board, `{ ok: false, error: 'not_found' }` when the caller may not see the event's scores (`canSeeEvent`, `lib/event-visibility.js`: Live and Completed for anyone, earlier only the host or a participating org), and `{ ok: false, error: 'rate_limited' }` past 20 a minute per socket. The spectator scoreboard asks this way when it opens an event, on every reconnect, and after a `score_corrected` for the dive on the board, so a board opened mid-dive, back from a dropped connection, or watching a correction to that dive shows the panel as it's stored. Without an ack (the judge screen, the Control Room) there's no DB read. |
@@ -131,7 +134,7 @@ directly. A refused write gets ack `{ ok: false, error: 'maintenance' }`
 | `get_meet_hold`           | none (any socket)             | `{ event_id }` | Read-only — joins the room (same rules as `subscribe_event`) and returns the current hold state to the asking socket. |
 | `notification:ack`        | any signed-in socket          | `{ id }` | Marks the caller's own notification `acknowledged` (the UPDATE is scoped to `socket.userId`). Dropped silently in maintenance mode, like its HTTP twin `POST /api/notifications/:id/acknowledge`. |
 | `subscribe_venue`         | none (any socket)             | `{ event_id }` | Joins `venue:<event_id>` and immediately emits a fresh `venue.scoreboard_state` snapshot for hardware bridges. |
-| `disconnect`              | (built-in)                    | — | Frees the socket's slot in the per-IP connection count and any Control Room lease it held (`clearEventControllersBySocket`). Rooms go with the socket. |
+| `disconnect`              | (built-in)                    | — | Frees the socket's slot in the per-IP connection count and any Control Room lease it held (`eventControl.disconnect`). Rooms go with the socket. |
 
 ---
 
@@ -154,3 +157,37 @@ directly. A refused write gets ack `{ ok: false, error: 'maintenance' }`
    directions.
 4. **Update the integration test** at `test/integration.test.js`
    to assert the gate works for the unauthenticated case.
+
+
+### Exclusive event progression and mobile suspension
+
+`set_active_diver` checks the owning socket and, for protocol 2, its current
+`control_token`, after the normal authorization gate and again after asynchronous
+payload sanitization. It refuses a held event (`event_held`) or lost generation
+(`control_lost`). The token is removed before broadcasting or persisting the
+active diver. Claim, release, takeover, progression and HTTP event-status changes
+are serialized per event in the existing single-process live-state engine.
+
+An active lease also requires its token and owning authenticated user on
+`PUT /api/events/:id/status`; a missing/expired/wrong token returns HTTP 409
+`control_required`. Two devices using the same account do not share ownership.
+Unclaimed manager status changes retain their normal authorization. Referee
+calls, holds, judge scoring and score corrections retain their independent role
+and event checks; a referee does not need to take the operator's progression.
+
+The Control Room opens as a live observer. Take control restores the canonical
+roster, active diver/history and current scores before enabling progression.
+Take over asks for confirmation naming the event. Hidden pages, disconnects,
+lease loss and navigation cancel automatic advancement and release ownership;
+returning requires Take control again. The local clock stops and displays a dash
+until the operator explicitly restarts it; this does not impose a penalty or
+pretend to preserve an authoritative referee clock. Progression is never stored
+in the offline outbox. Older queued cursor/status commands are rejected by the
+new client rather than replayed.
+
+Published native 1.1(2) clients use legacy socket claims and have no ownership
+settings or heartbeat. They cannot overwrite another socket's lease; their HTTP
+finalisation is deliberately refused while leased because it cannot identify a
+socket generation. Update the native testing build for the full workflow.
+No database migration is required. Release the new native build before enabling
+this backend behavior during an active meet.

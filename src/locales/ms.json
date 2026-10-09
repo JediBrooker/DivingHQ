@@ -866,7 +866,11 @@
     "event_finished": "Acara tamat",
     "event_not_live": "Acara tidak lagi berlangsung",
     "waiting_next_panel": "Menunggu panel hakim anda seterusnya…",
-    "score_not_recorded": "Markah anda {score} tidak direkodkan: acara sudah berhenti menerima markah."
+    "score_not_recorded": "Markah anda {score} tidak direkodkan: acara sudah berhenti menerima markah.",
+    "choose_event": "Pilih acara untuk diadili",
+    "switch_event": "Tukar acara",
+    "switch_pending": "Tunggu sehingga markah dalam baris gilir selesai disegerakkan sebelum menukar acara.",
+    "event_unavailable": "Anda tidak ditugaskan untuk acara ini. Pilih salah satu panel anda yang sedang berlangsung."
   },
   "control": {
     "page_label": "Bilik kawalan",
@@ -961,7 +965,28 @@
       "overlay_part_upnext": "Giliran Seterusnya",
       "overlay_part_standings": "Kedudukan",
       "overlay_part_history": "Terjun selesai"
-    }
+    },
+    "take_control": "Ambil kawalan",
+    "take_over": "Ambil alih",
+    "release_control": "Lepaskan kawalan",
+    "observing": "Menonton secara langsung. Ambil kawalan untuk meneruskan acara ini.",
+    "progression_owned": "Perjalanan acara dikawal oleh {operator}.",
+    "control_required": "Ambil kawalan sebelum meneruskan acara ini",
+    "timer_paused": "Jam dihentikan — semak dengan pengadil sebelum memulakan semula",
+    "restart_clock": "Mulakan semula jam",
+    "connection_lost": "Sambungan terputus. Ambil kawalan semula selepas disambungkan.",
+    "no_response": "Tiada respons. Ambil kawalan semula sebelum meneruskan.",
+    "request_refused": "Permintaan ditolak",
+    "take_over_title": "Ambil alih “{event}”?",
+    "take_over_body": "Tetingkap atau pengendali lain akan berhenti mengawal perjalanan acara ini.",
+    "restore_roster_failed": "Tidak dapat memulihkan senarai peserta.",
+    "restore_scores_failed": "Tidak dapat memulihkan markah semasa.",
+    "restore_history_failed": "Tidak dapat memulihkan sejarah acara.",
+    "take_control_failed": "Tidak dapat mengambil kawalan “{event}”: {error}",
+    "progression_stopped": "Perjalanan acara dihentikan: {error}",
+    "another_window": "tetingkap lain",
+    "another_operator": "pengendali lain",
+    "queued_action_stopped": "Tindakan kawalan dalam baris gilir telah dihentikan. Buka Bilik Kawalan, ambil kawalan dan pilih tindakan itu semula."
   },
   "manager": {
     "title": "Pengurus pertandingan",

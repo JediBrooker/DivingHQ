@@ -877,7 +877,11 @@
     "event_finished": "Konkurransen er ferdig",
     "event_not_live": "Konkurransen er ikke lenger i gang",
     "waiting_next_panel": "Venter på ditt neste dommerpanel…",
-    "score_not_recorded": "Poengene dine på {score} ble ikke registrert: konkurransen tok ikke lenger imot poeng."
+    "score_not_recorded": "Poengene dine på {score} ble ikke registrert: konkurransen tok ikke lenger imot poeng.",
+    "choose_event": "Velg en øvelse å dømme",
+    "switch_event": "Bytt øvelse",
+    "switch_pending": "Vent til poengene i køen er synkronisert før du bytter øvelse.",
+    "event_unavailable": "Du er ikke tildelt denne øvelsen. Velg et av dine pågående dommerpaneler."
   },
   "control": {
     "page_label": "Kontrollrom",
@@ -972,7 +976,28 @@
       "overlay_part_upnext": "Neste opp-kø",
       "overlay_part_standings": "Stillingen",
       "overlay_part_history": "Gjennomførte hopp"
-    }
+    },
+    "take_control": "Ta kontroll",
+    "take_over": "Overta",
+    "release_control": "Frigi kontroll",
+    "observing": "Følger direkte. Ta kontroll for å fortsette denne øvelsen.",
+    "progression_owned": "Fremdriften styres av {operator}.",
+    "control_required": "Ta kontroll før du fortsetter denne øvelsen",
+    "timer_paused": "Klokken er stoppet — avklar med overdommeren før du starter igjen",
+    "restart_clock": "Start klokken på nytt",
+    "connection_lost": "Forbindelsen er brutt. Ta kontroll igjen når du er tilkoblet.",
+    "no_response": "Ingen respons. Ta kontroll igjen før du fortsetter.",
+    "request_refused": "Forespørsel avvist",
+    "take_over_title": "Overta «{event}»?",
+    "take_over_body": "Det andre vinduet eller den andre operatøren slutter å styre fremdriften i denne øvelsen.",
+    "restore_roster_failed": "Kunne ikke gjenopprette deltakerlisten.",
+    "restore_scores_failed": "Kunne ikke gjenopprette gjeldende poeng.",
+    "restore_history_failed": "Kunne ikke gjenopprette øvelsens historikk.",
+    "take_control_failed": "Kunne ikke ta kontroll over «{event}»: {error}",
+    "progression_stopped": "Fremdriften er stoppet: {error}",
+    "another_window": "et annet vindu",
+    "another_operator": "en annen operatør",
+    "queued_action_stopped": "En kontrollhandling i køen ble stoppet. Åpne kontrollrommet, ta kontroll og velg handlingen på nytt."
   },
   "manager": {
     "title": "Stevneadministrator",

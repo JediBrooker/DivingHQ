@@ -30,6 +30,7 @@
 
 const { verifySocketTicket, nativeSocketLifetimeMs } = require("../lib/socket-ticket");
 const jwt = require("jsonwebtoken");
+const { eventControl: defaultEventControl, LEASE_MS } = require("../lib/event-control");
 const createIdempotency = require("../lib/idempotency");
 const { readSessionCookie } = require("../lib/session-cookie");
 const { trustProxyHops } = require("../lib/trust-proxy");
@@ -93,10 +94,7 @@ module.exports = function attachSocket({
   // From lib/live-state:
   activeDivers,
   meetHolds,
-  // Per-event control lease (advisory; warns on double-driving).
-  getEventController,
-  setEventController,
-  clearEventControllersBySocket,
+  eventControl = defaultEventControl,
   // Persistence helpers: fire-and-forget DB writes that mirror
   // the in-memory map mutations so a server restart mid-meet
   // doesn't leak the live state.
@@ -237,6 +235,9 @@ module.exports = function attachSocket({
   const SOCKET_ACTION_LIMITS = {
     meet_hold:        { limit: 10, windowMs: 60 * 1000 },
     meet_resume:      { limit: 10, windowMs: 60 * 1000 },
+    claim_event_control: { limit: 60, windowMs: 60 * 1000 },
+    renew_event_control: { limit: 600, windowMs: 60 * 1000 },
+    release_event_control: { limit: 120, windowMs: 60 * 1000 },
     set_active_diver: { limit: 60, windowMs: 60 * 1000 },
     referee_action:   { limit: 30, windowMs: 60 * 1000 },
     announce_score:   { limit: 30, windowMs: 60 * 1000 },
@@ -378,7 +379,7 @@ module.exports = function attachSocket({
   // those private until approved). This payload goes to every
   // spectator in the event room, so those come off here, server-side,
   // whatever a client sends.
-  const PRIVATE_ACTIVE_FIELDS = ["paid_entry", "competitor_org_id", "competitor_org_name", "dive_list_id"];
+  const PRIVATE_ACTIVE_FIELDS = ["paid_entry", "competitor_org_id", "competitor_org_name", "dive_list_id", "control_token"];
   async function publicActivePayload(data) {
     const out = { ...data };
     for (const k of PRIVATE_ACTIVE_FIELDS) delete out[k];
@@ -442,6 +443,9 @@ module.exports = function attachSocket({
           ? (body) => { if (answered) return; answered = true; ack(body); }
           : undefined;
         try {
+          // UUIDs are case-insensitive in Postgres. Rooms, live state and
+          // lease generations must use the same canonical event key.
+          if (isUuid(data?.event_id)) data = { ...data, event_id: data.event_id.toLowerCase() };
           await handler(data, once);
         } catch (err) {
           console.error(`[socket ${name}]`, err.message);
@@ -479,9 +483,7 @@ module.exports = function attachSocket({
       }
       // Release any event-control leases this socket held so the events
       // are free for another operator to claim.
-      if (typeof clearEventControllersBySocket === "function") {
-        clearEventControllersBySocket(socket.id);
-      }
+      eventControl.disconnect(socket.id);
       console.log(`[Socket] Disconnected: ${socket.id}`);
     });
 
@@ -543,35 +545,50 @@ module.exports = function attachSocket({
     }
     on("subscribe_event", (data) => { joinEvent(data?.event_id); });
 
-    // Per-event control LEASE (advisory). A Control Room claims control of
-    // each event it drives. The lease never BLOCKS an action (a crashed
-    // operator must never lock an event), it just warns when a second
-    // socket (another operator, or the same operator in another window)
-    // is also driving the same event, so set_active_diver clobbering is
-    // surfaced instead of silent. First claim wins; the claimant is the
-    // one warned. Both sides are notified so neither drives blind.
-    on("claim_event_control", async (data) => {
-      const eventId = data?.event_id;
-      if (!socketRequireRole(socket)) return;
-      if (!isUuid(eventId)) {
-        socket.emit("unauthorized", { reason: "bad_event_id" });
-        return;
-      }
-      // Only real controllers can hold a lease (same gate as the actions).
-      if (!(await socketCanManageEvent(socket, eventId, CONTROL_ROLES))) return;
-      if (typeof getEventController !== "function") return;
-      const cur = getEventController(eventId);
-      const holderLive = cur && io.sockets.sockets.has(cur.socketId);
-      if (!cur || !holderLive || cur.socketId === socket.id) {
-        // Free (or stale, or already ours) -> grant.
-        setEventController(eventId, { socketId: socket.id, userId: socket.userId });
-        socket.emit("event_control_granted", { event_id: eventId });
-        return;
-      }
-      // Held by another live socket -> warn both, don't steal.
-      const sameUser = String(cur.userId) === String(socket.userId);
-      socket.emit("event_control_conflict", { event_id: eventId, sameUser });
-      io.to(cur.socketId).emit("event_control_contested", { event_id: eventId, sameUser });
+    // Claims never steal a live lease implicitly. Referee calls and holds keep
+    // their independent role gates; the lease only fences event progression.
+    const owner = (data) => ({ socketId: socket.id, userId: socket.userId, token: data?.control_token });
+    on("claim_event_control", async (data, ack) => {
+      if (!(await guardControl(socket, data, ack, "claim_event_control"))) return;
+      await eventControl.run(data.event_id, async () => {
+        if (socket.disconnected) return;
+        const live = await pool.query("SELECT status FROM events WHERE id = $1", [data.event_id]);
+        if (live.rows[0]?.status !== "Live") {
+          ackWith(ack, { ok: false, error: "event_not_live" });
+          return;
+        }
+        if (socket.disconnected) { ackWith(ack, { ok: false, error: "control_lost" }); return; }
+        const result = eventControl.claim(data.event_id, {
+          ...owner(data), modern: data.protocol === 2, takeover: data.takeover === true,
+        });
+        if (!result.ok) {
+          const body = { event_id: data.event_id, sameUser: result.previous.userId === socket.userId };
+          socket.emit("event_control_conflict", body);
+          io.to(result.previous.socketId).emit("event_control_contested", body);
+          ackWith(ack, { ok: false, error: "control_conflict", ...body });
+          return;
+        }
+        if (result.previous && result.previous.socketId !== socket.id) {
+          io.to(result.previous.socketId).emit("event_control_lost", { event_id: data.event_id });
+        }
+        const body = { event_id: data.event_id, control_token: result.lease.token, lease_ms: result.lease.modern ? LEASE_MS : null };
+        socket.emit("event_control_granted", body);
+        ackWith(ack, { ok: true, ...body, active: activeDivers[data.event_id] || null });
+      });
+    });
+    on("renew_event_control", async (data, ack) => {
+      if (!(await guardControl(socket, data, ack, "renew_event_control"))) return;
+      await eventControl.run(data.event_id, () => {
+        const ok = !socket.disconnected && eventControl.renew(data.event_id, owner(data));
+        ackWith(ack, { ok, ...(ok ? { lease_ms: LEASE_MS } : { error: "control_lost" }) });
+      });
+    });
+    on("release_event_control", async (data, ack) => {
+      if (!(await guardControl(socket, data, ack, "release_event_control"))) return;
+      await eventControl.run(data.event_id, () => {
+        const ok = eventControl.release(data.event_id, owner(data));
+        ackWith(ack, { ok, ...(ok ? {} : { error: "control_lost" }) });
+      });
     });
 
     // Venue bridge subscription. Hardware bridges (Daktronics,
@@ -639,39 +656,68 @@ module.exports = function attachSocket({
 
     on("set_active_diver", async (data, ack) => {
       if (!(await guardControl(socket, data, ack, "set_active_diver"))) return;
-      // What goes out, gets replayed to late joiners and is kept in
-      // event_live_state is the public copy, not the Control Room's
-      // roster row as sent.
-      const payload = await publicActivePayload(data);
-      activeDivers[payload.event_id] = payload;
-      // Write-through to event_live_state so a server
-      // restart picks the same diver back up on rehydrate.
-      if (typeof persistActiveDiver === "function") {
-        persistActiveDiver(payload.event_id, payload);
-      }
-      io.to(`event:${payload.event_id}`).emit("state_update", payload);
-
-      // Fire-and-forget coach alerts. The fan-out helper looks
-      // ahead N=dives_ahead slots from this new active diver and
-      // pushes "your diver is up next" to coaches whose linked
-      // divers land in the window. Per-process in-memory dedupe
-      // prevents double-fires when the operator re-emits state.
-      // Errors logged but never propagate, score path stays clean.
-      if (push) {
-        try {
-          require("../lib/coach-alerts")
-            .maybeNotifyCoachesOfNextDivers({ pool, push }, payload.event_id, payload);
-        } catch (err) {
-          console.error("[set_active_diver] coach alert hook failed", err.message);
+      await eventControl.run(data.event_id, async () => {
+        const live = await pool.query("SELECT status FROM events WHERE id = $1", [data.event_id]);
+        if (live.rows[0]?.status !== "Live") {
+          ackWith(ack, { ok: false, error: "event_not_live" });
+          return;
         }
-      }
+        // A legacy outbox must not acquire a free event or replay a command
+        // from before this connection claimed it. New clients use generations.
+        const lease = eventControl.get(data.event_id);
+        if (lease && !lease.modern && data.actor_local_time != null) {
+          const sentAt = typeof data.actor_local_time === "string" ? Date.parse(data.actor_local_time) : NaN;
+          if (!Number.isFinite(sentAt) || sentAt < lease.grantedAt || sentAt > Date.now()) {
+            ackWith(ack, { ok: false, error: "control_lost", message: "Update the app and take control again; a queued or clock-skewed progression command was refused." });
+            return;
+          }
+        }
+        if (socket.disconnected || !eventControl.owns(data.event_id, owner(data))) {
+          ackWith(ack, { ok: false, error: "control_lost" });
+          return;
+        }
+        if (meetHolds[data.event_id]) {
+          ackWith(ack, { ok: false, error: "event_held" });
+          return;
+        }
+        // What goes out, gets replayed to late joiners and is kept in
+        // event_live_state is the public copy, not the Control Room's
+        // roster row as sent.
+        const payload = await publicActivePayload(data);
+        if (socket.disconnected || !eventControl.owns(data.event_id, owner(data)) || meetHolds[data.event_id]) {
+          ackWith(ack, { ok: false, error: meetHolds[data.event_id] ? "event_held" : "control_lost" });
+          return;
+        }
+        activeDivers[payload.event_id] = payload;
+        // Write-through to event_live_state so a server
+        // restart picks the same diver back up on rehydrate.
+        if (typeof persistActiveDiver === "function") {
+          await persistActiveDiver(payload.event_id, payload);
+        }
+        io.to(`event:${payload.event_id}`).emit("state_update", payload);
 
-      // Venue scoreboard state: fan out to any connected
-      // hardware bridge in this event's venue room. See
-      // lib/venue-state.js for the wire shape. activeDivers now holds
-      // the payload, so that's the active diver it sends.
-      emitVenue(payload.event_id, "set_active_diver");
-      ackWith(ack, { ok: true });
+        // Fire-and-forget coach alerts. The fan-out helper looks
+        // ahead N=dives_ahead slots from this new active diver and
+        // pushes "your diver is up next" to coaches whose linked
+        // divers land in the window. Per-process in-memory dedupe
+        // prevents double-fires when the operator re-emits state.
+        // Errors logged but never propagate, score path stays clean.
+        if (push) {
+          try {
+            require("../lib/coach-alerts")
+              .maybeNotifyCoachesOfNextDivers({ pool, push }, payload.event_id, payload);
+          } catch (err) {
+            console.error("[set_active_diver] coach alert hook failed", err.message);
+          }
+        }
+
+        // Venue scoreboard state: fan out to any connected
+        // hardware bridge in this event's venue room. See
+        // lib/venue-state.js for the wire shape. activeDivers now holds
+        // the payload, so that's the active diver it sends.
+        emitVenue(payload.event_id, "set_active_diver");
+        ackWith(ack, { ok: true });
+      });
     });
 
     // Asked with an ack, the reply also carries the scores already stored
@@ -1485,13 +1531,14 @@ module.exports = function attachSocket({
     // -----------------------------------------------------------
     on("meet_hold", async (data, ack) => {
       if (!(await guardControl(socket, data, ack, "meet_hold"))) return;
+      await eventControl.run(data.event_id, async () => {
       meetHolds[data.event_id] = {
         reason: data.reason || null,
         since: Date.now(),
       };
       // Write-through to event_live_state.
       if (typeof persistMeetHold === "function") {
-        persistMeetHold(data.event_id, {
+        await persistMeetHold(data.event_id, {
           reason: meetHolds[data.event_id].reason,
           since:  new Date(meetHolds[data.event_id].since),
         });
@@ -1501,17 +1548,20 @@ module.exports = function attachSocket({
       // Venue: flip on_hold=true so the bridge can flash a HOLD banner.
       emitVenue(data.event_id, "meet_hold");
       ackWith(ack, { ok: true });
+      });
     });
     on("meet_resume", async (data, ack) => {
       if (!(await guardControl(socket, data, ack, "meet_resume"))) return;
+      await eventControl.run(data.event_id, async () => {
       delete meetHolds[data.event_id];
       if (typeof persistClearMeetHold === "function") {
-        persistClearMeetHold(data.event_id);
+        await persistClearMeetHold(data.event_id);
       }
       io.to(`event:${data.event_id}`).emit("meet_resumed", { event_id: data.event_id });
       // The hold is gone by now, so this sends on_hold=false.
       emitVenue(data.event_id, "meet_resume");
       ackWith(ack, { ok: true });
+      });
     });
     on("get_meet_hold", (data) => {
       if (!joinEvent(data?.event_id)) return;

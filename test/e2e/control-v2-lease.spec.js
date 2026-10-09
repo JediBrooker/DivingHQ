@@ -1,8 +1,5 @@
-// Per-event control LEASE (#lease). When two operators drive the SAME
-// event, both get an advisory conflict warning (the lease never actually
-// blocks anything, just warns). The second test is a plain advance on a
-// leased pool; the old "not confirmed" banner it used to check for went
-// away with the outbox.
+// One event has one progression owner. A second operator observes until
+// an explicit takeover, which immediately removes the old owner's controls.
 const { test, expect } = require("@playwright/test");
 const setup = require("./_setup");
 
@@ -38,7 +35,7 @@ async function liveEvent(request, { orgId, adminToken, name, diverNames }) {
   return { event, diveId, divers, judges };
 }
 
-test("two operators on the same event both see a conflict warning", async ({ request, browser }) => {
+test("a second operator observes, then explicitly takes over the event", async ({ request, browser }) => {
   test.setTimeout(120_000);
   const { orgId, username: adminUser, adminToken } = await setup.createOrgAndAdmin(request, { countryCode: "AUS", orgName: "Lease Diving" });
   await setup.insertClub({ orgId, name: "LS Club", shortCode: "LSC" });
@@ -54,17 +51,26 @@ test("two operators on the same event both see a conflict warning", async ({ req
   await setup.selectControlEvent(pageA, "Shared Pool");
   await pageA.waitForTimeout(600); // give A's claim a moment to land
 
-  // Operator B opens the same event, so both operators should be warned.
+  // Merely opening the event must not challenge its current operator.
   const ctxB = await browser.newContext();
   const pageB = await ctxB.newPage();
   await signIn(pageB, opB.username);
   await pageB.goto("/control");
   await pageB.waitForLoadState("networkidle");
-  await setup.selectControlEvent(pageB, "Shared Pool");
+  await setup.selectControlEvent(pageB, "Shared Pool", { takeControl: false });
+  await expect(pageB.locator(".cv2-primary")).toBeDisabled();
+  await expect(pageA.getByRole("button", { name: "Release control", exact: true })).toBeVisible();
+  await pageB.getByRole("button", { name: "Take control", exact: true }).click();
 
   await expect(pageB.locator(".cv2-pool-conflict")).toContainText(/another operator/i, { timeout: 6_000 });
-  // A (the lease holder) is contested too, so also warned.
+  await expect(pageB.locator(".cv2-primary")).toBeDisabled();
+  await expect(pageA.getByRole("button", { name: "Release control", exact: true })).toBeVisible();
+  await pageB.getByRole("button", { name: "Take over", exact: true }).click();
+  await expect(pageB.getByRole("dialog")).toContainText("Shared Pool");
+  await pageB.getByRole("dialog").getByRole("button", { name: "Take over", exact: true }).click();
+  await expect(pageB.getByRole("button", { name: "Release control", exact: true })).toBeVisible();
   await expect(pageA.locator(".cv2-pool-conflict")).toContainText(/another operator/i, { timeout: 6_000 });
+  await expect(pageA.locator(".cv2-primary")).toBeDisabled();
 
   await ctxA.close();
   await ctxB.close();

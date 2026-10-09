@@ -1,12 +1,12 @@
 # Offline Competitions
 
-DivingHQ is built to keep running even when venue Wi-Fi drops mid-meet. Every action that matters during a live competition — judge score submissions, advancing to the next diver, referee calls, holds and resumes — is queued locally before being sent to the server. If the network is unavailable, operations stack up on the device and replay automatically when connectivity returns. No scores are lost, and no one needs to do anything special to make it work.
+Judge scores, referee calls and holds can queue locally when venue Wi-Fi drops. The outbox sends those operations when the connection returns. Event progression is different: **Next Diver, automatic advancement and event status changes require a live connection and current control of the event.** They never replay from an offline queue.
 
 ## How it works
 
 ### The outbox
 
-Every write operation goes through an **outbox** backed by IndexedDB, the browser's built-in persistent storage. When a judge taps Submit or an operator clicks Next Diver, the action is written to the outbox first, then sent to the server. If the send succeeds, the entry is marked as synced. If the network is down, the entry stays in the queue and waits.
+Supported offline operations go through an **outbox** backed by IndexedDB, the browser's built-in persistent storage. When a judge taps Submit, the action is written to the outbox first, then sent to the server. If the send succeeds, the entry is marked as synced. If the network is down, the entry stays in the queue and waits.
 
 Because the outbox uses IndexedDB (not in-memory state), queued operations are **durable** — they survive page refreshes, navigation between views, and even closing and reopening the browser. A queued score written at 10:14 am is still there if you reopen the tab at 10:20 am.
 
@@ -27,7 +27,7 @@ When operations are queued, a **badge** appears next to the indicator showing th
 
 ### Automatic sync
 
-When the connection comes back, the outbox drains automatically — no button to press, no manual intervention. Operations replay in the exact order they were performed (FIFO), so a sequence like "submit score → advance diver → submit score" applies correctly on the server. You'll see the pending count tick down as each operation confirms.
+When the connection comes back, the outbox drains automatically — no button to press, no manual intervention. Queued operations replay in the order they were recorded. Advancing to another diver requires the operator to reconnect and take control explicitly. You'll see the pending count tick down as each operation confirms.
 
 Each operation retries up to 5 times with exponential backoff (1 second, 2 seconds, 4 seconds, up to 16 seconds between attempts). Only a real answer from the server counts as an attempt: time spent offline never uses them up, however long the outage and however many operations you queue. If an operation still fails after all 5 attempts, it's marked as failed and surfaced in the UI so you can investigate. The offline banner on the judge, diver and coach screens has a **Retry** button that puts failed operations back in the queue. In practice, transient failures almost always resolve on the first or second retry once the network is back. The one thing that isn't retried is a judge's score for an event that has already finished: the server will never take it, so it leaves the queue straight away and the judge screen says the event has finished, and which score wasn't recorded.
 
@@ -45,13 +45,15 @@ The most important thing: **a dropped connection during scoring is not an emerge
 ## For meet managers (Control Room)
 
 - The Control Room shows the connection indicator in the top bar, visible at all times. Glance at it periodically — green means everything is flowing; amber means you're queueing.
-- All operations go through the outbox: advance diver, hold/resume, referee actions (failed dive, cap scores, re-dive), and score announcements.
-- If you advance to the next diver while offline, the operation queues and executes when connectivity returns. The server applies the state change, and connected judges receive the updated active diver.
-- Multiple operations can queue — they replay in order. If you advanced three divers while offline, all three transitions apply in sequence.
-- The pending count badge tells you how many operations are waiting. If it's climbing, you're offline but operational. If it ticks down, the connection is back and draining.
+- Judge scores, hold/resume, referee actions (failed dive, cap scores, re-dive), and score announcements can use the outbox.
+- **Next Diver and event status changes stop while offline.** On reconnect, the Control Room restores the event's current state. Choose **Take control** to continue.
+- Backgrounding the app or switching away from its browser tab releases progression control and cancels automatic advancement. The local clock is stopped; check with the referee before restarting it.
+- Another authorized operator can take control while you are away. Returning to the app never takes it back automatically.
+- The pending count applies to queued operations such as scores; it is not a queue of future diver changes.
 
 ## What doesn't work offline
 
+- **Progression and finalisation.** Next Diver, automatic advancement and event status changes need a connection and the current control lease.
 - **Initial page load.** The judging page and Control Room need to fetch event data, dive lists, and panel configuration from the server on first load. Once loaded, they can operate offline.
 - **Live scoreboard updates.** The audience-facing scoreboard is read-only and needs a live socket connection to receive score updates. Queued scores appear on the scoreboard once they sync.
 - **Admin operations.** User management, fee configuration, event creation, and other admin tasks require a live connection. These aren't time-critical during a meet.
@@ -73,7 +75,7 @@ The most important thing: **a dropped connection during scoring is not an emerge
 | A device runs out of battery or crashes mid-meet | Queued scores in IndexedDB persist across browser restarts. Charge the device, reopen the browser, navigate back to the judging page — the queue resumes draining. |
 | A device is physically destroyed | Use the paper backup. The meet manager can re-enter scores from the paper judging cards using the [score correction modal](/guide/running-a-meet#correcting-a-score) in the Control Room. |
 | The pending count stays high after reconnecting | The outbox is retrying. Give it 30 seconds. If the count doesn't drop, check whether the server is reachable (the issue may be upstream, not local). |
-| A failed badge (red) appears | The server turned an operation down 5 times. Check the Control Room for details. The most common cause is a server-side conflict (e.g., two operators advancing the same event), which can be resolved from the conflict tray. Once the cause is fixed, **Retry** in the offline banner sends it again. |
+| A failed badge (red) appears | The server turned an operation down 5 times. Check the Control Room for details. The most common cause is a server-side conflict (e.g., conflicting score corrections), which can be resolved from the conflict tray. Once the cause is fixed, **Retry** in the offline banner sends it again. |
 
 ## Technical details
 
@@ -82,7 +84,7 @@ For the technically curious:
 - The outbox uses **IndexedDB** (`divinghq-outbox` database), not localStorage. IndexedDB is durable, has no practical size limit for this use case, and doesn't block the main thread.
 - Operations are sent via **Socket.IO** with acknowledgment callbacks — the server acks each operation so the outbox knows it was received. If the socket is unavailable, operations fall back to **HTTP POST** with an idempotency key header.
 - Retry uses **exponential backoff** — 1s, 2s, 4s, 8s, 16s between attempts, capped at 5 attempts total. A send that never reaches the server (socket down, network error) isn't counted, and it pauses the queue so nothing behind it can overtake.
-- **FIFO ordering** guarantees operations apply in the sequence the operator performed them. An advance-then-hold replays as advance-then-hold, never the reverse.
+- **FIFO ordering** guarantees operations apply in the sequence the operator performed them. Progression and status changes are excluded from this queue.
 - Each operation carries a **UUID v4 idempotency key**. The server's idempotency table (72-hour retention) deduplicates replayed operations, so a reconnect race never double-applies a score.
 - The outbox is **scoped per user** — logging out and logging in as a different user on the same device doesn't drain the first user's queue.
 

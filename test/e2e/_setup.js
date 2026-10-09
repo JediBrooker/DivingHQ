@@ -373,13 +373,22 @@ async function pickDiveId({ height = 3.0, dive_code = "101", position = "B" } = 
 // Set the event status by URL. Used to flip Upcoming → Live so
 // scoring routes accept submissions.
 async function setEventStatus(request, { adminToken, eventId, status }) {
-  const r = await request.put(`/api/events/${eventId}/status`, {
-    headers: { Authorization: `Bearer ${adminToken}` },
-    data: { status },
-  });
-  if (r.status() !== 200) {
-    throw new Error(`set status: ${r.status()} ${await r.text()}`);
+  let socket, controlToken;
+  const current = await pool.query("SELECT status FROM events WHERE id = $1", [eventId]);
+  if (current.rows[0]?.status === "Live" && status !== "Live") {
+    const health = await request.get("/api/health");
+    socket = await openSocket(new URL(health.url()).origin, adminToken);
+    const claim = await new Promise(resolve => socket.emit("claim_event_control", { event_id: eventId, protocol: 2, takeover: true }, resolve));
+    if (!claim?.ok) { socket.disconnect(); throw new Error(`fixture claim failed: ${JSON.stringify(claim)}`); }
+    controlToken = claim.control_token;
   }
+  try {
+    const r = await request.put(`/api/events/${eventId}/status`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
+      data: { status, ...(controlToken ? { control_token: controlToken } : {}) },
+    });
+    if (r.status() !== 200) throw new Error(`set status: ${r.status()} ${await r.text()}`);
+  } finally { socket?.disconnect(); }
 }
 
 // Insert a coach_diver_links row. The link is scoped to an org:
@@ -747,14 +756,21 @@ async function installClickHighlight(page) {
 // removed left rail's .stage-row). Clicks the event's chip if one is
 // showing (Live events + the focused event), otherwise opens the
 // "All events" dropdown and picks it there (Upcoming / Completed).
-async function selectControlEvent(page, name) {
+async function selectControlEvent(page, name, { takeControl = true } = {}) {
   const chip = page.locator(".cv2-chip", { hasText: name });
-  if (await chip.count()) {
-    await chip.first().click();
-    return;
+  if (await chip.count()) await chip.first().click();
+  else {
+    await page.locator(".cv2-allbtn").click();
+    await page.locator(".cv2-allitem", { hasText: name }).click();
   }
-  await page.locator(".cv2-allbtn").click();
-  await page.locator(".cv2-allitem", { hasText: name }).click();
+  if (takeControl) {
+    const card = page.locator(".cv2-pool", { has: page.locator(".cv2-pool-title", { hasText: name }) });
+    const button = card.getByRole("button", { name: "Take control", exact: true });
+    if (await button.count()) {
+      await button.click();
+      await card.getByRole("button", { name: "Release control", exact: true }).waitFor();
+    }
+  }
 }
 
 module.exports = {

@@ -96,3 +96,18 @@ test('cancelAutoAdvance stops an in-flight countdown without firing', () => {
 test('AUTO_ADVANCE_KEY matches the V1 localStorage key (preference carries across the flag)', () => {
   assert.equal(AUTO_ADVANCE_KEY, 'dr_control_auto_advance_seconds')
 })
+
+test('background, lost connection or lost ownership cancels an armed timer without replay on resume', () => {
+  const { fireOnce, scheduler } = makeScheduler()
+  let allowed = true, fired = 0
+  const { autoAdvanceSeconds, autoAdvanceCountdown, startAutoAdvance } = useAutoAdvance({ scheduler, canRun: () => allowed })
+  autoAdvanceSeconds.value = 2
+  startAutoAdvance(() => { fired++ })
+  fireOnce()
+  allowed = false
+  fireOnce()
+  assert.equal(autoAdvanceCountdown.value, 0)
+  allowed = true
+  fireOnce()
+  assert.equal(fired, 0)
+})

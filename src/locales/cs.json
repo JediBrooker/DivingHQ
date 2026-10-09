@@ -866,7 +866,11 @@
     "event_finished": "Disciplína skončila",
     "event_not_live": "Disciplína už neběží živě",
     "waiting_next_panel": "Čekání na váš další panel rozhodčích…",
-    "score_not_recorded": "Vaše známka {score} nebyla zaznamenána: disciplína už nepřijímala známky."
+    "score_not_recorded": "Vaše známka {score} nebyla zaznamenána: disciplína už nepřijímala známky.",
+    "choose_event": "Vyberte disciplínu k hodnocení",
+    "switch_event": "Změnit disciplínu",
+    "switch_pending": "Před změnou disciplíny počkejte na dokončení synchronizace čekajících známek.",
+    "event_unavailable": "K této disciplíně nejste přiřazeni. Vyberte jednu ze svých probíhajících disciplín."
   },
   "control": {
     "page_label": "Řídicí místnost",
@@ -961,7 +965,28 @@
       "overlay_part_upnext": "Fronta Následující",
       "overlay_part_standings": "Pořadí",
       "overlay_part_history": "Dokončené skoky"
-    }
+    },
+    "take_control": "Převzít řízení",
+    "take_over": "Převzít od obsluhy",
+    "release_control": "Uvolnit řízení",
+    "observing": "Sledujete živě. Pro pokračování této disciplíny převezměte řízení.",
+    "progression_owned": "Postup řídí {operator}.",
+    "control_required": "Před pokračováním této disciplíny převezměte řízení",
+    "timer_paused": "Časomíra zastavena — před restartem se poraďte s vrchním rozhodčím",
+    "restart_clock": "Restartovat časomíru",
+    "connection_lost": "Spojení přerušeno. Po připojení znovu převezměte řízení.",
+    "no_response": "Bez odpovědi. Před pokračováním znovu převezměte řízení.",
+    "request_refused": "Požadavek odmítnut",
+    "take_over_title": "Převzít „{event}“?",
+    "take_over_body": "Druhé okno nebo obsluha přestane řídit postup této disciplíny.",
+    "restore_roster_failed": "Nepodařilo se obnovit seznam účastníků.",
+    "restore_scores_failed": "Nepodařilo se obnovit aktuální známky.",
+    "restore_history_failed": "Nepodařilo se obnovit historii disciplíny.",
+    "take_control_failed": "Nepodařilo se převzít řízení „{event}“: {error}",
+    "progression_stopped": "Postup zastaven: {error}",
+    "another_window": "jiné okno",
+    "another_operator": "jiná obsluha",
+    "queued_action_stopped": "Čekající akce řízení disciplíny byla zastavena. Otevřete řídicí místnost, převezměte řízení a vyberte akci znovu."
   },
   "manager": {
     "title": "Správa závodů",

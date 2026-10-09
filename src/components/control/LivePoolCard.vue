@@ -3,8 +3,8 @@
 // multi-pool grid, so each card is fully self-contained: it owns its own
 // shot clock, auto-advance countdown, and meet-hold (all keyed to this
 // card's :event), driven reactively off its :pool. Two pools never share
-// a timer or a hold, a background pool runs its own 60s clock and
-// auto-advances itself without the operator ever focusing it.
+// a timer or a hold. An owned, non-focused pool can auto-advance while
+// this screen remains visible and connected; observers never drive timers.
 //
 // Side-effecting MEET actions (advance the cursor, finalise) stay in the
 // parent via the `advance` emit: the parent owns the confirm + socket
@@ -27,10 +27,11 @@ const props = defineProps({
   socket: { type: Object, required: true },
   // Lease: another operator/window is also driving this event (or null)
   conflict: { type: String, default: null },
+  canProgress: { type: Boolean, default: false },
 })
 // skip: move past the live diver without a full panel (a no-show, say).
 // The parent asks before it does anything.
-const emit = defineEmits(['focus', 'advance', 'skip'])
+const emit = defineEmits(['focus', 'advance', 'skip', 'take-control', 'release-control'])
 const { t } = useI18n()
 
 // ---- Per-pool controllers (own lifecycle, auto-clean on card unmount) --
@@ -40,6 +41,7 @@ const {
 const signaling = computed(() => (props.pool?.judgeTiles || []).some((t) => t.signaled))
 const { autoAdvanceSeconds, autoAdvanceCountdown, startAutoAdvance, cancelAutoAdvance } = useAutoAdvance({
   isSignaling: () => signaling.value,
+  canRun: () => props.canProgress && props.socket.connected && document.visibilityState !== 'hidden',
   // Per-event key so each pool keeps its own cadence, no cross-clobber.
   storageKey: `${AUTO_ADVANCE_KEY}:${props.event.id}`,
 })
@@ -73,13 +75,14 @@ const isLast = computed(
   () => !!props.pool && nextQueueIndex(props.pool.roster, props.pool.currentIndex) < 0,
 )
 const nextBtnComplete = computed(() => !!props.pool?.advanceArmed && isLast.value)
-const nextBtnDisabled = computed(() => !props.pool?.advanceArmed || isHeld.value)
+const nextBtnDisabled = computed(() => !props.canProgress || !props.pool?.advanceArmed || isHeld.value)
 const nextBtnText = computed(() =>
   nextBtnComplete.value
     ? `✓ ${t('control.finalise')} & ${t('control.view_results')}`
     : `${t('control.next_diver')} →`,
 )
 const nextBtnTitle = computed(() => {
+  if (!props.canProgress) return t('control.control_required')
   if (isHeld.value) return 'Meet held — resume to continue'
   if (!nextBtnDisabled.value) {
     return nextBtnComplete.value
@@ -115,7 +118,10 @@ const activeKey = computed(() => {
 // Not on a dive whose panel is already in: a pool put back from the
 // server's scores (a reload, an undone finalise) comes up armed, and its
 // clock ran out long ago.
+const clockSuspended = ref(false)
 function armClockForActive() {
+  if (!props.canProgress) { stopShotClock(); clockSuspended.value = true; return }
+  clockSuspended.value = false
   if (activeKey.value && props.event.status === 'Live' && !isHeld.value && !props.pool?.advanceArmed) startShotClock()
   else resetShotClock()
 }
@@ -133,7 +139,7 @@ watch(
   (armed, was) => {
     if (armed && !was) {
       stopShotClock()
-      if (!nextBtnComplete.value && !isHeld.value && !props.pool?.armedByRestore) startAutoAdvance(fireAdvance)
+      if (props.canProgress && !nextBtnComplete.value && !isHeld.value && !props.pool?.armedByRestore) startAutoAdvance(fireAdvance)
     } else if (!armed && was) {
       cancelAutoAdvance()
     }
@@ -163,19 +169,26 @@ watch(isHeld, (held) => {
   if (held) { resetShotClock(); cancelAutoAdvance() } else armClockForActive()
 })
 
+watch(() => props.canProgress, () => {
+  cancelAutoAdvance()
+  stopShotClock()
+  clockSuspended.value = true
+}, { flush: 'sync' })
 onMounted(armClockForActive)
 
 function fireAdvance() {
+  if (!props.canProgress || !props.socket.connected || document.visibilityState === 'hidden') return
   emit('advance')
 }
 function onSkip() {
+  if (!props.canProgress) return
   cancelAutoAdvance()
   emit('skip')
 }
 function onPrimary() {
   // A manual advance cancels any in-flight countdown so the click wins.
   cancelAutoAdvance()
-  emit('advance')
+  fireAdvance()
 }
 
 // Referee calls for THIS pool's active diver.
@@ -245,14 +258,26 @@ defineExpose({ refAction, toggleHold })
       ⏸ Held<template v-if="holdReason"> — {{ holdReason }}</template>
     </div>
     <div v-if="conflict" class="cv2-pool-conflict" role="status">
-      ⚠ Also being controlled by {{ conflict }} — changes may conflict.
+      {{ t('control.progression_owned', { operator: conflict }) }}
+    </div>
+
+    <div class="cv2-control-ownership" role="status">
+      <template v-if="!canProgress">
+        <span>{{ t('control.observing') }}</span>
+        <button type="button" class="btn btn-primary btn-sm" :disabled="!socket.isConnected.value" @click.stop="emit('take-control')">{{ t(conflict ? 'control.take_over' : 'control.take_control') }}</button>
+      </template>
+      <button v-else type="button" class="btn btn-ghost btn-sm" @click.stop="emit('release-control')">{{ t('control.release_control') }}</button>
     </div>
 
     <div v-if="info" class="cv2-live">
       <div class="cv2-live-head">
         <span class="cv2-live-status" :class="`cv2-status-${liveStatus}`">{{ liveStatus.toUpperCase() }}</span>
         <span class="cv2-live-round">Round {{ info.round_number }} / {{ event.total_rounds }}</span>
-        <span class="cv2-shotclock" :class="shotClockClass" aria-label="Shot clock">{{ shotClock }}s</span>
+        <span class="cv2-shotclock" :class="shotClockClass" aria-label="Shot clock">{{ clockSuspended ? '—' : `${shotClock}s` }}</span>
+      </div>
+      <div v-if="clockSuspended && canProgress" class="cv2-clock-stopped">
+        <span>{{ t('control.timer_paused') }}</span>
+        <button type="button" class="btn btn-ghost btn-sm" @click.stop="armClockForActive">{{ t('control.restart_clock') }}</button>
       </div>
       <p class="cv2-live-diver">
         {{ info.name }}
@@ -289,6 +314,7 @@ defineExpose({ refAction, toggleHold })
           v-if="!pool.advanceArmed"
           type="button"
           class="cv2-skip"
+          :disabled="!canProgress"
           v-tip="'Move past this diver without a full panel (asks first)'"
           @click.stop="onSkip"
         >Skip</button>
@@ -338,6 +364,7 @@ defineExpose({ refAction, toggleHold })
 </template>
 
 <style scoped>
+.cv2-control-ownership, .cv2-clock-stopped { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin-bottom: var(--space-3); font-size: var(--text-sm); color: var(--fg-2); }
 .cv2-pool {
   display: flex; flex-direction: column;
   border: 1px solid var(--border-2); border-radius: var(--radius-lg);

@@ -87,18 +87,14 @@ async function serverActiveDiver(eventId) {
   return r.rows[0]?.active_diver_payload?.full_name ?? null;
 }
 
-// Advance while offline. The click moves only the operator's screen; the
-// action goes to IndexedDB and waits.
+// Offline progression is deliberately stopped; judge scores remain durable.
 async function advanceOffline(page) {
   await page.context().setOffline(true);
-  await page.waitForTimeout(600);
-  await page.locator(".cv2-primary").click();
-  await expect(page.locator(".cv2-live-diver")).toContainText("ZZZ Diver");
-  // Let the IDB write commit before anything navigates.
-  await page.waitForTimeout(1500);
+  await expect(page.locator(".cv2-primary")).toBeDisabled();
+  await expect(page.locator(".cv2-live-diver")).toContainText("AAA Diver");
 }
 
-test("an offline refresh keeps the operator signed in, and the queued advance lands on reconnect", async ({ request, page, baseURL }) => {
+test("an offline refresh keeps the operator signed in without replaying progression", async ({ request, page, baseURL }) => {
   test.setTimeout(120_000);
   const { event } = await liveMeetReadyToAdvance(request, page, baseURL, "ObxA");
 
@@ -113,7 +109,7 @@ test("an offline refresh keeps the operator signed in, and the queued advance la
   expect(
     await serverActiveDiver(event.id),
     "the offline advance must not reach the server before the network returns",
-  ).not.toBe("ZZZ Diver");
+  ).toBe("AAA Diver");
 
   // The refresh that used to end the operator's afternoon. Wait for the
   // signed-in shell to actually paint before judging the URL. Sleeping and
@@ -129,12 +125,12 @@ test("an offline refresh keeps the operator signed in, and the queued advance la
   await expect
     .poll(() => serverActiveDiver(event.id), {
       timeout: 20_000,
-      message: "the queued advance never replayed after the network came back",
+      message: "reconnect must preserve the canonical active diver",
     })
-    .toBe("ZZZ Diver");
+    .toBe("AAA Diver");
 });
 
-test("reconnecting drains the queue from a route that never mounts the Control Room", async ({ request, page, baseURL }) => {
+test("reconnecting on another route cannot replay an old progression command", async ({ request, page, baseURL }) => {
   test.setTimeout(120_000);
   const { event } = await liveMeetReadyToAdvance(request, page, baseURL, "ObxB");
 
@@ -151,9 +147,9 @@ test("reconnecting drains the queue from a route that never mounts the Control R
   await expect
     .poll(() => serverActiveDiver(event.id), {
       timeout: 20_000,
-      message: "the outbox only drains while the Control Room is on screen",
+      message: "reconnect outside the Control Room must not advance the event",
     })
-    .toBe("ZZZ Diver");
+    .toBe("AAA Diver");
 });
 
 test("an anonymous tab never opens the outbox and caches no identity", async ({ page }) => {
@@ -308,6 +304,7 @@ test("a judge's score queued offline replays when the network returns", async ({
   // Put a diver on the board so the judge's keypad unlocks.
   const adminSocket = await setup.openSocket(baseURL, adminToken);
   adminSocket.emit("subscribe_event", { event_id: event.id });
+  await new Promise(resolve => adminSocket.emit("claim_event_control", { event_id: event.id }, resolve));
   adminSocket.emit("set_active_diver", {
     event_id: event.id, competitor_id: diver.userId, round_number: 1,
     full_name: "Solo Diver", diverName: "Solo Diver",

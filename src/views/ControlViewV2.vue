@@ -9,6 +9,7 @@
 // useControlStage derivation. Same /control URL, ?event= deep-link, role
 // gate + AppShell as before.
 import { ref, reactive, computed, watch, onMounted, onUnmounted, nextTick, defineAsyncComponent, provide } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRoute, onBeforeRouteLeave, RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useClubScope, CONTROL_ROOM_ROLES } from '@/composables/useClubScope'
@@ -54,12 +55,13 @@ import { confirmAction } from '@/composables/useConfirm'
 import { showUndo } from '@/composables/useUndo'
 import { showError, showSuccess, showInfo, showWarning } from '@/composables/useNotify'
 
+const { t } = useI18n()
 const route = useRoute()
 const auth = useAuthStore()
 // Referees run any event in the org here, so only a club / region admin
 // with none of the Control Room's roles gets narrowed to their own meets.
 const { narrowEvents } = useClubScope(CONTROL_ROOM_ROLES)
-const { queueAction, queueSocketAction } = useHttpOutbox()
+const { queueSocketAction } = useHttpOutbox()
 
 // Socket + the concurrent-pool live-state engine are hoisted ABOVE the
 // mode switch: one subscription for the shell's whole lifetime routes every
@@ -146,7 +148,7 @@ useSocketEvent(socket, 'roster_changed', async (data) => {
 // say) leans on get_active_diver alone. We record it and snap the matching pool
 // to that diver, without emitting, so reopening the Control Room
 // mid-meet never yanks the judges' panel back to roster[0]. Only a
-// genuinely fresh event (no server diver) announces, over in setupLivePool.
+// an explicit claim with an empty canonical snapshot can announce a fresh event.
 const pendingActive = {} // event_id -> latest server state_update payload
 const pendingSeed = new Set() // events optimistically seeded, awaiting the server's verdict
 const seedTimers = new Set() // fallback timers, cleared on unmount
@@ -159,39 +161,123 @@ const SEED_GRACE_MS = 1500
 // judges of any event nobody had started.
 let unmounted = false
 
-// Lease conflict state: event_id -> true when another socket (operator or
-// window) is also controlling this event (server claim_event_control).
+// Ownership is memory-only. A reconnect, hidden page or expired heartbeat
+// requires a deliberate claim and canonical restore before progression resumes.
 const conflicts = reactive({})
-
+const control = reactive({})
+const foreground = ref(document.visibilityState !== 'hidden')
+let controlHeartbeat = null
+function canProgress(eventId) {
+  const lease = control[eventId]
+  return !unmounted && foreground.value && socket.isConnected.value && !!lease?.ready && lease.until > Date.now()
+}
+function socketRequest(name, data) {
+  return new Promise((resolve, reject) => {
+    if (!socket.connected) return reject(new Error(t('control.connection_lost')))
+    const timer = setTimeout(() => reject(new Error(t('control.no_response'))), 8000)
+    socket.emit(name, data, (reply) => {
+      clearTimeout(timer)
+      if (reply?.ok) resolve(reply)
+      else {
+        const message = reply?.error === 'control_conflict'
+          ? t('control.progression_owned', { operator: t(reply.sameUser ? 'control.another_window' : 'control.another_operator') })
+          : ['control_lost', 'control_required'].includes(reply?.error)
+            ? t('control.control_required')
+            : t('control.request_refused')
+        reject(new Error(message))
+      }
+    })
+  })
+}
+function releaseControl(eventId) {
+  const lease = control[eventId]
+  delete control[eventId]
+  if (lease && socket.connected) socket.emit('release_event_control', { event_id: eventId, control_token: lease.token })
+}
+function suspendControl() {
+  for (const id of Object.keys(control)) releaseControl(id)
+}
+function visibilityChanged() {
+  foreground.value = document.visibilityState !== 'hidden'
+  if (!foreground.value) suspendControl()
+}
+async function takeControl(ev, takeover = false, publishRestored = false) {
+  if (!foreground.value || !socket.connected || unmounted) return
+  if (takeover && !(await confirmAction({
+    title: t('control.take_over_title', { event: ev.name }),
+    body: t('control.take_over_body'),
+    confirmLabel: t('control.take_over'), confirmKind: 'warn',
+  }))) return
+  if (!foreground.value || !socket.connected || unmounted) return
+  try {
+    const reply = await socketRequest('claim_event_control', { event_id: ev.id, protocol: 2, takeover })
+    const lease = { token: reply.control_token, until: Date.now() + reply.lease_ms, ready: false }
+    control[ev.id] = lease
+    if (!foreground.value || !socket.connected || unmounted) { releaseControl(ev.id); return }
+    const fullRoster = await refreshPoolRoster(ev.id)
+    if (!fullRoster) throw new Error(t('control.restore_roster_failed'))
+    if (control[ev.id]?.token !== lease.token) return
+    pendingSeed.add(ev.id)
+    let announceInitial = false
+    if (reply.active) {
+      const idx = rosterIndexForActive(fullRoster, reply.active)
+      if (idx < 0) throw new Error(t('control.restore_roster_failed'))
+      // The full roster retains a withdrawn current diver in original order.
+      // Preserve that live dive while the competing queue skips it on Next.
+      const pool = pools[ev.id]
+      pool.roster = fullRoster
+      selectDiver(pool, idx, numberOfJudgesFor(ev.id), diveDescription)
+      rebaseQueue(pool, fullRoster)
+      pendingActive[ev.id] = reply.active
+      pendingSeed.delete(ev.id)
+    } else {
+      delete pendingActive[ev.id]
+      announceInitial = await resumeFromHistory(ev, pools[ev.id], { strict: true })
+    }
+    if (!(await restoreLiveDive(ev.id))) throw new Error(t('control.restore_scores_failed'))
+    if (control[ev.id]?.token !== lease.token || !foreground.value || !socket.connected) return
+    control[ev.id].ready = true
+    delete conflicts[ev.id]
+    // Only an acknowledged empty snapshot permits the initial announce.
+    if (!reply.active && (announceInitial || publishRestored)) await emitActiveDiver(ev)
+  } catch (err) {
+    releaseControl(ev.id)
+    showError(t('control.take_control_failed', { event: ev.name, error: err.message }))
+  }
+}
 useSocketEvent(socket, 'state_update', (data) => {
   if (!data?.event_id) return
   pendingActive[data.event_id] = data
+  if (!canProgress(data.event_id)) pendingSeed.add(data.event_id)
   seedPoolFromServer(data.event_id)
 })
-
-// Lease: the server warns when a second socket drives the same event.
 useSocketEvent(socket, 'event_control_conflict', (d) => {
-  if (d?.event_id) conflicts[d.event_id] = d.sameUser ? 'another window' : 'another operator'
+  if (d?.event_id) conflicts[d.event_id] = d.sameUser ? t('control.another_window') : t('control.another_operator')
 })
-useSocketEvent(socket, 'event_control_contested', (d) => {
-  if (d?.event_id) conflicts[d.event_id] = d.sameUser ? 'another window' : 'another operator'
+useSocketEvent(socket, 'event_control_lost', (d) => {
+  if (!d?.event_id) return
+  delete control[d.event_id]
+  conflicts[d.event_id] = t('control.another_operator')
+  pendingSeed.add(d.event_id)
+  socket.emit('get_active_diver', { event_id: d.event_id })
 })
-useSocketEvent(socket, 'event_control_granted', (d) => {
-  if (d?.event_id) delete conflicts[d.event_id]
-})
+useSocketEvent(socket, 'disconnect', suspendControl)
 
-// Queue set_active_diver through the outbox. It persists to IDB and
-// drains via socket ack when online; offline entries replay on
-// reconnect. That replaced the old token-bucket + drop-detection flow
-// (and its "unconfirmed / Retry" banner on the pool card), since the
-// outbox's own pending/synced/failed states cover retries now.
-// The roster row alone isn't enough: judges and the scoreboard render
-// diverName / diveCode / eventName, see src/lib/activeDiver.js.
-function emitActiveDiver(ev) {
-  const p = pools[ev.id]
-  const a = p && p.currentActive
-  if (!a) return
-  queueSocketAction('set_active_diver', activeDiverPayload(a, ev))
+// Cursor changes are live commands, never offline outbox entries. An ambiguous
+// ack drops ownership so a retry cannot silently advance a different dive.
+async function emitActiveDiver(ev, active = pools[ev.id]?.currentActive) {
+  if (!active || !canProgress(ev.id)) return false
+  const token = control[ev.id].token
+  try {
+    await socketRequest('set_active_diver', { ...activeDiverPayload(active, ev), control_token: token })
+    return canProgress(ev.id) && control[ev.id]?.token === token
+  } catch (err) {
+    releaseControl(ev.id)
+    pendingSeed.add(ev.id)
+    socket.emit('get_active_diver', { event_id: ev.id })
+    showError(t('control.progression_stopped', { error: err.message }))
+    return false
+  }
 }
 
 // Snap an optimistically-seeded pool to the server's authoritative active
@@ -489,7 +575,7 @@ async function announceFocused() {
 const advancing = new Set()
 
 async function advancePool(ev) {
-  if (!ev || advancing.has(ev.id)) return
+  if (!ev || advancing.has(ev.id) || !canProgress(ev.id)) return
   advancing.add(ev.id)
   try {
     await advancePoolOnce(ev)
@@ -500,7 +586,10 @@ async function advancePool(ev) {
 
 async function advancePoolOnce(ev) {
   const p = pools[ev.id]
-  if (!p) return
+  if (!p || !canProgress(ev.id)) return
+  const generation = control[ev.id].token
+  const original = p.currentActive
+  const stillCurrent = () => canProgress(ev.id) && control[ev.id]?.token === generation && p.currentActive === original
   if (holdStore[String(ev.id)]) {
     showInfo(`"${ev.name}" is on hold. Resume it before moving on.`)
     return
@@ -517,6 +606,7 @@ async function advancePoolOnce(ev) {
       new Promise((resolve) => setTimeout(() => resolve(false), 2000)),
     ])
   }
+  if (!stillCurrent()) return
   const totalJudges = numberOfJudgesFor(ev.id) || 0
   const scoresIn = Object.keys(p.scoresThisRound || {}).length
   // The pool's roster is the competing queue already (competingQueue),
@@ -552,7 +642,7 @@ async function advancePoolOnce(ev) {
         confirmLabel: 'Skip diver',
         confirmKind: 'warn',
       })
-    if (!ok) return
+    if (!ok || !stillCurrent()) return
     // Skipping the last dive in the queue is finishing the event.
     if (isLast) {
       await finalisePool(ev)
@@ -561,10 +651,10 @@ async function advancePoolOnce(ev) {
   }
   if (isComplete) {
     await finalisePool(ev)
-  } else if (selectDiver(p, nextIndex, totalJudges, diveDescription)) {
-    // The pool's currentActive changed -> its card re-arms the shot clock.
-    // Goes out through the outbox, see emitActiveDiver.
-    emitActiveDiver(ev)
+  } else if (stillCurrent() && nextIndex >= 0) {
+    // Do not move the local cursor until the server accepts this generation.
+    const next = p.roster[nextIndex]
+    if (await emitActiveDiver(ev, next)) selectDiver(p, nextIndex, totalJudges, diveDescription)
   }
 }
 
@@ -665,7 +755,8 @@ function onReflowSaved(payload) {
 // Finalise one pool: consequences confirm, PUT Completed, then an undo
 // toast, and the re-flow prompt when the event overran its slot.
 async function finalisePool(ev) {
-  if (!ev) return
+  if (!ev || !canProgress(ev.id)) return
+  const generation = control[ev.id].token
   const p = pools[ev.id]
   // pool.roster is already just the divers who compete, so reserves and
   // scratched divers don't pad the email count.
@@ -692,13 +783,15 @@ async function finalisePool(ev) {
   ) {
     return
   }
+  if (!canProgress(ev.id) || control[ev.id]?.token !== generation || holdStore[String(ev.id)]) return
   const evId = ev.id
   const evName = ev.name
   try {
     const res = await auth.apiFetch(`/api/events/${evId}/status`, {
       method: 'PUT',
-      body: JSON.stringify({ status: 'Completed' }),
+      body: JSON.stringify({ status: 'Completed', control_token: generation }),
     })
+    releaseControl(evId)
     const target = events.value.find((e) => String(e.id) === String(evId))
     if (target) target.status = 'Completed' // -> workflowMode flips to review
     if (Array.isArray(res?.reflow?.candidates) && res.reflow.candidates.length) {
@@ -712,20 +805,15 @@ async function finalisePool(ev) {
       message: `Finalised "${evName}" — results published.`,
       timeoutMs: 12000,
       onUndo: async () => {
-        await queueAction({
-          method: 'PUT',
-          url: `/api/events/${evId}/status`,
-          body: { status: 'Live' },
-          actionType: 'event_status_flip',
+        await auth.apiFetch(`/api/events/${evId}/status`, {
+          method: 'PUT', body: JSON.stringify({ status: 'Live' }),
         })
         const back = events.value.find((e) => String(e.id) === String(evId))
         if (back) {
           back.status = 'Live'
-          // Finalising cleared the server's active diver, so judges and
-          // the scoreboard were left with nobody up. Put back the one this
-          // board still shows, same as before the finalise. It queues
-          // behind the status flip in the same outbox.
-          emitActiveDiver(back)
+          // A successful online undo claims again and restores the last
+          // judged dive before publishing its active state.
+          await takeControl(back, false, true)
         }
       },
     })
@@ -754,17 +842,14 @@ function numberOfJudgesFor(eventId) {
 //   2. ask the server who is actually live (get_active_diver). If it has a
 //      diver, the state_update echo snaps us to it via seedPoolFromServer,
 //      still no emit, so the judges are never reset;
-//   3. only when the server has NO diver (a freshly-Live event nobody has
-//      started yet) do we announce roster[0], the one load path that emits.
-// Join an event's room and claim its lease. Also asks whether it's held:
+//   3. leave progression read-only until Take control confirms the server
+//      snapshot and restores its roster and scores.
+// Join an event's room as an observer. Also asks whether it's held:
 // the server only replays a hold to a socket that asks, so without this a
 // second operator (or a reload) mid-hold saw no banner, a running clock
 // and an enabled Next.
 function joinPoolRooms(eventId) {
   socket.emit('subscribe_event', { event_id: eventId })
-  // Claim the control lease so a second operator/window driving this same
-  // event gets warned (advisory; never blocks).
-  socket.emit('claim_event_control', { event_id: eventId })
   socket.emit('get_meet_hold', { event_id: eventId })
 }
 
@@ -773,14 +858,15 @@ function joinPoolRooms(eventId) {
 // judge_signal only go to event:<id>, so after a wifi blip or a deploy
 // every pool went deaf until someone reloaded. Rejoin each wired Live
 // pool. get_active_diver just refreshes what the server has on record;
-// pendingSeed isn't touched, so a routine reconnect never snaps the
-// operator's cursor or announces over it.
+// pendingSeed is restored so a returning observer follows the current
+// operator's canonical cursor. Ownership is never reclaimed automatically.
 useSocketEvent(socket, 'connect', () => {
   for (const ev of events.value) {
     if (ev.status !== 'Live' || !wiredPools.has(ev.id)) continue
     // A resume that happened while we were away never reached us. Forget
     // the hold and let get_meet_hold put it back if it's still on.
     delete holdStore[String(ev.id)]
+    pendingSeed.add(ev.id)
     joinPoolRooms(ev.id)
     socket.emit('get_active_diver', { event_id: ev.id })
     // Everything sent while we were away only went to the room: scores,
@@ -814,11 +900,8 @@ async function setupLivePool(ev) {
     // that landed before the roster finished loading) snaps us to it.
     socket.emit('get_active_diver', { event_id: ev.id })
     seedPoolFromServer(ev.id)
-    // Fallback: the server never answered within the grace window, so it
-    // has nobody up. Usually that's an event freshly Live, but not always
-    // (see resumeFromHistory). Guarded on pendingSeed (cleared once the
-    // server resolves it) plus a live socket check, so we never clobber an
-    // existing diver or announce blind while disconnected.
+    // An unanswered snapshot can only seed the observer display from
+    // history. It never authorizes an announce; only the claim ack can.
     const tid = setTimeout(() => {
       seedTimers.delete(tid)
       if (!unmounted && pendingSeed.has(ev.id) && socket.isConnected.value && pool.currentActive) {
@@ -838,25 +921,26 @@ async function setupLivePool(ev) {
 // at what's been judged and pick up from there (resumeIndex). If the
 // history can't be had, the copy loadPoolPanels fetched will do, and with
 // neither we treat it as a fresh event, which is what it nearly always is.
-async function resumeFromHistory(ev, pool) {
+async function resumeFromHistory(ev, pool, { strict = false } = {}) {
   let history = null
   try {
     history = await auth.apiFetch(`/api/events/${ev.id}/history`)
   } catch {
+    if (strict) throw new Error(t('control.restore_history_failed'))
     history = Array.isArray(histories[ev.id]) ? histories[ev.id] : null
   }
   // The server may have answered while we were asking, or we've gone.
-  if (unmounted || !pendingSeed.has(ev.id)) return
+  if (unmounted || (!strict && !pendingSeed.has(ev.id))) return
   pendingSeed.delete(ev.id)
   const { index, announce } = resumeIndex(pool.roster, history, numberOfJudgesFor(ev.id))
   if (index >= 0 && index !== pool.currentIndex) {
     selectDiver(pool, index, numberOfJudgesFor(ev.id), diveDescription)
   }
-  if (announce && socket.isConnected.value) emitActiveDiver(ev)
   // The dive it picked up on may be part or fully judged already. Every
   // dive in and nothing after it is the undone-finalise case: this is
   // what arms Finalise there.
   restoreLiveDive(ev.id)
+  return announce
 }
 
 async function selectEvent(id) {
@@ -929,6 +1013,7 @@ useSocketEvent(socket, 'event_status_changed', (d) => {
   const ev = events.value.find((e) => String(e.id) === String(d.event_id))
   if (ev) {
     ev.status = d.to
+    if (d.to !== 'Live') releaseControl(d.event_id)
     return
   }
   if (d.to === 'Live' && (auth.user?.is_system_admin || String(d.org_id) === String(auth.user?.org_id))) {
@@ -956,6 +1041,19 @@ watch(socket.isConnected, async (connected) => {
   }
 })
 
+onMounted(() => {
+  document.addEventListener('visibilitychange', visibilityChanged)
+  controlHeartbeat = setInterval(async () => {
+    for (const [eventId, lease] of Object.entries(control)) {
+      if (!canProgress(eventId)) { releaseControl(eventId); continue }
+      try {
+        const reply = await socketRequest('renew_event_control', { event_id: eventId, control_token: lease.token })
+        if (control[eventId]?.token === lease.token) control[eventId].until = Date.now() + reply.lease_ms
+      } catch { releaseControl(eventId) }
+    }
+  }, 10000)
+})
+
 onMounted(async () => {
   // Both before the await on purpose. Queued outbox actions from a
   // previous visit still need the leave-page prompt while /api/events is
@@ -977,6 +1075,9 @@ onMounted(async () => {
 // after the view is gone. Heads up: useSocketEvent already auto-cleans the
 // socket listeners on unmount, this is just for our own timers.
 onUnmounted(() => {
+  suspendControl()
+  clearInterval(controlHeartbeat)
+  document.removeEventListener('visibilitychange', visibilityChanged)
   unmounted = true
   seedTimers.forEach(clearTimeout)
   seedTimers.clear()
@@ -1137,6 +1238,9 @@ function onBeforeUnload(e) {
               :total-judges="numberOfJudgesFor(lp.event.id)"
               :socket="socket"
               :conflict="conflicts[lp.event.id] || null"
+              :can-progress="canProgress(lp.event.id)"
+              @take-control="takeControl(lp.event, !!conflicts[lp.event.id])"
+              @release-control="releaseControl(lp.event.id)"
               @focus="selectEvent"
               @advance="advancePool(lp.event)"
               @skip="advancePool(lp.event)"

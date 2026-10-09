@@ -51,6 +51,8 @@ test("Undo puts the last diver back up, not round 1 diver 1, and a reload keeps 
 
   await signIn(page, w.username);
   await page.goto(`/control?event=${event.id}`);
+  await page.getByRole("button", { name: "Take control", exact: true }).first().click();
+  await expect(page.getByRole("button", { name: "Release control", exact: true }).first()).toBeVisible();
   const card = page.locator(`.cv2-pool[data-event-id="${event.id}"]`);
   await expect(card.locator(".cv2-live-diver")).toContainText("AAA Undo", { timeout: 10_000 });
   await expect.poll(() => room.seen.state.length, { timeout: 8_000 }).toBeGreaterThan(0);
@@ -82,6 +84,8 @@ test("Undo puts the last diver back up, not round 1 diver 1, and a reload keeps 
 
   // Someone reloads the Control Room.
   await page.reload();
+  await card.getByRole("button", { name: "Take control", exact: true }).click();
+  await expect(card.getByRole("button", { name: "Release control", exact: true })).toBeVisible();
   await expect(card.locator(".cv2-live-diver")).toContainText("BBB Undo", { timeout: 10_000 });
   await page.waitForTimeout(3_000);
   expect(room.seen.state.slice(before).map((s) => s.full_name)).not.toContain("AAA Undo");
@@ -108,6 +112,8 @@ test("a Control Room opened after a finalise was undone elsewhere doesn't announ
 
   await signIn(page, w.username);
   await page.goto(`/control?event=${event.id}`);
+  await page.getByRole("button", { name: "Take control", exact: true }).first().click();
+  await expect(page.getByRole("button", { name: "Release control", exact: true }).first()).toBeVisible();
   const card = page.locator(`.cv2-pool[data-event-id="${event.id}"]`);
   // Every dive is in: the board sits on the last one, ready to finalise,
   // and nothing goes out to the judges.
@@ -130,6 +136,8 @@ test("part way through, it picks up after the last dive judged", async ({ page, 
 
   await signIn(page, w.username);
   await page.goto(`/control?event=${event.id}`);
+  await page.getByRole("button", { name: "Take control", exact: true }).first().click();
+  await expect(page.getByRole("button", { name: "Release control", exact: true }).first()).toBeVisible();
   const card = page.locator(`.cv2-pool[data-event-id="${event.id}"]`);
   await expect(card.locator(".cv2-live-diver")).toContainText("BBB Undo", { timeout: 10_000 });
   await expect.poll(() => room.seen.state.slice(before).map((s) => s.full_name), { timeout: 8_000 }).toEqual(["BBB Undo"]);

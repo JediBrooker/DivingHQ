@@ -30,6 +30,8 @@ test("Start Event from the Setup stage brings the pool up and announces the firs
   const primary = page.locator(".setup-primary");
   await expect(primary).toContainText(/Start Event/i, { timeout: 10_000 });
   await primary.click();
+  await page.getByRole("button", { name: "Take control", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Release control", exact: true })).toBeVisible();
 
   const card = page.locator(`.cv2-pool[data-event-id="${event.id}"]`);
   await expect(card.locator(".cv2-live-diver")).toContainText("AAA Start", { timeout: 10_000 });
@@ -100,6 +102,8 @@ test("after the socket drops and reconnects, judge scores still reach the pool",
   await page.goto(`/control?event=${event.id}`);
   const card = page.locator(`.cv2-pool[data-event-id="${event.id}"]`);
   await expect(card.locator(".cv2-live-diver")).toContainText("AAA Blip", { timeout: 10_000 });
+  await card.getByRole("button", { name: "Take control", exact: true }).click();
+  await expect(card.getByRole("button", { name: "Release control", exact: true })).toBeVisible();
   await expect.poll(() => room.seen.state.length, { timeout: 8_000 }).toBeGreaterThan(0);
   await expect.poll(() => links.length, { timeout: 8_000 }).toBeGreaterThan(0);
 
@@ -111,6 +115,8 @@ test("after the socket drops and reconnects, judge scores still reach the pool",
   // socket.io reconnects on its own; wait for the fresh transport
   await expect.poll(() => links.length, { timeout: 15_000 }).toBeGreaterThan(0);
   expect(before).toBeGreaterThan(0);
+  await card.getByRole("button", { name: "Take control", exact: true }).click();
+  await expect(card.getByRole("button", { name: "Release control", exact: true })).toBeVisible();
   await page.waitForTimeout(1500);
 
   await setup.submitPanelScores({ baseURL, judges, eventId: event.id, competitorId: divers[0].userId, roundNumber: 1, diveId });

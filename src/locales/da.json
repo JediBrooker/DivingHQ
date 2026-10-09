@@ -877,7 +877,11 @@
     "event_finished": "Konkurrencen er slut",
     "event_not_live": "Konkurrencen er ikke længere i gang",
     "waiting_next_panel": "Venter på dit næste dommerpanel…",
-    "score_not_recorded": "Din karakter på {score} blev ikke registreret: konkurrencen tog ikke længere imod karakterer."
+    "score_not_recorded": "Din karakter på {score} blev ikke registreret: konkurrencen tog ikke længere imod karakterer.",
+    "choose_event": "Vælg en disciplin at dømme",
+    "switch_event": "Skift disciplin",
+    "switch_pending": "Vent på, at dine ventende karakterer er synkroniseret, før du skifter disciplin.",
+    "event_unavailable": "Du er ikke tilknyttet denne disciplin. Vælg et af dine igangværende dommerpaneler."
   },
   "control": {
     "page_label": "Kontrolrum",
@@ -972,7 +976,28 @@
       "overlay_part_upnext": "Næste op-kø",
       "overlay_part_standings": "Stillinger",
       "overlay_part_history": "Gennemførte udspring"
-    }
+    },
+    "take_control": "Tag styringen",
+    "take_over": "Overtag",
+    "release_control": "Frigiv styringen",
+    "observing": "Du følger med live. Tag styringen for at fortsætte denne disciplin.",
+    "progression_owned": "Forløbet styres af {operator}.",
+    "control_required": "Tag styringen, før du fortsætter denne disciplin",
+    "timer_paused": "Uret er stoppet — spørg overdommeren, før du starter igen",
+    "restart_clock": "Genstart uret",
+    "connection_lost": "Forbindelsen blev afbrudt. Tag styringen igen, når du er tilsluttet.",
+    "no_response": "Intet svar. Tag styringen igen, før du fortsætter.",
+    "request_refused": "Anmodning afvist",
+    "take_over_title": "Overtag “{event}”?",
+    "take_over_body": "Det andet vindue eller den anden operatør stopper med at styre denne disciplin.",
+    "restore_roster_failed": "Kunne ikke gendanne deltagerlisten.",
+    "restore_scores_failed": "Kunne ikke gendanne aktuelle karakterer.",
+    "restore_history_failed": "Kunne ikke gendanne disciplinens historik.",
+    "take_control_failed": "Kunne ikke tage styringen af “{event}”: {error}",
+    "progression_stopped": "Forløbet er stoppet: {error}",
+    "another_window": "et andet vindue",
+    "another_operator": "en anden operatør",
+    "queued_action_stopped": "En handling i køen til styring af disciplinen blev stoppet. Åbn kontrolrummet, tag styringen, og vælg handlingen igen."
   },
   "manager": {
     "title": "Stævnehåndtering",

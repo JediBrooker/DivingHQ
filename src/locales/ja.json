@@ -866,7 +866,11 @@
     "event_finished": "種目が終了しました",
     "event_not_live": "種目はライブではなくなりました",
     "waiting_next_panel": "次の審判団を待っています…",
-    "score_not_recorded": "あなたの点数 {score} は記録されませんでした。種目はすでに点数の受付を終了していました。"
+    "score_not_recorded": "あなたの点数 {score} は記録されませんでした。種目はすでに点数の受付を終了していました。",
+    "choose_event": "採点する種目を選択",
+    "switch_event": "種目を切り替え",
+    "switch_pending": "種目を切り替える前に、送信待ちの得点の同期が完了するまでお待ちください。",
+    "event_unavailable": "この種目の審判には割り当てられていません。担当する進行中の種目を選択してください。"
   },
   "control": {
     "page_label": "コントロールルーム",
@@ -961,7 +965,28 @@
       "overlay_part_upnext": "次の演技者",
       "overlay_part_standings": "順位表",
       "overlay_part_history": "完了した演技"
-    }
+    },
+    "take_control": "操作権を取得",
+    "take_over": "操作権を引き継ぐ",
+    "release_control": "操作権を手放す",
+    "observing": "ライブ観戦中です。この種目を進行するには操作権を取得してください。",
+    "progression_owned": "{operator} が進行を操作しています。",
+    "control_required": "この種目を進行する前に操作権を取得してください",
+    "timer_paused": "時計が停止しました — 再開前に審判長に確認してください",
+    "restart_clock": "時計を再開",
+    "connection_lost": "接続が切れました。再接続後に操作権を再取得してください。",
+    "no_response": "応答がありません。続行する前に操作権を再取得してください。",
+    "request_refused": "リクエストが拒否されました",
+    "take_over_title": "「{event}」を引き継ぎますか？",
+    "take_over_body": "別のウィンドウまたは担当者は、この種目の進行を操作できなくなります。",
+    "restore_roster_failed": "参加者一覧を復元できませんでした。",
+    "restore_scores_failed": "現在の得点を復元できませんでした。",
+    "restore_history_failed": "種目の履歴を復元できませんでした。",
+    "take_control_failed": "「{event}」の操作権を取得できませんでした: {error}",
+    "progression_stopped": "進行が停止しました: {error}",
+    "another_window": "別のウィンドウ",
+    "another_operator": "別の担当者",
+    "queued_action_stopped": "待機中の進行操作を停止しました。コントロールルームを開き、操作権を取得してから、もう一度操作を選択してください。"
   },
   "manager": {
     "title": "大会マネージャー",

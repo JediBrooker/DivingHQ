@@ -866,7 +866,11 @@
     "event_finished": "종목이 종료되었습니다",
     "event_not_live": "종목이 더 이상 라이브가 아닙니다",
     "waiting_next_panel": "다음 심판단을 기다리는 중…",
-    "score_not_recorded": "점수 {score}점이 기록되지 않았습니다. 종목이 이미 점수 접수를 마감했습니다."
+    "score_not_recorded": "점수 {score}점이 기록되지 않았습니다. 종목이 이미 점수 접수를 마감했습니다.",
+    "choose_event": "채점할 종목 선택",
+    "switch_event": "종목 전환",
+    "switch_pending": "종목을 전환하기 전에 대기 중인 점수의 동기화가 완료될 때까지 기다려 주세요.",
+    "event_unavailable": "이 종목에 배정되지 않았습니다. 담당하는 진행 중인 심판 패널을 선택하세요."
   },
   "control": {
     "page_label": "컨트롤 룸",
@@ -961,7 +965,28 @@
       "overlay_part_upnext": "다음 순서 대기열",
       "overlay_part_standings": "순위표",
       "overlay_part_history": "완료된 다이빙"
-    }
+    },
+    "take_control": "제어권 가져오기",
+    "take_over": "제어권 인계받기",
+    "release_control": "제어권 해제",
+    "observing": "실시간 관람 중입니다. 이 종목을 진행하려면 제어권을 가져오세요.",
+    "progression_owned": "{operator} 님이 진행을 제어합니다.",
+    "control_required": "이 종목을 진행하기 전에 제어권을 가져오세요",
+    "timer_paused": "시계가 멈췄습니다 — 다시 시작하기 전에 주심에게 확인하세요",
+    "restart_clock": "시계 다시 시작",
+    "connection_lost": "연결이 끊겼습니다. 연결 후 제어권을 다시 가져오세요.",
+    "no_response": "응답이 없습니다. 계속하기 전에 제어권을 다시 가져오세요.",
+    "request_refused": "요청이 거부되었습니다",
+    "take_over_title": "“{event}”의 제어권을 인계받으시겠습니까?",
+    "take_over_body": "다른 창이나 운영자는 이 종목의 진행을 더 이상 제어하지 못합니다.",
+    "restore_roster_failed": "참가자 명단을 복원할 수 없습니다.",
+    "restore_scores_failed": "현재 점수를 복원할 수 없습니다.",
+    "restore_history_failed": "종목 기록을 복원할 수 없습니다.",
+    "take_control_failed": "“{event}”의 제어권을 가져올 수 없습니다: {error}",
+    "progression_stopped": "진행이 중단되었습니다: {error}",
+    "another_window": "다른 창",
+    "another_operator": "다른 운영자",
+    "queued_action_stopped": "대기 중인 진행 제어 작업이 중단되었습니다. 컨트롤 룸을 열고 제어권을 가져온 뒤 작업을 다시 선택하세요."
   },
   "manager": {
     "title": "대회 매니저",

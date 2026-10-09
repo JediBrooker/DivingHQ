@@ -866,7 +866,11 @@
     "event_finished": "Acara selesai",
     "event_not_live": "Acara tidak lagi berlangsung",
     "waiting_next_panel": "Menunggu panel juri Anda berikutnya…",
-    "score_not_recorded": "Skor Anda {score} tidak tercatat: acara sudah tidak menerima skor."
+    "score_not_recorded": "Skor Anda {score} tidak tercatat: acara sudah tidak menerima skor.",
+    "choose_event": "Pilih nomor untuk dinilai",
+    "switch_event": "Ganti nomor",
+    "switch_pending": "Tunggu hingga nilai yang mengantre selesai disinkronkan sebelum mengganti nomor.",
+    "event_unavailable": "Anda tidak ditugaskan untuk nomor ini. Pilih salah satu panel Anda yang sedang berlangsung."
   },
   "control": {
     "page_label": "Ruang kontrol",
@@ -961,7 +965,28 @@
       "overlay_part_upnext": "Antrean Berikutnya",
       "overlay_part_standings": "Klasemen",
       "overlay_part_history": "Loncatan yang selesai"
-    }
+    },
+    "take_control": "Ambil kendali",
+    "take_over": "Ambil alih",
+    "release_control": "Lepaskan kendali",
+    "observing": "Menonton langsung. Ambil kendali untuk melanjutkan nomor ini.",
+    "progression_owned": "Jalannya nomor dikendalikan oleh {operator}.",
+    "control_required": "Ambil kendali sebelum melanjutkan nomor ini",
+    "timer_paused": "Jam berhenti — konfirmasikan dengan wasit sebelum memulai ulang",
+    "restart_clock": "Mulai ulang jam",
+    "connection_lost": "Koneksi terputus. Ambil kendali lagi setelah terhubung.",
+    "no_response": "Tidak ada respons. Ambil kendali lagi sebelum melanjutkan.",
+    "request_refused": "Permintaan ditolak",
+    "take_over_title": "Ambil alih “{event}”?",
+    "take_over_body": "Jendela atau operator lain akan berhenti mengendalikan jalannya nomor ini.",
+    "restore_roster_failed": "Tidak dapat memulihkan daftar peserta.",
+    "restore_scores_failed": "Tidak dapat memulihkan nilai saat ini.",
+    "restore_history_failed": "Tidak dapat memulihkan riwayat nomor.",
+    "take_control_failed": "Tidak dapat mengambil kendali “{event}”: {error}",
+    "progression_stopped": "Jalannya nomor dihentikan: {error}",
+    "another_window": "jendela lain",
+    "another_operator": "operator lain",
+    "queued_action_stopped": "Tindakan kendali yang mengantre dihentikan. Buka Ruang Kontrol, ambil kendali, dan pilih tindakan itu lagi."
   },
   "manager": {
     "title": "Pengelola kompetisi",

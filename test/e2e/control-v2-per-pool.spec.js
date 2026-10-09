@@ -52,6 +52,9 @@ test("a NON-focused pool runs its own clock and auto-advances itself", async ({ 
   const cardA = page.locator(`.cv2-pool[data-event-id="${A.event.id}"]`);
   const cardB = page.locator(`.cv2-pool[data-event-id="${B.event.id}"]`);
 
+  await cardB.getByRole("button", { name: "Take control", exact: true }).click();
+  await expect(cardB.getByRole("button", { name: "Release control", exact: true })).toBeVisible();
+
   // #1: both pools show their own shot clock, not just the focused one.
   await expect(cardA.locator(".cv2-shotclock")).toBeVisible();
   await expect(cardB.locator(".cv2-shotclock")).toBeVisible();

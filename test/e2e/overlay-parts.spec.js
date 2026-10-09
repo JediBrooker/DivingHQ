@@ -76,7 +76,10 @@ test.beforeAll(async ({ request, baseURL }) => {
   // Name diver 4 as the active one, in round 2, so the centre card is full:
   // name, country, dive code, DD, empty judge slots, total, rank.
   const sock = await setup.openSocket(baseURL, adminToken);
+  const control = await new Promise(resolve => sock.emit("claim_event_control", { event_id: event.id, protocol: 2 }, resolve));
+  expect(control.ok).toBe(true);
   const ack = await new Promise((res) => sock.emit("set_active_diver", {
+    control_token: control.control_token,
     event_id: event.id, competitor_id: divers[3].userId,
     full_name: "Di Parts", diverName: "Di Parts", country_code: "AUS",
     round_number: 2, dive_id: diveId, diveCode: "101B", dd: 1.5,

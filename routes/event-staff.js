@@ -271,8 +271,10 @@ module.exports = function createEventStaffRouter({
   router.get("/api/judge/my-events", requireOrgRole(["judge"]), async (req, res) => {
     try {
       const r = await pool.query(
-        `SELECT e.id, e.name, e.number_of_judges, e.total_rounds, e.status
+        `SELECT e.id, e.name, e.number_of_judges, e.total_rounds, e.status,
+                e.meet_id, m.name AS meet_name
          FROM events e JOIN event_judges ej ON e.id = ej.event_id
+         LEFT JOIN meets m ON m.id = e.meet_id
          WHERE ej.judge_id = $1 ORDER BY e.created_at DESC`,
         [req.user.id],
       );

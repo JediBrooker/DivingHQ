@@ -877,7 +877,11 @@
     "event_finished": "Grenen är avslutad",
     "event_not_live": "Grenen pågår inte längre",
     "waiting_next_panel": "Väntar på din nästa domarpanel…",
-    "score_not_recorded": "Din poäng på {score} registrerades inte: grenen tog inte längre emot poäng."
+    "score_not_recorded": "Din poäng på {score} registrerades inte: grenen tog inte längre emot poäng.",
+    "choose_event": "Välj en gren att döma",
+    "switch_event": "Byt gren",
+    "switch_pending": "Vänta tills dina köade poäng har synkroniserats innan du byter gren.",
+    "event_unavailable": "Du är inte tilldelad den här grenen. Välj en av dina pågående domarpaneler."
   },
   "control": {
     "page_label": "Kontrollrum",
@@ -972,7 +976,28 @@
       "overlay_part_upnext": "Nästa i kö",
       "overlay_part_standings": "Ställningar",
       "overlay_part_history": "Genomförda hopp"
-    }
+    },
+    "take_control": "Ta kontroll",
+    "take_over": "Ta över",
+    "release_control": "Släpp kontroll",
+    "observing": "Följer live. Ta kontroll för att fortsätta den här grenen.",
+    "progression_owned": "Förloppet styrs av {operator}.",
+    "control_required": "Ta kontroll innan du fortsätter den här grenen",
+    "timer_paused": "Klockan har stannat — stäm av med överdomaren innan du startar om",
+    "restart_clock": "Starta om klockan",
+    "connection_lost": "Anslutningen bröts. Ta kontroll igen när du är ansluten.",
+    "no_response": "Inget svar. Ta kontroll igen innan du fortsätter.",
+    "request_refused": "Begäran nekad",
+    "take_over_title": "Ta över ”{event}”?",
+    "take_over_body": "Det andra fönstret eller den andra operatören slutar styra förloppet för den här grenen.",
+    "restore_roster_failed": "Kunde inte återställa deltagarlistan.",
+    "restore_scores_failed": "Kunde inte återställa aktuella poäng.",
+    "restore_history_failed": "Kunde inte återställa grenens historik.",
+    "take_control_failed": "Kunde inte ta kontroll över ”{event}”: {error}",
+    "progression_stopped": "Förloppet stoppades: {error}",
+    "another_window": "ett annat fönster",
+    "another_operator": "en annan operatör",
+    "queued_action_stopped": "En köad kontrollåtgärd stoppades. Öppna kontrollrummet, ta kontroll och välj åtgärden igen."
   },
   "manager": {
     "title": "Tävlingshanterare",

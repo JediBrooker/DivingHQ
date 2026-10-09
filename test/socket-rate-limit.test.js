@@ -60,6 +60,7 @@ function makeHarness(opts = {}) {
       isTokenVersionCurrent: async () => true,
       checkAndApplyRecords: async () => {},
       activeDivers: {},
+      eventControl: require("../lib/event-control").createEventControl(),
       meetHolds: opts.meetHolds || {},
       persistActiveDiver: () => {},
       persistMeetHold: () => {},

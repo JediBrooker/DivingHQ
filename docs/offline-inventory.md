@@ -114,7 +114,7 @@ work.
 |---|---|---|---|---|---|---|
 | `submit_score` | [routes/socket.js#L341](../routes/socket.js) | judge | Transactional INSERT + audit row in one txn. Idempotent on `(judge_id, competitor_id, dive_id, round)`. Already buffers ONE pending in `JudgeView.pendingScore`. | Optimistic | Identity-merge → Operator-decides on mismatch | P1 (first to migrate, prototype) |
 | `judge_signal` | [routes/socket.js#L527](../routes/socket.js) | judge | Toggleable flag (red ring on operator's panel). Ephemeral, resets on every `state_update`. | Optimistic | Last-write-wins | P1 |
-| `set_active_diver` | [routes/socket.js#L283](../routes/socket.js) | meet_manager, referee, org_admin | Updates in-memory `activeDivers[event_id]`, write-through to `event_live_state`, broadcasts `state_update`. | Optimistic | Last-write-wins (single operator) | P4 |
+| `set_active_diver` | [routes/socket.js#L283](../routes/socket.js) | meet_manager, referee, org_admin | Updates in-memory `activeDivers[event_id]`, write-through to `event_live_state`, broadcasts `state_update`. Requires an active socket lease. | Server-canonical | Exclusive progression lease; no offline replay | P4 |
 | `meet_hold` | [routes/socket.js#L660](../routes/socket.js) | meet_manager, referee, org_admin | Sets `meetHolds[event_id]`, write-through to `event_live_state`, broadcasts `meet_held`. | Optimistic | Last-write-wins | P4 |
 | `meet_resume` | [routes/socket.js#L689](../routes/socket.js) | meet_manager, referee, org_admin | Clears `meetHolds[event_id]`, write-through, broadcasts. | Optimistic | Last-write-wins | P4 |
 | `referee_failed_dive` | [routes/socket.js#L624](../routes/socket.js) | referee, meet_manager, org_admin | Marks current dive as failed (0 across the board), audit row. Audit-critical. | Optimistic | Operator-decides (rare conflict, but safety-critical) | P4 |
@@ -149,7 +149,7 @@ work.
 | `POST /api/events/:id/roster` | [routes/control-room.js#L1285](../routes/control-room.js) | meet_editor | Adds a row to a diver's sheet (used during meet for late additions). | Optimistic | Last-write-wins | P4 |
 | `POST /api/events/:id/advance` | [routes/events/index.js#L1489](../routes/events/index.js) | meet_manager | Advances from one stage to the next (Prelim → SF → F). | Server-canonical (complex ranking logic + reserves) | — | — |
 | `POST /api/events/:id/reserves/:competitorId/promote` | [routes/events/reserves.js#L155](../routes/events/reserves.js) | meet_manager | Promote reserve into the event. | Server-canonical | — | — |
-| `PUT /api/events/:id/status` | [routes/events/index.js#L784](../routes/events/index.js) | meet_manager | Upcoming → Live → Completed transitions. | Optimistic | Last-write-wins | P4 |
+| `PUT /api/events/:id/status` | [routes/events/index.js#L784](../routes/events/index.js) | meet_manager | Upcoming → Live → Completed transitions. Active lease requires its generation token. | Server-canonical | Exclusive progression lease; no offline replay | P4 |
 
 ---
 

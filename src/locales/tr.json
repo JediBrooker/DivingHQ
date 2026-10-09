@@ -866,7 +866,11 @@
     "event_finished": "Etkinlik sona erdi",
     "event_not_live": "Etkinlik artık canlı değil",
     "waiting_next_panel": "Sonraki hakem paneliniz bekleniyor…",
-    "score_not_recorded": "{score} puanınız kaydedilmedi: etkinlik artık puan kabul etmiyordu."
+    "score_not_recorded": "{score} puanınız kaydedilmedi: etkinlik artık puan kabul etmiyordu.",
+    "choose_event": "Puanlanacak yarışı seçin",
+    "switch_event": "Yarış değiştir",
+    "switch_pending": "Yarış değiştirmeden önce sıradaki puanlarınızın eşitlenmesini bekleyin.",
+    "event_unavailable": "Bu yarışa atanmadınız. Devam eden hakem panellerinizden birini seçin."
   },
   "control": {
     "page_label": "Kontrol Odası",
@@ -961,7 +965,28 @@
       "overlay_part_upnext": "Sıradakiler kuyruğu",
       "overlay_part_standings": "Sıralama",
       "overlay_part_history": "Tamamlanan atlayışlar"
-    }
+    },
+    "take_control": "Kontrolü al",
+    "take_over": "Devral",
+    "release_control": "Kontrolü bırak",
+    "observing": "Canlı izleniyor. Bu yarışı ilerletmek için kontrolü alın.",
+    "progression_owned": "İlerlemeyi {operator} kontrol ediyor.",
+    "control_required": "Bu yarışı ilerletmeden önce kontrolü alın",
+    "timer_paused": "Saat durdu — yeniden başlatmadan önce başhakeme danışın",
+    "restart_clock": "Saati yeniden başlat",
+    "connection_lost": "Bağlantı kesildi. Bağlandıktan sonra kontrolü yeniden alın.",
+    "no_response": "Yanıt yok. Devam etmeden önce kontrolü yeniden alın.",
+    "request_refused": "İstek reddedildi",
+    "take_over_title": "“{event}” devralınsın mı?",
+    "take_over_body": "Diğer pencere veya operatör bu yarışın ilerlemesini kontrol etmeyi bırakacak.",
+    "restore_roster_failed": "Katılımcı listesi geri yüklenemedi.",
+    "restore_scores_failed": "Mevcut puanlar geri yüklenemedi.",
+    "restore_history_failed": "Yarış geçmişi geri yüklenemedi.",
+    "take_control_failed": "“{event}” kontrolü alınamadı: {error}",
+    "progression_stopped": "İlerleme durduruldu: {error}",
+    "another_window": "başka bir pencere",
+    "another_operator": "başka bir operatör",
+    "queued_action_stopped": "Sıradaki bir kontrol işlemi durduruldu. Kontrol Odasını açın, kontrolü alın ve işlemi yeniden seçin."
   },
   "manager": {
     "title": "Yarışma Yöneticisi",

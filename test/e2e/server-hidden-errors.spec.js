@@ -100,11 +100,15 @@ test("coach up-next fan-out writes notification rows", async ({ request, baseURL
 
     const sock = await setup.openSocket(baseURL, adminToken);
     try {
-      sock.emit("set_active_diver", {
+      const control = await new Promise(resolve => sock.emit("claim_event_control", { event_id: event.id, protocol: 2 }, resolve));
+      expect(control.ok).toBe(true);
+      const active = await new Promise(resolve => sock.emit("set_active_diver", {
+        control_token: control.control_token,
         event_id: event.id,
         competitor_id: divers[0].userId,
         round_number: 1,
-      });
+      }, resolve));
+      expect(active.ok).toBe(true);
 
       await expect.poll(async () => {
         const r = await setup.pool.query(

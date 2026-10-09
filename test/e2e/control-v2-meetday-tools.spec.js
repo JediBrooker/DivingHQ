@@ -26,6 +26,8 @@ test("a Super Final H2H event's dive-offs open from the Tools drawer", async ({ 
 
   await signIn(page, username);
   await page.goto(`/control?event=${event.id}`);
+  await page.getByRole("button", { name: "Take control", exact: true }).first().click();
+  await expect(page.getByRole("button", { name: "Release control", exact: true }).first()).toBeVisible();
   await expect(page.locator(".cv2-live-diver")).toContainText("AAA H2H", { timeout: 10_000 });
   const drawer = await openTool(page, "Super Final");
   await expect(drawer.locator(".reserves-head-label", { hasText: "Dive-offs" })).toBeVisible();
@@ -41,6 +43,8 @@ test("an ordinary event has no Super Final section, but does have Late entry", a
 
   await signIn(page, username);
   await page.goto(`/control?event=${event.id}`);
+  await page.getByRole("button", { name: "Take control", exact: true }).first().click();
+  await expect(page.getByRole("button", { name: "Release control", exact: true }).first()).toBeVisible();
   await expect(page.locator(".cv2-live-diver")).toContainText("AAA Plain", { timeout: 10_000 });
   const drawer = await openTool(page, "Late entry");
   await expect(drawer.locator(".cv2-drawer-row", { hasText: "Super Final" })).toHaveCount(0);
@@ -74,6 +78,8 @@ test("finalising an event that ran long offers to reschedule what comes after it
 
   await signIn(page, username);
   await page.goto(`/control?event=${event.id}`);
+  await page.getByRole("button", { name: "Take control", exact: true }).first().click();
+  await expect(page.getByRole("button", { name: "Release control", exact: true }).first()).toBeVisible();
   const card = page.locator(`.cv2-pool[data-event-id="${event.id}"]`);
   await expect(card.locator(".cv2-live-diver")).toContainText("AAA Long", { timeout: 10_000 });
   await page.waitForTimeout(2000);
@@ -98,6 +104,8 @@ test("Operator broadcast turns this Control Room into a kiosk, and ✕ brings it
 
   await signIn(page, username);
   await page.goto(`/control?event=${event.id}`);
+  await page.getByRole("button", { name: "Take control", exact: true }).first().click();
+  await expect(page.getByRole("button", { name: "Release control", exact: true }).first()).toBeVisible();
   await expect(page.locator(".cv2-live-diver")).toContainText("AAA Kiosk", { timeout: 10_000 });
   await expect(page.locator(".cv2-topbar")).toBeVisible();
 
