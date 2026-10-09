@@ -1,5 +1,10 @@
 # Mobile corrective verification — 8 October 2026
 
+This is the 8 October verification checkpoint. Subsequent signing, provider
+provisioning and store-processing evidence is recorded in the
+[9 October release report](native-release-evidence-2026-10-09.md); the historical
+results and incomplete states below are retained as observed on this date.
+
 Target source version: **1.1 (2)**, bundle ID `app.divinghq.mobile`.
 The existing owner-only 1.0 (1) store builds are earlier artifacts. This report
 does not claim that a replacement build is published or that native push has

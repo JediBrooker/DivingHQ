@@ -1,10 +1,17 @@
 # Native testing releases
 
-The first store testing build is version 1.0, build/versionCode 1, with bundled
-assets explicitly configured for `https://divinghq.app`. Testers use live accounts
-and data. This is internal testing, not a public App Store or Play production
-release. Native push, app links, downloads/sharing and payment redirects remain
-outside the verified workflows; see [native apps](native-apps.md).
+The corrective release candidate is **1.1 (2)**, with bundled assets explicitly
+configured for `https://divinghq.app`. Signed artifacts have passed package review;
+Apple has accepted the upload and made it available to the existing owner-only
+TestFlight group. See the
+[9 October release evidence](native-release-evidence-2026-10-09.md) for current
+provider, store-distribution and delivery status. The earlier owner-only **1.0 (1)**
+release is recorded below as history.
+
+Testers use live accounts and data. This is internal testing, not a public App
+Store or Play production release. Implemented features, emulator checks, provider
+delivery and physical store-installed acceptance are separate claims; see
+[native apps](native-apps.md) and the release evidence before relying on a workflow.
 
 ## Registered destinations
 
@@ -12,7 +19,9 @@ outside the verified workflows; see [native apps](native-apps.md).
 - Apple team: `6MY34D5RKG`; App Store Connect app `6820469893`, SKU
   `divinghq-mobile`, primary locale `en-AU`.
 - iOS Release target uses the existing Apple Distribution identity and
-  `DivingHQ App Store` provisioning profile. Debug simulator builds need no
+  `DivingHQ App Store Native` provisioning profile (UUID
+  `c7b6945b-1193-4c68-b97e-04073bcee5bd`), which permits production APNs and
+  `applinks:divinghq.app`. Debug simulator builds need no
   distribution identity. The profile and private key stay outside the repo.
 - Google Play uses the existing Christian Brooker developer account, DivingHQ
   app, and internal testing track. Play App Signing manages the distribution
@@ -23,17 +32,21 @@ outside the verified workflows; see [native apps](native-apps.md).
 Use Node 22, JDK 21, the Android SDK and Xcode. Reuse existing test devices and
 Xcode's default DerivedData location as described in the native guide. Sync once
 before both platform builds, and serialize shared build assets with anyone
-running device tests:
+running device tests.
+
+The paths below identify the 1.1 (2) release. Preserve uploaded artifacts and
+their checksums; use a new version/build directory for every future candidate
+rather than overwriting a published package.
 
 ```sh
 VITE_NATIVE_API_ORIGIN=https://divinghq.app npm run native:sync
 xcodebuild -project ios/App/App.xcodeproj -scheme App \
   -configuration Release -destination 'generic/platform=iOS' \
-  -archivePath /Volumes/Storage/DivingHQ-releases/1.0-1/DivingHQ.xcarchive archive
+  -archivePath /Volumes/Storage/DivingHQ-releases/1.1-2/DivingHQ.xcarchive archive
 xcodebuild -exportArchive \
-  -archivePath /Volumes/Storage/DivingHQ-releases/1.0-1/DivingHQ.xcarchive \
+  -archivePath /Volumes/Storage/DivingHQ-releases/1.1-2/DivingHQ.xcarchive \
   -exportOptionsPlist ios/ExportOptions-TestFlight.plist \
-  -exportPath /Volumes/Storage/DivingHQ-releases/1.0-1/ios
+  -exportPath /Volumes/Storage/DivingHQ-releases/1.1-2/ios
 ```
 
 The export options export locally and mark the build **TestFlight internal
@@ -56,7 +69,9 @@ cd android
 
 The bundle is `android/app/build/outputs/bundle/release/app-release.aab`.
 Release builds fail without signing configuration; Debug builds remain available
-without it. The repository contains no upload key or password.
+without it. Android Release also requires the legitimate Firebase client
+configuration for `app.divinghq.mobile` in the correct project; the file remains
+ignored. The repository contains no upload key, password or provider private key.
 
 ## Gates before distributing to testers
 
@@ -81,7 +96,7 @@ use the [privacy policy](privacy-policy.md) and actual app behaviour for store
 data declarations. Internal testing does not establish complete role coverage,
 physical-device reliability, or readiness for use at a live meet.
 
-## Store status — 8 October 2026
+## Original 1.0 release — 8 October 2026
 
 The signed version 1.0/build 1 candidates passed local artifact review; exact
 hashes and verification results are in the [test report](native-test-report-2026-10-08.md).
@@ -119,11 +134,12 @@ unchanged; the socket-ticket endpoint rejected anonymous requests with 403 and
 malformed bearer tokens with 401. Testing access is limited to the owner as
 requested.
 
-## Install the owner testing build
+## Install an available owner testing build
 
 - **iPhone or iPad:** install Apple's TestFlight app, then open the DivingHQ
-  invitation sent to the owner's Apple account. Accept it and install version
-  1.0 (1), or open DivingHQ in TestFlight if it is already installed.
+  invitation sent to the owner's Apple account. Open DivingHQ in TestFlight and
+  choose the latest version offered to the owner. The release evidence records
+  whether a newer uploaded build has actually been assigned to that group.
 - **Android phone or tablet:** sign in to Google Play with the selected owner
   account, open the internal opt-in link above, join the test, and follow its
   Google Play installation link.
