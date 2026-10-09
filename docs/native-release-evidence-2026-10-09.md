@@ -161,11 +161,14 @@ Evidence: `verification/production-deploy-preflight.json`,
 `verification/production-deploy.log` and `verification/production-postdeploy.json`.
 
 The optional background translation process subsequently failed with an Anthropic
-insufficient-credit response while checking 178 pre-existing stuck keys. Its
+insufficient-credit response while checking 178 English-stuck keys. Its
 partial writes were discarded and the production checkout remained clean. This
 is an ancillary translation-service follow-up, not a failed deployment or an
 observed regression in the 1.2 tour translations; those passed the local checks
-above.
+above. Sanitized evidence is retained in
+`verification/background-translation-2026-10-09.log` and
+`verification/background-translation-evidence.json`; the log does not establish
+when every affected key first became untranslated.
 
 ## Historical corrective release — 1.1 (2)
 
