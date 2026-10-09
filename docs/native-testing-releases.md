@@ -1,12 +1,12 @@
 # Native testing releases
 
-The current owner-only testing release is **1.1 (2)**, with bundled assets explicitly
-configured for `https://divinghq.app`. Signed artifacts have passed package review;
-Apple has made it available to the existing TestFlight group, and Google Play
-reports it available on the active internal testing track. See the
-[9 October release evidence](native-release-evidence-2026-10-09.md) for current
-provider, store-distribution and delivery status. The earlier owner-only **1.0 (1)**
-release is recorded below as history.
+The current owner-only testing release is **1.2 (3)**, with bundled assets explicitly configured
+for `https://divinghq.app`. Signed artifacts passed package review and both stores
+report the release available to the existing owner-only internal audiences.
+The matching backend is deployed and verified healthy. See the
+[9 October release evidence](native-release-evidence-2026-10-09.md) for the exact
+store and deployment checkpoint. Earlier 1.1 (2) notification proof is retained
+there, and the original **1.0 (1)** release is recorded below as history.
 
 Testers use live accounts and data. This is internal testing, not a public App
 Store or Play production release. Implemented features, emulator checks, provider
@@ -39,7 +39,7 @@ Xcode's default DerivedData location as described in the native guide. Sync once
 before both platform builds, and serialize shared build assets with anyone
 running device tests.
 
-The paths below identify the 1.1 (2) release. Preserve uploaded artifacts and
+The paths below identify the 1.2 (3) release. Preserve uploaded artifacts and
 their checksums; use a new version/build directory for every future candidate
 rather than overwriting a published package.
 
@@ -47,11 +47,11 @@ rather than overwriting a published package.
 VITE_NATIVE_API_ORIGIN=https://divinghq.app npm run native:sync
 xcodebuild -project ios/App/App.xcodeproj -scheme App \
   -configuration Release -destination 'generic/platform=iOS' \
-  -archivePath /Volumes/Storage/DivingHQ-releases/1.1-2/DivingHQ.xcarchive archive
+  -archivePath /Volumes/Storage/DivingHQ-releases/1.2-3/DivingHQ.xcarchive archive
 xcodebuild -exportArchive \
-  -archivePath /Volumes/Storage/DivingHQ-releases/1.1-2/DivingHQ.xcarchive \
+  -archivePath /Volumes/Storage/DivingHQ-releases/1.2-3/DivingHQ.xcarchive \
   -exportOptionsPlist ios/ExportOptions-TestFlight.plist \
-  -exportPath /Volumes/Storage/DivingHQ-releases/1.1-2/ios
+  -exportPath /Volumes/Storage/DivingHQ-releases/1.2-3/ios
 ```
 
 The export options export locally and mark the build **TestFlight internal
@@ -83,16 +83,19 @@ ignored. The repository contains no upload key, password or provider private key
 1. Run the required local CI and platform builds, then inspect packaged origin,
    signatures, privacy manifests, and absence of Debug CA/trust overrides.
 2. Verify public startup on production-origin Android/iPhone/iPad builds.
-3. Deploy the matching backend through the normal `deploy.sh` workflow. An
-   anonymous `GET /api/auth/socket-ticket` must return 403 rather than 404;
-   a malformed bearer token must return 401 (the existing middleware contract).
-   Native sign-in needs this endpoint for authenticated live sockets. Verify
-   production health and deployed commit, not only the local source state.
+3. Confirm the backend/client compatibility order and selected audience before
+   publication. For 1.2 (3), make both native updates available to the existing
+   owner before deploying enforcement that 1.1 cannot satisfy. Follow the
+   [concurrency rollout gates](mobile-concurrency-plan.md#rollout-gates).
 4. Upload for processing to the existing TestFlight app and Play internal track.
    Uploading alone must not assign testers, notify people or submit a public
-   release. Publish an internal track or assign a build to an empty internal
-   group only after backend compatibility is confirmed. Add testers or send
-   invitations only after the owner selects the audience.
+   release. Publish only to the selected audience after the compatibility plan is
+   confirmed. Add testers or send invitations only after the owner selects them.
+5. Re-check that no production event is Live immediately before the 1.2 backend
+   deployment, then use the normal `deploy.sh` workflow. Verify production health
+   and deployed commit, not only local source. Native sign-in needs
+   `GET /api/auth/socket-ticket`: anonymous requests must return 403 rather than
+   404, and a malformed bearer token must return 401.
 
 The app uses operating-system HTTPS/TLS and declares no non-exempt encryption
 in iOS `Info.plist`. Reassess that declaration if bundled encryption changes.
@@ -143,12 +146,15 @@ requested.
 
 - **iPhone or iPad:** install Apple's TestFlight app, then open the DivingHQ
   invitation sent to the owner's Apple account. Open DivingHQ in TestFlight and
-  install **1.1 (2)**, which is assigned to the existing owner-only group.
+  install **1.2 (3)**, which is assigned to the existing owner-only group.
 - **Android phone or tablet:** sign in to Google Play with the selected owner
   account, open the internal opt-in link above, join the test, and follow its
-  Google Play installation link for **1.1 (2)**.
+  Google Play installation link for **1.2 (3)**.
 
 Both builds connect to `https://divinghq.app` and use live accounts and data.
+Update to 1.2 (3) before using the updated Control Room: 1.1 (2) does not have the
+new ownership token required to finalise a Live event. Reading and judging remain
+available in the older build.
 
 Official references: [Apple TestFlight](https://developer.apple.com/help/app-store-connect/test-a-beta-version/testflight-overview/),
 [Google Play testing](https://support.google.com/googleplay/android-developer/answer/9845334),

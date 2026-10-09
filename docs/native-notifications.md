@@ -34,6 +34,9 @@ both providers configured, real Android emulator delivery/tap/logout revocation,
 and the owner's confirmation of one physical TestFlight 1.1 (2) iOS background
 notification whose tap opened Settings. The iOS device model was not confirmed;
 physical Android and the remaining iOS acceptance scenarios remain unverified.
+Those observations belong to 1.1 (2). The 1.2 (3) concurrency release preserves
+provider configuration and signed notification entitlements, but has no new
+physical or store-installed notification acceptance result.
 
 `node --test test/native-push-provider.test.js test/native-push-client.test.js` covers invalid credentials, production/sandbox scope, OS denial, explicit consent, resume overlap, offline logout, late registration and account changes. `DB_DATABASE=divinghq_test node --test test/native-push.integration.test.js` runs ownership/revision/token rotation/provider failure tests against the guarded test database and real HTTP auth middleware.
 

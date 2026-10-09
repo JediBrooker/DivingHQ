@@ -1,9 +1,15 @@
 # Simultaneous event corrections
 
-Plan agreed on 9 October 2026. Target private testing release: **1.2 (3)** for
+Plan agreed and implemented on 9 October 2026. Private testing release: **1.2 (3)** for
 iPhone, iPad, Android phones and Android tablets, using `https://divinghq.app`.
-This document describes intended behaviour and acceptance gates; it is not a
-claim that implementation, verification or publication has finished.
+Implementation and verification are complete at source
+`4c1cfbe838db63de4fe509b4d5624ffa88250243`. Local lint/build, 1,606 Node/integration
+and 456 Playwright checks passed, with native phone/tablet checks recorded in the
+[release evidence](native-release-evidence-2026-10-09.md#simultaneous-event-release--12-3).
+Both stores report the owner-only update available. The matching backend was
+deployed through `deploy.sh` after a fresh zero-Live-events check and verified
+healthy at the same source, schema 105. Physical/store-installed 1.2 acceptance
+is not claimed.
 
 ## Judge event selection
 
