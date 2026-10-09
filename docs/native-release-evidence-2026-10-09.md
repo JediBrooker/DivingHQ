@@ -1,6 +1,6 @@
 # Native release evidence — 9 October 2026
 
-Release candidate: **1.1 (2)**, app identifier `app.divinghq.mobile`, production
+Owner-only testing release: **1.1 (2)**, app identifier `app.divinghq.mobile`, production
 API origin `https://divinghq.app`. Access remains limited to the previously
 selected owner. No public production release is requested or claimed.
 
@@ -18,7 +18,7 @@ Both packages contain identical native JavaScript assets and the explicit
 production API origin. The signed-package record is
 `/Volumes/Storage/DivingHQ-releases/1.1-2/verification/signed-artifacts.json`.
 Its `storeUpload: "not performed"` field describes the signing checkpoint before
-the later Apple upload recorded below.
+the later store uploads recorded below.
 
 | Platform | Verified package properties |
 |---|---|
@@ -47,9 +47,22 @@ Evidence: `verification/asc-upload.log`, `verification/asc-build2-final.json`,
 `verification/asc-build2-group-assignment.json` and
 `verification/asc-owner-testers-final.json` under the release directory above.
 
-The Android bundle is signed and validated. A replacement Play upload or release
-has not yet been verified at this checkpoint; the prior owner-only internal
-track remains the distribution destination.
+Google Play published release **1.1 (2) - native notifications and settings**,
+version code **2**, to internal track `4701056953067005627` at **13:37 Sydney
+time on 9 October 2026 (02:37 UTC)**. Console readback reports the track
+**Active** and the release **Available to internal testers**. The audience was
+read back again after publication: only **DivingHQ Owner**, containing one
+existing owner account, was selected and the Save control was disabled. No
+additional testers were added.
+The [existing internal opt-in link](https://play.google.com/apps/internaltest/4701056953067005627)
+remains the installation route for that selected account. Store installation and
+physical Android receipt have not been independently observed.
+
+The release preview had no errors. Its missing deobfuscation mapping warning is
+expected with `minifyEnabled false`; it also reported absent native debug
+symbols. Phone/tablet device support was retained. Evidence:
+`verification/play-1.1-2-published.txt`, `.jpg` and
+`verification/play-1.1-2-owner-audience.txt`.
 
 ## Provider provisioning and device acceptance
 
@@ -60,8 +73,9 @@ directory and 0600 file. Only `FCM_SERVICE_ACCOUNT_PATH` was added to the backen
 environment; the application restarted through PM2 without a source pull or
 deployment. Local and public health remained HTTP 200, schema 105.
 
-A fresh production provider instance reports **Android configured / iOS
-unconfigured**. OAuth authentication succeeded. An FCM `validate_only` request
+At the initial FCM installation checkpoint, a fresh production provider instance
+reported **Android configured / iOS unconfigured**. OAuth authentication succeeded.
+An FCM `validate_only` request
 using a synthetic, non-device token reached registration-token validation and
 returned HTTP 400 `INVALID_ARGUMENT`; no notification was sent by this check.
 This establishes credential loading/authentication, not device delivery.
@@ -92,10 +106,25 @@ cleared, original size/density restored, and the reused emulator stopped.
 `cleanup-result.json` records these checks. Exact signed IPA/AAB checksums remain
 unchanged; no redundant platform compilation was needed for cleanup.
 
-The Apple APNs registration action was attempted, but the browser window closed
-before the key could be downloaded. The resulting key's identity and usable
-credential have not yet been confirmed. No production APNs readiness or delivery
-is claimed.
+Apple APNs key `57V96TN77H` was subsequently created, downloaded and installed
+outside the checkout. It is restricted to production and the topic
+`app.divinghq.mobile`, under team `6MY34D5RKG`. The validated key is EC
+`prime256v1`, with a 0600 credential file in a 0700 directory. Only the four APNs
+environment keys (`APNS_KEY_PATH`, `APNS_KEY_ID`, `APNS_TEAM_ID`,
+`APNS_ENVIRONMENTS`) changed; other values were preserved. PM2 restarted online
+without a source pull, and local/public health remained HTTP 200, schema 105.
+
+The final production provider instance reports **iOS and Android configured**.
+A request to Apple's production endpoint using a synthetic all-zero token and
+zero expiry returned HTTP 400 `BadDeviceToken`. This is an endpoint/credential
+configuration check, not evidence that a real device accepted a notification.
+No production user's notification was sent by that check. This key does not
+authorize sandbox delivery.
+
+Evidence: `verification/apple-apns-key-created.jpg` and
+`verification/production-apns-provider-2026-10-09.json`. Physical iOS receipt and
+tap behavior remain pending an owner-only test from the installed TestFlight
+1.1 (2) app with notifications enabled; no such result is claimed yet.
 
 Physical iPhone/iPad and Android store-installed acceptance remains separate from
 simulator/emulator verification. The earlier test evidence and the remaining

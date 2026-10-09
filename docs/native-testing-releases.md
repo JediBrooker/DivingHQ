@@ -1,9 +1,9 @@
 # Native testing releases
 
-The corrective release candidate is **1.1 (2)**, with bundled assets explicitly
+The current owner-only testing release is **1.1 (2)**, with bundled assets explicitly
 configured for `https://divinghq.app`. Signed artifacts have passed package review;
-Apple has accepted the upload and made it available to the existing owner-only
-TestFlight group. See the
+Apple has made it available to the existing TestFlight group, and Google Play
+reports it available on the active internal testing track. See the
 [9 October release evidence](native-release-evidence-2026-10-09.md) for current
 provider, store-distribution and delivery status. The earlier owner-only **1.0 (1)**
 release is recorded below as history.
@@ -138,11 +138,10 @@ requested.
 
 - **iPhone or iPad:** install Apple's TestFlight app, then open the DivingHQ
   invitation sent to the owner's Apple account. Open DivingHQ in TestFlight and
-  choose the latest version offered to the owner. The release evidence records
-  whether a newer uploaded build has actually been assigned to that group.
+  install **1.1 (2)**, which is assigned to the existing owner-only group.
 - **Android phone or tablet:** sign in to Google Play with the selected owner
   account, open the internal opt-in link above, join the test, and follow its
-  Google Play installation link.
+  Google Play installation link for **1.1 (2)**.
 
 Both builds connect to `https://divinghq.app` and use live accounts and data.
 
