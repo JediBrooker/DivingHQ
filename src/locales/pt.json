@@ -881,7 +881,8 @@
     "choose_event": "Escolher uma prova para julgar",
     "switch_event": "Mudar de prova",
     "switch_pending": "Aguarde a sincronização das notas pendentes antes de mudar de prova.",
-    "event_unavailable": "Não está designado para esta prova. Escolha um dos seus painéis em curso."
+    "event_unavailable": "Não está designado para esta prova. Escolha um dos seus painéis em curso.",
+    "tour_event_choice": "Se estiver designado para uma única prova em curso, o Terminal de Juiz abre-a automaticamente. Se várias das suas provas estiverem em curso, escolha a correta antes de atribuir notas."
   },
   "control": {
     "page_label": "Sala de Controlo",

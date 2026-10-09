@@ -870,7 +870,8 @@
     "choose_event": "Pilih nomor untuk dinilai",
     "switch_event": "Ganti nomor",
     "switch_pending": "Tunggu hingga nilai yang mengantre selesai disinkronkan sebelum mengganti nomor.",
-    "event_unavailable": "Anda tidak ditugaskan untuk nomor ini. Pilih salah satu panel Anda yang sedang berlangsung."
+    "event_unavailable": "Anda tidak ditugaskan untuk nomor ini. Pilih salah satu panel Anda yang sedang berlangsung.",
+    "tour_event_choice": "Jika Anda ditugaskan ke satu nomor yang sedang berlangsung, Terminal Juri membukanya secara otomatis. Jika beberapa nomor yang ditugaskan kepada Anda sedang berlangsung, pilih nomor yang benar sebelum memberi nilai."
   },
   "control": {
     "page_label": "Ruang kontrol",

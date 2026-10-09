@@ -870,7 +870,8 @@
     "choose_event": "Choose an event to judge",
     "switch_event": "Switch event",
     "switch_pending": "Wait for your queued scores to finish syncing before switching events.",
-    "event_unavailable": "You are not assigned to this event. Choose one of your live panels."
+    "event_unavailable": "You are not assigned to this event. Choose one of your live panels.",
+    "tour_event_choice": "If you are assigned to one live event, Judge Terminal opens it automatically. If several of your assigned events are live, choose the correct event before scoring."
   },
   "control": {
     "page_label": "Control Room",

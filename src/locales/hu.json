@@ -881,7 +881,8 @@
     "choose_event": "Válasszon pontozandó versenyszámot",
     "switch_event": "Versenyszám váltása",
     "switch_pending": "A versenyszám váltása előtt várja meg a függőben lévő pontszámok szinkronizálását.",
-    "event_unavailable": "Ehhez a versenyszámhoz nincs beosztva. Válassza ki valamelyik folyamatban lévő versenyszámát."
+    "event_unavailable": "Ehhez a versenyszámhoz nincs beosztva. Válassza ki valamelyik folyamatban lévő versenyszámát.",
+    "tour_event_choice": "Ha egy folyamatban lévő versenyszámhoz van beosztva, a pontozói terminál automatikusan megnyitja azt. Ha több beosztott versenyszáma zajlik, pontozás előtt válassza ki a megfelelőt."
   },
   "control": {
     "page_label": "Vezérlőszoba",

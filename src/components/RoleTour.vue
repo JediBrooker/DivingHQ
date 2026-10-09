@@ -54,7 +54,7 @@ const SLIDES = {
   judge: [
     { emoji: '⚖️',
       title: 'You score from one screen',
-      body: 'When a meet manager assigns you to a panel, the Judge view loads the active diver automatically. No event picker — just tap the score.' },
+      bodyKey: 'judge.tour_event_choice' },
     { emoji: '📱',
       title: 'Built for the pool deck',
       body: 'Lock your phone in landscape, leave it face-up, and DivingHQ keeps the screen awake. Submitting a score buzzes the phone so you can confirm without looking.' },
@@ -207,7 +207,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onTourKey))
 
       <div class="role-tour-emoji" aria-hidden="true">{{ slide.emoji }}</div>
       <h2 id="role-tour-title" class="role-tour-title">{{ slide.title }}</h2>
-      <p class="role-tour-body">{{ slide.body }}</p>
+      <p class="role-tour-body">{{ slide.bodyKey ? $t(slide.bodyKey) : slide.body }}</p>
 
       <div class="role-tour-footer">
         <button class="btn btn-ghost btn-sm role-tour-skip" @click="skip">

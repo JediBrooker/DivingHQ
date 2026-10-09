@@ -870,7 +870,8 @@
     "choose_event": "Puanlanacak yarışı seçin",
     "switch_event": "Yarış değiştir",
     "switch_pending": "Yarış değiştirmeden önce sıradaki puanlarınızın eşitlenmesini bekleyin.",
-    "event_unavailable": "Bu yarışa atanmadınız. Devam eden hakem panellerinizden birini seçin."
+    "event_unavailable": "Bu yarışa atanmadınız. Devam eden hakem panellerinizden birini seçin.",
+    "tour_event_choice": "Devam eden tek bir yarışa atandıysanız Hakem Terminali onu otomatik olarak açar. Atandığınız birden fazla yarış devam ediyorsa puan vermeden önce doğru yarışı seçin."
   },
   "control": {
     "page_label": "Kontrol Odası",

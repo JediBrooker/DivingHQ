@@ -881,7 +881,8 @@
     "choose_event": "Choisir une épreuve à juger",
     "switch_event": "Changer d’épreuve",
     "switch_pending": "Attendez la synchronisation de vos notes en attente avant de changer d’épreuve.",
-    "event_unavailable": "Vous n’êtes pas affecté à cette épreuve. Choisissez l’un de vos panels en cours."
+    "event_unavailable": "Vous n’êtes pas affecté à cette épreuve. Choisissez l’un de vos panels en cours.",
+    "tour_event_choice": "Si vous êtes affecté à une seule épreuve en cours, le Terminal Juge l’ouvre automatiquement. Si plusieurs de vos épreuves sont en cours, choisissez la bonne avant de noter."
   },
   "control": {
     "page_label": "Salle de contrôle",

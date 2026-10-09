@@ -870,7 +870,8 @@
     "choose_event": "Elige una prueba para puntuar",
     "switch_event": "Cambiar de prueba",
     "switch_pending": "Espera a que se sincronicen tus puntuaciones pendientes antes de cambiar de prueba.",
-    "event_unavailable": "No estás asignado a esta prueba. Elige uno de tus paneles en curso."
+    "event_unavailable": "No estás asignado a esta prueba. Elige uno de tus paneles en curso.",
+    "tour_event_choice": "Si estás asignado a una sola prueba en curso, el Terminal de Juez la abre automáticamente. Si varias de tus pruebas asignadas están en curso, elige la correcta antes de puntuar."
   },
   "control": {
     "page_label": "Sala de control",

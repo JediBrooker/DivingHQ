@@ -881,7 +881,8 @@
     "choose_event": "Disziplin zum Werten auswählen",
     "switch_event": "Disziplin wechseln",
     "switch_pending": "Warte vor dem Wechsel, bis deine ausstehenden Wertungen synchronisiert sind.",
-    "event_unavailable": "Du bist dieser Disziplin nicht zugeteilt. Wähle eines deiner laufenden Kampfgerichte."
+    "event_unavailable": "Du bist dieser Disziplin nicht zugeteilt. Wähle eines deiner laufenden Kampfgerichte.",
+    "tour_event_choice": "Wenn du einer laufenden Disziplin zugeteilt bist, öffnet das Kampfrichterterminal sie automatisch. Laufen mehrere deiner zugeteilten Disziplinen, wähle vor dem Werten die richtige aus."
   },
   "control": {
     "page_label": "Kontrollraum",

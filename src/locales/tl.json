@@ -870,7 +870,8 @@
     "choose_event": "Pumili ng event na huhusgahan",
     "switch_event": "Lumipat ng event",
     "switch_pending": "Hintaying matapos ang pag-sync ng mga nakapilang puntos bago lumipat ng event.",
-    "event_unavailable": "Hindi ka nakatalaga sa event na ito. Pumili ng isa sa iyong kasalukuyang panel."
+    "event_unavailable": "Hindi ka nakatalaga sa event na ito. Pumili ng isa sa iyong kasalukuyang panel.",
+    "tour_event_choice": "Kung nakatalaga ka sa isang kasalukuyang event, awtomatiko itong bubuksan ng Judge Terminal. Kung sabay-sabay na ginaganap ang ilan sa mga event na nakatalaga sa iyo, piliin ang tamang event bago magbigay ng puntos."
   },
   "control": {
     "page_label": "Control room page",

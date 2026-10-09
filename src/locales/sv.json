@@ -881,7 +881,8 @@
     "choose_event": "Välj en gren att döma",
     "switch_event": "Byt gren",
     "switch_pending": "Vänta tills dina köade poäng har synkroniserats innan du byter gren.",
-    "event_unavailable": "Du är inte tilldelad den här grenen. Välj en av dina pågående domarpaneler."
+    "event_unavailable": "Du är inte tilldelad den här grenen. Välj en av dina pågående domarpaneler.",
+    "tour_event_choice": "Om du är tilldelad en pågående gren öppnar domarterminalen den automatiskt. Om flera av dina tilldelade grenar pågår väljer du rätt gren innan du ger poäng."
   },
   "control": {
     "page_label": "Kontrollrum",

@@ -881,7 +881,8 @@
     "choose_event": "Vælg en disciplin at dømme",
     "switch_event": "Skift disciplin",
     "switch_pending": "Vent på, at dine ventende karakterer er synkroniseret, før du skifter disciplin.",
-    "event_unavailable": "Du er ikke tilknyttet denne disciplin. Vælg et af dine igangværende dommerpaneler."
+    "event_unavailable": "Du er ikke tilknyttet denne disciplin. Vælg et af dine igangværende dommerpaneler.",
+    "tour_event_choice": "Hvis du er tilknyttet én igangværende disciplin, åbner dommerterminalen den automatisk. Hvis flere af dine discipliner er i gang, skal du vælge den rigtige, før du giver karakterer."
   },
   "control": {
     "page_label": "Kontrolrum",

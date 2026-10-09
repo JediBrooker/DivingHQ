@@ -881,7 +881,8 @@
     "choose_event": "Velg en øvelse å dømme",
     "switch_event": "Bytt øvelse",
     "switch_pending": "Vent til poengene i køen er synkronisert før du bytter øvelse.",
-    "event_unavailable": "Du er ikke tildelt denne øvelsen. Velg et av dine pågående dommerpaneler."
+    "event_unavailable": "Du er ikke tildelt denne øvelsen. Velg et av dine pågående dommerpaneler.",
+    "tour_event_choice": "Hvis du er tildelt én pågående øvelse, åpner dommerterminalen den automatisk. Hvis flere av øvelsene dine pågår, velger du riktig øvelse før du gir poeng."
   },
   "control": {
     "page_label": "Kontrollrom",

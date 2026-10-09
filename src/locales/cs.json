@@ -870,7 +870,8 @@
     "choose_event": "Vyberte disciplínu k hodnocení",
     "switch_event": "Změnit disciplínu",
     "switch_pending": "Před změnou disciplíny počkejte na dokončení synchronizace čekajících známek.",
-    "event_unavailable": "K této disciplíně nejste přiřazeni. Vyberte jednu ze svých probíhajících disciplín."
+    "event_unavailable": "K této disciplíně nejste přiřazeni. Vyberte jednu ze svých probíhajících disciplín.",
+    "tour_event_choice": "Pokud jste přiřazeni k jedné probíhající disciplíně, terminál rozhodčího ji otevře automaticky. Pokud probíhá více vašich disciplín, vyberte před hodnocením tu správnou."
   },
   "control": {
     "page_label": "Řídicí místnost",

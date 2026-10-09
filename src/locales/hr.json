@@ -870,7 +870,8 @@
     "choose_event": "Odaberite disciplinu za suđenje",
     "switch_event": "Promijeni disciplinu",
     "switch_pending": "Pričekajte da se ocjene na čekanju sinkroniziraju prije promjene discipline.",
-    "event_unavailable": "Niste dodijeljeni ovoj disciplini. Odaberite jedno od svojih aktivnih sudačkih vijeća."
+    "event_unavailable": "Niste dodijeljeni ovoj disciplini. Odaberite jedno od svojih aktivnih sudačkih vijeća.",
+    "tour_event_choice": "Ako ste dodijeljeni jednoj disciplini koja je u tijeku, sudački terminal otvara je automatski. Ako je više vaših disciplina u tijeku, odaberite pravu prije ocjenjivanja."
   },
   "control": {
     "page_label": "Kontrolna soba",

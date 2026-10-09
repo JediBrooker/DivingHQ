@@ -881,7 +881,8 @@
     "choose_event": "Scegli una gara da giudicare",
     "switch_event": "Cambia gara",
     "switch_pending": "Attendi la sincronizzazione dei voti in coda prima di cambiare gara.",
-    "event_unavailable": "Non sei assegnato a questa gara. Scegli una delle tue giurie attive."
+    "event_unavailable": "Non sei assegnato a questa gara. Scegli una delle tue giurie attive.",
+    "tour_event_choice": "Se sei assegnato a una sola gara in corso, il Terminale Giudice la apre automaticamente. Se sono in corso più gare a cui sei assegnato, scegli quella corretta prima di assegnare i voti."
   },
   "control": {
     "page_label": "Sala Controllo",

@@ -881,7 +881,8 @@
     "choose_event": "Valitse arvosteltava laji",
     "switch_event": "Vaihda lajia",
     "switch_pending": "Odota jonossa olevien pisteidesi synkronointia ennen lajin vaihtamista.",
-    "event_unavailable": "Sinua ei ole määrätty tähän lajiin. Valitse jokin käynnissä olevista tuomaripaneeleistasi."
+    "event_unavailable": "Sinua ei ole määrätty tähän lajiin. Valitse jokin käynnissä olevista tuomaripaneeleistasi.",
+    "tour_event_choice": "Jos sinut on määrätty yhteen käynnissä olevaan lajiin, tuomaripääte avaa sen automaattisesti. Jos useita sinulle määrättyjä lajeja on käynnissä, valitse oikea laji ennen pisteiden antamista."
   },
   "control": {
     "page_label": "Ohjaamo",

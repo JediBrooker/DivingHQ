@@ -881,7 +881,8 @@
     "choose_event": "Wybierz konkurencję do oceniania",
     "switch_event": "Zmień konkurencję",
     "switch_pending": "Przed zmianą konkurencji poczekaj na synchronizację oczekujących ocen.",
-    "event_unavailable": "Nie jesteś przypisany do tej konkurencji. Wybierz jeden ze swoich aktywnych paneli sędziowskich."
+    "event_unavailable": "Nie jesteś przypisany do tej konkurencji. Wybierz jeden ze swoich aktywnych paneli sędziowskich.",
+    "tour_event_choice": "Jeśli jesteś przypisany do jednej trwającej konkurencji, Terminal Sędziego otworzy ją automatycznie. Jeśli trwa kilka przypisanych Ci konkurencji, wybierz właściwą przed wystawieniem ocen."
   },
   "control": {
     "page_label": "Pokój kontroli",

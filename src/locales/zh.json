@@ -870,7 +870,8 @@
     "choose_event": "选择要评分的项目",
     "switch_event": "切换项目",
     "switch_pending": "请等待排队中的分数同步完成后再切换项目。",
-    "event_unavailable": "您未被指派到此项目。请选择您正在执裁的项目。"
+    "event_unavailable": "您未被指派到此项目。请选择您正在执裁的项目。",
+    "tour_event_choice": "如果您只被指派到一个正在进行的项目，裁判终端会自动打开它。如果您被指派的多个项目同时进行，请在评分前选择正确的项目。"
   },
   "control": {
     "page_label": "控制室",

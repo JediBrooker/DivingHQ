@@ -870,7 +870,8 @@
     "choose_event": "Pilih acara untuk diadili",
     "switch_event": "Tukar acara",
     "switch_pending": "Tunggu sehingga markah dalam baris gilir selesai disegerakkan sebelum menukar acara.",
-    "event_unavailable": "Anda tidak ditugaskan untuk acara ini. Pilih salah satu panel anda yang sedang berlangsung."
+    "event_unavailable": "Anda tidak ditugaskan untuk acara ini. Pilih salah satu panel anda yang sedang berlangsung.",
+    "tour_event_choice": "Jika anda ditugaskan kepada satu acara yang sedang berlangsung, Terminal Hakim membukanya secara automatik. Jika beberapa acara yang ditugaskan kepada anda sedang berlangsung, pilih acara yang betul sebelum memberikan markah."
   },
   "control": {
     "page_label": "Bilik kawalan",
