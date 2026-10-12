@@ -1,5 +1,11 @@
 # Store distribution disclosures — working evidence
 
+**Current status — 13 October 2026:** the owner has authorised **13-and-older direct use only**, superseding the earlier age-nine audience. The shared app’s registration and authentication changes are prepared; release still depends on a replacement native build, verification and remaining store disclosures. The owner explicitly declined notice emails on 13 October; no notice emails will be sent, and the earlier notice-approval hold is superseded. See [Owner audience decision — 13 October 2026](#owner-audience-decision--13-october-2026) for the current scope and limitations. This document is not evidence of deployment or store submission.
+
+## Historical 12 October 2026 snapshot
+
+The following body, through “Final local verification gate”, preserves the 12 October audience decision, blockers and build-4 verification evidence. Statements that the owner had not authorised a 13+ audience describe that historical snapshot and are superseded by the 13 October decision linked above.
+
 Prepared 12 October 2026. This is a draft for the store operator, not a submitted declaration or a legal certification. Source inspection began at `38aa051a299d3114f80e92b0e1a2d57dcbfe17b5`; corrective release **1.2 (4)** has now been built locally and passed the final source-verification gate and awaits commit/upload. Its build evidence does not replace build 3 physical-device acceptance.
 
 The owner confirmed all supported countries and direct use by children aged **9 and above**, as well as adults. Google target groups are therefore **9–12, 13–15, 16–17, 18+**. Do not select younger groups, adult-only access, or a 13+ target merely to avoid children's requirements. An Apple content rating is a separate calculation and may exceed the intended minimum age.
@@ -194,3 +200,26 @@ Both native build-4 packages are signed and locally verified. Final source CI pa
 Lint and production web build passed. All **1,629 Node tests** passed with zero failures or skips, including real PostgreSQL integration tests. The final complete browser run passed **458/458 tests** across configured projects with zero failures, skips or retries. Successful lint/build/Node evidence was retained across the final test-only control-release correction; the complete browser suite was then rerun against that corrected test. Every runtime/package source file remains byte-identical to the signed native build-4 manifest.
 
 The external `verification/verification-summary.json` records exact file SHA-256 values, tracked diff hash, test counts, independent reviews and earlier failed-run/reproduction evidence. `ci-recovered.json` holds the successful lint/build/Node stages; `e2e-final-gate.json` and `.log` hold the final all-green browser result. Tests used only the guarded local `divinghq_distribution_test` database, with mail/push provider credentials blank. This verification does not remove the child-audience/store-rating holds, establish physical-device acceptance or publish either store release.
+
+
+## Owner audience decision — 13 October 2026
+
+The owner changed the intended direct-use audience to **13 and older only**. This supersedes the earlier minimum-age-nine launch decision above; the historical store evidence is retained. Select Google age groups 13–15, 16–17 and 18+, without under-13 groups. Regional content ratings remain the stores’ classifications and may be higher than 13; do not lower truthful content answers to force a rating.
+
+The shared website/native signup forms require an unchecked 13+ declaration and both public registration APIs require literal boolean `age_13_or_older: true`. Missing declarations (including build 4’s old signup form) fail closed with instructions to update the app or register on the website. No new date-of-birth field is collected for signup. Known under-13 dates of birth prevent session issuance and invalidate authenticated HTTP/socket access through the existing auth-state gate. Date-of-birth changes revoke existing sessions. Unknown dates of birth are not treated as verified ages. Adult-managed junior competition records and public results are retained.
+
+**Release dependency:** staged native build 1.2 (4) predates this change and must be replaced with a newly built and tested bundle before public submission. This source change does not prove deployment or store submission. Physical-device acceptance must cover the replacement build.
+
+**Owner notice decision — 13 October 2026:** the owner explicitly instructed, “no, don’t send any notice”. No notice emails will be sent. This supersedes the earlier notice-approval activation hold: activate the 13+ changes after the required verification passes, following the owner’s direction. The existing published privacy policy promises advance email notice for material changes; the owner’s instruction does not establish that users were notified or remove that policy discrepancy. The prepared notice draft and policy attachments remain historical, unsent evidence. Actual policy text and attachments are unchanged by this audit update.
+
+The age decision removes the planned under-13 direct-use audience. It does not verify users’ ages, establish parental consent for teenagers or junior competition records, resolve worldwide legal requirements, or resolve the separate provider-retention/privacy disclosure questions. Google Data Safety and Apple privacy drafts must still match the final implementation before submission.
+
+## Current prepared release — 13 October 2026
+
+This section supersedes the historical draft/upload statuses above. Native **1.2 (5)** replaces build 4 for the 13+ direct-use change: the signed packages have been uploaded and attached in both store drafts. Google targets **13–15, 16–17 and 18+**; Apple uses the corresponding 13+ direct-use audience while retaining regional content ratings. Neither store app has been submitted for review or public release.
+
+Google's **14-type Data Safety declaration is saved**, with all **11 changes staged** in Publishing overview. Managed publishing remains off. Apple's **12-type privacy disclosure has been published and its receipt verified**; publishing the privacy label does not submit the app. Production inventory included private meets and found no nonempty legacy sponsor-image URLs or automatic off-origin logo hosts. These observations support the prepared disclosures without proving future sponsor configurations or all third-party retention behaviour.
+
+Final local verification passed lint and production web build, **1,636/1,636 Node tests** and **458/458 browser tests**, with no test failures, skips or flaky retries in the final runs. Earlier fixture/assertion and cleanup failures remain recorded in the external evidence. The narrowly scoped queue teardown correction passed independent review, five deterministic error-handling checks and 20 repeated browser cases. All runtime, native and bundled policy inputs match signed build 5; only this nonbundled audit document and the reviewed test corrections differ from the original build snapshot.
+
+The owner's **no-email instruction remains in force**. No notice email was sent; the prepared campaign is permanently cancelled and its sender blocks execution. This does not claim that existing account holders received advance notice. No production activation is claimed by this preparation record: the exact committed source, normal deployment result and anonymous live checks are recorded separately in `/Volumes/Storage/DivingHQ-releases/age13-2026-10-13/`. Physical-device acceptance of build 5 remains outstanding and is not established by previous build testing or store draft acceptance.
