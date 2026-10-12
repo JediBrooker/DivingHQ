@@ -15,7 +15,7 @@ test.describe("legal pages", () => {
     await expect(page.locator("body")).not.toContainText("your-domain.example");
 
     const footer = page.locator(".legal-footer");
-    await expect(footer.getByRole("link", { name: "Contact" })).toHaveAttribute("href", "mailto:support@divinghq.app");
+    await expect(footer.getByRole("link", { name: "Contact" })).toHaveAttribute("href", "/support");
     await footer.getByRole("link", { name: "Terms of Service" }).click();
     await expect(page).toHaveURL(/\/terms$/);
     await expect(page.getByRole("heading", { level: 1, name: "DivingHQ Terms of Service" })).toBeVisible();
@@ -47,6 +47,25 @@ test.describe("legal pages", () => {
 });
 
 test.describe("support contact", () => {
+  test("store support and deletion links work without an account or the app", async ({ page }) => {
+    await page.goto("/delete-account");
+    await expect(page).toHaveURL(/\/delete-account$/);
+    await expect(page.getByRole("heading", { level: 1, name: "Delete your DivingHQ account" })).toBeVisible();
+    const requestLink = page.getByRole("link", { name: "Request account deletion by email" });
+    await expect(requestLink).toHaveAttribute("href", "mailto:support@divinghq.app?subject=DivingHQ%20account%20deletion");
+    await expect(requestLink).toBeInViewport();
+    await expect(page.locator(".md-article")).toContainText("does not automatically delete");
+    await expect(page.locator(".md-article")).toContainText("Named sporting records");
+    await expect(page.locator(".md-article")).toContainText("five weeks");
+    await expect(page.locator(".md-article")).toContainText("only administrator");
+    await page.locator(".legal-footer").getByRole("link", { name: "Contact", exact: true }).click();
+    await expect(page).toHaveURL(/\/support$/);
+    await expect(page.getByRole("heading", { level: 1, name: "DivingHQ Support" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "email support@divinghq.app", exact: true })).toHaveAttribute("href", "mailto:support@divinghq.app");
+    await page.reload();
+    await expect(page.getByRole("heading", { level: 1, name: "DivingHQ Support" })).toBeVisible();
+  });
+
   test("the public config names the support inbox", async ({ request }) => {
     const res = await request.get("/api/public-config");
     expect(res.status()).toBe(200);
@@ -116,6 +135,8 @@ test.describe("titles and link previews", () => {
       ["/login", "Sign In · DivingHQ"],
       ["/privacy", "Privacy Policy · DivingHQ"],
       ["/terms", "Terms of Service · DivingHQ"],
+      ["/support", "Contact · DivingHQ"],
+      ["/delete-account", "Delete account · DivingHQ"],
       ["/guide", "User Guide · DivingHQ"],
       ["/guide/faq", "FAQ & Troubleshooting · DivingHQ"],
     ]) {

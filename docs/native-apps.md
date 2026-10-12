@@ -170,6 +170,13 @@ Run the normal lint, web build, safe/integration tests and relevant Playwright
 regressions too. Native compilation and simulator evidence are separate gates;
 an HTML build alone does not establish native readiness.
 
+The [12 October store distribution preparation](store-distribution-disclosures.md)
+records current privacy, child-audience, rating, review-access and publication
+holds. Release evidence is kept outside Git at
+`/Volumes/Storage/DivingHQ-releases/distribution-2026-10-12/`. Build 4 preparation
+does not replace the recorded build 3 owner-testing results or establish the
+remaining physical-device and background-notification acceptance checks.
+
 Primary references: [Capacitor setup](https://capacitorjs.com/docs/getting-started),
 [configuration](https://capacitorjs.com/docs/config),
 [native HTTP](https://capacitorjs.com/docs/apis/http),

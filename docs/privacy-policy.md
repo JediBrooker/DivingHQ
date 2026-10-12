@@ -1,6 +1,6 @@
 # DivingHQ Privacy Policy
 
-Last updated: 8 October 2026
+Last updated: 12 October 2026
 
 This policy explains what DivingHQ collects, why, who can see it, how long it's kept, and how to get it removed. It covers the hosted service at [divinghq.app](https://divinghq.app) and the DivingHQ iOS and Android apps that connect to it.
 
@@ -36,7 +36,8 @@ A summary of every kind of data DivingHQ stores. Detail follows in §4 and §6.
 | Scores, rankings, judging history | Judges and meet officials | Public from the moment an event goes Live | Permanent (sporting record) |
 | Claims (the body's name, website, votes and objection reasons) | The body applying, and the clubs or regions voting | The claimant, the voters, the deciding admins, DivingHQ | Kept as the record of who runs an account |
 | Two-factor secret and recovery codes (hashed) | You, at 2FA setup | Only used at sign-in | Until you turn 2FA off or delete the account |
-| Notifications and push subscriptions | Your browser and the app | Only you | Until you revoke them or delete the account |
+| Notifications and browser push subscriptions | Your browser and the app | Only you | Until you revoke them or delete the account |
+| Native push device and installation records | The iOS or Android app when notifications are enabled | DivingHQ operations; Apple/Google receive the token needed for delivery | Delivery stops on revocation, expiry or deletion; device records have no automatic purge schedule (§4) |
 | Audit log of privileged actions | The server, on every privileged action | Admins of the organisation concerned | **30 days**, then purged |
 | Security logs (IP address, user agent, sign-in attempts) | The server | DivingHQ operations | 30 days |
 
@@ -80,7 +81,7 @@ If you turn on push notifications (for example a coach's "your diver is up next"
 
 The iOS app uses Apple Push Notification service (APNs); Android uses Firebase Cloud Messaging (FCM). If you enable app notifications, we store the provider-issued device token, a random installation identifier, your account association, notification preference, session expiry and delivery diagnostics. Apple or Google receives the device token, a generic DivingHQ alert and a notification identifier. App notifications contain no meet, account or message details on the lock screen; the app fetches those details securely after you open it and sign in. These native payloads use encrypted connections but are visible to the delivery provider; browser Web Push encryption is different.
 
-You can enable, disable or test notifications in Settings, or change permission in device settings. Signing out disables that installation and removes notifications already in its notification centre; if offline, server cleanup is retried when connected. An alert already queued at Apple or Google can still arrive, but contains only the generic text. Tokens also stop being used when the account session expires, is revoked or the account is suspended. Device associations are removed when the account is deleted. A hash of the installation's revoke-only key and revision remains without an account link to reject delayed registration requests; it cannot access your account or messages.
+You can enable, disable or test notifications in Settings, or change permission in device settings. Signing out disables that installation and removes notifications already in its notification centre; if offline, server cleanup is retried when connected. An alert already queued at Apple or Google can still arrive, but contains only the generic text. Tokens also stop being used when the account session expires, is revoked or the account is suspended. Deleting an account stops notification delivery through account and session checks, but native device records can remain in the database, including the device token, installation ID, former account association and delivery diagnostics. These records currently have no automatic expiry or purge schedule; contact support to request their removal. A separate hash of the installation's revoke-only key and revision is retained to reject delayed registration requests; it cannot access your account or messages.
 
 ### Payments (not switched on yet)
 
@@ -206,7 +207,7 @@ If you're the only administrator left in your federation, we ask you to appoint 
 **What we delete, straight away:**
 
 - The login itself: password, email address, 2FA secret and recovery codes.
-- Personal details and settings: date of birth, gender, nationality, language, dashboard layout, push subscriptions.
+- Personal details and settings: date of birth, gender, nationality, language, dashboard layout and browser push subscriptions. Native push delivery stops; retained device records are described in §4.
 - Anything that links your *account* to other people: roles, coach links, guardian links, role requests, club change or transfer requests still open (they're closed), club and region admin roles, any claim you made that's still being decided (it's withdrawn), and your public profile address (so `/profile/<you>` stops working).
 - Every active session, on every device. You're signed out immediately.
 

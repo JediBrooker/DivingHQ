@@ -53,6 +53,18 @@ const routes = [
     meta: { titleKey: 'legal.terms_title' },
   },
   {
+    path: '/support',
+    component: () => import('@/views/LegalView.vue'),
+    props: { doc: 'support' },
+    meta: { titleKey: 'legal.contact' },
+  },
+  {
+    path: '/delete-account',
+    component: () => import('@/views/LegalView.vue'),
+    props: { doc: 'deletion' },
+    meta: { titleKey: 'profile.delete.title' },
+  },
+  {
     path: '/forgot-password',
     component: () => import('@/views/ForgotPasswordView.vue'),
     meta: { titleKey: 'auth.forgot.title' },

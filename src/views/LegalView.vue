@@ -1,5 +1,6 @@
 <script setup>
-// /privacy and /terms, public.
+// Public policy, support and deletion information share one renderer so
+// store links work for signed-out people who no longer have the app.
 //
 // The text is docs/privacy-policy.md and docs/terms-of-service.md, imported
 // raw the same way the guide imports its topics. One source, so the policy in
@@ -14,20 +15,20 @@ import { RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import privacyMd from '../../docs/privacy-policy.md?raw'
 import termsMd from '../../docs/terms-of-service.md?raw'
+import supportMd from '../../docs/support.md?raw'
+import deletionMd from '../../docs/account-deletion.md?raw'
 import MarkdownArticle from '@/components/MarkdownArticle.vue'
 import LogoMark from '@/components/LogoMark.vue'
 import LocaleSwitcher from '@/components/LocaleSwitcher.vue'
 import ThemeToggle from '@/components/ThemeToggle.vue'
-import { useSupportEmail } from '@/composables/useSupportEmail'
 
 const props = defineProps({
-  doc: { type: String, required: true, validator: (v) => ['privacy', 'terms'].includes(v) },
+  doc: { type: String, required: true, validator: (v) => ['privacy', 'terms', 'support', 'deletion'].includes(v) },
 })
 
-const DOCS = { privacy: privacyMd, terms: termsMd }
+const DOCS = { privacy: privacyMd, terms: termsMd, support: supportMd, deletion: deletionMd }
 
 const { locale } = useI18n()
-const supportEmail = useSupportEmail()
 
 // MarkdownArticle swaps in this deployment's SUPPORT_EMAIL where the
 // documents name the hosted inbox.
@@ -59,7 +60,8 @@ watch(() => props.doc, () => nextTick(() => window.scrollTo(0, 0)))
       <RouterLink to="/privacy" :class="{ 'is-current': doc === 'privacy' }">{{ $t('legal.privacy_title') }}</RouterLink>
       <RouterLink to="/terms" :class="{ 'is-current': doc === 'terms' }">{{ $t('legal.terms_title') }}</RouterLink>
       <RouterLink to="/guide">{{ $t('guide.title') }}</RouterLink>
-      <a v-if="supportEmail" :href="`mailto:${supportEmail}`">{{ $t('legal.contact') }}</a>
+      <RouterLink to="/support" :class="{ 'is-current': doc === 'support' }">{{ $t('legal.contact') }}</RouterLink>
+      <RouterLink to="/delete-account" :class="{ 'is-current': doc === 'deletion' }">{{ $t('profile.delete.title') }}</RouterLink>
     </footer>
   </div>
 </template>
