@@ -81,7 +81,8 @@
       "region_will_ask": "{region} hangi kulüpleri alacağına kendisi karar verir; e-postanızı doğruladığınızda ona bir talep gönderilir. Kabul edene kadar kulübünüz bölgede değildir.",
       "founder_role_note": "Kulübün kurucusu olarak kendi antrenör veya hakem talebinizi onaylayamazsınız; talep bölgenizin yöneticilerine ya da DivingHQ'ya gider.",
       "spectator_note_see_above": "Tüm hesaplar Seyirci olarak başlar. Yukarıda talep ettiğiniz rol, altındaki notta belirtildiği gibi incelenir. E-postanız doğrulandıktan sonra giriş yapabilirsiniz.",
-      "username_taken": "Bu kullanıcı adı zaten alınmış. Başka bir tane seçin."
+      "username_taken": "Bu kullanıcı adı zaten alınmış. Başka bir tane seçin.",
+      "age_confirmation": "13 yaşındayım veya daha büyüğüm."
     },
     "register_org": {
       "title": "Kuruluş Kaydı",

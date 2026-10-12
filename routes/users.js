@@ -42,6 +42,7 @@
 //   app.use(require('./routes/users')({ … }))
 
 const express = require("express");
+const { withTx } = require("../lib/club-approvals");
 const roleRequests = require("../lib/role-requests");
 const guardianRequests = require("../lib/guardian-requests");
 const claimsLib = require("../lib/claims");
@@ -73,6 +74,7 @@ module.exports = function createUsersRouter({
   requireOrgAdmin,
   requireMeetEditor,
   bumpTokenVersion,
+  invalidateTokenVersion,
   sendRoleDecisionEmail,
   bulkWriteLimiter,
   // Migration 058: org-admin profile edit + account lifecycle.
@@ -1336,7 +1338,17 @@ module.exports = function createUsersRouter({
       }
       if (!sets.length) return res.status(400).json({ error: "No fields to update" });
       vals.push(req.params.id);
-      await pool.query(`UPDATE users SET ${sets.join(", ")} WHERE id = $${i}`, vals);
+      await withTx(pool, async (client) => {
+        await client.query(`UPDATE users SET ${sets.join(", ")} WHERE id = $${i}`, vals);
+        // A DOB correction changes direct-use eligibility. Revoke stale sessions
+        // atomically, including if the DOB is later cleared or corrected again.
+        if (date_of_birth !== undefined) await bumpTokenVersion(client, req.params.id);
+      });
+      if (date_of_birth !== undefined) {
+        // A request racing the transaction can have cached its pre-commit row.
+        invalidateTokenVersion?.(req.params.id);
+        if (io) io.in(`user:${req.params.id}`).disconnectSockets(true);
+      }
       await recordAudit(pool, {
         ...auditFromReq(req), org_id: target.org_id, entity_type: "user",
         entity_id: req.params.id, entity_name: full_name || target.full_name,

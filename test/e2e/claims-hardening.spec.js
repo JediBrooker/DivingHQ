@@ -59,7 +59,7 @@ test("claimants see a replaced claim, and a revoke reports what it took back", a
       for (const name of ["Longyearbyen Divers", "Barentsburg Divers"]) {
         const username = `e2e-claims-${setup.rand()}`;
         const r = await request.post("/api/auth/register", {
-          data: { username, full_name: `${name} Admin`, password: setup.TEST_PASSWORD,
+          data: { age_13_or_older: true, username, full_name: `${name} Admin`, password: setup.TEST_PASSWORD,
                   email: `${username}@example.test`, country_code: CODE, new_club_name: name },
         });
         expect(r.status()).toBe(201);
@@ -81,7 +81,7 @@ test("claimants see a replaced claim, and a revoke reports what it took back", a
     const claim = async (orgName) => {
       const username = `e2e-claimsfed-${setup.rand()}`;
       const r = await request.post("/api/auth/register-org", {
-        data: { org_name: orgName, country_code: CODE, slug: `claims-${setup.rand()}`, username,
+        data: { age_13_or_older: true, org_name: orgName, country_code: CODE, slug: `claims-${setup.rand()}`, username,
                 password: setup.TEST_PASSWORD, full_name: `${orgName} Staff`,
                 email: `${username}@claimsfed.example.org` },
       });

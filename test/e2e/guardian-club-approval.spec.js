@@ -43,7 +43,7 @@ test("a parent asks to pay for a child and the child's club admin approves it on
   // The club's founder, which makes them its admin in a country the clubs run.
   const username = `e2e-gca-${setup.rand()}`;
   const reg = await request.post("/api/auth/register", {
-    data: { username, full_name: "Vientiane Divers Admin", password: setup.TEST_PASSWORD,
+    data: { age_13_or_older: true, username, full_name: "Vientiane Divers Admin", password: setup.TEST_PASSWORD,
             email: `${username}@example.test`, country_code: COUNTRY, new_club_name: "Vientiane Divers" },
   });
   expect(reg.status()).toBe(201);

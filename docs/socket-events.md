@@ -132,7 +132,7 @@ directly. A refused write gets ack `{ ok: false, error: 'maintenance' }`
 | `meet_hold`               | meet_manager / referee / org_admin / sysadmin | `{ event_id, reason? }` | Updates in-memory `meetHolds[event_id]`. |
 | `meet_resume`             | meet_manager / referee / org_admin / sysadmin | `{ event_id }` | Clears the hold. |
 | `get_meet_hold`           | none (any socket)             | `{ event_id }` | Read-only — joins the room (same rules as `subscribe_event`) and returns the current hold state to the asking socket. |
-| `notification:ack`        | any signed-in socket          | `{ id }` | Marks the caller's own notification `acknowledged` (the UPDATE is scoped to `socket.userId`). Dropped silently in maintenance mode, like its HTTP twin `POST /api/notifications/:id/acknowledge`. |
+| `notification:ack`        | any signed-in socket          | `{ id }` | Rechecks the caller’s current account/session eligibility (including minimum direct-use age) and disconnects revoked sessions. Marks the caller's own notification `acknowledged` (the UPDATE is scoped to `socket.userId`). Dropped silently in maintenance mode, like its HTTP twin `POST /api/notifications/:id/acknowledge`. |
 | `subscribe_venue`         | none (any socket)             | `{ event_id }` | Joins `venue:<event_id>` and immediately emits a fresh `venue.scoreboard_state` snapshot for hardware bridges. |
 | `disconnect`              | (built-in)                    | — | Frees the socket's slot in the per-IP connection count and any Control Room lease it held (`eventControl.disconnect`). Rooms go with the socket. |
 
@@ -191,3 +191,5 @@ finalisation is deliberately refused while leased because it cannot identify a
 socket generation. Update the native testing build for the full workflow.
 No database migration is required. Release the new native build before enabling
 this backend behavior during an active meet.
+
+Authenticated sockets recheck current account/session eligibility before each handled packet, including read requests. Revoked sessions disconnect. Profile date-of-birth edits revoke tokens and disconnect that account’s sockets after the update commits; anonymous public spectators are unaffected.

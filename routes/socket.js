@@ -443,6 +443,14 @@ module.exports = function attachSocket({
           ? (body) => { if (answered) return; answered = true; ack(body); }
           : undefined;
         try {
+          // Recheck authenticated reads as well as writes: a profile DOB
+          // correction must not leave a revoked socket in privileged rooms.
+          // Anonymous spectators keep their existing public access.
+          if (socket.userId && !(await isTokenVersionCurrent(socket.userId, socket.userTokenVersion))) {
+            once?.({ ok: false, error: "token_revoked" });
+            socket.disconnect(true);
+            return;
+          }
           // UUIDs are case-insensitive in Postgres. Rooms, live state and
           // lease generations must use the same canonical event key.
           if (isUuid(data?.event_id)) data = { ...data, event_id: data.event_id.toLowerCase() };

@@ -28,7 +28,7 @@ async function wipeCountry() {
 async function founder(request, clubName) {
   const username = `e2e-rj-${setup.rand()}`;
   const r = await request.post("/api/auth/register", {
-    data: {
+    data: { age_13_or_older: true,
       username, full_name: clubName.replace(/ Divers$/, " Admin"), password: setup.TEST_PASSWORD,
       email: `${username}@example.test`, country_code: COUNTRY, new_club_name: clubName,
     },
@@ -129,7 +129,7 @@ test("a stale My region page explains the last-admin refusal", async ({ page, re
   // A Freeport member, so a region admin the region could have picked itself.
   const username = `e2e-rj-${setup.rand()}`;
   const r = await request.post("/api/auth/register", {
-    data: { username, full_name: "Lucaya Co-admin", password: setup.TEST_PASSWORD,
+    data: { age_13_or_older: true, username, full_name: "Lucaya Co-admin", password: setup.TEST_PASSWORD,
             email: `${username}@example.test`, org_id: world.freeport.orgId, club_id: world.freeport.clubId },
   });
   expect(r.status(), await r.text()).toBe(201);

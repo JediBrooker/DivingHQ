@@ -11,6 +11,7 @@
 // since (club-first signup, claims, 2FA).
 
 const express = require("express");
+const { AGE_RESTRICTION, isKnownUnderMinimumAge, requireAgeDeclaration } = require("../lib/direct-use-age");
 const bcrypt  = require("bcrypt");
 const jwt     = require("jsonwebtoken");
 const rateLimit = require("express-rate-limit");
@@ -340,6 +341,10 @@ module.exports = function createAuthRouter({
   // end up inside the JWT. Change-password and the locale switch never
   // sent them, and still don't.
   async function sendSession(req, res, userId, { before = {}, after = {}, withExtras = false } = {}) {
+    const ageRow = await pool.query("SELECT to_char(date_of_birth, 'YYYY-MM-DD') AS date_of_birth FROM users WHERE id = $1", [userId]);
+    if (isKnownUnderMinimumAge(ageRow.rows[0]?.date_of_birth)) {
+      return res.status(403).json(AGE_RESTRICTION);
+    }
     const payload = await buildTokenPayload(userId);
     const token = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRY });
     setSessionCookie(req, res, token);
@@ -410,6 +415,7 @@ module.exports = function createAuthRouter({
       const result = await pool.query(
         `SELECT u.id, u.password, u.email_verified_at, u.totp_enabled_at,
                 u.deleted_at, u.suspended_at, u.is_system_admin,
+                to_char(u.date_of_birth, 'YYYY-MM-DD') AS date_of_birth,
                 o.status AS org_status, o.claim_state AS org_claim_state
            FROM users u
            LEFT JOIN organisations o ON o.id = u.org_id
@@ -431,6 +437,10 @@ module.exports = function createAuthRouter({
       const passwordOk = await bcrypt.compare(password, hashToCheck || DUMMY_BCRYPT_HASH);
       if (!user || user.deleted_at != null || !passwordOk)
         return res.status(401).json({ error: "Invalid username or password" });
+
+      if (isKnownUnderMinimumAge(user.date_of_birth)) {
+        return res.status(403).json(AGE_RESTRICTION);
+      }
 
       // Migration 058: an org admin can suspend an account. With a
       // correct password but a suspended flag, return a clear,
@@ -833,10 +843,10 @@ module.exports = function createAuthRouter({
       .catch((err) => console.error(`[${tag}]`, err.message));
   }
 
-  router.post("/api/auth/register", authLimiter, async (req, res) => {
-    if (!signupsOpen()) {
-      return res.status(403).json({ error: "Account creation is coming soon.", code: "signups_disabled" });
-    }
+  router.post("/api/auth/register", authLimiter, (req, res, next) => {
+    if (!signupsOpen()) return res.status(403).json({ error: "Account creation is coming soon.", code: "signups_disabled" });
+    requireAgeDeclaration(req, res, next);
+  }, async (req, res) => {
     const {
       username, password, email, org_id, country_code, requested_role, note,
       club_id, new_club_name, new_club_short_code, region_code,
@@ -1252,10 +1262,10 @@ module.exports = function createAuthRouter({
   });
 
   // Register a new organisation + its founding org_admin
-  router.post("/api/auth/register-org", authLimiter, async (req, res) => {
-    if (!signupsOpen()) {
-      return res.status(403).json({ error: "Account creation is coming soon.", code: "signups_disabled" });
-    }
+  router.post("/api/auth/register-org", authLimiter, (req, res, next) => {
+    if (!signupsOpen()) return res.status(403).json({ error: "Account creation is coming soon.", code: "signups_disabled" });
+    requireAgeDeclaration(req, res, next);
+  }, async (req, res) => {
     const { org_name, country_code, slug, username, password, full_name, email, region_code, website } =
       req.body || {};
 

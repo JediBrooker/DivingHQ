@@ -81,7 +81,8 @@
       "region_will_ask": "{region} decide quali club accogliere, quindi riceverà una richiesta appena avrai verificato l'email. Finché non accetta, il tuo club non fa parte della regione.",
       "founder_role_note": "Come fondatore del club non puoi approvare la tua richiesta di allenatore o giudice, quindi la esaminano gli amministratori della tua regione o DivingHQ.",
       "spectator_note_see_above": "Tutti gli account partono come Spettatore. Il ruolo che richiedi qui sopra viene esaminato come indica la nota sotto. Potrai accedere dopo aver verificato la tua email.",
-      "username_taken": "Questo nome utente è già in uso. Scegline un altro."
+      "username_taken": "Questo nome utente è già in uso. Scegline un altro.",
+      "age_confirmation": "Ho almeno 13 anni."
     },
     "register_org": {
       "title": "Registra organizzazione",

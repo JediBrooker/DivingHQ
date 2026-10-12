@@ -36,12 +36,12 @@ const USER_ID = "11111111-1111-1111-1111-111111111111";
 // auth state for the SELECT in fetchUserAuthState.
 function build({
   token_version = 1, deleted_at = null, suspended_at = null,
-  org_status = "active", is_system_admin = false,
+  org_status = "active", is_system_admin = false, date_of_birth = null,
 } = {}) {
   const fakePool = {
     async query(sql) {
       if (/FROM users u\s+LEFT JOIN organisations o/.test(sql)) {
-        return { rows: [{ token_version, deleted_at, suspended_at, org_status, is_system_admin }] };
+        return { rows: [{ token_version, deleted_at, suspended_at, org_status, is_system_admin, date_of_birth }] };
       }
       return { rows: [] };
     },
@@ -441,4 +441,18 @@ test("verifyToken / optionalAuth: purpose tokens and unknown users aren't sessio
   // A session for a user row that's gone (hard-deleted) is revoked too.
   const gone = createMiddleware({ pool: { async query() { return { rows: [] }; } }, JWT_SECRET });
   assert.equal((await runVerify(gone.verifyToken, sign({ id: USER_ID, tv: 1 }))).statusCode, 401);
+});
+
+
+test("known under-13 accounts cannot reuse HTTP, optional-auth or socket sessions", async () => {
+  const middleware = build({ date_of_birth: new Date().toISOString().slice(0, 10) });
+  for (const claims of [{ id: USER_ID, tv: 1 }, { id: USER_ID }]) {
+    const out = await runVerify(middleware.verifyToken, sign(claims));
+    assert.equal(out.statusCode, 401);
+    assert.equal(out.body.code, "minimum_age");
+    const guest = await runVerify(middleware.optionalAuth, sign(claims));
+    assert.equal(guest.type, "next");
+    assert.equal(guest.req.user, undefined);
+    assert.equal(await middleware.isTokenVersionCurrent(USER_ID, claims.tv), false);
+  }
 });

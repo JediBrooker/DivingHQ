@@ -38,7 +38,7 @@ async function signIn(page, username) {
 async function founder(request, country, clubName) {
   const username = `e2e-cff-${setup.rand()}`;
   const r = await request.post("/api/auth/register", {
-    data: { username, full_name: `${clubName} Admin`, password: setup.TEST_PASSWORD,
+    data: { age_13_or_older: true, username, full_name: `${clubName} Admin`, password: setup.TEST_PASSWORD,
             email: `${username}@example.test`, country_code: country, new_club_name: clubName },
   });
   expect(r.status()).toBe(201);
@@ -76,7 +76,7 @@ test("a club admin sees members' requests on the dashboard, and can step down cl
   // A member of the club asks to judge.
   const memberName = `e2e-cfm-${setup.rand()}`;
   const reg = await request.post("/api/auth/register", {
-    data: { username: memberName, full_name: "Mele Christian", password: setup.TEST_PASSWORD,
+    data: { age_13_or_older: true, username: memberName, full_name: "Mele Christian", password: setup.TEST_PASSWORD,
             email: `${memberName}@example.test`, org_id: A.org_id, club_id: A.club_id, requested_role: "judge" },
   });
   expect(reg.status()).toBe(201);
@@ -152,6 +152,7 @@ test("a claimant finds their claim after signing in; a failed load offers a retr
   await page.locator('input[type="email"]').fill(`${fedUser}@example.test`);
   await page.locator('input[autocomplete="username"]').fill(fedUser);
   await page.locator('input[autocomplete="new-password"]').fill(setup.TEST_PASSWORD);
+  await page.getByTestId("age-confirmation").check();
   await page.getByRole("button", { name: /Submit Registration/i }).click();
   await expect(page.getByTestId("register-org-next")).toBeVisible();
   const claimRow = await setup.pool.query(

@@ -1,8 +1,10 @@
 # DivingHQ Terms of Service
 
-Last updated: 29 September 2026
+Last updated: 13 October 2026
 
 These terms cover your use of DivingHQ, the diving competition service at [divinghq.app](https://divinghq.app), operated by **DivingHQ (divinghq.app)**. They sit alongside our [Privacy Policy](/privacy), which explains what we do with your data.
+
+DivingHQ is intended for direct use by people aged **13 and older**, including the website and iOS and Android apps. Children under 13 must not create an account or use someone else’s account.
 
 By creating an account you agree to these terms. If you don't agree, please don't create an account. You can still watch public scoreboards and results without one.
 
@@ -10,7 +12,8 @@ By creating an account you agree to these terms. If you don't agree, please don'
 
 - Give your real name and an email address you can receive mail at. Results carry your name, so it should be the one you compete or officiate under.
 - One account per person. Don't share your password; you're responsible for what happens under your account. Turning on two-factor authentication is a good idea, and admin roles may require it.
-- If you're a child, a parent or guardian should be involved in creating your account (see the Privacy Policy, §9).
+- You must be at least 13 to create or directly use an account. If you are under the age of legal adulthood where you live, involve your parent or guardian and obtain any permission required by local law. An age declaration is not identity verification or parental consent.
+- Parents, guardians, coaches and authorised officials may manage junior competitors’ entries through their own authorised accounts. This does not permit a child under 13 to sign in. Organisers remain responsible for the authority and any consent required to hold and publish junior competition information (see the Privacy Policy, §9).
 - Tell us at [support@divinghq.app](mailto:support@divinghq.app) straight away if you think someone else has used your account.
 
 ## 2. Acting for a club, region or federation

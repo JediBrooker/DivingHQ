@@ -22,6 +22,7 @@ const fullName = ref('')
 const email = ref('')
 const username = ref('')
 const password = ref('')
+const ageConfirmed = ref(false)
 const msg = ref('')
 const msgType = ref('')
 const loading = ref(false)
@@ -126,6 +127,11 @@ const websiteInvalid = computed(() => websiteLooksWrong(website.value))
 async function handleSubmit() {
   msg.value = ''
   msgType.value = ''
+  if (!ageConfirmed.value) {
+    msg.value = t('auth.register.age_confirmation')
+    msgType.value = 'error'
+    return
+  }
   if (websiteInvalid.value) {
     websiteTouched.value = true
     return
@@ -139,6 +145,7 @@ async function handleSubmit() {
       email: email.value,
       username: username.value,
       password: password.value,
+      age_13_or_older: ageConfirmed.value,
     }
     if (regionCode.value) body.region_code = regionCode.value
     if (website.value.trim()) body.website = website.value.trim()
@@ -274,6 +281,9 @@ async function handleSubmit() {
         </div>
       </div>
 
+      <label class="field">
+        <span><input v-model="ageConfirmed" type="checkbox" required data-testid="age-confirmation"> {{ $t('auth.register.age_confirmation') }}</span>
+      </label>
       <div v-if="msg" :class="['msg', msgType === 'success' ? 'msg-success' : 'msg-error']">{{ msg }}</div>
       <button type="submit" class="btn btn-primary-lg" :disabled="loading || claimKind === 'taken'">
         {{ loading ? $t('auth.register_org.submit_loading') : $t('auth.register_org.submit_idle') }}

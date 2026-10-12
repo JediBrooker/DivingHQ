@@ -1,6 +1,6 @@
 # DivingHQ Privacy Policy
 
-Last updated: 12 October 2026
+Last updated: 13 October 2026
 
 This policy explains what DivingHQ collects, why, who can see it, how long it's kept, and how to get it removed. It covers the hosted service at [divinghq.app](https://divinghq.app) and the DivingHQ iOS and Android apps that connect to it.
 
@@ -234,11 +234,15 @@ If you create a new account in the future with the same name, we check whether a
 
 No service can promise perfect security. Use a strong password, turn on 2FA, and tell us at [support@divinghq.app](mailto:support@divinghq.app) if you think someone has got into your account.
 
-## 9. Children
+## 9. Children and teenagers
 
-Diving is a youth sport, and many divers on DivingHQ are children. Children usually join through their club, and their club (or federation) is responsible for getting the consent it needs from parents or guardians.
+DivingHQ’s website and mobile apps are intended for direct use by people aged **13 and older**. Children under 13 must not create an account or sign in using another person’s account. New account registration requires a declaration that the person registering is at least 13. We do not collect a date of birth just for this declaration, and it is not verified proof of age. Where an existing competition profile’s date of birth shows that someone is under 13, direct account access is restricted; the competition record is retained.
 
-A child shouldn't create an account without a parent or guardian's involvement. If you think a child has signed up without that, contact us at [support@divinghq.app](mailto:support@divinghq.app) and we'll remove the account.
+Parents, guardians, coaches and authorised officials may use their own authorised accounts to manage younger competitors’ entries and results. This does not remove the organiser’s responsibility to establish a lawful basis and obtain any required parental permission before collecting or publishing a child’s information. A guardian link in DivingHQ is not a record of verified parental consent.
+
+Teenagers aged 13–17 should involve a parent or guardian. Additional parental permission or other protections may be required where they live; a 13+ minimum does not establish compliance with every country’s rules.
+
+Contact [support@divinghq.app](mailto:support@divinghq.app) about an under-13 account, an incorrect date of birth, a child’s published results or any safeguarding concern. We will review the access or information concerned with the responsible organisation. Changing the direct-use age does not automatically delete historical competition records.
 
 ## 10. Your rights
 

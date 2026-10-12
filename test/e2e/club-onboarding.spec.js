@@ -35,7 +35,7 @@ async function wipeCountry() {
 async function founder(request, clubName) {
   const username = `e2e-onb-${setup.rand()}`;
   const r = await request.post("/api/auth/register", {
-    data: { username, full_name: `${clubName} Admin`, password: setup.TEST_PASSWORD,
+    data: { age_13_or_older: true, username, full_name: `${clubName} Admin`, password: setup.TEST_PASSWORD,
             email: `${username}@example.test`, country_code: COUNTRY, new_club_name: clubName },
   });
   expect(r.status()).toBe(201);
@@ -144,6 +144,7 @@ test("a club founder's checklist, invite link, club code and first meet", async 
     await guest.locator('input[autocomplete="username"]').fill(member);
     await guest.locator('input[autocomplete="email"]').fill(`${member}@example.test`);
     await guest.locator('input[autocomplete="new-password"]').fill(setup.TEST_PASSWORD);
+    await guest.getByTestId("age-confirmation").check();
     await guest.getByRole("button", { name: /Create Account/i }).click();
     await expect(guest.getByTestId("check-inbox")).toContainText(`${member}@example.test`);
     const joined = await setup.pool.query("SELECT club_id FROM users WHERE username = $1", [member]);
@@ -193,6 +194,7 @@ test("the check-inbox panel stays put and its resend cools down", async ({ page 
   await page.locator('input[autocomplete="username"]').fill(username);
   await page.locator('input[autocomplete="email"]').fill(`${username}@example.test`);
   await page.locator('input[autocomplete="new-password"]').fill(setup.TEST_PASSWORD);
+  await page.getByTestId("age-confirmation").check();
   await page.locator("select").first().selectOption(COUNTRY);
   await page.getByRole("button", { name: /Create Account/i }).click();
 

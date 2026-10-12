@@ -546,6 +546,7 @@ const {
   isValidScore,
   parseDateRange,
   bumpTokenVersion,
+  invalidateTokenVersion,
   isTokenVersionCurrent,
   loadEventForEntries,
   requireTotpForPrivilegedRoles,
@@ -981,6 +982,7 @@ app.use(require("./routes/users")({
   requireMeetEditor,
   requireMeetOrClubEditor,
   bumpTokenVersion,
+  invalidateTokenVersion,
   sendRoleDecisionEmail,
   // Self-delete + claim endpoints (Migration 053), rate-limited
   // so a hijacked session can't brute-force the password gate.

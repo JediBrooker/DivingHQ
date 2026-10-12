@@ -81,7 +81,8 @@
       "region_will_ask": "{region} memutuskan klub mana yang diterimanya, jadi permintaan akan dikirim setelah Anda memverifikasi email. Sampai diterima, klub Anda belum masuk wilayah itu.",
       "founder_role_note": "Sebagai pendiri klub, Anda tidak bisa menyetujui sendiri permintaan Anda menjadi pelatih atau juri, jadi permintaan itu ditinjau oleh admin wilayah Anda atau oleh DivingHQ.",
       "spectator_note_see_above": "Semua akun dimulai sebagai Penonton. Peran yang Anda minta di atas ditinjau seperti yang dijelaskan catatan di bawahnya. Anda dapat masuk setelah email Anda terverifikasi.",
-      "username_taken": "Nama pengguna itu sudah dipakai. Pilih yang lain."
+      "username_taken": "Nama pengguna itu sudah dipakai. Pilih yang lain.",
+      "age_confirmation": "Saya berusia 13 tahun atau lebih."
     },
     "register_org": {
       "title": "Daftarkan organisasi",

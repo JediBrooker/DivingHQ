@@ -81,7 +81,8 @@
       "region_will_ask": "A(z) {region} régió maga dönti el, mely klubokat fogadja be, ezért az e-mail-címe megerősítése után kérelmet kap. Amíg nem fogadja el, a klubja nem tartozik a régióhoz.",
       "founder_role_note": "A klub alapítójaként nem hagyhatja jóvá saját edzői vagy pontozóbírói kérelmét, ezért azt a régiója adminisztrátorai vagy a DivingHQ bírálja el.",
       "spectator_note_see_above": "Minden fiók Nézőként indul. A fent kért szerepkört az alatta lévő megjegyzés szerint bírálják el. Az e-mail-címe megerősítése után bejelentkezhet.",
-      "username_taken": "Ez a felhasználónév már foglalt. Válasszon másikat."
+      "username_taken": "Ez a felhasználónév már foglalt. Válasszon másikat.",
+      "age_confirmation": "Legalább 13 éves vagyok."
     },
     "register_org": {
       "title": "Szervezet regisztrációja",

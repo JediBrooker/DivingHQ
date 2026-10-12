@@ -81,7 +81,8 @@
       "region_will_ask": "{region} menentukan kelab yang diterimanya, jadi permintaan akan dihantar sebaik sahaja anda mengesahkan e-mel. Sehingga ia menerima, kelab anda belum berada dalam rantau itu.",
       "founder_role_note": "Sebagai pengasas kelab, anda tidak boleh meluluskan sendiri permintaan anda sebagai jurulatih atau hakim, jadi ia disemak oleh pentadbir rantau anda atau DivingHQ.",
       "spectator_note_see_above": "Semua akaun bermula sebagai Penonton. Peranan yang anda minta di atas disemak seperti yang diterangkan dalam nota di bawahnya. Anda boleh log masuk selepas e-mel anda disahkan.",
-      "username_taken": "Nama pengguna itu sudah digunakan. Pilih yang lain."
+      "username_taken": "Nama pengguna itu sudah digunakan. Pilih yang lain.",
+      "age_confirmation": "Saya berumur 13 tahun atau lebih."
     },
     "register_org": {
       "title": "Daftarkan organisasi",

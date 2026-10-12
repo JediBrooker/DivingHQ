@@ -50,6 +50,7 @@ test("a club founded under a federation waits for it, then its founder runs it",
   await page.locator('input[autocomplete="username"]').fill(username);
   await page.locator('input[autocomplete="email"]').fill(`${username}@example.test`);
   await page.locator('input[autocomplete="new-password"]').fill(setup.TEST_PASSWORD);
+  await page.getByTestId("age-confirmation").check();
   await page.locator("select").first().selectOption(COUNTRY);
   const club = page.locator("select").filter({ has: page.locator('option[value="new"]') });
   await club.selectOption("new");

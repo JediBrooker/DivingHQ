@@ -173,7 +173,7 @@ async function createOrgAndAdmin(request, opts = {}) {
   // every spec here wants an org of its own, so the real code goes
   // on in step 2 along with the approval.
   const reg = await request.post("/api/auth/register-org", {
-    data: {
+    data: { age_13_or_older: true,
       org_name:     orgName,
       country_code: "TST",
       slug,

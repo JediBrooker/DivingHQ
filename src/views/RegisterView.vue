@@ -36,6 +36,7 @@ const fullName = ref('')
 const username = ref('')
 const email = ref('')
 const password = ref('')
+const ageConfirmed = ref(false)
 // Default to "diver", the most common public-registration use case.
 // Spectator-only sign-ups will pick "Spectator" explicitly.
 const requestedRole = ref('diver')
@@ -243,6 +244,11 @@ function applyInviteRegion() {
 async function handleSubmit() {
   msg.value = ''
   msgType.value = ''
+  if (!ageConfirmed.value) {
+    msg.value = t('auth.register.age_confirmation')
+    msgType.value = 'error'
+    return
+  }
   loading.value = true
   try {
     const body = {
@@ -250,6 +256,7 @@ async function handleSubmit() {
       username: username.value,
       email:    email.value || undefined,
       password: password.value,
+      age_13_or_older: ageConfirmed.value,
     }
     if (orgId.value) body.org_id = orgId.value
     else body.country_code = countryCode.value
@@ -468,6 +475,9 @@ async function handleSubmit() {
         !noFederation ? $t('auth.register.spectator_note')
           : founderAsksUp || requestedRole === 'referee' ? $t('auth.register.spectator_note_see_above')
             : $t('auth.register.spectator_note_club') }}</p>
+      <label class="field">
+        <span><input v-model="ageConfirmed" type="checkbox" required data-testid="age-confirmation"> {{ $t('auth.register.age_confirmation') }}</span>
+      </label>
       <div v-if="msg" :class="['msg', msgType === 'success' ? 'msg-success' : 'msg-error']">{{ msg }}</div>
       <button type="submit" class="btn btn-primary-lg" style="margin-top:0.25rem" :disabled="loading">
         {{ loading ? $t('auth.register.submit_loading') : $t('auth.register.submit_idle') }}
