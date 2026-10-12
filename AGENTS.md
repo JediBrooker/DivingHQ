@@ -160,6 +160,16 @@ Do not broaden CORS or add release cleartext allowances to make a device test pa
 }
 ```
 
+Two counters ride along too. `tv` is `users.token_version`: bump it
+(`bumpTokenVersion`) only for things that should end every session, like a
+password or 2FA change, suspension or a DOB correction. `cv` is
+`users.claims_version` (migration 106): anything that changes what's in
+the token (a role grant or revoke, a claim approved or revoked, a move to
+another org) calls `bumpClaimsVersion`, and `verifyToken` / the socket
+checks rebuild the claims from the DB on the next request instead of
+signing the person out. Don't reach for `bumpTokenVersion` for a role
+change, that's the logout we got rid of.
+
 **The single most common bug in this repo's history is using
 `req.user.user_id`.** Don't. The audit pass found three handlers doing
 this; if you find a fourth, fix it and grep the rest of the file.
@@ -408,7 +418,7 @@ until the operator has switched maintenance mode on and passed
 | Confirm event ID belongs to caller's org (read paths) | `ensureEventOrgGate(req, res, paramName)` | `lib/middleware.js` |
 | Confirm a target user/team belongs to the event's org | `isInSameOrg(db, eventOrgId, id, kind)` | `lib/middleware.js` |
 | Auth + maintenance gate for socket writes | `socketRequireRole(socket, [...])` | `lib/middleware.js` |
-| Auth gate for socket events (per event: org, role or delegate, token version) | `socketCanManageEvent(socket, eventId, roles)`, wrapped with the rate limit as `guardControl` in `routes/socket.js` | `lib/middleware.js` |
+| Auth gate for socket events (per event: org, role or delegate, token version; refreshes the socket's roles first when `claims_version` moved, via `refreshSocketSession`) | `socketCanManageEvent(socket, eventId, roles)`, wrapped with the rate limit as `guardControl` in `routes/socket.js` | `lib/middleware.js` |
 | Is this socket locked out by maintenance mode? | `socketMaintenanceBlocked(socket)` | `lib/middleware.js` |
 | Read TRUST_PROXY (Express value; the socket side uses Express's compiled `app.get("trust proxy fn")`, with the hop count only as a fallback) | `expressTrustProxy()` / `trustProxyHops()` | `lib/trust-proxy.js` |
 | Audit snapshot + purge (daily, high-water mark) | `createAuditSnapshot({ pool, logger })` | `lib/audit-snapshot.js` |

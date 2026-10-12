@@ -14,7 +14,9 @@ check the caller before mutating anything. How that's done today:
   `referee_*` actions, `meet_hold`, `meet_resume`) go through
   `guardControl` in `routes/socket.js`: `socketRequireRole(socket)`
   (signed in, not in maintenance mode), then `socketCanManageEvent`
-  (`lib/middleware.js`: a UUID event id, token version current, event in
+  (`lib/middleware.js`: a UUID event id, token version current (roles that
+  changed since the handshake are reloaded in place, `refreshSocketSession`,
+  rather than refused), event in
   the caller's org, one of the control roles or a delegate of the event),
   then a per-(action, user) rate limit. `claim_event_control` runs the same
   two gates without the rate limit.

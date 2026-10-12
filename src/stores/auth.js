@@ -273,6 +273,12 @@ export const useAuthStore = defineStore('auth', () => {
       headers: { ...getHeaders(), ...(options.headers ?? {}) },
     })
     requireCurrentSession(generation)
+    // Someone changed this person's roles and the server just rebuilt
+    // their session to match. Reload who we think they are, so a judge
+    // who got approved sees the judge screens without signing in again.
+    if (res.headers?.get?.('X-DivingHQ-Session') === 'refreshed' && isLoggedIn.value) {
+      fetchMe().catch(() => {})
+    }
     // 401 with a dead cookie (expired or revoked): clear the session so
     // the router guard sends the user back to /login instead of every
     // page throwing red errors. Skip it for viewers who weren't signed in

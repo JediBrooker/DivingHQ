@@ -362,6 +362,11 @@ module.exports = function createAuthRouter({
   // state, not an error.
   // -------------------------------------------------------------
   router.get("/api/auth/me", optionalAuth, async (req, res) => {
+    // Couldn't check the session (DB blip): say so. A 401 here would
+    // read as "you're signed out" and the SPA would drop the session.
+    if (!req.user && req.authUnavailable) {
+      return res.status(503).json({ error: "Auth temporarily unavailable" });
+    }
     if (!req.user) return res.status(401).json({ error: "Not authenticated" });
     try {
       // Rebuild from the DB so a role/locale change since the cookie

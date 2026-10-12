@@ -550,8 +550,11 @@ const {
   isValidScore,
   parseDateRange,
   bumpTokenVersion,
+  bumpClaimsVersion,
   invalidateTokenVersion,
   isTokenVersionCurrent,
+  sessionClaimsForSocket,
+  refreshSocketSession,
   loadEventForEntries,
   requireTotpForPrivilegedRoles,
 } = require("./lib/middleware")({
@@ -690,7 +693,7 @@ const push = require("./lib/push")({ pool, io });
 // =============================================================
 async function buildTokenPayload(userId) {
   const u = await pool.query(
-    "SELECT id, username, full_name, org_id, is_system_admin, token_version, locale FROM users WHERE id = $1",
+    "SELECT id, username, full_name, org_id, is_system_admin, token_version, claims_version, locale FROM users WHERE id = $1",
     [userId],
   );
   if (!u.rows.length) throw new Error("User not found");
@@ -710,9 +713,13 @@ async function buildTokenPayload(userId) {
     // Stamped on every issued JWT. verifyToken (lib/middleware.js)
     // rejects any token whose `tv` is older than the current row.
     // Bumping users.token_version invalidates every outstanding
-    // session for that user, used by role grant/revoke and the
-    // password change flow (Migration 021).
+    // session for that user, used by the password change flow,
+    // 2FA changes and suspension (Migration 021).
     tv: user.token_version,
+    // Migration 106: what role grants, revokes and org moves bump
+    // instead. A token whose cv is behind gets rebuilt from here on its
+    // next request, so the person keeps their session.
+    cv: user.claims_version ?? 0,
     // Migration 052: per-user locale. Null when the user's never set
     // one, so the server falls back to Accept-Language, and the SPA
     // falls back to whatever localStorage remembers. Stamped on the
@@ -845,7 +852,7 @@ app.use(require("./routes/club-setup")({ pool, verifyToken }));
 
 // Claims: a federation or state body taking over an account the clubs
 // started (migration 089, lib/claims.js).
-app.use(require("./routes/claims")({ pool, push, email, verifyToken, requireSystemAdmin, bumpTokenVersion }));
+app.use(require("./routes/claims")({ pool, push, email, verifyToken, requireSystemAdmin, bumpClaimsVersion }));
 
 // =============================================================
 // PAYMENTS ROUTES (platform is merchant of record, per Migration 075)
@@ -989,6 +996,7 @@ app.use(require("./routes/users")({
   requireMeetEditor,
   requireMeetOrClubEditor,
   bumpTokenVersion,
+  bumpClaimsVersion,
   invalidateTokenVersion,
   sendRoleDecisionEmail,
   // Self-delete + claim endpoints (Migration 053), rate-limited
@@ -1008,7 +1016,7 @@ app.use(require("./routes/users")({
 }));
 
 // Club-change requests + cross-org transfers (Migration 057).
-app.use(require("./routes/club-changes")({ pool, verifyToken, bumpTokenVersion }));
+app.use(require("./routes/club-changes")({ pool, verifyToken, bumpClaimsVersion }));
 
 // =============================================================
 // MEET ROUTES
@@ -1362,6 +1370,8 @@ require("./routes/socket")({
   socketMaintenanceBlocked,
   isValidScore,
   isTokenVersionCurrent,
+  sessionClaimsForSocket,
+  refreshSocketSession,
   checkAndApplyRecords,
   recomputeRecordKeys,
   activeDivers,
@@ -1630,7 +1640,7 @@ function startBackgroundJobs() {
   // Claims sweep (migration 089): hourly, resolves votes whose window has
   // closed and withdraws claims nobody verified. Not payments-gated.
   try {
-    require("./lib/claims").start({ pool, push, email, bumpTokenVersion, logger });
+    require("./lib/claims").start({ pool, push, email, bumpClaimsVersion, logger });
   } catch (err) {
     logger.warn({ err: err.message }, "claims sweeper start failed");
   }

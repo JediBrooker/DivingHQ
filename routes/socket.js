@@ -88,6 +88,11 @@ module.exports = function attachSocket({
   // comes from lib/score-audit (required above), the one the HTTP
   // routes use, so the two paths can't disagree.
   isTokenVersionCurrent,
+  // Also lib/middleware: the same checks, but they rebuild a socket's
+  // roles after a role change (claims_version) instead of treating it as
+  // revoked. Optional, the unit tests only hand over isTokenVersionCurrent.
+  sessionClaimsForSocket,
+  refreshSocketSession,
   // From lib/records:
   checkAndApplyRecords,
   recomputeRecordKeys,
@@ -128,6 +133,13 @@ module.exports = function attachSocket({
   // cached response on hit. See docs/offline-p1-design.md §2.
   const idem = createIdempotency({ pool });
 
+  const claimsForSocket = sessionClaimsForSocket
+    || (async (decoded) => ((await isTokenVersionCurrent(decoded.id, decoded.tv)) ? decoded : null));
+  // Every signed-in socket goes through this before it does anything.
+  // false means revoked: disconnect it.
+  const socketSessionOk = refreshSocketSession
+    || ((socket) => isTokenVersionCurrent(socket.userId, socket.userTokenVersion));
+
   // -----------------------------------------------------------
   // Handshake: soft JWT verify
   // -----------------------------------------------------------
@@ -164,13 +176,15 @@ module.exports = function attachSocket({
         // carry `type` and no `id`.
         // Validate tv via the same 30s cache the HTTP path uses.
         // A revoked session must lose its socket privileges too.
-        const tvOk = (nativeTicket || isSessionClaims(decoded)) && await isTokenVersionCurrent(decoded.id, decoded.tv);
-        if (nativeTicket && !tvOk) return next(new Error("Session revoked"));
-        if (tvOk) {
-          socket.userId = decoded.id;
-          socket.userOrgId = decoded.org_id;
-          socket.userIsSystemAdmin = !!decoded.is_system_admin;
-          socket.userOrgRoles = decoded.org_roles || [];
+        // Roles changed since the token was minted get rebuilt here.
+        const claims = (nativeTicket || isSessionClaims(decoded)) ? await claimsForSocket(decoded) : null;
+        if (nativeTicket && !claims) return next(new Error("Session revoked"));
+        if (claims) {
+          socket.userId = claims.id;
+          socket.userOrgId = claims.org_id;
+          socket.userIsSystemAdmin = !!claims.is_system_admin;
+          socket.userOrgRoles = claims.org_roles || [];
+          socket.userClaimsVersion = claims.cv ?? 0;
           // Stash the token version so socketCanManageEvent can
           // re-check it on every privileged action (catches role
           // revocation / 2FA-bump on a long-lived websocket).
@@ -446,7 +460,9 @@ module.exports = function attachSocket({
           // Recheck authenticated reads as well as writes: a profile DOB
           // correction must not leave a revoked socket in privileged rooms.
           // Anonymous spectators keep their existing public access.
-          if (socket.userId && !(await isTokenVersionCurrent(socket.userId, socket.userTokenVersion))) {
+          // A role change since the last event just refreshes the
+          // socket's roles in here, it doesn't count as revoked.
+          if (socket.userId && !(await socketSessionOk(socket))) {
             once?.({ ok: false, error: "token_revoked" });
             socket.disconnect(true);
             return;
@@ -843,7 +859,7 @@ module.exports = function attachSocket({
       // panel) must lose submit immediately, not at next reconnect.
       // O(1) via the 30s auth-state cache. Mirrors socketCanManageEvent.
       if (typeof socket.userTokenVersion === "number"
-          && !(await isTokenVersionCurrent(socket.userId, socket.userTokenVersion))) {
+          && !(await socketSessionOk(socket))) {
         reject("token_revoked", { message: "Your session was revoked — please sign in again." });
         socket.disconnect(true);
         return;
@@ -1240,7 +1256,7 @@ module.exports = function attachSocket({
       if (!socketRequireRole(socket)) return;
       if (socketActionRateLimited("judge_signal", socket.userId)) return;
       if (typeof socket.userTokenVersion === "number"
-          && !(await isTokenVersionCurrent(socket.userId, socket.userTokenVersion))) {
+          && !(await socketSessionOk(socket))) {
         socket.disconnect(true);
         return;
       }

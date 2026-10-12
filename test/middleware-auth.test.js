@@ -462,11 +462,11 @@ test("known under-13 accounts cannot reuse HTTP, optional-auth or socket session
 // so a cookie older than a day gets swapped for a fresh one on the way
 // through. Bearer callers manage their own token and never get one.
 // ---------------------------------------------------------------
-function buildSliding({ token_version = 1, payloadTv = token_version, failBuild = false } = {}) {
+function buildSliding({ token_version = 1, claims_version = 0, payloadTv = token_version, failBuild = false, roles = ["judge"], orgId = null } = {}) {
   const fakePool = {
     async query(sql) {
       if (/FROM users u\s+LEFT JOIN organisations o/.test(sql)) {
-        return { rows: [{ token_version, org_status: "active", is_system_admin: false }] };
+        return { rows: [{ token_version, claims_version, org_status: "active", is_system_admin: false }] };
       }
       return { rows: [] };
     },
@@ -477,7 +477,7 @@ function buildSliding({ token_version = 1, payloadTv = token_version, failBuild 
     async buildTokenPayload(id) {
       built.push(id);
       if (failBuild) throw new Error("db down");
-      return { id, username: "u", org_id: null, org_roles: ["judge"], is_system_admin: false, tv: payloadTv, locale: null };
+      return { id, username: "u", org_id: orgId, org_roles: roles, is_system_admin: false, tv: payloadTv, cv: claims_version, locale: null };
     },
   });
   return { ...mw, built };
@@ -486,9 +486,11 @@ function buildSliding({ token_version = 1, payloadTv = token_version, failBuild 
 function runWithCookie(gate, token, { header = null } = {}) {
   return new Promise((resolve) => {
     const cookies = [];
+    const headers = {};
     const req = { headers: header ? { authorization: `Bearer ${header}` } : {}, cookies: { dhq_session: token } };
     const res = {
-      statusCode: 200, headersSent: false,
+      statusCode: 200, headersSent: false, headers,
+      set(k, v) { headers[k] = v; return this; },
       status(c) { this.statusCode = c; return this; },
       json(body) { resolve({ type: "res", statusCode: this.statusCode, body, cookies }); return this; },
       cookie(name, value, opts) { cookies.push({ name, value, opts }); },
@@ -561,4 +563,143 @@ test("verifyToken: a failed rebuild keeps the old cookie and lets the request th
   const out = await runWithCookie(verifyToken, signedAt(Math.floor(Date.now() / 1000) - 2 * DAY));
   assert.equal(out.type, "next");
   assert.equal(out.cookies.length, 0);
+});
+
+// ---------------------------------------------------------------
+// Role changes (migration 106). They bump claims_version, and a token
+// whose cv is behind is rebuilt from the DB instead of refused, so
+// nobody gets signed out because an admin approved their judge request.
+// ---------------------------------------------------------------
+const signedCv = (cv, { tv = 1, iat = Math.floor(Date.now() / 1000) - 60, roles = ["diver"] } = {}) =>
+  jwt.sign({ id: USER_ID, tv, cv, iat, org_roles: roles }, JWT_SECRET, { expiresIn: "90d" });
+
+test("verifyToken: a cookie whose roles are behind is rebuilt, not refused", async () => {
+  const { verifyToken, built } = buildSliding({ claims_version: 3, roles: ["diver", "judge"] });
+  const out = await runWithCookie(verifyToken, signedCv(2));
+  assert.equal(out.type, "next");
+  assert.deepEqual(built, [USER_ID]);
+  assert.deepEqual(out.req.user.org_roles, ["diver", "judge"], "this request already runs with the new role");
+  assert.equal(out.req.user.cv, 3);
+  assert.equal(out.cookies.length, 1, "a fresh cookie so the next request doesn't rebuild again");
+  assert.equal(jwt.verify(out.cookies[0].value, JWT_SECRET).cv, 3);
+});
+
+test("verifyToken: a revoked role is gone on the very next request", async () => {
+  const { verifyToken } = buildSliding({ claims_version: 1, roles: ["diver"] });
+  const out = await runWithCookie(verifyToken, signedCv(0, { roles: ["diver", "referee"] }));
+  assert.equal(out.type, "next");
+  assert.deepEqual(out.req.user.org_roles, ["diver"]);
+});
+
+test("verifyToken: a pre-106 token (no cv) is current until the first role change", async () => {
+  const current = buildSliding({ claims_version: 0 });
+  const tok = jwt.sign({ id: USER_ID, tv: 1, org_roles: ["diver"] }, JWT_SECRET, { expiresIn: "90d" });
+  const a = await runWithCookie(current.verifyToken, tok);
+  assert.equal(a.type, "next");
+  assert.deepEqual(current.built, []);
+  const changed = buildSliding({ claims_version: 1 });
+  const b = await runWithCookie(changed.verifyToken, tok);
+  assert.equal(b.type, "next");
+  assert.deepEqual(changed.built, [USER_ID]);
+});
+
+test("verifyToken: a bearer caller gets fresh roles for the request and no cookie", async () => {
+  const { verifyToken } = buildSliding({ claims_version: 2, roles: ["meet_manager"] });
+  const stale = signedCv(1);
+  const out = await runWithCookie(verifyToken, signedCv(1, { iat: Math.floor(Date.now() / 1000) - 120 }), { header: stale });
+  assert.equal(out.type, "next");
+  assert.deepEqual(out.req.user.org_roles, ["meet_manager"]);
+  assert.equal(out.cookies.length, 0);
+  assert.equal(out.req.user.exp, jwt.decode(stale).exp, "keeps the caller's own expiry");
+});
+
+test("verifyToken: the refresh is announced so the SPA reloads its identity", async () => {
+  const { verifyToken } = buildSliding({ claims_version: 1 });
+  const headersOf = (token) => new Promise((resolve) => {
+    const headers = {};
+    const req = { headers: {}, cookies: { dhq_session: token } };
+    const res = { headersSent: false, set(k, v) { headers[k] = v; }, cookie() {}, status() { return this; }, json() {} };
+    verifyToken(req, res, () => resolve(headers));
+  });
+  assert.equal((await headersOf(signedCv(0)))["X-DivingHQ-Session"], "refreshed");
+  // A current token says nothing.
+  assert.equal((await headersOf(signedCv(1)))["X-DivingHQ-Session"], undefined);
+});
+
+test("verifyToken: roles behind AND a tv bump racing the rebuild is still a revoke", async () => {
+  const { verifyToken } = buildSliding({ claims_version: 1, payloadTv: 2 });
+  const out = await runWithCookie(verifyToken, signedCv(0));
+  assert.equal(out.statusCode, 401);
+  assert.equal(out.cookies.length, 0);
+});
+
+test("verifyToken: without a payload builder a stale cv falls back to a 401", async () => {
+  const fakePool = { async query() { return { rows: [{ token_version: 1, claims_version: 1, org_status: "active" }] }; } };
+  const { verifyToken } = createMiddleware({ pool: fakePool, JWT_SECRET });
+  const out = await runVerify(verifyToken, signedCv(0));
+  assert.equal(out.statusCode, 401);
+});
+
+test("verifyToken: a DB error during the rebuild is a 503, never a sign-out", async () => {
+  const { verifyToken } = buildSliding({ claims_version: 1, failBuild: true });
+  const out = await runWithCookie(verifyToken, signedCv(0));
+  assert.equal(out.statusCode, 503);
+});
+
+test("optionalAuth: a DB error flags the request so /api/auth/me can answer 503", async () => {
+  const fakePool = { async query() { throw new Error("db down"); } };
+  const { optionalAuth } = createMiddleware({ pool: fakePool, JWT_SECRET });
+  const out = await runWithCookie(optionalAuth, signedCv(0));
+  assert.equal(out.type, "next");
+  assert.equal(out.req.user, undefined);
+  assert.equal(out.req.authUnavailable, true);
+});
+
+function liveSocket({ orgId = "org-a", roles = ["referee"], cv = 0, tv = 1, sysadmin = false } = {}) {
+  const rooms = new Set(["sid", `user:${USER_ID}`, `org:${orgId}`]);
+  if (sysadmin) rooms.add("sysadmins");
+  return {
+    userId: USER_ID, userOrgId: orgId, userOrgRoles: roles, userIsSystemAdmin: sysadmin,
+    userTokenVersion: tv, userClaimsVersion: cv, rooms, emits: [],
+    join(r) { rooms.add(r); }, leave(r) { rooms.delete(r); },
+    emit(event, payload) { this.emits.push({ event, payload }); },
+  };
+}
+
+test("refreshSocketSession: a role change refreshes the socket in place and moves its org room", async () => {
+  const { refreshSocketSession } = buildSliding({ claims_version: 1, roles: ["judge"], orgId: "org-b" });
+  const socket = liveSocket();
+  assert.equal(await refreshSocketSession(socket), true);
+  assert.deepEqual(socket.userOrgRoles, ["judge"]);
+  assert.equal(socket.userOrgId, "org-b");
+  assert.equal(socket.userClaimsVersion, 1);
+  assert.ok(socket.rooms.has("org:org-b") && !socket.rooms.has("org:org-a"));
+});
+
+test("refreshSocketSession: current roles cost no rebuild; a tv bump is still a revoke", async () => {
+  const current = buildSliding({ claims_version: 0 });
+  assert.equal(await current.refreshSocketSession(liveSocket()), true);
+  assert.deepEqual(current.built, []);
+  const revoked = buildSliding({ token_version: 2 });
+  assert.equal(await revoked.refreshSocketSession(liveSocket()), false);
+});
+
+test("socketCanManageEvent: a referee whose role was revoked is refused, not disconnected", async () => {
+  const { socketCanManageEvent } = buildSliding({ claims_version: 1, roles: ["diver"], orgId: "org-a" });
+  const socket = liveSocket();
+  let disconnected = false;
+  socket.disconnect = () => { disconnected = true; };
+  const ok = await socketCanManageEvent(socket, "22222222-2222-2222-2222-222222222222", ["referee"]);
+  assert.equal(ok, false);
+  assert.equal(disconnected, false);
+  assert.deepEqual(socket.userOrgRoles, ["diver"]);
+});
+
+test("sessionClaimsForSocket: rebuilds a stale handshake, refuses a revoked one", async () => {
+  const stale = buildSliding({ claims_version: 2, roles: ["judge"] });
+  const claims = await stale.sessionClaimsForSocket(jwt.decode(signedCv(1)));
+  assert.deepEqual(claims.org_roles, ["judge"]);
+  assert.equal(claims.cv, 2);
+  const revoked = buildSliding({ token_version: 5 });
+  assert.equal(await revoked.sessionClaimsForSocket(jwt.decode(signedCv(0))), null);
 });

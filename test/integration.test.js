@@ -2239,8 +2239,8 @@ test("claims: revoking a national claim takes back everything handed out under i
 
     const everyone = [fed.id, A.id, B.id, C.id, state.id];
     const versions = async () => Object.fromEntries((await pool.query(
-      "SELECT id, token_version FROM users WHERE id = ANY($1::uuid[])", [everyone],
-    )).rows.map((r) => [r.id, r.token_version]));
+      "SELECT id, claims_version FROM users WHERE id = ANY($1::uuid[])", [everyone],
+    )).rows.map((r) => [r.id, r.claims_version]));
     const before = await versions();
 
     const rv = await fetchJson("POST", `/api/claims/${id}/revoke`, { token: sys.token, body: { reason: "Not the federation" } });
@@ -2268,9 +2268,10 @@ test("claims: revoking a national claim takes back everything handed out under i
     const orphan = await claimStatus(waiting.res.body.claim_id);
     assert.equal(orphan.status, "escalated");
     assert.match(orphan.status_reason, /no longer runs the country/);
-    // Everyone who lost something signs in again.
+    // Everyone who lost something gets their token rebuilt (migration
+    // 106), they don't get signed out.
     const after = await versions();
-    for (const u of everyone) assert.ok(after[u] > before[u], `token_version bumped for ${u}`);
+    for (const u of everyone) assert.ok(after[u] > before[u], `claims_version bumped for ${u}`);
     // Nobody is left with no role at all.
     for (const u of [fed.id, C.id]) {
       assert.ok((await pool.query("SELECT 1 FROM user_org_roles WHERE user_id = $1 AND org_id = $2", [u, orgId])).rows.length);
@@ -3515,9 +3516,12 @@ test("request a role after signup: routed like signup, one pending per role, a d
     await pool.query("UPDATE role_requests SET reviewed_at = now() - interval '25 hours' WHERE user_id = $1", [dId]);
     const third = await fetchJson("POST", "/api/role-requests", { token: D.token, body: { role: "judge" } });
     assert.equal((await decide(third.body.id, "approved")).status, 200);
-    // Approval bumps token_version, so sign in again to read it back.
-    const D2 = await claimKit.login(username);
-    const history = (await fetchJson("GET", "/api/role-requests/mine", { token: D2.token })).body;
+    // Approval no longer signs D out (migration 106): the same token
+    // carries on, and the server rebuilds it with the new role in.
+    const meAfter = await fetchJson("GET", "/api/auth/me", { token: D.token });
+    assert.equal(meAfter.status, 200);
+    assert.ok(meAfter.body.user.org_roles.includes("judge"), JSON.stringify(meAfter.body.user.org_roles));
+    const history = (await fetchJson("GET", "/api/role-requests/mine", { token: D.token })).body;
     assert.deepEqual(history.requests.map((r) => r.status), ["approved", "rejected", "rejected"]);
     assert.ok(history.held.includes("judge"));
 
@@ -6447,7 +6451,7 @@ test("claims: a national revoke also takes back referees the federation appointe
     const put = async (userId, roles) => (await fetchJson("PUT", `/api/users/${userId}/roles`, { token: fedToken, body: { roles } })).status;
     assert.equal(await put(A.id, ["referee", "spectator"]), 200);
     assert.equal(await put(fed.id, ["org_admin", "referee"]), 200);
-    const versionOf = async (u) => (await pool.query("SELECT token_version FROM users WHERE id = $1", [u])).rows[0].token_version;
+    const versionOf = async (u) => (await pool.query("SELECT claims_version FROM users WHERE id = $1", [u])).rows[0].claims_version;
     const aBefore = await versionOf(A.id);
 
     const rv = await fetchJson("POST", `/api/claims/${id}/revoke`, { token: sys.token, body: { reason: "Not the federation" } });
@@ -6465,8 +6469,12 @@ test("claims: a national revoke also takes back referees the federation appointe
       "SELECT metadata FROM audit_log WHERE entity_id = $1 AND action = 'claim.revoked'", [id],
     )).rows[0].metadata;
     assert.ok(audit.removed.org_roles.some((r) => r.user_id === A.id && r.role === "referee"));
-    // The JWT carries org_roles, so A has to sign in again to lose it.
-    assert.ok((await versionOf(A.id)) > aBefore, "token_version bumped");
+    // The JWT carries org_roles, so A's gets rebuilt without referee in
+    // it on their next request, and A stays signed in.
+    assert.ok((await versionOf(A.id)) > aBefore, "claims_version bumped");
+    const aMe = await fetchJson("GET", "/api/auth/me", { token: A.token });
+    assert.equal(aMe.status, 200);
+    assert.ok(!aMe.body.user.org_roles.includes("referee"), JSON.stringify(aMe.body.user.org_roles));
     assert.ok((await pool.query("SELECT 1 FROM user_org_roles WHERE user_id = $1 AND org_id = $2", [A.id, orgId])).rows.length);
   } finally {
     await claimKit.wipe(CODE);
@@ -6560,8 +6568,8 @@ test("org transfer: the mover's admin seats in the old federation go with the mo
     })).body.token;
     let token = await signIn();
     assert.equal((await fetchJson("GET", `/api/events/${X.eventId}/score-audit`, { token })).status, 200);
-    const tv = async () => (await pool.query("SELECT token_version FROM users WHERE id = $1", [mover])).rows[0].token_version;
-    const before = await tv();
+    const cv = async () => (await pool.query("SELECT claims_version FROM users WHERE id = $1", [mover])).rows[0].claims_version;
+    const before = await cv();
 
     const ask = await fetchJson("POST", "/api/club-change-requests", { token, body: { to_org_id: Y.orgId } });
     assert.equal(ask.status, 201, JSON.stringify(ask.body));
@@ -6575,7 +6583,9 @@ test("org transfer: the mover's admin seats in the old federation go with the mo
     assert.equal(await count("SELECT count(*)::int AS n FROM region_admins WHERE user_id = $1"), 0);
     assert.equal(await count("SELECT count(*)::int AS n FROM event_managers WHERE user_id = $1"), 0);
     assert.ok((await pool.query("SELECT 1 FROM club_admins WHERE club_id = $1 AND user_id = $2", [club, stayer])).rows.length);
-    assert.ok((await tv()) > before, "the old token, carrying org X, is dead");
+    assert.ok((await cv()) > before, "the old token, carrying org X, gets rebuilt");
+    // Still signed in, but the rebuilt token is org Y's: X's event is shut.
+    assert.equal((await fetchJson("GET", `/api/events/${X.eventId}/score-audit`, { token })).status, 403);
     // The co-admin hears about it; the region had nobody else, so X's admin does.
     const titles = async (u) => (await pool.query("SELECT title FROM notifications WHERE user_id = $1", [u])).rows.map((r) => r.title);
     assert.ok((await titles(stayer)).includes("Old Town Divers has one admin fewer"));

@@ -27,6 +27,9 @@
  * @property {?string}  [locale]        users.locale (migration 052), null until set. The
  *   SPA's auth store saves the on-screen language here and adopts it on
  *   sign-in (adoptAccountLocale); server-side mail goes out in it.
+ * @property {number}   [tv]            users.token_version when minted. Behind the DB row = revoked.
+ * @property {number}   [cv]            users.claims_version (migration 106). Behind the DB row =
+ *   roles changed, the server rebuilds the token instead of refusing it.
  * @property {number}   iat             issued-at, set by jsonwebtoken
  * @property {number}   exp             expiry, set by jsonwebtoken
  * @property {boolean}  [has_dependents] Body-only (login + /api/auth/me), never in the JWT.

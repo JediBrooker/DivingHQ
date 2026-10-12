@@ -26,7 +26,7 @@ const notices = require("../lib/notices");
 const { isOrgAdminOf, liveAdminIds, liveOrgAdminIds, orgAdminHold, lastOrgAdminRefusal } = require("../lib/admin-rows");
 const { isUuid, requireUuidParam } = require("../lib/uuid");
 
-module.exports = function createClubChangesRouter({ pool, verifyToken, bumpTokenVersion }) {
+module.exports = function createClubChangesRouter({ pool, verifyToken, bumpClaimsVersion }) {
   if (!pool) throw new Error("createClubChangesRouter requires { pool }");
   const router = express.Router();
   router.param("id", requireUuidParam);
@@ -191,9 +191,9 @@ module.exports = function createClubChangesRouter({ pool, verifyToken, bumpToken
         [r.to_org_id, r.to_club_id || null, r.user_id],
       );
       seats = await dropSeatsLeftBehind(client, r.user_id, r.to_org_id);
-      // Their token still carries the old org and its roles until it
-      // expires, so make them sign in again.
-      if (typeof bumpTokenVersion === "function") await bumpTokenVersion(client, r.user_id);
+      // Their token still carries the old org and its roles, so have it
+      // rebuilt on their next request (they stay signed in).
+      if (typeof bumpClaimsVersion === "function") await bumpClaimsVersion(client, r.user_id);
       // Roles are kept per org and the token reads the ones in
       // users.org_id, so rows left in the old org weren't history, they
       // were grants waiting to switch back on. A former org_admin who

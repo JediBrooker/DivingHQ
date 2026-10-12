@@ -33,10 +33,10 @@
 //   POST /api/guardians/:id/revoke   end a link, or withdraw a request
 //
 // Both writes that change a user's privilege set call
-// bumpTokenVersion inside the same transaction, so a rollback rolls
+// bumpClaimsVersion inside the same transaction, so a rollback rolls
 // back the bump too: the freshly-revoked role takes effect on the
-// user's next request without waiting for their JWT to expire
-// (Migration 021).
+// user's next request, which rebuilds their token from the DB rather
+// than signing them out (Migration 106).
 //
 // Mounted via:
 //   app.use(require('./routes/users')({ … }))
@@ -74,6 +74,9 @@ module.exports = function createUsersRouter({
   requireOrgAdmin,
   requireMeetEditor,
   bumpTokenVersion,
+  // Role changes. Falls back to the old sign-everyone-out bump for a
+  // harness that only wires bumpTokenVersion.
+  bumpClaimsVersion = bumpTokenVersion,
   invalidateTokenVersion,
   sendRoleDecisionEmail,
   bulkWriteLimiter,
@@ -255,14 +258,13 @@ module.exports = function createUsersRouter({
         );
       }
 
-      // Invalidate the target user's existing JWTs (Migration 021).
-      // Granting or revoking either one changes the privilege set,
-      // so whatever token is currently circulating is no longer
-      // accurate. The helper bumps users.token_version and clears
-      // the in-memory cache; the next request from any of their
-      // devices forces a fresh login.
+      // Granting or revoking changes the privilege set, so whatever
+      // token is circulating is out of date. bumpClaimsVersion makes
+      // the next request from each of their devices rebuild it from the
+      // DB (Migration 106): the change lands at once and they stay
+      // signed in.
       if (granted.length > 0 || revoked.length > 0) {
-        await bumpTokenVersion(client, req.params.id);
+        await bumpClaimsVersion(client, req.params.id);
       }
 
       await client.query("COMMIT");
@@ -397,10 +399,9 @@ module.exports = function createUsersRouter({
             "approved from role request",
           ],
         );
-        // Bump token_version so the freshly-granted role takes
-        // effect on the user's next request without waiting for
-        // their current JWT to expire.
-        await bumpTokenVersion(client, rq.user_id);
+        // Their next request rebuilds its token with the new role in it,
+        // no signing in again.
+        await bumpClaimsVersion(client, rq.user_id);
       }
 
       await client.query("COMMIT");

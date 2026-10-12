@@ -37,7 +37,7 @@ test("socket ticket carries only socket identity and a 30-second admission windo
   const raw = mintSocketTicket(original, SECRET, { now: at });
   const ticket = verifySocketTicket(raw, SECRET);
   assert.deepEqual(ticket, {
-    id: USER, org_id: ORG, org_roles: ["judge"], is_system_admin: false, tv: 7,
+    id: USER, org_id: ORG, org_roles: ["judge"], is_system_admin: false, tv: 7, cv: 0,
     type: "socket_ticket", aud: "dhq-native-socket", iat: at, exp: at + 30,
     session_exp: original.exp,
   });

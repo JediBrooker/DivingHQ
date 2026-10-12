@@ -18,11 +18,11 @@ const claims = require("../lib/claims");
 const settingsLib = require("../lib/platform-settings");
 const { recordAudit, auditFromReq } = require("../lib/audit");
 
-module.exports = function createClaimsRouter({ pool, push, email, verifyToken, requireSystemAdmin, bumpTokenVersion }) {
+module.exports = function createClaimsRouter({ pool, push, email, verifyToken, requireSystemAdmin, bumpClaimsVersion }) {
   if (!pool || !verifyToken) throw new Error("createClaimsRouter requires { pool, verifyToken }");
   const router = express.Router();
   // email: lib/email, for the claim notices (sendClaimEmail).
-  const deps = { push, email, bumpTokenVersion };
+  const deps = { push, email, bumpClaimsVersion };
 
   function fail(res, err, label) {
     if (err instanceof claims.ClaimError) {
