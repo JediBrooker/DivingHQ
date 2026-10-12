@@ -74,7 +74,19 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 1024, height: 1366
     await expect(card.locator('.cv2-primary')).toBeDisabled();
     const other = await setup.openSocket(baseURL, f.adminToken);
     try {
-      expect((await ask(other, 'claim_event_control', { event_id: f.event.id, protocol: 2 })).ok).toBe(true);
+      // Local fencing renders before the asynchronous release reaches the
+      // server. Wait only for that same-user lease to clear; never take over
+      // or wait long enough for the normal 30-second lease to expire.
+      let claimed;
+      await expect.poll(async () => {
+        claimed = await ask(other, 'claim_event_control', { event_id: f.event.id, protocol: 2 });
+        if (!claimed?.ok && !(claimed?.error === 'control_conflict' && claimed.sameUser === true)) {
+          throw new Error(`Unexpected control claim reply: ${JSON.stringify(claimed)}`);
+        }
+        return claimed.ok;
+      }, { timeout: 5000 }).toBe(true);
+      expect(claimed).toMatchObject({ ok: true, event_id: f.event.id, lease_ms: 30000 });
+      expect(claimed.control_token).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
       await card.getByRole('button', { name: 'Take control', exact: true }).click();
       await expect(card.getByRole('button', { name: 'Take over', exact: true })).toBeVisible();
       await card.getByRole('button', { name: 'Take over', exact: true }).click();
