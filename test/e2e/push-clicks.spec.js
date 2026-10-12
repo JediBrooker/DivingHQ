@@ -71,6 +71,13 @@ test("a sign-off answered from the notification leaves the open tab's banner", a
   await page.goto(`/control?signoff_request=${requestId}`);
   const banner = page.locator(".notif-referee_signoff");
   await expect(banner).toBeVisible({ timeout: 10_000 });
+  // A successful worker answer has already retired the server request and
+  // notification. Record that state without broadcasting a socket close,
+  // so this still exercises the SW message rather than the socket handler.
+  // Leaving it pending would leak a second live banner into the later tests
+  // when the shared referee's reconnect recovers the real inbox.
+  await setup.pool.query("UPDATE referee_signoff_requests SET status='approved' WHERE id=$1", [requestId]);
+  await setup.pool.query("UPDATE notifications SET status='expired' WHERE id=$1", [notifId]);
   // What sw.js posts to every tab after answerSignoff succeeds.
   await page.evaluate((id) => {
     navigator.serviceWorker.dispatchEvent(new MessageEvent("message", { data: { type: "notification-answered", id } }));

@@ -121,3 +121,100 @@ test('late inbox and sign-off reads cannot restore a signed-out account banners'
   assert.equal(await signoff, false);
   assert.equal(push.notifications.value.some(n => n.data.request_id === 'late-signoff'), false);
 });
+
+test('initial socket connection and reconnect recover missed notices without duplicates or cross-account data', { skip: !hooked }, async () => {
+  const auth = useAuthStore();
+  auth.user = { ...USER, id: 'inbox-recovery-user' };
+  let rows = [];
+  auth.apiFetch = async () => rows;
+  const push = usePush();
+  push.notifications.value = [];
+  await push.recent();
+  const sock = fakeSocket();
+  bindPushSocket(sock);
+  const missed = { id: 'missed-before-connect', category: 'event_live', title: 'Live', status: 'sent' };
+  rows = [missed];
+  sock.fire('connect');
+  await settle();
+  assert.deepEqual(push.notifications.value.map(n => n.id), [missed.id]);
+  rows = [{ ...missed, id: 'missed-while-offline' }, missed];
+  sock.fire('notification', missed);
+  sock.fire('connect');
+  await settle();
+  assert.deepEqual(push.notifications.value.map(n => n.id), ['missed-while-offline', missed.id]);
+
+  let completeRead;
+  auth.apiFetch = () => new Promise(resolve => { completeRead = resolve; });
+  sock.fire('connect');
+  auth.user = { ...USER, id: 'another-inbox-user' };
+  await settle();
+  completeRead([{ ...missed, id: 'old-user-late-recovery' }]);
+  await settle();
+  assert.equal(push.notifications.value.some(n => n.id === 'old-user-late-recovery'), false);
+  bindPushSocket(null);
+});
+
+test('a stale reconnect inbox cannot restore a notice acknowledged during its read', { skip: !hooked }, async () => {
+  const auth = useAuthStore();
+  auth.user = { ...USER, id: 'inbox-ack-user' };
+  auth.apiFetch = async () => [];
+  const push = usePush();
+  await settle();
+  push.notifications.value = [];
+  const sock = fakeSocket();
+  bindPushSocket(sock);
+  const notice = { id: 'ack-during-refresh', category: 'event_live', status: 'sent' };
+  pushNotificationForTests(notice);
+  let completeRead;
+  auth.apiFetch = url => url.includes('/notifications/me?')
+    ? new Promise(resolve => { completeRead = resolve; }) : Promise.resolve({ ok: true });
+  sock.fire('connect');
+  await push.ack(notice.id);
+  completeRead([notice, { ...notice, id: 'already-expired', status: 'expired' }]);
+  await settle();
+  assert.deepEqual(push.notifications.value, []);
+  bindPushSocket(null);
+});
+
+test('failed acknowledgement is recoverable by the next inbox read', { skip: !hooked }, async () => {
+  const auth = useAuthStore();
+  auth.user = { ...USER, id: 'inbox-ack-retry-user' };
+  auth.apiFetch = async () => [];
+  const push = usePush();
+  await settle();
+  push.notifications.value = [];
+  const notice = { id: 'retry-failed-ack', category: 'event_live', status: 'sent' };
+  pushNotificationForTests(notice);
+  let completeRead;
+  auth.apiFetch = url => url.includes('/notifications/me?')
+    ? new Promise(resolve => { completeRead = resolve; }) : Promise.reject(new Error('offline'));
+  const reading = push.recent();
+  await push.ack(notice.id);
+  completeRead([notice]);
+  await reading;
+  assert.deepEqual(push.notifications.value, [], 'the already-running snapshot cannot undo the local action');
+  auth.apiFetch = async () => [notice];
+  await push.recent();
+  assert.equal(push.notifications.value[0].id, notice.id, 'a fresh server read can recover the failed acknowledgement');
+});
+
+test('a sign-off closed before its inbox row arrives is never restored', { skip: !hooked }, async () => {
+  const auth = useAuthStore();
+  auth.user = { ...USER, id: 'inbox-close-user' };
+  auth.apiFetch = async () => [];
+  const push = usePush();
+  await settle();
+  push.notifications.value = [];
+  const sock = fakeSocket();
+  bindPushSocket(sock);
+  const completions = [];
+  auth.apiFetch = () => new Promise(resolve => { completions.push(resolve); });
+  const reading = push.recent();
+  const reopening = push.showSignoff('closed-before-read', { eventId: 'e1' });
+  sock.fire('referee_signoff_response', { request_id: 'closed-before-read' });
+  for (const finish of completions) finish([{ ...banner('closed-before-read'), status: 'sent' }]);
+  await reading;
+  assert.equal(await reopening, false);
+  assert.deepEqual(push.notifications.value, []);
+  bindPushSocket(null);
+});

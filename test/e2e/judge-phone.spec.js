@@ -227,6 +227,38 @@ test("banners on the judge screen stay clear of the keypad, Submit and Signal Re
   }
 });
 
+test('a live notice sent between the initial inbox read and socket connection is recovered', async ({ browser, request, baseURL }) => {
+  const { orgId, adminToken } = await setup.createOrgAndAdmin(request, { countryCode: "AUS", orgName: "Judge Connect Gap" });
+  const X = await liveEvent(request, {
+    orgId, adminToken, name: "Connect Gap", diverNames: ["Gap Fixture"], status: "Upcoming",
+  });
+  const { ctx, page } = await phone(browser, 390, 664);
+  let releaseHandshake;
+  const handshakeGate = new Promise(resolve => { releaseHandshake = resolve; });
+  try {
+    await signIn(page, X.judges[0].username);
+    // Hold this page's initial polling handshake until the HTTP inbox read
+    // has finished. The alert then genuinely happens while nobody listens.
+    await page.route('**/socket.io/**', async route => { await handshakeGate; await route.continue(); });
+    const firstInbox = page.waitForResponse(r => r.url().includes('/api/notifications/me?'));
+    await page.goto(`/judge?event=${X.event.id}`);
+    await firstInbox;
+    await setup.setEventStatus(request, { adminToken, eventId: X.event.id, status: "Live" });
+    await expect.poll(() => eventLiveRows(X.judges[0].userId, X.event.id)).toEqual(["sent"]);
+    releaseHandshake();
+    expect(await emitAck(baseURL, adminToken, "set_active_diver", activeDiver(X.event, X.divers[0], "Gap Fixture")))
+      .toMatchObject({ ok: true });
+    await expect(page.locator('.status-dot.connected')).toBeVisible();
+    await expect.poll(() => eventLiveRows(X.judges[0].userId, X.event.id), { timeout: 5_000 })
+      .toEqual(["acknowledged"]);
+    await expect(page.locator('.notif-card')).toHaveCount(0);
+  } finally {
+    releaseHandshake();
+    await ctx.close();
+    await setup.deleteOrg(orgId);
+  }
+});
+
 // Real phone sizes. The two iPhones are the smallest the judges use and
 // have to fit the whole pad with no scrolling; the original SE is the
 // floor, where the header may scroll inside itself, but its keys still

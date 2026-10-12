@@ -41,6 +41,7 @@ import { useAuthStore } from '@/stores/auth'
 
 // Module-level shared state, survives across component mounts
 const notifications = ref([])
+const inboxReads = new Set()
 const ready = ref(false)
 // 'granted' | 'denied' | 'default', or 'unsupported' where web push
 // can't work at all (no PushManager, plain http). Set on first use and
@@ -68,9 +69,10 @@ const onNotification = (n) => pushIntoList(n)
 const onSignoffClosed = (d) => {
   const requestId = d?.request_id
   if (!requestId) return
-  notifications.value = notifications.value.filter(
-    (n) => !(n.category === 'referee_signoff' && n.data?.request_id === requestId),
-  )
+  for (const read of inboxReads) read.closedRequests.add(requestId)
+  dropNotifications(notifications.value
+    .filter(n => n.category === 'referee_signoff' && n.data?.request_id === requestId)
+    .map(n => n.id))
 }
 
 // Where one sign-off request stands, from the server: 'pending',
@@ -90,15 +92,33 @@ async function signoffRequestStatus(auth, eventId, requestId) {
   }
 }
 
-// Back from a dropped socket. A referee's phone locks and its socket goes
-// with it, and a request withdrawn, replaced or answered elsewhere in that
-// time sent its referee_signoff_response to nobody: the banner came back
-// from the lock screen still offering Approve and Deny for a request that
-// was gone. So every sign-off banner still up asks after its request, and
-// the closed ones go. Nothing to ask about on most connects, so it's
-// usually free. Also runs on the first connect, harmlessly.
+// The initial inbox read can finish before this socket is listening; a
+// notice sent in that gap is otherwise lost. The same happens while a
+// phone is disconnected. Recover the inbox on every connect, then check
+// sign-off banners whose requests may have closed while we were away.
 const onReconnect = () => {
-  recheckSignoffBanners().catch(() => {})
+  recentNotifications().then(recheckSignoffBanners).catch(() => {})
+}
+
+function beginInboxRead() {
+  const read = { removed: new Set(), closedRequests: new Set(), cancelled: false }
+  inboxReads.add(read)
+  return read
+}
+
+async function recentNotifications(auth = useAuthStore()) {
+  if (!auth.isLoggedIn) return
+  const owner = auth.user?.id
+  const read = beginInboxRead()
+  try {
+    const rows = await auth.apiFetch('/api/notifications/me?limit=20')
+    if (read.cancelled || auth.user?.id !== owner) return
+    const fresh = (rows || []).filter(r => r.status !== 'acknowledged' && r.status !== 'expired'
+      && !read.removed.has(r.id) && !read.closedRequests.has(r.data?.request_id))
+    // pushIntoList deduplicates an alert also received on the live socket.
+    for (const r of [...fresh].reverse()) pushIntoList(r)
+  } catch { /* The next connection or explicit inbox refresh can retry. */ }
+  finally { inboxReads.delete(read) }
 }
 
 async function recheckSignoffBanners() {
@@ -106,8 +126,10 @@ async function recheckSignoffBanners() {
   if (!banners.length) return
   const auth = useAuthStore()
   if (!auth.isLoggedIn) return
+  const owner = auth.user?.id
   await Promise.all(banners.map(async (n) => {
     const status = await signoffRequestStatus(auth, n.data.event_id, n.data.request_id)
+    if (auth.user?.id !== owner) return
     if (status && status !== 'pending') onSignoffClosed({ request_id: n.data.request_id })
   }))
 }
@@ -131,6 +153,7 @@ export function bindPushSocket(sock) {
     socket.on('notification', onNotification)
     socket.on('referee_signoff_response', onSignoffClosed)
     socket.on('connect', onReconnect)
+    if (socket.connected) onReconnect()
   }
 }
 
@@ -164,6 +187,7 @@ function urlBase64ToUint8Array(base64String) {
 // user A's banners (receipts, role decisions, sign-off Approve/Deny
 // cards) used to stay on screen at /login and into the next session.
 export function clearNotifications() {
+  for (const read of inboxReads) read.cancelled = true
   notifications.value = []
 }
 
@@ -172,6 +196,9 @@ export function clearNotifications() {
 export function dropNotifications(ids) {
   const gone = new Set(ids)
   if (!gone.size) return
+  // An HTTP inbox snapshot begun before this action may still say 'sent'.
+  // Keep only active reads informed, so completed reads leave no ID cache.
+  for (const read of inboxReads) for (const id of gone) read.removed.add(id)
   notifications.value = notifications.value.filter(n => !gone.has(n.id))
 }
 
@@ -231,7 +258,7 @@ export function usePush({ socket: sock } = {}) {
       // Approve/Deny pressed on the OS notification itself. The worker has
       // already answered and acked it, so just drop the banner copy.
       if (m?.type === 'notification-answered') {
-        if (m.id) notifications.value = notifications.value.filter(n => n.id !== m.id)
+        if (m.id) dropNotifications([m.id])
         return
       }
       if (m?.type !== 'notification-click') return
@@ -239,9 +266,9 @@ export function usePush({ socket: sock } = {}) {
         // Mark read locally; the SW already POSTed the ack. Not for a
         // sign-off though: the SW leaves those unacked until they're
         // answered, and its banner is where the answering happens.
-        notifications.value = notifications.value.filter(
-          n => n.id !== m.id || n.category === 'referee_signoff',
-        )
+        dropNotifications(notifications.value
+          .filter(n => n.id === m.id && n.category !== 'referee_signoff')
+          .map(n => n.id))
       }
       // The tap was meant to take them somewhere. The SW only focuses
       // this tab, so the routing is ours to do.
@@ -310,7 +337,7 @@ export function usePush({ socket: sock } = {}) {
 
   async function ack(id) {
     if (!id) return
-    notifications.value = notifications.value.filter(n => n.id !== id)
+    dropNotifications([id])
     if (socket) socket.emit('notification:ack', { id })
     // belt and braces, also fire the HTTP ack in case the socket is
     // disconnected (idempotent server-side anyway)
@@ -336,37 +363,30 @@ export function usePush({ socket: sock } = {}) {
     const match = (n) => n?.category === 'referee_signoff' && n.data?.request_id === requestId
     let n = notifications.value.find(match)
     if (!n) {
+      const read = beginInboxRead()
       try {
         // Acknowledged rows count too: opening the inbox row may have
         // acked it while the request itself is still waiting.
         const rows = await auth.apiFetch('/api/notifications/me?limit=50')
-        if (auth.user?.id !== owner) return false
+        if (read.cancelled || auth.user?.id !== owner) return false
+        if (read.closedRequests.has(requestId)) return false
         n = (rows || []).find(match)
+        if (n && read.removed.has(n.id)) return null
       } catch {
         return null
-      }
+      } finally { inboxReads.delete(read) }
     }
     if (n) {
+      if (n.status === 'expired') return false
       pushIntoList(n)
       return true
     }
     const status = await signoffRequestStatus(auth, eventId, requestId)
+    if (auth.user?.id !== owner) return false
     return status && status !== 'pending' ? false : null
   }
 
-  async function recent() {
-    if (!auth.isLoggedIn) return
-    const owner = auth.user?.id
-    try {
-      const rows = await auth.apiFetch('/api/notifications/me?limit=20')
-      if (auth.user?.id !== owner) return
-      // filter out anything already acknowledged, those don't
-      // belong in the live banner
-      const fresh = (rows || []).filter(r => r.status !== 'acknowledged')
-      // Merge into notifications, preserving order.
-      for (const r of [...fresh].reverse()) pushIntoList(r)
-    } catch { /* silent */ }
-  }
+  const recent = () => recentNotifications(auth)
 
   // Auto-subscribe on login, once. The watcher fires when the user
   // identity appears (after a fresh login or the boot-time /me probe).
