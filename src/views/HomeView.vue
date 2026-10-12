@@ -5,6 +5,7 @@ import { useAuthStore } from '@/stores/auth'
 import LocaleSwitcher from '@/components/LocaleSwitcher.vue'
 import ThemeToggle from '@/components/ThemeToggle.vue'
 import LogoMark from '@/components/LogoMark.vue'
+import FlagAU from '@/components/FlagAU.vue'
 import { CircleHelp } from '@lucide/vue'
 import { useSupportEmail } from '@/composables/useSupportEmail'
 
@@ -264,6 +265,7 @@ onMounted(() => {
              target="_blank" rel="noopener" class="footer-bug">{{ $t('home.footer.report_bug') }}</a>
         </div>
       </div>
+      <p class="footer-made" data-testid="footer-made-in-australia">{{ $t('home.footer.made_in_australia') }} <FlagAU /></p>
     </footer>
   </div>
 </template>
@@ -458,6 +460,7 @@ onMounted(() => {
   transition: color var(--dur) var(--ease);
 }
 .footer-links a:hover { color: var(--accent); }
+.footer-made { max-width: 1200px; margin: 1.25rem auto 0; font-size: 12px; color: var(--fg-3); text-align: center; }
 
 @media (max-width: 720px) {
   .nav-in { padding: 0 1rem; }

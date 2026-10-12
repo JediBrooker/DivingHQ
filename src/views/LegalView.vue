@@ -19,6 +19,7 @@ import supportMd from '../../docs/support.md?raw'
 import deletionMd from '../../docs/account-deletion.md?raw'
 import MarkdownArticle from '@/components/MarkdownArticle.vue'
 import LogoMark from '@/components/LogoMark.vue'
+import FlagAU from '@/components/FlagAU.vue'
 import LocaleSwitcher from '@/components/LocaleSwitcher.vue'
 import ThemeToggle from '@/components/ThemeToggle.vue'
 
@@ -63,6 +64,7 @@ watch(() => props.doc, () => nextTick(() => window.scrollTo(0, 0)))
       <RouterLink to="/support" :class="{ 'is-current': doc === 'support' }">{{ $t('legal.contact') }}</RouterLink>
       <RouterLink to="/delete-account" :class="{ 'is-current': doc === 'deletion' }">{{ $t('profile.delete.title') }}</RouterLink>
     </footer>
+    <p class="legal-made" data-testid="legal-made-in-australia">{{ $t('home.footer.made_in_australia') }} <FlagAU /></p>
   </div>
 </template>
 
@@ -112,6 +114,7 @@ watch(() => props.doc, () => nextTick(() => window.scrollTo(0, 0)))
 }
 .legal-footer a:hover { color: var(--accent); }
 .legal-footer a.is-current { color: var(--fg); font-weight: 600; }
+.legal-made { margin: 1rem 0 0; font-size: 12px; color: var(--fg-3); }
 @media (max-width: 560px) {
   .legal-wrap { padding: 1rem 1rem 2.5rem; }
 }
