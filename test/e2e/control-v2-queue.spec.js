@@ -77,7 +77,20 @@ test("reserves stay out of the queue, so the last primary finalises", async ({ p
   await expect(card.locator(".cv2-primary")).toHaveClass(/is-finalise/);
   expect(room.seen.state.map((s) => s.full_name)).not.toContain("R Reserve");
   room.close();
-  await setup.deleteOrg(orgId);
+  await page.close();
+  // Score acknowledgements precede the async record transaction. Its row
+  // locks can meet this fixture's cascading DELETE in the opposite order.
+  // PostgreSQL rolls back the whole deadlocked statement, so retry only
+  // that idempotent teardown DELETE, never the test or another SQL error.
+  for (let attempt = 1; ; attempt++) {
+    try {
+      await setup.pool.query("DELETE FROM users WHERE org_id = $1", [orgId]);
+      break;
+    } catch (error) {
+      if (error.code !== "40P01" || attempt === 3) throw error;
+    }
+  }
+  await setup.pool.query("DELETE FROM organisations WHERE id = $1", [orgId]);
 });
 
 test("the roster endpoint says which rows are reserves", async ({ request }) => {
