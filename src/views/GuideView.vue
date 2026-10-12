@@ -41,6 +41,7 @@ import { computed, onMounted, onBeforeUnmount, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import LocaleSwitcher from '@/components/LocaleSwitcher.vue'
 import ThemeToggle from '@/components/ThemeToggle.vue'
+import FlagAU from '@/components/FlagAU.vue'
 import { useFeaturesStore } from '@/stores/features'
 import { Waves, Gavel, GraduationCap, MonitorPlay, Building2, Globe, Users, Map } from '@lucide/vue'
 import { useSupportEmail, DEFAULT_SUPPORT_EMAIL } from '@/composables/useSupportEmail'
@@ -496,6 +497,7 @@ onBeforeUnmount(() => observer?.disconnect())
       <RouterLink to="/privacy">{{ $t('legal.privacy_title') }}</RouterLink>
       <RouterLink to="/terms">{{ $t('legal.terms_title') }}</RouterLink>
       <a v-if="supportEmail" :href="`mailto:${supportEmail}`">{{ $t('legal.need_help') }} {{ supportEmail }}</a>
+      <span class="guide-made" data-testid="guide-made-in-australia">{{ $t('home.footer.made_in_australia') }} <FlagAU /></span>
     </footer>
   </div>
 </template>
@@ -883,6 +885,7 @@ onBeforeUnmount(() => observer?.disconnect())
   font-size: 13px; font-weight: 500; color: var(--fg-2); text-decoration: none;
 }
 .guide-footer a:hover { color: var(--accent); }
+.guide-made { margin-left: auto; font-size: 13px; color: var(--fg-3); }
 
 /* Narrow viewports: collapse the TOC into a horizontal scroll
    strip pinned above the content. The strip is still sticky

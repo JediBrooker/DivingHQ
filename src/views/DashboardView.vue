@@ -35,6 +35,7 @@ import { useSocket } from '@/composables/useSocket'
 import { useDiverSearch } from '@/composables/useDiverSearch'
 import { contributesToDiverChip, rankAttentionChips } from '@/composables/useAttention'
 import AttentionLane from '@/components/dashboard/AttentionLane.vue'
+import FlagAU from '@/components/FlagAU.vue'
 import { fmtCloses, fmtDate, fmtRelative } from '@/lib/format'
 import { signoffLink } from '@/lib/signoffLink'
 import { usePlural } from '@/composables/usePlural'
@@ -1210,6 +1211,8 @@ function detachSocketHandlers() {
         rel="noopener"
         class="dashboard-footer-link"
       >🐛 Report it on GitHub →</a>
+      <span class="dashboard-footer-sep" aria-hidden="true">·</span>
+      <span class="dashboard-footer-label dashboard-footer-made" data-testid="dashboard-made-in-australia">{{ $t('home.footer.made_in_australia') }} <FlagAU /></span>
     </footer>
   </div>
 </template>
@@ -1527,6 +1530,11 @@ function detachSocketHandlers() {
 .dashboard-footer-sep {
   color: var(--text-3);
   opacity: 0.5;
+}
+.dashboard-footer-made {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
 }
 .dashboard-footer-link {
   color: var(--cyan);
