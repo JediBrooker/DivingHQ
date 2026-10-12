@@ -93,7 +93,7 @@ DivingHQ keeps a few things in your browser or the app’s embedded browser:
 
 | Storage | Name | Purpose |
 |---|---|---|
-| Cookie (httpOnly) | `dhq_session` | Keeps you signed in. A session cookie, cleared when you close the browser, and unreadable by scripts on the page |
+| Cookie (httpOnly) | `dhq_session` | Keeps you signed in until you sign out, including after you close the browser. It's renewed while you use DivingHQ and expires after 90 days without use. Unreadable by scripts on the page |
 | sessionStorage | `dhq_identity`, `profile.claim.seen` | Who's signed in on this tab, so a refresh on bad venue Wi-Fi doesn't sign you out; whether you've already dismissed the "claim past results" prompt |
 | localStorage | `locale`, `dhq-theme`, `dhq-sidebar` | Language, light or dark theme, sidebar collapsed or not |
 | localStorage | `sb_sort_by`, `dashboard.activeTab.v1`, `setup.wizard*` | Scoreboard sort order, last dashboard tab, first-run wizard state |
@@ -105,9 +105,9 @@ DivingHQ keeps a few things in your browser or the app’s embedded browser:
 | Service worker cache | `divinghq-shell-*` | The app's own code and assets, so it opens offline once installed |
 
 The iOS and Android apps keep the same sign-in cookie in the device's app cookie
-storage. Unlike the website's session cookie, the app cookie can survive closing
-and reopening the app, but expires no later than the signed session it belongs
-to. Signing out clears the app cookie storage and the per-user page cache. The
+storage. Like the website's, it survives closing and reopening the app, is
+renewed while you use the app and expires after 90 days without use. Signing
+out clears the app cookie storage and the per-user page cache. The
 apps also keep the offline queue and interface preferences listed above. Their
 code is bundled with the installation rather than stored by a browser service
 worker.

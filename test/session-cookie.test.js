@@ -28,17 +28,17 @@ test("readSessionCookie treats bad percent-encoding as no cookie instead of thro
 });
 
 
-test("native cookies persist only until signed expiry while browser cookies remain session-only", () => {
-  const { cookieOptions, nativeCookieOptions } = require("../lib/session-cookie");
+test("the session cookie persists exactly as long as the signed JWT", () => {
+  const { cookieOptions, sessionCookieOptions } = require("../lib/session-cookie");
   const now = 1800000000000;
   const expiry = now / 1000 + 3600;
-  const native = nativeCookieOptions(expiry, now);
-  assert.equal(native.maxAge, 3600000);
-  assert.equal(native.httpOnly, true);
-  assert.equal(native.sameSite, "lax");
-  assert.equal(native.secure, cookieOptions().secure);
+  const opts = sessionCookieOptions(expiry, now);
+  assert.equal(opts.maxAge, 3600000);
+  assert.equal(opts.httpOnly, true);
+  assert.equal(opts.sameSite, "lax");
+  assert.equal(opts.secure, cookieOptions().secure);
+  // The clearing options carry no lifetime, clearCookie sets its own.
   assert.equal(cookieOptions().maxAge, undefined);
-  assert.equal(cookieOptions().expires, undefined);
-  assert.throws(() => nativeCookieOptions(now / 1000, now));
-  assert.throws(() => nativeCookieOptions(NaN, now));
+  assert.throws(() => sessionCookieOptions(now / 1000, now));
+  assert.throws(() => sessionCookieOptions(NaN, now));
 });

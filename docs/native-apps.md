@@ -71,8 +71,8 @@ Use the guarded test database, never production accounts or meet data.
   origin use `CapacitorHttp`. External requests use browser fetch with omitted
   credentials. API redirects are refused. Native logging is disabled.
 - Login, 2FA and session refresh keep using the existing HttpOnly session
-  cookie in the platform cookie jar. Native cookie persistence is capped to the signed
-  session's expiry; web cookies remain session-only. No session token is persisted in JavaScript
+  cookie in the platform cookie jar. The cookie persists to the signed session's
+  expiry (web too) and the server renews it daily while in use. No session token is persisted in JavaScript
   storage or Capacitor Preferences. The native request marker suppresses the
   API's legacy bearer-token response body; it grants no permissions. Returned
   `Set-Cookie` headers are stripped before constructing the shared app's Response.

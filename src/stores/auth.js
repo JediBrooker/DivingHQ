@@ -31,8 +31,9 @@ export const useAuthStore = defineStore('auth', () => {
   // operator to a login page they couldn't use, because fetchMe() read
   // "the network is down" as "you are anonymous".
   //
-  // sessionStorage, deliberately, NOT localStorage. dhq_session is a session
-  // cookie: it dies when the browser closes. A mirror that outlives it would
+  // sessionStorage, deliberately, NOT localStorage. dhq_session is persistent
+  // now, but it still ends (sign out, revocation, 90 idle days) in ways this
+  // mirror can't see from an offline tab. A mirror that outlives it would
   // resurrect the previous user on the next offline boot, and since the idb
   // cache is keyed by this identity's fingerprint, the next person at a
   // shared meet-desk laptop would be shown as them and served their cached

@@ -506,7 +506,11 @@ if (JWT_SECRET.length < 32) {
     `[security] JWT_SECRET is only ${JWT_SECRET.length} chars. Rotate to ≥32 random chars when convenient — short secrets are easier to brute force.`,
   );
 }
-const JWT_EXPIRY = process.env.JWT_EXPIRY || "8h";
+// How long a session survives with nobody using it. Sessions slide (see
+// renewSessionCookie in lib/middleware.js), so in practice people stay
+// signed in until they press Sign out. Revocation doesn't wait for this,
+// token_version handles that.
+const JWT_EXPIRY = process.env.JWT_EXPIRY || "90d";
 
 // =============================================================
 // MIDDLEWARE
@@ -554,6 +558,9 @@ const {
   pool,
   JWT_SECRET,
   isMaintenance: () => features.enabled("maintenance"),
+  // Hoisted function declaration further down, safe to hand over here.
+  buildTokenPayload,
+  JWT_EXPIRY,
 });
 
 // Convenience aliases, defined once so a typo can't drift the

@@ -187,8 +187,8 @@ test("signing out clears the cached identity, so an offline reload stays signed 
     "a signed-in session is mirrored so an offline boot still knows who you are",
   ).not.toBeNull();
 
-  // dhq_session is a session cookie, so the mirror must not outlive the
-  // browser either. In localStorage it would survive a close, and the next
+  // The mirror must never outlive the cookie. In localStorage it would
+  // survive the cookie going away (sign out elsewhere, expiry), and the next
   // person to open the laptop offline would boot as the last operator and
   // read their fingerprint-keyed idb cache.
   expect(
@@ -234,10 +234,10 @@ test("a closed browser takes the identity with it, so the next person is not the
   const state = await ctxA.storageState();
   await ctxA.close();
 
-  // What survives a browser restart is persistent storage, not the session
-  // cookie: dhq_session has no maxAge, so the browser drops it on close.
-  // storageState carries localStorage across; sessionStorage it cannot,
-  // which is precisely why the identity belongs there.
+  // The laptop comes back without A's cookie (expired, or cleared). What's
+  // left is persistent storage: storageState carries localStorage across,
+  // sessionStorage it cannot, which is precisely why the identity belongs
+  // there.
   const persisted = state.origins.flatMap((o) => o.localStorage ?? []);
   expect(
     persisted.map((e) => e.name),

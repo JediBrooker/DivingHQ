@@ -456,3 +456,109 @@ test("known under-13 accounts cannot reuse HTTP, optional-auth or socket session
     assert.equal(await middleware.isTokenVersionCurrent(USER_ID, claims.tv), false);
   }
 });
+
+// ---------------------------------------------------------------
+// Sliding sessions. People stay signed in until they press Sign out,
+// so a cookie older than a day gets swapped for a fresh one on the way
+// through. Bearer callers manage their own token and never get one.
+// ---------------------------------------------------------------
+function buildSliding({ token_version = 1, payloadTv = token_version, failBuild = false } = {}) {
+  const fakePool = {
+    async query(sql) {
+      if (/FROM users u\s+LEFT JOIN organisations o/.test(sql)) {
+        return { rows: [{ token_version, org_status: "active", is_system_admin: false }] };
+      }
+      return { rows: [] };
+    },
+  };
+  const built = [];
+  const mw = createMiddleware({
+    pool: fakePool, JWT_SECRET, JWT_EXPIRY: "90d",
+    async buildTokenPayload(id) {
+      built.push(id);
+      if (failBuild) throw new Error("db down");
+      return { id, username: "u", org_id: null, org_roles: ["judge"], is_system_admin: false, tv: payloadTv, locale: null };
+    },
+  });
+  return { ...mw, built };
+}
+
+function runWithCookie(gate, token, { header = null } = {}) {
+  return new Promise((resolve) => {
+    const cookies = [];
+    const req = { headers: header ? { authorization: `Bearer ${header}` } : {}, cookies: { dhq_session: token } };
+    const res = {
+      statusCode: 200, headersSent: false,
+      status(c) { this.statusCode = c; return this; },
+      json(body) { resolve({ type: "res", statusCode: this.statusCode, body, cookies }); return this; },
+      cookie(name, value, opts) { cookies.push({ name, value, opts }); },
+    };
+    gate(req, res, () => resolve({ type: "next", req, cookies }));
+  });
+}
+
+const DAY = 24 * 60 * 60;
+const signedAt = (iat, tv = 1) => jwt.sign({ id: USER_ID, tv, iat }, JWT_SECRET, { expiresIn: "90d" });
+
+test("verifyToken: a day-old session cookie is renewed with a fresh 90-day one", async () => {
+  const { verifyToken, built } = buildSliding();
+  const old = signedAt(Math.floor(Date.now() / 1000) - DAY - 60);
+  const out = await runWithCookie(verifyToken, old);
+  assert.equal(out.type, "next");
+  assert.deepEqual(built, [USER_ID]);
+  assert.equal(out.cookies.length, 1);
+  const { name, value, opts } = out.cookies[0];
+  assert.equal(name, "dhq_session");
+  const fresh = jwt.verify(value, JWT_SECRET);
+  assert.equal(fresh.id, USER_ID);
+  assert.equal(fresh.tv, 1);
+  assert.ok(fresh.exp - fresh.iat >= 89 * DAY);
+  assert.equal(opts.httpOnly, true);
+  assert.ok(opts.maxAge > 89 * DAY * 1000, "persistent, not a browser-session cookie");
+});
+
+test("optionalAuth renews too (it's what /api/auth/me runs on app start)", async () => {
+  const { optionalAuth } = buildSliding();
+  const out = await runWithCookie(optionalAuth, signedAt(Math.floor(Date.now() / 1000) - 2 * DAY));
+  assert.equal(out.type, "next");
+  assert.equal(out.req.user.id, USER_ID);
+  assert.equal(out.cookies.length, 1);
+});
+
+test("verifyToken: a cookie minted today is left alone", async () => {
+  const { verifyToken, built } = buildSliding();
+  const out = await runWithCookie(verifyToken, signedAt(Math.floor(Date.now() / 1000) - 60));
+  assert.equal(out.type, "next");
+  assert.equal(out.cookies.length, 0);
+  assert.deepEqual(built, []);
+});
+
+test("verifyToken: a bearer caller never gets a cookie planted", async () => {
+  const { verifyToken } = buildSliding();
+  const old = signedAt(Math.floor(Date.now() / 1000) - 3 * DAY);
+  const other = signedAt(Math.floor(Date.now() / 1000) - 4 * DAY);
+  const out = await runWithCookie(verifyToken, other, { header: old });
+  assert.equal(out.type, "next");
+  assert.equal(out.cookies.length, 0);
+});
+
+test("verifyToken: renewal never outruns a revocation", async () => {
+  // Stale tv: still a 401, no fresh cookie.
+  const stale = buildSliding({ token_version: 2 });
+  const revoked = await runWithCookie(stale.verifyToken, signedAt(Math.floor(Date.now() / 1000) - 2 * DAY, 1));
+  assert.equal(revoked.statusCode, 401);
+  assert.equal(revoked.cookies.length, 0);
+  // A bump landing between the check and the rebuild: request goes
+  // through on the old token, but no replacement is minted.
+  const racing = buildSliding({ token_version: 1, payloadTv: 2 });
+  const raced = await runWithCookie(racing.verifyToken, signedAt(Math.floor(Date.now() / 1000) - 2 * DAY, 1));
+  assert.equal(raced.type, "next");
+  assert.equal(raced.cookies.length, 0);
+});
+
+test("verifyToken: a failed rebuild keeps the old cookie and lets the request through", async () => {
+  const { verifyToken } = buildSliding({ failBuild: true });
+  const out = await runWithCookie(verifyToken, signedAt(Math.floor(Date.now() / 1000) - 2 * DAY));
+  assert.equal(out.type, "next");
+  assert.equal(out.cookies.length, 0);
+});

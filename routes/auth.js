@@ -17,7 +17,7 @@ const jwt     = require("jsonwebtoken");
 const rateLimit = require("express-rate-limit");
 const crypto  = require("node:crypto");
 const totp    = require("../lib/totp");
-const { SESSION_COOKIE, cookieOptions, nativeCookieOptions } = require("../lib/session-cookie");
+const { SESSION_COOKIE, cookieOptions, sessionCookieOptions } = require("../lib/session-cookie");
 const { ADMIN_ORG_ID } = require("../lib/admin-org");
 const { countryByCode } = require("../lib/countries");
 const { materializeRegions } = require("../lib/regions");
@@ -40,11 +40,10 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // Plant the JWT in the httpOnly session cookie. This is the SPA's
 // session of record, browser JS can neither read nor exfiltrate it.
+// Persistent everywhere (web and native) so closing the browser or the
+// app doesn't sign anyone out, only the Sign out button does.
 function setSessionCookie(req, res, token) {
-  const options = req.get("x-divinghq-native") === "1"
-    ? nativeCookieOptions(jwt.decode(token).exp)
-    : cookieOptions();
-  res.cookie(SESSION_COOKIE, token, options);
+  res.cookie(SESSION_COOKIE, token, sessionCookieOptions(jwt.decode(token).exp));
 }
 
 // Decide whether to include the bearer token in a JSON auth response.

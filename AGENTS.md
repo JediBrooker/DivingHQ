@@ -132,8 +132,10 @@ never put a production `server.url` remote wrapper in the config. See
 `src/native-main.js` installs native HTTP before the shared app loads. Only the
 configured API origin gets the native cookie jar; API redirects are refused,
 Set-Cookie response headers are stripped, and browser service workers/Web Push
-are disabled. Native cookies stay HttpOnly and persist only to the signed JWT
-expiry; browser cookies remain session-only. No bearer belongs in JS storage or
+are disabled. Session cookies stay HttpOnly and persist to the signed JWT
+expiry on web and native alike; `renewSessionCookie` (`lib/middleware.js`)
+re-mints a cookie older than a day, so only Sign out, a `token_version`
+revocation or `JWT_EXPIRY` (90d) of disuse ends one. No bearer belongs in JS storage or
 Preferences. Native sockets exchange that HTTP session for a short-lived,
 socket-only ticket (`lib/socket-ticket.js`); HTTP middleware must keep rejecting
 those tickets. Existing per-event role and token-version gates remain mandatory.
