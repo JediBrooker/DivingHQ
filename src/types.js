@@ -1126,6 +1126,32 @@
  * @property {?string} [dependent_dob]  org admins and the sysadmin only
  */
 
+/**
+ * @typedef {Object} UserManagerRow
+ * One member in GET /api/users (routes/users.js), the org admin's User
+ * Manager list; the sysadmin gets every org's.
+ *
+ * @property {string}   id
+ * @property {string}   username         a junior's is made up and never shown
+ * @property {string}   full_name
+ * @property {boolean}  is_system_admin
+ * @property {?string}  email
+ * @property {?string}  email_verified_at
+ * @property {boolean}  is_junior        a junior profile (migration 107): no sign-in at all
+ * @property {?string}  date_of_birth    YYYY-MM-DD
+ * @property {?string}  gender
+ * @property {?string}  nationality
+ * @property {?string}  suspended_at
+ * @property {string}   org_id
+ * @property {string}   org_name
+ * @property {?string}  country_code
+ * @property {?string}  org_slug
+ * @property {?string}  club_id
+ * @property {?string}  club_name
+ * @property {?string}  club_code
+ * @property {string[]} org_roles
+ */
+
 // ---- junior divers (migration 107) -----------------------------
 
 /**

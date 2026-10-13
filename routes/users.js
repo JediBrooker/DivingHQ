@@ -127,6 +127,11 @@ module.exports = function createUsersRouter({
       const r = await pool.query(
         `SELECT u.id, u.username, u.full_name, u.is_system_admin,
                 u.email, u.email_verified_at,
+                -- A junior profile (migration 107): nobody signs in to it, so
+                -- the list shows a Junior badge rather than its made-up
+                -- username, and the drawer drops the sign-in actions.
+                EXISTS (SELECT 1 FROM junior_profiles jp
+                         WHERE jp.user_id = u.id AND jp.status IN ('pending', 'active')) AS is_junior,
                 to_char(u.date_of_birth, 'YYYY-MM-DD') AS date_of_birth,
                 u.gender, u.nationality, u.suspended_at,
                 u.org_id,  o.name AS org_name,  o.country_code, o.slug AS org_slug,

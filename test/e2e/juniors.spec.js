@@ -81,6 +81,36 @@ test("a parent adds their child and the club confirms it", async ({ page }) => {
   await expect(page.getByRole("link", { name: "Junior divers" }).first()).toBeVisible();
 });
 
+test("User Manager badges a junior instead of showing its made-up username", async ({ page, request }) => {
+  const fed = await setup.createOrgAndAdmin(request);
+  try {
+    const fedClub = await setup.insertClub({ orgId: fed.orgId, name: "Badge Club" });
+    const id = (await setup.pool.query(
+      `INSERT INTO users (username, full_name, org_id, club_id, date_of_birth, gender)
+       VALUES ($1, 'Badge Junior', $2, $3, $4, 'male') RETURNING id`,
+      [`junior-${crypto.randomBytes(6).toString("hex")}`, fed.orgId, fedClub.clubId, birthday(10)],
+    )).rows[0].id;
+    await setup.pool.query(
+      `INSERT INTO junior_profiles (user_id, org_id, status, created_by, created_as, consent_by)
+       VALUES ($1, $2, 'active', $3, 'org', $3)`,
+      [id, fed.orgId, fed.adminId],
+    );
+    await signIn(page, fed.username);
+    await page.goto("/users");
+    const row = page.locator("tr").filter({ hasText: "Badge Junior" });
+    await expect(row).toContainText("Under 13");
+    await expect(row).not.toContainText("@junior-");
+    await row.getByRole("button", { name: "Badge Junior" }).click();
+    await expect(page.getByTestId("um-junior-badge")).toBeVisible();
+    await expect(page.getByTestId("um-junior-note")).toContainText("Nobody signs in to it");
+    await expect(page.getByRole("button", { name: "Send password reset" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Suspend account" })).toHaveCount(0);
+    await page.screenshot({ path: "test-results/um-junior-drawer.png" });
+  } finally {
+    await setup.deleteOrg(fed.orgId);
+  }
+});
+
 test("at 13 the diver takes the profile over and signs in with it", async ({ page }) => {
   const id = (await setup.pool.query(
     `INSERT INTO users (username, full_name, org_id, club_id, date_of_birth, gender)

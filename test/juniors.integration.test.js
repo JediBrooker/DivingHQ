@@ -254,6 +254,10 @@ test("under a federation a club admin's junior waits for the federation's admins
 
   as(ids.fedAdmin);
   assert.ok((await api("GET", "/api/juniors/pending")).json.juniors.some((j) => j.id === ids.cal));
+  // User Manager badges it rather than show the made-up username.
+  const members = (await api("GET", "/api/users")).json;
+  assert.equal(members.find((u) => u.id === ids.cal)?.is_junior, true);
+  assert.equal(members.find((u) => u.id === ids.fedClubAdmin.id)?.is_junior, false);
   assert.equal((await api("POST", `/api/juniors/${ids.cal}/review`, { decision: "approved" })).status, 200);
   assert.equal(await diverRole(ids.cal), true);
 });
