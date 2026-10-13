@@ -27,7 +27,8 @@
 //   [SECTION: ROUTES: COACH]          /api/coach/*
 //   [SECTION: ROUTES: CLASSES]        club-private training classes
 //   [SECTION: ROUTES: VENUE]          /api/venue/scoreboard-state/:event_id
-//   [SECTION: ROUTES: USERS]          /api/users/*, /api/role-requests/*
+//   [SECTION: ROUTES: USERS]          /api/users/*, /api/role-requests/*,
+//                                     then /api/juniors/* (routes/juniors.js)
 //   [SECTION: ROUTES: MEETS]          /api/meets/*
 //   [SECTION: ROUTES: SESSIONS]       /api/meets/:id/sessions, schedule.ics
 //   [SECTION: ROUTES: EVENTS]         /api/events (CRUD + status)
@@ -1017,6 +1018,20 @@ app.use(require("./routes/users")({
 
 // Club-change requests + cross-org transfers (Migration 057).
 app.use(require("./routes/club-changes")({ pool, verifyToken, bumpClaimsVersion }));
+
+// Junior profiles (migration 107): under-13 divers that parents, coaches
+// and clubs look after, plus the public handover link they take it over
+// with at 13. The handover routes sit in the auth limiter's "other" bucket.
+app.use(require("./routes/juniors")({
+  pool,
+  verifyToken,
+  authLimiter,
+  bulkWriteLimiter,
+  requireTotpForPrivilegedRoles,
+  push,
+  sendNoticeEmail: email.sendNoticeEmail,
+  sendJuniorHandoverEmail: email.sendJuniorHandoverEmail,
+}));
 
 // =============================================================
 // MEET ROUTES

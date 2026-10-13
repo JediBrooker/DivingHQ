@@ -80,6 +80,8 @@ function htmlEscape(s) {
     .replace(/'/g, "&#39;");
 }
 
+const { underAgeSql } = require("../lib/juniors");
+
 module.exports = function createPublicProfileRouter({ pool, readPool }) {
   if (!pool) throw new Error("createPublicProfileRouter requires { pool, … }");
   const reads = readPool || pool;
@@ -87,7 +89,9 @@ module.exports = function createPublicProfileRouter({ pool, readPool }) {
 
   // The diver behind a public slug, or undefined. All three routes below
   // read this row, each using a few of the columns. Deleted accounts
-  // don't resolve.
+  // don't resolve, and neither do divers under 13 (lib/juniors.js): their
+  // results show on scoreboards, but there's no shareable profile page or
+  // social card for a child.
   async function diverBySlug(slug) {
     return (await reads.query(
       `SELECT u.id, u.full_name,
@@ -97,7 +101,8 @@ module.exports = function createPublicProfileRouter({ pool, readPool }) {
        JOIN organisations o ON u.org_id = o.id
        ${PUBLIC_CLUB_JOIN}
        WHERE u.public_slug = $1
-         AND u.deleted_at IS NULL`,
+         AND u.deleted_at IS NULL
+         AND NOT ${underAgeSql("u")}`,
       [slug],
     )).rows[0];
   }

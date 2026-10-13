@@ -10,6 +10,17 @@ The first section groups features **by persona** — pick your role to see what 
 
 ## By persona
 
+### 👪 Parent of a junior diver (under 13)
+
+| Section | Feature | Where |
+|---|---|---|
+| Junior divers | Add your child (name, date of birth, gender, club) with your agreement recorded | [Junior Divers → Adding your child](/guide/junior-divers#adding-your-child) |
+| Junior divers | See who confirms it and track it from "Waiting to be confirmed" to "Confirmed" | [Junior Divers → What happens next](/guide/junior-divers#what-happens-next-the-club-confirms) |
+| Junior divers | A child the club already added: ask to be linked instead of making a second profile | [Junior Divers → Already on DivingHQ](/guide/junior-divers#if-your-child-is-already-on-divinghq) |
+| Junior divers | Add the other parent by username; take yourself off | [Junior Divers → Once confirmed](/guide/junior-divers#once-your-child-is-confirmed) |
+| Notifications | Get your child's meet notifications and emails, with their name on | [Junior Divers → Notifications](/guide/junior-divers#notifications) |
+| Junior divers | Hand the profile over when your child turns 13 | [Junior Divers → When your child turns 13](/guide/junior-divers#when-your-child-turns-13) |
+
 ### 🌐 Spectator (no login required)
 
 | Section | Feature | Where |

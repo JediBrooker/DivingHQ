@@ -727,6 +727,10 @@ const CLEANUP_STEPS = [
   ["events", "DELETE FROM events WHERE id = ANY(@events)"],
   ["meets", "DELETE FROM meets WHERE id = ANY(@meets)"],
   ["club_admins", "DELETE FROM club_admins WHERE org_id = @org OR user_id = ANY(@users)"],
+  // Junior profiles cascade off users anyway; listed so the counts say so.
+  // A junior added in the rehearsal org is somebody collect() didn't seed,
+  // so cleanup refuses over them before it gets this far.
+  ["junior_profiles", "DELETE FROM junior_profiles WHERE org_id = @org OR user_id = ANY(@users)"],
   ["user_org_roles", "DELETE FROM user_org_roles WHERE org_id = @org OR user_id = ANY(@users)"],
   // users.org_id is ON DELETE RESTRICT, so the users go before the org,
   // and only ours: collect() refused if anyone else was in there.

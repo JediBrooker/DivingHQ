@@ -12,7 +12,9 @@
 // expose is already public via the meet scoreboards and the archive
 // (and cross-org comparison was the explicit feature request that
 // drove that). dashboard_widgets is private though;
-// canViewDiverPrivate gates that single field.
+// canViewDiverPrivate gates that single field. Divers under 13 are the
+// exception: only their parents, coaches, club and federation see these
+// (lib/juniors.js profileHiddenFrom), everyone else gets the 404.
 //
 // All the heavy SQL CTEs (PER_DIVE, FULL_FIELD_RANKING) live in
 // db/queries.js so a fix to the dive-points logic only has to
@@ -28,6 +30,7 @@ const {
 const { perDiveSelect, perDivePointsCte } = require("../lib/scoring-sql");
 const { uuidParams } = require("../lib/uuid-params");
 const { PUBLIC_CLUB_JOIN } = require("../lib/club-approvals");
+const { profileHiddenFrom } = require("../lib/juniors");
 
 // Catalog of widget IDs the diver can enable on their dashboard.
 // Validated against the inbound array so a typo can't poison the
@@ -172,6 +175,9 @@ module.exports = function createDiverProfileRouter({
       );
       if (!diverRes.rows.length)
         return res.status(404).json({ error: "Diver not found" });
+      // Under 13 it's the diver's own people only (lib/juniors.js).
+      if (await profileHiddenFrom(reads, req.user, req.params.id))
+        return res.status(404).json({ error: "Diver not found", code: "junior_private" });
       const diver = diverRes.rows[0];
 
       // No view gate on purpose: competitive profiles are public, same
@@ -347,6 +353,9 @@ module.exports = function createDiverProfileRouter({
       );
       if (!diverRes.rows.length) {
         return res.status(404).json({ error: "Diver not found" });
+      }
+      if (await profileHiddenFrom(reads, req.user, req.params.id)) {
+        return res.status(404).json({ error: "Diver not found", code: "junior_private" });
       }
       const id = req.params.id;
       const orgId = diverRes.rows[0].org_id;

@@ -8,7 +8,7 @@ DivingHQ has three diver-facing surfaces:
 
 All three work on phone (most divers use phones) or desktop. The signed-in app shell uses a **light theme by default**; switch to dark with the theme toggle in the top bar, or under **Appearance** on **Settings** on a phone. Your preference is saved in `localStorage`.
 
-You need to be 13 or older to have an account. The [FAQ](/guide/faq#how-old-do-i-have-to-be-to-have-an-account) covers what happens for younger divers.
+You need to be 13 or older to have an account. Younger divers have a junior profile that a parent or the club looks after; see [Junior Divers](/guide/junior-divers).
 
 ## Meet day view
 

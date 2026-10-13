@@ -32,11 +32,8 @@ const { recordAudit } = require("../lib/audit");
 const createAuthLinks = require("../lib/auth-links");
 const { isUuid } = require("../lib/uuid");
 const { mintSocketTicket } = require("../lib/socket-ticket");
-
-// Loose on purpose, something@something.tld: the verification link is what
-// actually proves the address. Register, register-org and the email change
-// all check against this.
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// Shared with the junior handover (routes/juniors.js).
+const { EMAIL_RE, USERNAME_RE, validatePassword, safeText } = require("../lib/account-rules");
 
 // Plant the JWT in the httpOnly session cookie. This is the SPA's
 // session of record, browser JS can neither read nor exfiltrate it.
@@ -111,31 +108,6 @@ const DUMMY_BCRYPT_HASH = bcrypt.hashSync(
   12,
 );
 
-// Centralised password policy, applied to every set-password
-// path (register, register-org, password change, password reset).
-// Returns null on success, or a user-facing error string.
-//
-// Policy:
-//   * minimum 12 characters (NIST SP 800-63B's lower bound for
-//     memorised secrets without complexity rules; the longer
-//     floor more than compensates for not requiring symbols).
-//   * must contain at least one letter AND one digit, to block
-//     the most trivially weak choices (all-digits PINs, single
-//     dictionary words).
-//
-// Deliberately NOT enforced here: symbol classes, max length,
-// breached-password lookups. Those are the next two upgrades
-// (zxcvbn or HIBP k-anonymity) and can layer on top without
-// changing this signature.
-function validatePassword(pw) {
-  if (typeof pw !== "string" || pw.length < 12) {
-    return "Password must be at least 12 characters";
-  }
-  if (!/[A-Za-z]/.test(pw) || !/\d/.test(pw)) {
-    return "Password must contain at least one letter and one digit";
-  }
-  return null;
-}
 
 // Clubs this user admins, [{ id, name, region_id, org_claim_state }]. Same reasoning as
 // has_dependents below: a club admin grant lands whenever the federation
@@ -799,18 +771,6 @@ module.exports = function createAuthRouter({
     }
   });
 
-  // Strip control chars + cap length on free-text user input. Used
-  // on full_name + new_club_name during registration so a malicious
-  // user can't smuggle CR/LF (header/email-body injection) or
-  // multi-megabyte payloads through the form.
-  function safeText(input, maxLen = 100) {
-    if (typeof input !== "string") return null;
-    // Strip all control chars (incl. CR, LF, tab, BOM) and trim.
-    const cleaned = input.replace(/[\x00-\x1f\x7f​-‏﻿]/g, "").trim();
-    if (!cleaned) return null;
-    return cleaned.slice(0, maxLen);
-  }
-
   // Self-register as a user within an existing org. Email
   // verification (Migration 021) is now mandatory: the user is
   // created with email_verified_at = NULL and login is blocked
@@ -882,7 +842,7 @@ module.exports = function createAuthRouter({
     if (!cleanUsername) {
       return res.status(400).json({ error: "Username is required" });
     }
-    if (!/^[a-zA-Z0-9._-]{2,50}$/.test(cleanUsername)) {
+    if (!USERNAME_RE.test(cleanUsername)) {
       return res.status(400).json({
         error: "Username must be 2–50 characters of letters, digits, dot, underscore, or hyphen",
       });
@@ -1295,7 +1255,7 @@ module.exports = function createAuthRouter({
       });
     }
     if (!cleanUsername) return res.status(400).json({ error: "Username is required" });
-    if (!/^[a-zA-Z0-9._-]{2,50}$/.test(cleanUsername)) {
+    if (!USERNAME_RE.test(cleanUsername)) {
       return res.status(400).json({
         error: "Username must be 2-50 characters of letters, digits, dot, underscore, or hyphen",
       });

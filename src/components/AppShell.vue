@@ -23,7 +23,7 @@ import {
   ListChecks, BookOpen, Users, Building2, ScrollText,
   PanelLeftClose, PanelLeftOpen, ChevronRight, Search, CircleHelp,
   Bell, User, Inbox, LogOut, EllipsisVertical, CreditCard, Award, Gavel,
-  History, Receipt, Heart, Layers, Wallet, UserCheck, SlidersHorizontal, Scale, Medal, Settings, Menu, X, ArrowLeft,
+  History, Receipt, Heart, Layers, Wallet, UserCheck, SlidersHorizontal, Scale, Medal, Settings, Menu, X, ArrowLeft, Baby,
 } from '@lucide/vue'
 
 const router = useRouter()
@@ -115,6 +115,8 @@ const NAV = [
   { key: 'account', group: 'Account', icon: User, items: [
     { to: '/profile', label: 'My profile', labelKey: 'dashboard.my_profile', icon: User },
     { to: '/inbox', label: 'Inbox', labelKey: 'dashboard.inbox', icon: Inbox },
+    // Everyone: a parent with no other role needs it most.
+    { to: '/juniors', label: 'Junior divers', labelKey: 'juniors.nav', icon: Baby },
     { to: '/settings', label: 'Settings', icon: Settings },
   ] },
   { key: 'admin', group: 'Admin', icon: SlidersHorizontal, sysadminOnly: true, items: [

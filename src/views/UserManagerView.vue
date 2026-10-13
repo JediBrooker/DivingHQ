@@ -6,6 +6,7 @@ import { RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useFeaturesStore } from '@/stores/features'
+import JuniorQueue from '@/components/JuniorQueue.vue'
 import { confirmAction } from '@/composables/useConfirm'
 import { showSuccess, showError } from '@/composables/useNotify'
 import { useCountryOptions, isKnownCountry } from '@/composables/useCountryOptions'
@@ -31,6 +32,7 @@ function lastAdminMessage() {
 const requests = ref([])
 const clubRequests = ref([])     // club-change / org-transfer requests
 const guardianRequests = ref([]) // parents asking to pay for a child (payments on only)
+const juniorPending = ref(0)     // junior divers + their parent links to confirm (JuniorQueue)
 const pendingOrgs = ref([])      // federations awaiting approval (system admin only)
 const allOrgList = ref([])       // every org, for the pending cards' country checks (system admin only)
 const orgsNeedingCountry = ref([])  // live orgs signups can't find by country (system admin only)
@@ -113,7 +115,7 @@ const stats = computed(() => {
   const counts = {
     total: allUsers.value.length,
     pending: requests.value.length + pendingClubRequests.value.length + pendingOrgs.value.length
-      + guardianRequests.value.length,
+      + guardianRequests.value.length + juniorPending.value,
   }
   PRIMARY_ROLES.forEach(r => { counts[r] = 0 })
   for (const u of allUsers.value) {
@@ -560,6 +562,15 @@ async function loadGuardianRequests() {
   } catch { guardianRequests.value = [] }
 }
 
+// Just the count, for the Pending badge before the tab is opened;
+// JuniorQueue keeps it current once it's on screen.
+async function loadJuniorPending() {
+  try {
+    const out = await auth.apiFetch('/api/juniors/pending')
+    juniorPending.value = (out?.juniors?.length || 0) + (out?.parent_links?.length || 0)
+  } catch { juniorPending.value = 0 }
+}
+
 async function reviewGuardianRequest(id, decision) {
   try {
     await auth.apiFetch(`/api/guardian-requests/${id}/review`, {
@@ -961,7 +972,7 @@ function pageNums() {
 
 onMounted(async () => {
   window.addEventListener('keydown', onKeyDown)
-  await Promise.all([loadRequests(), loadClubRequests(), loadGuardianRequests(), loadPendingOrgs(), loadUsers()])
+  await Promise.all([loadRequests(), loadClubRequests(), loadGuardianRequests(), loadJuniorPending(), loadPendingOrgs(), loadUsers()])
 })
 
 onUnmounted(() => {
@@ -1009,7 +1020,13 @@ onUnmounted(() => {
 
     <!-- Requests tab -->
     <div v-if="activeTab === 'requests'" class="card">
-      <div v-if="!requests.length && !pendingClubRequests.length && !pendingOrgs.length && !guardianRequests.length" class="empty-state">{{ $t('user_manager.no_pending') }}</div>
+      <div v-if="!requests.length && !pendingClubRequests.length && !pendingOrgs.length && !guardianRequests.length && !juniorPending" class="empty-state">{{ $t('user_manager.no_pending') }}</div>
+
+      <!-- Junior divers and parents added to one (lib/juniors.js). Not
+           behind payments. Hides itself when there's nothing. -->
+      <div v-if="juniorPending" class="club-requests-block" data-testid="um-junior-requests">
+        <JuniorQueue :title="$t('juniors.queue_title')" hide-when-empty show-club @count="n => juniorPending = n" />
+      </div>
 
       <!-- Pending federation registrations (system admin only) -->
       <div v-if="pendingOrgs.length" class="club-requests-block">
@@ -1252,7 +1269,8 @@ onUnmounted(() => {
                 <span v-if="user.is_system_admin" class="sys-badge sys-badge-inline">{{ $t('user_manager.sys_badge_short') }}</span>
               </td>
               <td class="dim">
-                <div>@{{ user.username }}</div>
+                <div v-if="user.is_junior"><span class="badge badge-cyan" v-tip="$t('user_manager.junior_badge_tip')">{{ $t('user_manager.junior_badge') }}</span></div>
+                <div v-else>@{{ user.username }}</div>
                 <div v-if="user.email" class="user-email">{{ user.email }}</div>
               </td>
               <td v-if="isSysAdmin" class="org-cell">
@@ -1317,7 +1335,8 @@ onUnmounted(() => {
                       <span v-if="user.is_system_admin" class="sys-badge sys-badge-inline">{{ $t('user_manager.sys_badge_short') }}</span>
                     </td>
                     <td class="dim">
-                      <div>@{{ user.username }}</div>
+                      <div v-if="user.is_junior"><span class="badge badge-cyan" v-tip="$t('user_manager.junior_badge_tip')">{{ $t('user_manager.junior_badge') }}</span></div>
+                      <div v-else>@{{ user.username }}</div>
                       <div v-if="user.email" class="user-email">{{ user.email }}</div>
                     </td>
                     <td>
@@ -1383,7 +1402,8 @@ onUnmounted(() => {
             <span v-if="drawerUser.is_system_admin" class="sys-badge sys-badge-inline">SYS</span>
           </div>
           <div class="drawer-meta">
-            @{{ drawerUser.username }}<span v-if="drawerUser.email"> · {{ drawerUser.email }}</span>
+            <span v-if="drawerUser.is_junior" class="badge badge-cyan" data-testid="um-junior-badge">{{ $t('user_manager.junior_badge') }}</span>
+            <template v-else>@{{ drawerUser.username }}</template><span v-if="drawerUser.email"> · {{ drawerUser.email }}</span>
           </div>
           <div class="drawer-org">
             <span v-if="drawerUser.org_name" class="drawer-org-name">{{ drawerUser.org_name }}</span>
@@ -1491,7 +1511,13 @@ onUnmounted(() => {
              verification, and password reset. Each refreshes the
              user list so the suspended / verified flags update. -->
         <div class="drawer-section-label" style="margin-top:1.5rem">Account</div>
-        <div class="account-actions">
+        <!-- A junior profile has no sign-in to suspend or reset; it's looked
+             after on Junior divers (lib/juniors.js). -->
+        <p v-if="drawerUser.is_junior" class="junior-note" data-testid="um-junior-note">
+          {{ $t('user_manager.junior_drawer_note') }}
+          <RouterLink to="/juniors">{{ $t('juniors.nav') }}</RouterLink>
+        </p>
+        <div v-else class="account-actions">
           <div v-if="drawerUser.suspended_at" class="account-suspended-row">
             <span class="badge badge-amber">Suspended</span>
             <button v-if="!drawerUser.is_system_admin"
@@ -1509,7 +1535,9 @@ onUnmounted(() => {
                   :disabled="drawerAccountBusy"
                   @click="resendVerification">Resend verification email</button>
 
-          <button class="btn btn-ghost btn-sm"
+          <!-- The reset goes to the account's email; without one it can
+               only fail (routes/users.js answers 400). -->
+          <button v-if="drawerUser.email" class="btn btn-ghost btn-sm"
                   :disabled="drawerAccountBusy"
                   @click="sendPasswordReset">Send password reset</button>
         </div>
@@ -1988,6 +2016,7 @@ onUnmounted(() => {
   vertical-align: middle;
 }
 .sys-badge-inline { font-size: 9px; padding: 0.1rem 0.35rem; margin-inline-start: 0.5rem; }
+.junior-note { margin: 0; font-size: var(--text-sm); color: var(--fg-2); line-height: 1.5; max-width: 52ch; }
 
 .org-cell { white-space: nowrap; }
 .org-stack { display: flex; flex-direction: column; gap: 0.15rem; }

@@ -31,6 +31,7 @@ A summary of every kind of data DivingHQ stores. Detail follows in §4 and §6.
 |---|---|---|---|
 | Account (username, full name, email, password hash, country, club, state or region) | You, at sign-up | You; your club's admins; your region's admins; your federation's admins once there is one (§6) | Until you delete the account |
 | Competition details (date of birth, gender, nationality) | An admin in your organisation | You; the admins above; used for age groups and eligibility | Until you delete the account |
+| Junior profiles for divers under 13 (name, date of birth, gender, club; who added it, who agreed and when) | A parent, coach or club admin (§9) | The child's linked parents, linked coaches, their club's and region's admins, the federation's admins; results are public like anyone's | Until it's deleted or handed over to the diver at 13 (§9) |
 | Role requests (the role you asked for and your note) | You | The admins who review them (§6) | Until you delete the account |
 | Dive lists, synchro partner pairings | You or your coach | You, your coach and the meet's organisers; everyone once the event goes Live | Permanent (sporting record) |
 | Scores, rankings, judging history | Judges and meet officials | Public from the moment an event goes Live | Permanent (sporting record) |
@@ -239,6 +240,12 @@ No service can promise perfect security. Use a strong password, turn on 2FA, and
 DivingHQ’s website and mobile apps are intended for direct use by people aged **13 and older**. Children under 13 must not create an account or sign in using another person’s account. New account registration requires a declaration that the person registering is at least 13. We do not collect a date of birth just for this declaration, and it is not verified proof of age. Where an existing competition profile’s date of birth shows that someone is under 13, direct account access is restricted; the competition record is retained.
 
 Parents, guardians, coaches and authorised officials may use their own authorised accounts to manage younger competitors’ entries and results. This does not remove the organiser’s responsibility to establish a lawful basis and obtain any required parental permission before collecting or publishing a child’s information. A guardian link in DivingHQ is not a record of verified parental consent.
+
+**Junior profiles.** A diver under 13 can compete through a junior profile, which a parent, a coach or a club admin adds for them. It holds the child’s name, date of birth, gender and club, and nothing to sign in with: no email address, no password, no photo. Whoever adds it confirms that they are the child’s parent or guardian, or that a parent or guardian has agreed; we record who confirmed it and when. That confirmation is a declaration, not verified consent. A junior profile can’t be used until someone who confirms that club’s divers (the club’s or region’s admins, or the federation’s admins) has checked it; one they turn down is deleted.
+
+While a diver is under 13, their results show publicly like anyone’s (name, club and country on scoreboards, results and records), but their profile page is not public and they don’t appear in the diver search: only their linked parents and coaches, their club’s and region’s admins and the federation’s admins can open it. Notifications and the “meet is live” and “results posted” emails meant for the child go to their linked parents instead, with the child’s name on them.
+
+When the diver turns 13, a parent or the club can send a one-time link to the diver’s own email address. The diver chooses a username and password and the profile becomes their own account, with that email address. A parent or the club can delete a junior profile at any time; if the child has already competed, their name stays on those results as part of the sporting record (§7).
 
 Teenagers aged 13–17 should involve a parent or guardian. Additional parental permission or other protections may be required where they live; a 13+ minimum does not establish compliance with every country’s rules.
 

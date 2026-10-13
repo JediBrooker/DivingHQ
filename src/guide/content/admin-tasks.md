@@ -91,6 +91,7 @@ The Requests tab shows these sections:
 - **Role requests** — pending role grant requests, approve or deny each.
 - **Club change requests** — pending club or org moves, with type badges (`club change` or `transfer`).
 - **Guardian link requests** — a parent asking to pay on a child's behalf, with the child's age. Only shown while payments is switched on. In a country whose federation isn't on DivingHQ yet these go to the child's club instead (see [Club admins](#club-admins)).
+- **Junior divers to confirm** — divers under 13 that a parent, coach or club admin added, and parents asking to be linked to one. Confirm only juniors you can vouch for through their club; confirming lets them be entered in meets. Always shown, payments or not. See [Junior Divers](/guide/junior-divers#for-federation-admins).
 
 For **same-org club changes** (diver moving from one club to another within your federation), a single org-admin approval completes the move.
 
@@ -126,6 +127,7 @@ The short code matters more than you'd think — it's the cyan pill that shows n
 - **Admins** — the club's admins. While the country has no federation you can add co-admins from your members and remove them. The last admin can't step down: their **Remove** stays greyed out until there's a co-admin. Under a federation this list is read-only, because the federation appoints club admins.
 - **Region** — which state, province or home nation the club is in, in countries that have them. Same rule: yours to set until a federation arrives.
 - **Guardian link requests** — a parent asking to pay on behalf of a child in your club, with the child's age. Only while payments is switched on, and only where there's no federation yet (under one, the federation's admins decide them in User Manager). Approve only someone you know is the child's parent or guardian: once linked they can pay the child's fees and see what the child owes. You never see a request you're part of. Ask to pay for your own child and a co-admin, your region or DivingHQ decides it.
+- **Junior divers to confirm** — divers under 13 added by a parent or coach, and parents asking to be linked to one, where there's no federation yet. Confirm only a junior you know is in your club, added by someone who is who they say. Every junior in your club is on **Junior divers** too, where you can fix details, add parents and hand a profile over at 13. See [Junior Divers](/guide/junior-divers#for-club-and-region-admins).
 
 A club admin also runs the club's meets. In Meet Manager, **+ New meet** creates a meet hosted by your club, and from there you have the same tools as a meet manager for that meet's events: entries, panels, the schedule and the Control Room. **Save as template** in the New Event form keeps the settings for next time. Those templates are your club's: your co-admins see them, your region and federation don't.
 
@@ -377,8 +379,9 @@ Email notifications fire automatically (best-effort, never block the response):
 | Role decision | The applicant |
 | Password changed | The user |
 | Password reset link | The user |
-| Meet went Live | Every competitor in any event of the meet |
-| Results posted | Every competitor in the finalised event |
+| Meet went Live | Every competitor in any event of the meet (for a [junior diver](/guide/junior-divers), their parents) |
+| Results posted | Every competitor in the finalised event (for a junior diver, their parents) |
+| Junior diver added, waiting to be confirmed | Whoever confirms the club's divers: the federation's admins, or the club's (region's) admins where there's no federation |
 
 Without `CF_ACCOUNT_ID` and `CF_EMAIL_TOKEN` configured (Cloudflare Email Sending), all email helpers silently no-op. Registrations + password changes still work; just no email.
 

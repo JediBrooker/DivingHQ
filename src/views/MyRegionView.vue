@@ -19,6 +19,7 @@ import EmptyState from '@/components/EmptyState.vue'
 import RoleRequestQueue from '@/components/RoleRequestQueue.vue'
 import JoinRequestQueue from '@/components/JoinRequestQueue.vue'
 import GuardianRequestQueue from '@/components/GuardianRequestQueue.vue'
+import JuniorQueue from '@/components/JuniorQueue.vue'
 import LoadError from '@/components/LoadError.vue'
 
 const { t } = useI18n()
@@ -215,6 +216,11 @@ onMounted(reloadAll)
     <section v-if="selfRun" class="block">
       <h2 class="block-title">{{ $t('my_club.join_requests') }}</h2>
       <JoinRequestQueue :key="`jq-${queueKey}`" show-club @decided="reloadAll" />
+    </section>
+
+    <section v-if="reviewsRequests" class="block" data-testid="region-junior-requests">
+      <h2 class="block-title">{{ $t('juniors.queue_title') }}</h2>
+      <JuniorQueue :key="`jq-${queueKey}`" show-club />
     </section>
 
     <section v-if="reviewsGuardians" class="block" data-testid="region-guardian-requests">

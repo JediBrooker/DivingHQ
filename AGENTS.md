@@ -370,6 +370,25 @@ club admins, payments, records, rep codes), filter on `status = 'active'` or
 answer 409 `club_pending`, and add a test. Deciding lives in
 `lib/club-approvals.js`, never a hand-written `UPDATE clubs SET status`.
 
+**Junior profiles: under-13s nobody signs in to** (migration 107,
+`lib/juniors.js`, `routes/juniors.js`, guide topic `junior-divers`).
+Accounts are 13+ (`lib/direct-use-age.js`), so a younger diver is a
+`users` row with no password and no email plus a `junior_profiles` row.
+A parent, coach or club admin adds one; it's confirmed on the same ladder
+as a diver request (`nearestReviewers`: the federation's admins, else the
+club's, its region's, then the sysadmin), and nobody confirms one they
+added as parent or coach. The diver role is only granted on confirmation,
+so a pending junior can't be entered anywhere. Three things lean on
+"looked after" (`lookedAfterSql`: a pending/active junior, or anyone whose
+DOB says under 13): `lib/push.js sendNotification` sends their
+notifications to their approved guardians with the child's name on the
+front, `sendEventAudienceEmails` mails the guardians instead, and the
+profile/search routes hide anyone under 13 from everyone but their own
+people (`profileHiddenFrom`, `underAgeSql`). A new diver-facing profile or
+search surface has to do the same, and a new notification path should go
+through `push.sendNotification` rather than writing `notifications` rows
+itself, or a child's parents never hear about it.
+
 **Some things belong to their maker, not the hierarchy.** Meets follow the
 "your level and below" rule, but saved event templates (migration 104,
 `docs/club-first-onboarding.md` §21) are the owner's alone: an org's for its
@@ -479,6 +498,8 @@ until the operator has switched maintenance mode on and passed
 | Sysadmin-tunable numeric settings (claim vote rules) | `getAll` / `describeAll` / `set` | `lib/platform-settings.js` |
 | The support address (Reply-To on mail, "contact support" in messages; SPA reads `GET /api/public-config`) | `supportEmail()` / `supportContact()` | `lib/support.js` |
 | What a suspended account is told (login and verifyToken; club admin in unclaimed countries) | `suspendedAccountMessage(claimState)` | `lib/support.js` |
+| Username / password / email / free-text rules (signup, password change and reset, junior handover) | `USERNAME_RE` / `validatePassword(pw)` / `EMAIL_RE` / `safeText(s, max)` | `lib/account-rules.js` |
+| Junior profiles (under 13): who may add, see, manage, confirm; confirm a pending one; who reads a child's notifications; is this profile hidden from this viewer | `relationsFor` / `startsActive` / `juniorFor` (with `.rights`) / `activate` / `noticeRedirects` / `profileHiddenFrom`; SQL `underAgeSql(alias)` / `lookedAfterSql(u, jp)` | `lib/juniors.js` |
 
 If you write the third copy of any of these, **stop and consolidate** into
 a helper. The repo has bled time on duplicated patterns.
