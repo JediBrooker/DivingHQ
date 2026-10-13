@@ -14,6 +14,7 @@ By creating an account you agree to these terms. If you don't agree, please don'
 - One account per person. Don't share your password; you're responsible for what happens under your account. Turning on two-factor authentication is a good idea, and admin roles may require it.
 - You must be at least 13 to create or directly use an account. If you are under the age of legal adulthood where you live, involve your parent or guardian and obtain any permission required by local law. An age declaration is not identity verification or parental consent.
 - Parents, guardians, coaches and authorised officials may manage junior competitors’ entries through their own authorised accounts. This does not permit a child under 13 to sign in. Organisers remain responsible for the authority and any consent required to hold and publish junior competition information (see the Privacy Policy, §9).
+- If you add a junior profile for a diver under 13, you’re confirming that you are their parent or guardian, or that their parent or guardian has agreed. Only add a child you have that authority for.
 - Tell us at [support@divinghq.app](mailto:support@divinghq.app) straight away if you think someone else has used your account.
 
 ## 2. Acting for a club, region or federation

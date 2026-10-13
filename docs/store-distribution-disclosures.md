@@ -214,6 +214,17 @@ The shared website/native signup forms require an unchecked 13+ declaration and 
 
 The age decision removes the planned under-13 direct-use audience. It does not verify users’ ages, establish parental consent for teenagers or junior competition records, resolve worldwide legal requirements, or resolve the separate provider-retention/privacy disclosure questions. Google Data Safety and Apple privacy drafts must still match the final implementation before submission.
 
+## Junior profiles — 13 October 2026 (after build 6)
+
+The server now has **junior profiles** (migration 107, `lib/juniors.js`): a parent, coach or club admin can add a diver under 13, who never signs in. Direct use stays 13+, so the store audience decision above stands, but both store forms need a second look before submission because the service now holds data **about** under-13s, entered by adults:
+
+- Data types: name, date of birth, gender, club and competition results for the child, plus who added the profile and who confirmed a parent agreed. No contact details, credentials, photos or device identifiers for the child.
+- Where it shows: results are public like any diver's; the child's profile page and diver search are limited to linked parents, coaches and the club, region and federation admins.
+- Notifications for the child are delivered to the linked parents' devices, not the child's (the child has none).
+- At 13 the profile is handed over by an emailed one-time link and becomes an ordinary account.
+
+Check Google's Data Safety answers and the Families policy, and Apple's privacy label, against this before submitting. Nothing here was changed in either store console. The bundled privacy policy (§9) and terms describe junior profiles from this change on.
+
 ## Current prepared release — 13 October 2026
 
 This section supersedes the historical draft/upload statuses above. Native **1.2 (5)** replaces build 4 for the 13+ direct-use change: the signed packages have been uploaded and attached in both store drafts. Google targets **13–15, 16–17 and 18+**; Apple uses the corresponding 13+ direct-use audience while retaining regional content ratings. Neither store app has been submitted for review or public release.
