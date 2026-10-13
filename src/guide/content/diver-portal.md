@@ -6,7 +6,9 @@ DivingHQ has three diver-facing surfaces:
 - **Meet day view** (`/me/meet/<eventId>`) — focused phone-deck experience while a meet is in progress: your next dive, current rank, what you need to score for gold/silver/bronze. See [Meet day view](#meet-day-view) below.
 - **Diver Profile** (`/profile/<id>`) — a public-ish dashboard with your career stats, personal bests, score-trend sparkline, and a customisable analytics panel.
 
-All three work on phone (most divers use phones) or desktop. The signed-in app shell uses a **light theme by default**; switch to dark with the theme toggle in the top bar. Your preference is saved in `localStorage`.
+All three work on phone (most divers use phones) or desktop. The signed-in app shell uses a **light theme by default**; switch to dark with the theme toggle in the top bar, or under **Appearance** on **Settings** on a phone. Your preference is saved in `localStorage`.
+
+You need to be 13 or older to have an account. The [FAQ](/guide/faq#how-old-do-i-have-to-be-to-have-an-account) covers what happens for younger divers.
 
 ## Meet day view
 
@@ -219,7 +221,7 @@ Every step is audit-logged. The transfer is only applied once all three confirma
 
 You arrive in the new federation as a diver. Any roles you held in the old one (judge, meet manager, admin and so on) end with the move, along with any club or region you ran there and any role request still waiting there, so ask the new federation for the roles you need.
 
-If you admin a club or region in your old federation, or manage any of its events, those seats end with the move: they belong to the federation that gave them. The club's other admins are told, or its federation if nobody else runs it. You'll be asked to sign in again.
+If you admin a club or region in your old federation, or manage any of its events, those seats end with the move: they belong to the federation that gave them. The club's other admins are told, or its federation if nobody else runs it. You stay signed in: the next page you open is already in the new federation.
 
 ## Cross-org browse
 

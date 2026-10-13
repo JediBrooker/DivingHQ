@@ -79,6 +79,28 @@ test("the guide names the Clubs sidebar entry as it appears", () => {
   }
 });
 
+// Migration 106: a role grant or revoke, a claim decision and a move to
+// another org bump claims_version, and the session rebuilds itself on the
+// next request. The guide went on saying people get signed out, and it
+// offered a sysadmin "force logout" button that never existed.
+test("the guide's sign-out advice matches what the app does", () => {
+  assert.match(read("routes/users.js"), /bumpClaimsVersion\(client, req\.params\.id\)/);
+  const stale = [/forced to sign in again/i, /grants\/revokes a role, the version increments/i,
+    /You'll be asked to sign in again/, /force a logout for any user/i];
+  for (const file of ["src/guide/content/admin-tasks.md", "src/guide/content/faq.md", "src/guide/content/diver-portal.md"]) {
+    for (const re of stale) assert.doesNotMatch(read(file), re, `${file} still says ${re}`);
+  }
+});
+
+// lib/direct-use-age.js sets the minimum age; the sign-up checkbox and the
+// guide's answer both quote it.
+test("the guide gives the same minimum age as the code", () => {
+  const { MINIMUM_DIRECT_USE_AGE: age } = require("../lib/direct-use-age");
+  assert.match(en.auth.register.age_confirmation, new RegExp(`\\b${age} years old`));
+  assert.match(read("src/guide/content/faq.md"),
+    new RegExp(`### "How old do I have to be to have an account\\?"\\n\\n${age} or older\\.`));
+});
+
 // docs/2026-02-18_World-Aquatics_CR-Final.pdf, PART FOUR: Article 13 is
 // age group eligibility. Cancelling the highest and lowest awards is
 // 9.1.5.1-9.1.5.4 (the synchro 3/5 factor 9.1.5.5), and half-point awards

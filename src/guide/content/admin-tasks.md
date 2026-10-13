@@ -61,9 +61,9 @@ When a chip's count is more than a glance can absorb, click the chip itself (rat
 Click any user's row to open the **edit drawer** on the right. The drawer shows:
 
 - **Club assignment** — pick from the org's existing clubs or create a new one inline; saving is immediate.
-- **Personal & competition details** — full name, date of birth, gender, nationality. Saved as a single PUT; blank fields clear the stored value.
+- **Personal & competition details** — full name, date of birth, gender, nationality. Saved as a single PUT; blank fields clear the stored value. Changing the date of birth signs the person out on every device, and if the new date puts them under 13 they can't sign back in. Their results stay (see [FAQ → minimum age](/guide/faq#how-old-do-i-have-to-be-to-have-an-account)).
 - **Account lifecycle** — four actions, each available to an org admin:
-  - **Suspend account** — requires confirmation; the user is blocked at login immediately. Suspended accounts show a badge and a **Reactivate** button instead.
+  - **Suspend account** — requires confirmation; the user is signed out on every device and blocked at login immediately. Suspended accounts show a badge and a **Reactivate** button instead.
   - **Resend verification email** — only shown when the user's email is unverified.
   - **Send password reset** — emails a single-use reset link to the user (requires email to be configured; see [Notifications](#notifications)).
 - **Roles** — current roles in this org, toggled as checkboxes; each change saves automatically and updates the role audit log.
@@ -72,7 +72,7 @@ Click any user's row to open the **edit drawer** on the right. The drawer shows:
 
 ### Granting and revoking roles
 
-Tick the role chip → grant. Untick → revoke. Both write to the role audit log automatically. The user's JWT becomes invalid the moment a role changes (token version is bumped); they're forced to sign in again, picking up the new role.
+Tick the role chip → grant. Untick → revoke. Both write to the role audit log automatically. The person doesn't have to sign out and back in: the next thing they open, on any device they're signed in on, already has the new role, and a revoked one stops working the same way.
 
 Your federation always keeps at least one live **Org Admin**. Unticking it on the last one (yourself included) is refused with a message, and the box ticks itself back; appoint another admin first, or write to DivingHQ support. The same goes for suspending the last one, and for the last one deleting their own account or transferring out. Suspended and deleted accounts don't count as admins.
 
@@ -382,9 +382,13 @@ Email notifications fire automatically (best-effort, never block the response):
 
 Without `CF_ACCOUNT_ID` and `CF_EMAIL_TOKEN` configured (Cloudflare Email Sending), all email helpers silently no-op. Registrations + password changes still work; just no email.
 
+### Push notifications
+
+Push goes to each device a person has switched it on for. Everyone manages their own on **Settings** (`/settings`) → Notifications, one device at a time, and nobody can switch them on for someone else. If a member says they never get alerts, that's the first place to send them: [FAQ → "How do I turn notifications on or off?"](/guide/faq#how-do-i-turn-notifications-on-or-off).
+
 ### In-app inbox
 
-Beyond email, every push notification and in-app banner is retained in the user's **Inbox** (`/inbox`, bell icon in the header) so a missed phone alert isn't lost. Users filter by category (Action required, Coach & team, Results, Operations), toggle unread-only, and **Mark all read**; each row deep-links to the relevant scoreboard, event, or approval queue.
+Beyond email, every push notification and in-app banner is retained in the user's **Inbox** (`/inbox`: the bell icon in the header, or the **Inbox** tab at the bottom of a phone screen) so a missed phone alert isn't lost. Users filter by category (Action required, Coach & team, Results, Operations), toggle unread-only, and **Mark all read**; each row deep-links to the relevant scoreboard, event, or approval queue.
 
 ![The notifications inbox, listing recent notifications with their category and timestamp](/guide-screenshots/inbox.png)
 

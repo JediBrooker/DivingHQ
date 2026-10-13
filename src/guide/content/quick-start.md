@@ -14,6 +14,7 @@ Go to [Create an account](/register) and fill in your name, a username, your ema
 - **State or region.** Countries with states, provinces or home nations (Australia, Canada and the UK so far) ask which one you're in.
 - **Club.** If your club is already listed, pick it. You join it straight away, and the role you ask for is approved by its club admin (or your federation's admins, if your country has a federation on DivingHQ). If it isn't, choose **+ Create a new club** and give it a name and an optional short code (up to 8 letters, numbers or dashes, e.g. `SYD`). The short code is the chip shown next to your divers on the scoreboard.
 - **I want to register as.** Diver is the default. Pick what you'll actually do; everyone starts as a spectator and gets more once approved.
+- **I am 13 years old or older.** Tick it to confirm. Accounts are for people 13 and up; the [FAQ](/guide/faq#how-old-do-i-have-to-be-to-have-an-account) covers younger divers.
 
 In a country with no federation on DivingHQ yet, **creating a club makes you its club admin** straight away. In a country whose federation already runs DivingHQ, a new club waits for the federation to approve it (unless it lets clubs join automatically). It asks them once you've confirmed your email, and you can sign in and dive while they decide. When they approve it they usually make you its admin; otherwise the federation decides who admins each club. Your dashboard shows the club as waiting until then, and you'll get an email either way.
 
@@ -25,7 +26,7 @@ Nothing arrived after a few minutes? Check your spam folder. Then try signing in
 
 ## 3. Bring in your members
 
-Copy your club's **invite link** from **My club** (`/club`, in the sidebar) and send it to your members. It opens the sign-up form with your country and club already picked. Each person chooses the role they want: diver, coach, judge or referee.
+Copy your club's **invite link** from **My club** (`/club`, in the sidebar, or under **Menu** on a phone) and send it to your members. It opens the sign-up form with your country and club already picked. Each person chooses the role they want: diver, coach, judge or referee.
 
 Their requests land on My club too. Approve or reject each one there. A referee request is the exception: in a country with no federation on DivingHQ yet it goes to DivingHQ, because a referee can act at any club's meet in the country.
 

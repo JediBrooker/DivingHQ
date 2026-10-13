@@ -33,7 +33,7 @@ Three entry points carry the language switcher:
 
 - **The home page** — top-right of the hero. Visible before sign-in so spectators / new users can pick their language before doing anything.
 - **The login page** — top-right next to the wordmark, for the same reason.
-- **Your diver profile** — in the Preferences section ("Language"), accessible from the sidebar account menu → My Profile → Preferences. This is the per-user locale control for signed-in users; the signed-in app shell top bar carries the **theme toggle** (light/dark) instead.
+- **Your diver profile** — in the Preferences section ("Language"), accessible from the sidebar account menu → My Profile → Preferences. This is the per-user locale control for signed-in users. The **theme toggle** (light/dark) lives in the signed-in top bar instead, or under **Appearance** on **Settings** on a phone.
 
 The switcher is a flag-prefixed dropdown. Tap the flag, pick a language, the entire app re-renders into the new locale immediately — no reload required.
 

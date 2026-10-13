@@ -216,7 +216,12 @@ Includes everything an org admin can do, **across every federation**, plus:
 | Anyone | Register an account, and start or join a club | [Quick Start → 1. Create your account and your club](/guide/quick-start#1-create-your-account-and-your-club) |
 | Anyone | Email verification | [FAQ → Getting started](/guide/faq#getting-started) |
 | Anyone | Forgot password / reset link | [FAQ → "I forgot my password"](/guide/faq#i-forgot-my-password) |
+| Anyone | Accounts are for ages 13 and up (sign-up asks you to confirm) | [FAQ → "How old do I have to be to have an account?"](/guide/faq#how-old-do-i-have-to-be-to-have-an-account) |
+| Anyone | Stay signed in until you press Sign out | [FAQ → "How long do I stay signed in?"](/guide/faq#how-long-do-i-stay-signed-in) |
 | Anyone | "Log out everywhere" | [FAQ → "I need to log out everywhere"](/guide/faq#i-need-to-log-out-everywhere) |
+| Anyone | Turn push notifications on or off for each device, on Settings | [FAQ → "How do I turn notifications on or off?"](/guide/faq#how-do-i-turn-notifications-on-or-off) |
+| Anyone | Phone layout: a tab bar along the bottom, with the sidebar under Menu | [FAQ → "Where's the sidebar on my phone?"](/guide/faq#wheres-the-sidebar-on-my-phone) |
+| Anyone | Delete your account | [FAQ → "How do I delete my account?"](/guide/faq#how-do-i-delete-my-account) |
 | Anyone | Two-factor authentication (TOTP) | [FAQ → Two-factor authentication](/guide/faq#how-do-i-turn-on-two-factor-authentication) |
 | Org admin | First-run `/setup` wizard | [FAQ → First-run setup wizard](/guide/faq#i-just-signed-up-as-a-federation-admin-and-the-dashboard-sent-me-to-setup-what-is-that) |
 

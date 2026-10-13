@@ -11,10 +11,10 @@ Common questions, error states, and "why is X happening" answers, plus a glossar
 | Start Event, Control Room, scoring, judges | [Running a meet](#running-a-meet) |
 | Boards, warmups, judge overlaps, delays | [Session scheduler](#session-scheduler) |
 | Synchro panels and partners | [Synchro events](#synchro-events) |
-| Passwords, two-factor, signing out everywhere | [Authentication](#authentication) |
+| Passwords, two-factor, staying signed in, notifications, deleting your account | [Authentication](#authentication) |
 | Scoreboard, PDFs, performance | [Performance](#performance) |
 
-Can't find it here? Write to [support@divinghq.app](mailto:support@divinghq.app) and a person will answer.
+Can't find it here? Write to [support@divinghq.app](mailto:support@divinghq.app) and a person will answer. The [support page](/support) says what to put in the email.
 
 ## Getting started
 
@@ -25,6 +25,24 @@ Confirm your email address first. As soon as you sign up we send a "confirm your
 Nothing arrived? Give it a few minutes and check your spam or junk folder. Then try to sign in anyway: the sign-in page tells you the address isn't confirmed yet and offers **Send a new verification link**.
 
 Roles don't hold up signing in. Everyone starts as a spectator, and the role you asked for (diver, judge, coach, referee) arrives once whoever reviews it approves it: your club admin, your federation, or DivingHQ. Until then you can sign in and look around.
+
+### "How old do I have to be to have an account?"
+
+13 or older. The sign-up form asks you to tick **I am 13 years old or older**; it doesn't ask for a date of birth just for that. If a profile's date of birth shows someone under 13, that account can't sign in, and the sign-in page says why. Write to [support@divinghq.app](mailto:support@divinghq.app) if the date on your profile is wrong.
+
+A younger diver whose profile is already on DivingHQ keeps it, and keeps their results. They just can't sign in, so a linked coach or the meet's managers look after their entries and dive lists from their own accounts. Divers aged 13 to 17 should sign up with a parent or guardian involved.
+
+### "Where's the sidebar on my phone?"
+
+On a phone, and on most tablets held upright, the sidebar folds away and a tab bar runs along the bottom of the screen:
+
+- **Home**, your dashboard
+- **Work**, your main job: the Control Room, Judge Terminal, Dive Sheets or the coach view, whichever of those you have first. If you have none of them it's **Results**, the scoreboard.
+- **Inbox**
+- **Menu**, everything the sidebar holds, with a **Find a tool** box at the top
+- **Settings**
+
+Wherever this guide says something is in the sidebar, look under **Menu**.
 
 ### "I registered a federation and it says it's waiting for approval"
 
@@ -253,15 +271,39 @@ The link is single-use AND time-limited. Causes of failure:
 - Someone else (or you, on another device) already used the link → request a new one
 - Your password was changed via another path between request and click → request a new one (the bcrypt fingerprint guard kicks in)
 
+### "How long do I stay signed in?"
+
+Until you press **Sign out**. Closing the browser, closing the app or restarting your phone doesn't sign you out, so a judge's phone is still signed in on the next meet day. **Sign out** is in the account menu at the bottom of the sidebar and on **Settings** (`/settings`), and it only signs out the device you press it on.
+
+A device nobody has opened for 90 days gets signed out. Every device on your account is signed out when your password changes or is reset, when two-factor is turned on or off, and when you confirm a new email address.
+
+A role change doesn't sign you out. Once a role you asked for is approved, or an admin takes one away, the next thing you open shows the change, on every device you're signed in on.
+
 ### "I need to log out everywhere"
 
-Change your password from your profile (**Change Password**). Every existing session for your user becomes invalid (token version is bumped server-side); every session is forced to re-login.
+Change your password from your profile (**Change Password**), or reset it from the sign-in page if you can't get in. Either one signs out every device on your account straight away, a lost phone included. Since you stay signed in until you sign out, do this whenever a phone or laptop you were signed in on goes missing.
 
-The system admin can also force a logout for any user from User Manager — useful if a phone is lost.
+If someone else may be using the account, your federation's admin can **Suspend** it from User Manager (DivingHQ support can, where your country has no federation yet). That signs it out everywhere and blocks sign-in until they reactivate it.
 
 ### "How do I turn on two-factor authentication?"
 
 Open your profile and click **🔐 Two-Factor Auth**. Scan the QR code with an authenticator app (1Password, Authy, Google Authenticator and the like), type in the 6-digit code it shows, and save the recovery codes somewhere safe. From then on sign-in asks for a code after your password. If you lose your phone, a recovery code gets you in once; each works a single time.
+
+### "How do I turn notifications on or off?"
+
+Open **Settings** (`/settings`): it's in the account menu, and it's the **Settings** tab at the bottom of a phone screen. The Notifications section shows whether this device gets push notifications and turns them on or off. It's per device, so switching them off on your laptop leaves your phone alone.
+
+Your browser may ask about notifications the first time you sign in on it. If you said no, Settings shows **Blocked in browser settings**: allow notifications for divinghq.app in the browser's own settings, then come back and turn them on.
+
+On an iPhone or iPad, Safari only offers notifications once DivingHQ is on your Home Screen (**Share → Add to Home Screen**) and you've opened it from there.
+
+Everything sent to you also lands in your **Inbox** (`/inbox`), so a notification you missed, or switched off, isn't lost.
+
+### "How do I delete my account?"
+
+Open your profile, find **Delete account** and press **Delete my account…**, then confirm with your password. That signs you out everywhere and removes your login, email and personal details. Your name stays on the results of dives you competed in and panels you judged, because they're part of each meet's record.
+
+Can't sign in any more? [Delete your DivingHQ account](/delete-account) explains how to ask by email instead, and lists what's kept. If you're your federation's last admin, appoint another one first.
 
 ## Performance
 
@@ -334,7 +376,9 @@ The boundaries match the official WA judging guidelines so the colour treatment 
 
 ### Token version
 
-A small integer on each user's record. The current value is signed into every JWT. When the user changes their password or an admin grants/revokes a role, the version increments — every existing token becomes invalid the next request, forcing re-login. The "log them out everywhere" hammer.
+A small integer on each user's record. The current value is signed into every JWT. It goes up when the user changes or resets their password, turns two-factor on or off or confirms a new email address, and when an admin suspends the account or corrects its date of birth. Every existing session then ends on its next request. The "log them out everywhere" hammer.
+
+Role changes don't touch it. A grant or revoke, a claim decision or a move to another federation bumps a separate claims version instead, and each signed-in device rebuilds its roles on its next request without signing out.
 
 ### Audit log
 
