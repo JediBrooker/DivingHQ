@@ -15,6 +15,7 @@ import { usePlural } from '@/composables/usePlural'
 import RoleRequestQueue from '@/components/RoleRequestQueue.vue'
 import JoinRequestQueue from '@/components/JoinRequestQueue.vue'
 import GuardianRequestQueue from '@/components/GuardianRequestQueue.vue'
+import JuniorQueue from '@/components/JuniorQueue.vue'
 import LoadError from '@/components/LoadError.vue'
 import ClubSetupCard from '@/components/ClubSetupCard.vue'
 
@@ -257,6 +258,14 @@ onMounted(() => {
     <section v-if="selfRun" class="block">
       <h2 class="block-title">{{ $t('my_club.join_requests') }}</h2>
       <JoinRequestQueue :show-club="clubs.length > 1" @decided="onJoinDecided" />
+    </section>
+
+    <!-- Junior divers (lib/juniors.js) are confirmed on the same terms as
+         role requests: by the club where there's no federation. Not behind
+         payments, a junior is about competing, not paying. -->
+    <section v-if="reviewsRequests" class="block" data-testid="club-junior-requests">
+      <h2 class="block-title">{{ $t('juniors.queue_title') }}</h2>
+      <JuniorQueue :show-club="clubs.length > 1" />
     </section>
 
     <section v-if="reviewsGuardians" class="block" data-testid="club-guardian-requests">

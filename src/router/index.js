@@ -65,6 +65,13 @@ const routes = [
     meta: { titleKey: 'profile.delete.title' },
   },
   {
+    // A junior diver taking their profile over at 13 (routes/juniors.js).
+    // Public, the token in the link is the credential.
+    path: '/junior-handover',
+    component: () => import('@/views/JuniorHandoverView.vue'),
+    meta: { titleKey: 'juniors.page_title' },
+  },
+  {
     path: '/forgot-password',
     component: () => import('@/views/ForgotPasswordView.vue'),
     meta: { titleKey: 'auth.forgot.title' },
@@ -136,6 +143,14 @@ const routes = [
     path: '/membership',
     component: () => import('@/views/MembershipView.vue'),
     meta: { requiresAuth: true, requiresRole: ['diver'], allowGuardian: true, appShell: true, feature: 'payments' },
+  },
+  {
+    // Junior profiles for under-13s (lib/juniors.js). Open to anyone signed
+    // in, not behind payments: a parent adding their child needs nothing
+    // else, and the page shows each person only the juniors that are theirs.
+    path: '/juniors',
+    component: () => import('@/views/JuniorsView.vue'),
+    meta: { requiresAuth: true, appShell: true, titleKey: 'juniors.title' },
   },
   {
     path: '/guardians',

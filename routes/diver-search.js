@@ -18,6 +18,7 @@
 const express = require("express");
 const { ADMIN_ORG_ID } = require("../lib/admin-org");
 const { rejectBadUuidQuery } = require("../lib/uuid-params");
+const { underAgeSql } = require("../lib/juniors");
 
 module.exports = function createDiverSearchRouter({ pool, verifyToken }) {
   const router = express.Router();
@@ -25,6 +26,8 @@ module.exports = function createDiverSearchRouter({ pool, verifyToken }) {
   // Both reads here join approved clubs only (cl.status = 'active', the
   // PUBLIC_CLUB_JOIN rule): any signed-in user can search, and a club
   // still waiting on its federation keeps its name private (migration 096).
+  // Divers under 13 aren't findable either (lib/juniors.js): their results
+  // are on the scoreboards, their profile pages aren't public.
   //
   // Cross-org diver autocomplete. Min 2 chars, ≤20 results, ranks
   // prefix matches above contains-anywhere. Parameterised, so no SQL
@@ -44,6 +47,7 @@ module.exports = function createDiverSearchRouter({ pool, verifyToken }) {
          LEFT JOIN clubs cl    ON cl.id = u.club_id AND cl.status = 'active'
          WHERE u.full_name ILIKE $1
            AND u.deleted_at IS NULL
+           AND NOT ${underAgeSql("u")}
          ORDER BY
            /* prefix match wins over contains-anywhere */
            CASE WHEN u.full_name ILIKE $2 THEN 0 ELSE 1 END,
@@ -83,6 +87,7 @@ module.exports = function createDiverSearchRouter({ pool, verifyToken }) {
            AND ($3::uuid IS NULL OR u.club_id = $3::uuid)
            AND ($4::text IS NULL OR o.country_code = $4::text)
            AND u.deleted_at IS NULL
+           AND NOT ${underAgeSql("u")}
          ORDER BY u.full_name ASC
          LIMIT $5 OFFSET $6`,
         [

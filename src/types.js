@@ -1126,6 +1126,55 @@
  * @property {?string} [dependent_dob]  org admins and the sysadmin only
  */
 
+// ---- junior divers (migration 107) -----------------------------
+
+/**
+ * @typedef {Object} JuniorProfile
+ * GET /api/juniors (routes/juniors.js). A diver under 13 the caller looks
+ * after, coaches, or runs the club of (lib/juniors.js). Nobody signs in to
+ * one. date_of_birth and handover only come to someone who manages it.
+ *
+ * @property {string}  id
+ * @property {string}  full_name
+ * @property {?string} date_of_birth    YYYY-MM-DD, managers only
+ * @property {?number} age
+ * @property {?string} gender           'female' | 'male' | 'other'
+ * @property {?string} club_id
+ * @property {?string} club_name
+ * @property {'pending'|'active'} status
+ * @property {'parent'|'coach'|'club'|'org'} created_as
+ * @property {string}  created_at
+ * @property {{ link_id: string, user_id: string, full_name: string, username: string,
+ *   status: 'pending'|'approved' }[]} parents
+ * @property {{ guardian: ?('approved'|'pending'), coach: boolean, club_admin: boolean, added: boolean }} you
+ * @property {{ manage: boolean, remove: boolean, hand_over: boolean }} can
+ * @property {?{ email: string, sent_at: string, expires_at: string }} handover
+ */
+
+/**
+ * @typedef {Object} JuniorQueue
+ * GET /api/juniors/pending: what the caller confirms, on the diver-request
+ * ladder. Juniors go to POST /api/juniors/:id/review, parent links to
+ * POST /api/guardian-requests/:id/review.
+ *
+ * @property {{ id: string, full_name: string, gender: ?string, age: ?number, club_name: ?string,
+ *   created_as: 'parent'|'coach'|'club'|'org', created_at: string,
+ *   added_by: { full_name: ?string, username: ?string }, possible_duplicate: boolean }[]} juniors
+ * @property {{ id: string, requested_at: string, junior_id: string, junior_name: string, age: ?number,
+ *   club_name: ?string, parent: { full_name: string, username: string } }[]} parent_links
+ */
+
+/**
+ * @typedef {Object} JuniorOptions
+ * GET /api/juniors/options: the clubs a junior can be added to, and as
+ * what. confirmed_as lists the ways that start confirmed.
+ *
+ * @property {{ id: string, name: string, as: ('parent'|'coach'|'club'|'org')[],
+ *   confirmed_as: ('parent'|'coach'|'club'|'org')[] }[]} clubs
+ * @property {string[]} genders
+ * @property {number} minimum_age
+ */
+
 // ---- ops --------------------------------------------------------
 
 /**

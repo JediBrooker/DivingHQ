@@ -69,6 +69,10 @@ const CATEGORY_LANES = {
   // parent hearing the answer is news.
   guardian_request:         'action',
   guardian_decision:        'ops',
+  // Same for a junior diver (lib/juniors.js): confirming one is the
+  // reviewer's job, the adder hearing the answer is news.
+  junior_request:           'action',
+  junior_decision:          'ops',
   claim_vote:               'action',
   claim_review:             'action',
   claim_decided:            'ops',
@@ -223,6 +227,8 @@ const CATEGORY_LABEL_KEYS = {
   region_decision:             'region_request',
   guardian_request:            'guardian_link',
   guardian_decision:           'guardian_link',
+  junior_request:              'junior_request',
+  junior_decision:             'junior_decision',
   claim_vote:                  'claim_vote',
   claim_review:                'claim_review',
   claim_decided:               'claim_decided',
