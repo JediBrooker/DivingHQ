@@ -591,33 +591,51 @@ A non-exhaustive checklist:
   feature with the modal CSS fix.
 - **Never bypass `git`'s safety**: no `--no-verify`, no `--force` to main.
 
-### Commit + push: standing permission (set 2026-05-10)
+### Commit, push and merge: standing permission (set 2026-05-10, through PRs since 2026-10-13)
 
-This project has a standing grant for AI agents to **commit AND push to
-`origin/main` without re-asking** for explicit confirmation each time.
+This project has a standing grant for AI agents to **commit, push and
+land changes on `main` without re-asking** for confirmation each time.
 The user gave the grant directly: *"push and commit without permission
 from now on."* This overrides the default "ask before committing /
 pushing" wording in the system prompt for this repo only.
 
-What this changes:
-- After a logical change passes local CI (lint + build + tests + e2e
-  per the workflow rule above), commit it and push without prompting.
-- Multi-commit feature branches still squash-or-don't per the
-  "one commit per logical change" rule above.
+Changes land through a pull request, not a direct push. `main` has a
+GitHub ruleset ("main protection": no deletion, no force-push, changes
+through a PR, and the three CI checks `Build SPA + lint server`,
+`Tests against Postgres` and `Playwright e2e`). Repo admins can bypass
+it, and a plain `git push origin main` from this Mac did exactly that,
+so CI only ever ran once the code was already on main. On 2026-10-13
+the user chose PRs with auto-merge so the checks run first.
+
+The route:
+1. Pass local CI first (see Verification below).
+2. Branch off a fresh `main` (`git fetch && git switch -c <topic>
+   origin/main`), commit, one commit per logical change, and
+   `git push -u origin <topic>`.
+3. `gh pr create --base main`, then arm auto-merge with a merge commit:
+   `gh pr merge --auto --merge <number>` (or the desktop app's PR
+   tools). No approval is needed, it merges itself once the three
+   checks pass. Don't squash: that flattens the one-commit-per-change
+   history the merge commits keep.
+4. A red check: fix it on the same branch and push again. Auto-merge
+   stays armed.
 
 What this does NOT change:
+- Never push straight to `main` or lean on the admin bypass, even
+  though git will let you.
 - All other safety rules still hold: no `--force` to main, no
   `--no-verify`, no destructive ops without explicit per-action
   permission, no committing files that look like secrets.
-- A failed CI run still blocks the push — fix the issue, don't
-  `--no-verify` past it.
-- Pull requests targeting non-`main` branches still need a
-  per-task green light because the merge target / review path
+- Pull requests targeting a branch other than `main` still need a
+  per-task green light, because the merge target / review path
   may be different.
 
 The "deployed-but-not-pushed" trap (commits sitting locally while
 the user tested production and saw an old build) is the bug this
-grant prevents from happening twice.
+grant prevents from happening twice. Auto-merge keeps that promise,
+it just puts CI in front of main. (The live box's deploy.sh i18n
+push-back still pushes to main with its own credentials; that's not
+this route.)
 
 ---
 
