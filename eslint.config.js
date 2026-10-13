@@ -28,6 +28,11 @@ module.exports = [
       "test-results/**",
       "coverage/**",
       "wiki/**",
+      // Claude Code puts git worktrees in .claude/worktrees, each a whole
+      // second checkout with its own dist-native and ios/android builds.
+      // Linting those failed verify:local on vendor bundles from a branch
+      // that had already been merged.
+      ".claude/**",
       "**/*.min.js",
       "src/locales/**",
     ],
