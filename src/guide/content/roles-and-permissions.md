@@ -13,6 +13,7 @@ Everyone on DivingHQ has an account in their country's organisation, and one or 
 | Judge | Per event | Judge view (phone) | Score dives over the socket |
 | Coach | Linked divers | Diver Profile + Compare | Track diver form, manage templates |
 | Diver | Self | Competitor view | Submit lists, watch own results |
+| Parent of a junior diver | Their children under 13 | Junior divers | Getting their child into meets, hearing how it went |
 | Spectator | Public | Scoreboard | Zero-friction live spectating |
 
 Role-awareness in practice: the federation admin below gets an admin section in the sidebar and a row of role filter tabs. A diver signing in to the same country sees neither: their dashboard opens on their own next dive and results.
@@ -103,6 +104,7 @@ Runs one club. In a country whose federation isn't on DivingHQ yet, a club admin
 - Where there's no federation yet, approve their members' requests to dive, judge or coach on **My club** (under a federation, its admins review them). Referee requests go to DivingHQ where the country has no federation yet, since a referee can act at any club's meet in the country. Nobody approves their own request for anything but diver: that goes to another admin, the region, or DivingHQ
 - Add and remove co-admins, and say which region the club is in (while the country has no federation; under one, the federation does both)
 - Where there's no federation yet, approve a parent's request to pay on behalf of a child in the club (**Guardian link requests** on **My club**, while payments is switched on). Nobody decides a request they're part of
+- Add [junior divers](/guide/junior-divers) (under 13) for the club, look after every junior in it, and, where there's no federation yet, confirm the ones parents and coaches add (**Junior divers to confirm** on **My club**)
 - Vote on a [claim](#claims) when a federation or state body applies to take over
 
 Club admins see their own members' names, usernames and role requests, and the guardian link requests they decide (who's asking, and the child's age), not the rest of the country.
@@ -212,6 +214,7 @@ Works closely with individual diver data. Spots trends across meets, compares tw
 - Compare two divers head-to-head in the Compare view
 - Save and re-use dive-list templates, scoped per board height
 - See historical scores at the dive-code-and-position level (e.g. their last ten 105Bs)
+- Add a [junior diver](/guide/junior-divers) (under 13) they coach; once the club confirms it they're linked as the junior's coach and enter them in meets
 
 ## Diver
 
@@ -226,6 +229,23 @@ Phone-native and impatient. The night before each meet they submit their list; d
 - Review own profile: recent form, individual judges' scores, PBs by board height
 
 See [Diver Portal](/guide/diver-portal).
+
+## Parent of a junior diver
+
+Not a role you ask for: any account can look after a child under 13. A parent adds their child from **Junior divers**, and once the club (or the federation) confirms it the child can be entered in meets.
+
+**Can:**
+- Add their child as a junior diver, with the agreement recorded
+- Edit the child's name, date of birth and gender, add the other parent by username, and delete the profile
+- Get the child's meet notifications and the meet-live and results emails, with the child's name on them
+- See the child's profile page, which isn't public while they're under 13
+- Hand the profile over when the child turns 13
+
+**Cannot:**
+- Sign the child in, or submit their dive lists (their coach or the meet's organisers enter them)
+- Confirm their own child, even as the club's admin: someone else does
+
+See [Junior Divers](/guide/junior-divers).
 
 ## Spectator
 

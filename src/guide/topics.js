@@ -1,6 +1,6 @@
 // Topic metadata stays in this file and loads with the view, so the sidebar,
 // the pager and "Topic not found." don't wait on anything. The markdown for
-// each topic is its own lazy chunk (loadTopicMarkdown below): all 17 used to
+// each topic is its own lazy chunk (loadTopicMarkdown below): all of them used to
 // be bundled into GuideTopicView, ~300 KB of text to read any one of them.
 //
 // lib/spa-shell.js and two tests read this file as plain text, pulling the
@@ -13,6 +13,12 @@ export const GUIDE_SECTIONS = [
     topics: [
       { slug: 'quick-start', title: 'Quick Start' },
       { slug: 'features', title: 'Features' },
+    ],
+  },
+  {
+    label: 'Parents',
+    topics: [
+      { slug: 'junior-divers', title: 'Junior Divers (under 13)' },
     ],
   },
   {

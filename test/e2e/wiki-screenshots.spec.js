@@ -27,6 +27,7 @@
 // needs a callout, the fix is to crop it (see snapEl) or to describe
 // it in the surrounding prose, not to paint on the PNG.
 
+const crypto = require("node:crypto");
 const { test, expect } = require("@playwright/test");
 const { io } = require("socket.io-client");
 const setup = require("./_setup");
@@ -170,7 +171,11 @@ async function snap(page, name, opts = {}) {
 // and a 1440px-wide page shot would render it four pixels tall.
 async function snapEl(page, selector, name, padding = 12) {
   await hideTransientChrome(page);
-  const box = await page.locator(selector).first().boundingBox();
+  // The app shell scrolls its content pane, not the window, so an element
+  // below the fold has a box outside the screenshot until it's brought in.
+  const el = page.locator(selector).first();
+  await el.scrollIntoViewIfNeeded();
+  const box = await el.boundingBox();
   if (!box) throw new Error(`snapEl: ${selector} has no box`);
   await page.screenshot({
     path: `${SCREENSHOT_DIR}/${name}.png`,
@@ -1672,6 +1677,148 @@ test("extras: pre-meet checklist / judge analysis / user drawer / language switc
 });
 
 // =============================================================
+// PHASE 12: junior divers (under 13), for the parents' guide topic
+// (src/guide/content/junior-divers.md). A country of its own where
+// the clubs run things, so the club admin is the one who confirms,
+// plus one shot of the federation's version in User Manager.
+// =============================================================
+function birthday(years, days = 0) {
+  const d = new Date();
+  d.setUTCFullYear(d.getUTCFullYear() - years);
+  d.setUTCDate(d.getUTCDate() - days);
+  return d.toISOString().slice(0, 10);
+}
+
+// A junior the way routes/juniors.js makes one, for the rows this phase
+// needs to already exist rather than drive through the form.
+async function seedJunior({ orgId, clubId, fullName, dob, gender, status, createdBy, createdAs }) {
+  const id = (await setup.pool.query(
+    `INSERT INTO users (username, full_name, org_id, club_id, date_of_birth, gender)
+     VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+    [`junior-${crypto.randomBytes(6).toString("hex")}`, fullName, orgId, clubId, dob, gender],
+  )).rows[0].id;
+  await setup.pool.query(
+    `INSERT INTO junior_profiles (user_id, org_id, status, created_by, created_as, consent_by)
+     VALUES ($1, $2, $3, $4, $5, $4)`,
+    [id, orgId, status, createdBy, createdAs],
+  );
+  if (status === "active") {
+    await setup.pool.query("INSERT INTO user_org_roles (user_id, org_id, role) VALUES ($1, $2, 'diver')", [id, orgId]);
+  }
+  return id;
+}
+
+test("juniors: a parent adds a child, the club confirms, handover at 13", async ({ page }) => {
+  test.setTimeout(120_000);
+  const orgId = (await setup.pool.query(
+    `INSERT INTO organisations (name, slug, status, claim_state, country_code)
+     VALUES ('Clubs of Testland', $1, 'active', 'unclaimed', 'TST') RETURNING id`,
+    [`e2e-juniors-${Date.now()}`],
+  )).rows[0].id;
+  world.juniorOrgId = orgId;
+  const club = await setup.insertClub({ orgId, name: "Bondi Diving Club", shortCode: "BDC" });
+  const admin = await setup.insertUser({ orgId, role: "coach", fullName: "Sam Taylor", clubId: club.clubId });
+  await setup.pool.query(
+    "INSERT INTO club_admins (club_id, user_id, org_id) VALUES ($1, $2, $3)", [club.clubId, admin.userId, orgId]);
+  const parent = await setup.insertUser({ orgId, role: "spectator", fullName: "Anna Fischer" });
+  // Usernames a reader would recognise, since the queue and the parents
+  // list show them. The stale-org sweep above clears a crashed run's.
+  for (const [u, name] of [[admin, "sam.taylor"], [parent, "anna.fischer"]]) {
+    await setup.pool.query("UPDATE users SET username = $2 WHERE id = $1", [u.userId, name]);
+    u.username = name;
+  }
+  await setup.pool.query("UPDATE users SET username = 'andreas.klein' WHERE id = $1", [world.coach.userId]);
+
+  // 1. The parent fills in the form.
+  await signIn(page, parent.username);
+  await page.goto("/juniors");
+  await settle(page);
+  await page.getByTestId("junior-club").selectOption(club.clubId);
+  await page.getByTestId("junior-name").fill("Mia Fischer");
+  await page.getByTestId("junior-dob").fill(birthday(9, 41));
+  await page.getByTestId("junior-gender").selectOption("female");
+  await page.getByTestId("junior-consent").check();
+  await settle(page, 300);
+  await snapEl(page, '[data-testid="junior-add"]', "juniors-add-child");
+
+  // 2. Added, waiting for the club.
+  await page.getByTestId("junior-submit").click();
+  await expect(page.getByTestId("junior-card")).toHaveCount(1);
+  await expect(page.getByTestId("junior-status")).toContainText(/Waiting/);
+  await settle(page);
+  await snapEl(page, '[data-testid="junior-list"]', "juniors-waiting");
+
+  // 3. The club admin confirms it on My club.
+  await signOut(page);
+  await signIn(page, admin.username);
+  await page.goto("/club");
+  await expect(page.getByTestId("junior-queue-row")).toHaveCount(1);
+  await settle(page);
+  await snapEl(page, '[data-testid="club-junior-requests"]', "juniors-club-confirm");
+  await page.getByTestId("junior-queue-row").getByRole("button", { name: "Confirm" }).click();
+  await expect(page.getByTestId("junior-queue-row")).toHaveCount(0);
+
+  // A brother who turned 13 last week, added by the club a while back,
+  // with Anna already linked as his parent.
+  const leon = await seedJunior({
+    orgId, clubId: club.clubId, fullName: "Leon Fischer", dob: birthday(13, 7), gender: "male",
+    status: "active", createdBy: admin.userId, createdAs: "club",
+  });
+  await setup.pool.query(
+    `INSERT INTO guardians (org_id, guardian_user_id, dependent_user_id, status, reviewed_by, reviewed_at)
+     VALUES ($1, $2, $3, 'approved', $4, now())`,
+    [orgId, parent.userId, leon, admin.userId],
+  );
+
+  // 4. Back to the parent: Mia confirmed, the notice in the inbox, and
+  // the handover form on Leon's card.
+  await signOut(page);
+  await signIn(page, parent.username);
+  await page.goto("/juniors");
+  await expect(page.getByTestId("junior-card")).toHaveCount(2);
+  await settle(page);
+  await snapEl(page, '[data-testid="junior-card"]:has-text("Mia Fischer")', "juniors-confirmed");
+  const leonCard = page.getByTestId("junior-card").filter({ hasText: "Leon Fischer" });
+  await leonCard.locator('input[type="email"]').fill("leon.fischer@example.com");
+  await settle(page, 300);
+  await snapEl(page, '[data-testid="junior-card"]:has-text("Leon Fischer")', "juniors-handover");
+  await page.goto("/inbox");
+  await settle(page);
+  await snap(page, "juniors-inbox", { fullPage: false });
+
+  // 5. The page Leon's link opens. The email itself needs a mail
+  // provider, so the link is minted here the way the route does it.
+  const token = crypto.randomBytes(32).toString("base64url");
+  await setup.pool.query(
+    `UPDATE junior_profiles SET handover_email = 'leon.fischer@example.com',
+            handover_token_hash = $2, handover_sent_by = $3, handover_sent_at = now(),
+            handover_expires_at = now() + interval '7 days'
+      WHERE user_id = $1`,
+    [leon, crypto.createHash("sha256").update(token).digest("hex"), parent.userId],
+  );
+  await signOut(page);
+  await page.goto(`/junior-handover?token=${token}`);
+  await expect(page.getByTestId("handover-username")).toBeVisible();
+  await page.getByTestId("handover-username").fill("leon.fischer");
+  await settle(page);
+  await snap(page, "junior-handover-page", { fullPage: false });
+
+  // 6. Under a federation the federation's admins confirm, in User
+  // Manager. A coach in the demo federation added this one.
+  await seedJunior({
+    orgId: world.orgId, clubId: world.clubs[0].clubId, fullName: "Noah Becker", dob: birthday(10, 100),
+    gender: "male", status: "pending", createdBy: world.coach.userId, createdAs: "coach",
+  });
+  await signIn(page, world.adminUsername);
+  await page.goto("/users");
+  await page.getByRole("button", { name: /Pending/ }).click();
+  await expect(page.getByTestId("junior-queue-row")).toHaveCount(1);
+  await settle(page);
+  await snapEl(page, '[data-testid="um-junior-requests"]', "juniors-federation-confirm");
+  await signOut(page);
+});
+
+// =============================================================
 // PHASE 13: teardown. Drains the federation we spun up so two
 // reruns don't pile up orgs in the test DB.
 // =============================================================
@@ -1680,4 +1827,5 @@ test("teardown", async () => {
     await purgePayments([world.orgId]);
     await setup.deleteOrg(world.orgId);
   }
+  if (world.juniorOrgId) await setup.deleteOrg(world.juniorOrgId);
 });

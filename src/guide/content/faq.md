@@ -30,7 +30,7 @@ Roles don't hold up signing in. Everyone starts as a spectator, and the role you
 
 13 or older. The sign-up form asks you to tick **I am 13 years old or older**; it doesn't ask for a date of birth just for that. If a profile's date of birth shows someone under 13, that account can't sign in, and the sign-in page says why. Write to [support@divinghq.app](mailto:support@divinghq.app) if the date on your profile is wrong.
 
-A younger diver whose profile is already on DivingHQ keeps it, and keeps their results. They just can't sign in, so a linked coach or the meet's managers look after their entries and dive lists from their own accounts. Divers aged 13 to 17 should sign up with a parent or guardian involved.
+Younger divers still compete, through a **junior profile**: a parent (or their coach, or their club) adds it from **Junior divers**, the club confirms it, and the child can then be entered in meets while their notifications go to the parent. At 13 they take it over with all their results. [Junior Divers](/guide/junior-divers) walks parents through it, screenshots and all. Divers aged 13 to 17 should sign up with a parent or guardian involved.
 
 ### "Where's the sidebar on my phone?"
 

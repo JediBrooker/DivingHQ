@@ -43,7 +43,7 @@ import LocaleSwitcher from '@/components/LocaleSwitcher.vue'
 import ThemeToggle from '@/components/ThemeToggle.vue'
 import FlagAU from '@/components/FlagAU.vue'
 import { useFeaturesStore } from '@/stores/features'
-import { Waves, Gavel, GraduationCap, MonitorPlay, Building2, Globe, Users, Map } from '@lucide/vue'
+import { Waves, Gavel, GraduationCap, MonitorPlay, Building2, Globe, Users, Map, Baby } from '@lucide/vue'
 import { useSupportEmail, DEFAULT_SUPPORT_EMAIL } from '@/composables/useSupportEmail'
 
 const supportEmail = useSupportEmail()
@@ -204,6 +204,21 @@ onBeforeUnmount(() => observer?.disconnect())
                 <li v-html="$t('guide.role.diver.step_4')"></li>
               </ol>
               <RouterLink to="/guide/diver-portal" class="role-cta">{{ $t('guide.role.diver.cta') }}</RouterLink>
+            </article>
+
+            <!-- Right after Diver: a parent of an under-13 is the other way a
+                 young diver gets onto DivingHQ (src/guide/content/junior-divers.md). -->
+            <article class="role-card" data-testid="guide-role-parent">
+              <div class="role-icon" aria-hidden="true"><Baby /></div>
+              <h3 class="role-name">{{ $t('guide.role.parent.name') }}</h3>
+              <p class="role-desc" v-html="$t('guide.role.parent.desc')"></p>
+              <ol class="role-steps">
+                <li v-html="$t('guide.role.parent.step_1')"></li>
+                <li v-html="$t('guide.role.parent.step_2')"></li>
+                <li v-html="$t('guide.role.parent.step_3')"></li>
+                <li v-html="$t('guide.role.parent.step_4')"></li>
+              </ol>
+              <RouterLink to="/guide/junior-divers" class="role-cta">{{ $t('guide.role.parent.cta') }}</RouterLink>
             </article>
 
             <article class="role-card">
