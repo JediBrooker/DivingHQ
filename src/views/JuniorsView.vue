@@ -281,6 +281,13 @@ onMounted(load)
                   <template v-if="j.club_name"> · {{ j.club_name }}</template>
                 </span>
                 <span v-if="relationLine(j)" class="meta">{{ relationLine(j) }}</span>
+                <!-- Who it's waiting for, by club / region / federation name,
+                     so nobody has to work out who runs the club. -->
+                <span v-if="j.status === 'pending' && j.waiting_on" class="meta waiting" data-testid="junior-waiting-on">
+                  {{ j.waiting_on.via === 'sysadmin' || !j.waiting_on.name
+                    ? $t('juniors.waiting_on_divinghq')
+                    : $t('juniors.waiting_on', { name: j.waiting_on.name }) }}
+                </span>
               </div>
               <span :class="['badge', j.status === 'active' ? 'badge-green' : 'badge-amber']" data-testid="junior-status">
                 {{ $t(j.status === 'active' ? 'juniors.status_active' : 'juniors.status_pending') }}
@@ -438,6 +445,7 @@ onMounted(load)
 .who { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .name { font-weight: 600; color: var(--fg); font-size: var(--text-body); overflow-wrap: anywhere; }
 .meta { font-size: var(--text-xs); color: var(--fg-3); }
+.waiting { color: var(--warn-fg); font-weight: 600; }
 .badge { flex-shrink: 0; }
 .parents, .handover { display: flex; flex-direction: column; gap: var(--space-2); }
 .parent-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-1); }

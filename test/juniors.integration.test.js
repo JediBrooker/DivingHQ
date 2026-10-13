@@ -196,6 +196,8 @@ test("a parent adds their child: it waits for the club, nobody can sign in to it
   assert.equal(amy.you.guardian, "pending");
   assert.equal(amy.can.manage, false);
   assert.equal(amy.can.remove, true, "whoever added it can withdraw it");
+  // Who it waits for, by club name: a parent can't look up who runs it.
+  assert.deepEqual(amy.waiting_on, { via: "club", name: `Free Club ${sfx}` });
 });
 
 test("the parent can't confirm their own child, the club admin can, and the queues agree", async (t) => {
@@ -251,6 +253,7 @@ test("under a federation a club admin's junior waits for the federation's admins
   assert.equal((await api("POST", `/api/juniors/${ids.cal}/review`, { decision: "approved" })).status, 403);
   const mine = (await api("GET", "/api/juniors")).json.find((j) => j.id === ids.cal);
   assert.equal(mine.can.manage, true);
+  assert.deepEqual(mine.waiting_on, { via: "org", name: `jr-fed-${sfx}` });
 
   as(ids.fedAdmin);
   assert.ok((await api("GET", "/api/juniors/pending")).json.juniors.some((j) => j.id === ids.cal));
@@ -459,6 +462,39 @@ test("editing: the diver's people only, and moving club takes someone who runs b
   assert.equal((await api("PUT", `/api/juniors/${ids.amy}`, { club_id: ids.otherClub })).status, 403);
   as(ids.stranger);
   assert.equal((await api("PUT", `/api/juniors/${ids.amy}`, { gender: "female" })).status, 404);
+});
+
+test("same child under another spelling: the club merges it and the parent is linked", async (t) => {
+  if (!ready) return t.skip("no database");
+  // Same club, same birthday as Amy, a name the exact-match check misses.
+  as(ids.stranger);
+  const r = await addJunior({ full_name: `Amelia Junior ${sfx}`, club_id: ids.club, as: "parent" });
+  assert.equal(r.json.status, "pending");
+  const mine = (await api("GET", "/api/juniors")).json.find((j) => j.id === r.json.id);
+  assert.equal(mine.waiting_on.via, "club");
+
+  as(ids.clubAdmin);
+  const row = (await api("GET", "/api/juniors/pending")).json.juniors.find((j) => j.id === r.json.id);
+  assert.ok(row.duplicates.some((d) => d.id === ids.amy), JSON.stringify(row.duplicates));
+  assert.equal(row.possible_duplicate, true);
+
+  // Only into a confirmed diver in the same club, and only by whoever confirms.
+  as(ids.parent);
+  assert.equal((await api("POST", `/api/juniors/${r.json.id}/merge`, { into: ids.amy })).status, 404);
+  as(ids.clubAdmin);
+  assert.equal((await api("POST", `/api/juniors/${r.json.id}/merge`, { into: ids.cal })).status, 400, "another club");
+  const ok = await api("POST", `/api/juniors/${r.json.id}/merge`, { into: ids.amy });
+  assert.equal(ok.status, 200, JSON.stringify(ok.json));
+  assert.equal((await pool.query("SELECT 1 FROM users WHERE id = $1", [r.json.id])).rowCount, 0, "the duplicate is gone");
+  const link = await one(
+    "SELECT status FROM guardians WHERE guardian_user_id = $1 AND dependent_user_id = $2 AND status = 'approved'",
+    [ids.stranger.id, ids.amy]);
+  assert.ok(link, "the parent who added it is linked to the existing profile");
+  const told = await one(
+    "SELECT title FROM notifications WHERE user_id = $1 AND category = 'junior_decision' ORDER BY created_at DESC LIMIT 1",
+    [ids.stranger.id]);
+  assert.match(told.title, /was already on DivingHQ/);
+  assert.equal((await api("POST", `/api/juniors/${r.json.id}/merge`, { into: ids.amy })).status, 404);
 });
 
 test("handover at 13: a link by email, then it's the diver's own account", async (t) => {

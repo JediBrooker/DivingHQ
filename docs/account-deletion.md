@@ -10,6 +10,10 @@ In the website or app, sign in and open **Profile → Delete account**. Enter yo
 
 If you are the only administrator left in your federation, appoint another administrator first. If you have nobody to hand over to, email support using the request link above: we can help remove the administrator role so deletion can proceed.
 
+## A junior diver's profile
+
+Divers under 13 don't have accounts. A parent, coach or club adds a **junior profile** for them, and nobody signs in to it. A parent, the club or the federation can delete one at any time: sign in, open **Junior divers**, and press **Delete profile** on the child's card. If you can't, [email us](mailto:support@divinghq.app?subject=DivingHQ%20junior%20profile%20deletion) with the child's name, club and date of birth and how you're related to them. We'll check with the club before acting. As with an account, a child who has already dived in a meet keeps their name on those results, as part of the sporting record.
+
 ## What is removed
 
 Account deletion removes your login credentials, email, two-factor setup, date of birth, gender, nationality, language and dashboard settings. It revokes account roles and personal links, disables push delivery, removes your public profile, and signs out active sessions on every device. Pending role, club and organisation requests are removed or closed as described in the [privacy policy](/privacy).

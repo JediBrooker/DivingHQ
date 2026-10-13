@@ -9,6 +9,7 @@
 //   DELETE /api/juniors/:id              remove one (or withdraw a pending one)
 //   GET    /api/juniors/pending          the confirm queue: juniors + parent links
 //   POST   /api/juniors/:id/review       confirm or turn down
+//   POST   /api/juniors/:id/merge        "same child": link the adder to an existing diver instead
 //   POST   /api/juniors/:id/parents      add a parent by username
 //   DELETE /api/juniors/:id/parents/:linkId
 //   POST   /api/juniors/:id/handover     email a 13-year-old a link to take over
@@ -107,6 +108,8 @@ module.exports = function createJuniorsRouter({
       handover: rights.manage && row.handover_email
         ? { email: row.handover_email, sent_at: row.handover_sent_at, expires_at: row.handover_expires_at }
         : null,
+      // Filled in below for pending ones: { via, name }.
+      waiting_on: null,
     };
   }
 
@@ -153,7 +156,14 @@ module.exports = function createJuniorsRouter({
           LIMIT 500`,
         [req.user.id, isOrgAdmin(req.user), req.user.org_id],
       );
-      res.json(r.rows.map((row) => shape(row, req.user)));
+      const out = r.rows.map((row) => shape(row, req.user));
+      // Who each pending one waits for, so nobody has to find out who runs
+      // the club. A handful at most, so one lookup each is fine.
+      for (let i = 0; i < out.length; i++) {
+        if (out[i].status !== "pending") continue;
+        out[i].waiting_on = await juniors.waitingOn(pool, r.rows[i]).catch(() => null);
+      }
+      res.json(out);
     } catch (err) {
       console.error("[Juniors]", err.message);
       res.status(500).json({ error: "Internal server error" });
@@ -447,10 +457,17 @@ module.exports = function createJuniorsRouter({
         `SELECT u.id, u.full_name, u.gender, to_char(u.date_of_birth, 'YYYY-MM-DD') AS date_of_birth,
                 c.name AS club_name, jp.created_as, jp.created_at,
                 a.full_name AS added_by_name, a.username AS added_by_username,
-                EXISTS (SELECT 1 FROM junior_profiles jp2 JOIN users u2 ON u2.id = jp2.user_id AND u2.deleted_at IS NULL
-                         WHERE jp2.user_id <> u.id AND jp2.status IN ('pending', 'active')
-                           AND u2.club_id = u.club_id AND lower(u2.full_name) = lower(u.full_name)
-                           AND u2.date_of_birth = u.date_of_birth) AS possible_duplicate
+                -- Divers already in the club with the same birthday: the
+                -- same child under a slightly different name, more often
+                -- than not. Confirmed ones only, those are what a duplicate
+                -- can be merged into (POST /api/juniors/:id/merge).
+                COALESCE((
+                  SELECT json_agg(json_build_object('id', u2.id, 'full_name', u2.full_name) ORDER BY u2.full_name)
+                    FROM users u2
+                   WHERE u2.id <> u.id AND u2.deleted_at IS NULL AND u2.club_id = u.club_id
+                     AND u2.date_of_birth = u.date_of_birth
+                     AND NOT EXISTS (SELECT 1 FROM junior_profiles jp2
+                                      WHERE jp2.user_id = u2.id AND jp2.status = 'pending')), '[]') AS duplicates
            FROM junior_profiles jp
            JOIN users u         ON u.id = jp.user_id AND u.deleted_at IS NULL
            JOIN organisations o ON o.id = u.org_id
@@ -483,7 +500,8 @@ module.exports = function createJuniorsRouter({
           id: r.id, full_name: r.full_name, gender: r.gender, age: juniors.ageFrom(r.date_of_birth),
           club_name: r.club_name, created_as: r.created_as, created_at: r.created_at,
           added_by: { full_name: r.added_by_name, username: r.added_by_username },
-          possible_duplicate: r.possible_duplicate,
+          duplicates: r.duplicates,
+          possible_duplicate: r.duplicates.length > 0,
         })),
         parent_links: links.rows.map((r) => ({
           id: r.id, requested_at: r.requested_at, junior_id: r.junior_id, junior_name: r.junior_name,
@@ -546,6 +564,85 @@ module.exports = function createJuniorsRouter({
       await juniors.notifyDecision(pool, noticeDeps, j, decision, j.full_name)
         .catch((err) => console.error("[Juniors] notify", err.message));
       res.json({ ok: true, status: decision === "approved" ? "active" : "removed" });
+    } catch (err) {
+      console.error("[Juniors]", err.message);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // ---------------------------------------------------------------
+  // POST /api/juniors/:id/merge { into }
+  // "Same child": a pending junior that turns out to be a diver the club
+  // already has (a different spelling, a nickname). The person who added
+  // it is linked to the existing profile the way confirming would have
+  // linked them (parent: guardian link, coach: coach link) and the new one
+  // goes. Only whoever could confirm it, and only into a confirmed diver in
+  // the same club.
+  // ---------------------------------------------------------------
+  router.post("/api/juniors/:id/merge", verifyToken, totpGate, async (req, res) => {
+    const into = req.body?.into;
+    if (!isUuid(into)) return res.status(400).json({ error: "Pick the diver it's the same as" });
+    try {
+      const j = await juniors.juniorFor(pool, req.user, req.params.id);
+      if (!j || (!j.rights.see && !j.rights.review)) return res.status(404).json({ error: "Junior not found" });
+      if (j.status !== "pending") {
+        return res.status(409).json({ error: "This has already been decided", code: "already_decided" });
+      }
+      if (!j.rights.review) return res.status(403).json({ error: "You don't confirm this club's divers" });
+      const target = (await pool.query(
+        `SELECT u.id, u.full_name, u.org_id, u.club_id, jp.status AS junior_status
+           FROM users u LEFT JOIN junior_profiles jp ON jp.user_id = u.id
+          WHERE u.id = $1 AND u.deleted_at IS NULL`,
+        [into],
+      )).rows[0];
+      if (!target || target.id === j.id || target.org_id !== j.org_id || target.club_id !== j.club_id
+          || target.junior_status === "pending") {
+        return res.status(400).json({ error: "Pick a confirmed diver in the same club", code: "bad_target" });
+      }
+      const merged = await withTx(pool, async (client) => {
+        const lock = await client.query(
+          "SELECT user_id FROM junior_profiles WHERE user_id = $1 AND status = 'pending' FOR UPDATE",
+          [j.id],
+        );
+        if (!lock.rowCount) return false;
+        if (j.created_by && j.created_as === "parent") {
+          // ON CONFLICT: they may already be linked, or asked to be.
+          await client.query(
+            `INSERT INTO guardians (org_id, guardian_user_id, dependent_user_id, status, reviewed_by, reviewed_at)
+             VALUES ($1, $2, $3, 'approved', $4, now()) ON CONFLICT DO NOTHING`,
+            [j.org_id, j.created_by, target.id, req.user.id],
+          );
+        }
+        if (j.created_by && j.created_as === "coach") {
+          await client.query(
+            `INSERT INTO coach_diver_links (coach_id, diver_id, org_id, note)
+             VALUES ($1, $2, $3, 'Added this junior') ON CONFLICT DO NOTHING`,
+            [j.created_by, target.id, j.org_id],
+          );
+        }
+        await client.query("DELETE FROM users WHERE id = $1", [j.id]);
+        await recordAudit(client, {
+          ...auditFromReq(req), org_id: j.org_id, entity_type: "user", entity_id: target.id,
+          entity_name: target.full_name, action: "junior.merged",
+          metadata: { removed: j.id, created_as: j.created_as },
+        });
+        return true;
+      });
+      if (!merged) return res.status(409).json({ error: "This has already been decided", code: "already_decided" });
+      if (j.created_by) {
+        await notices.deliver(noticeDeps, [{
+          userIds: [j.created_by],
+          category: "junior_decision",
+          title: `${target.full_name} was already on DivingHQ`,
+          body: j.created_as === "parent" ? "You're now linked to their profile as their parent."
+            : j.created_as === "coach" ? "You're now linked to their profile as their coach."
+              : "The club used the profile that was already there.",
+          action_url: "/juniors",
+          data: { junior_user_id: target.id },
+          email: false,
+        }], { tag: "juniors" }).catch((err) => console.error("[Juniors] notify", err.message));
+      }
+      res.json({ ok: true, into: target.id });
     } catch (err) {
       console.error("[Juniors]", err.message);
       res.status(500).json({ error: "Internal server error" });

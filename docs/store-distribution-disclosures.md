@@ -214,16 +214,48 @@ The shared website/native signup forms require an unchecked 13+ declaration and 
 
 The age decision removes the planned under-13 direct-use audience. It does not verify users’ ages, establish parental consent for teenagers or junior competition records, resolve worldwide legal requirements, or resolve the separate provider-retention/privacy disclosure questions. Google Data Safety and Apple privacy drafts must still match the final implementation before submission.
 
-## Junior profiles — 13 October 2026 (after build 6)
+## Junior profiles — 13 October 2026 (live at `4c03a6f`, native from build 7)
 
-The server now has **junior profiles** (migration 107, `lib/juniors.js`): a parent, coach or club admin can add a diver under 13, who never signs in. Direct use stays 13+, so the store audience decision above stands, but both store forms need a second look before submission because the service now holds data **about** under-13s, entered by adults:
+This section supersedes the earlier "check before submitting" note. It records how **junior profiles** (migration 107, `lib/juniors.js`, `routes/juniors.js`) map onto both forms. Production has served them since the `4c03a6f` deploy on 13 October (schema 107). Native builds 5 and 6 predate them: their bundled web app has no Junior divers screens and carries the older privacy text. **Build 7 is the first native build with them**, so it is the one the answers below must match.
 
-- Data types: name, date of birth, gender, club and competition results for the child, plus who added the profile and who confirmed a parent agreed. No contact details, credentials, photos or device identifiers for the child.
-- Where it shows: results are public like any diver's; the child's profile page and diver search are limited to linked parents, coaches and the club, region and federation admins.
-- Notifications for the child are delivered to the linked parents' devices, not the child's (the child has none).
-- At 13 the profile is handed over by an emailed one-time link and becomes an ordinary account.
+### What changed
 
-Check Google's Data Safety answers and the Families policy, and Apple's privacy label, against this before submitting. Nothing here was changed in either store console. The bundled privacy policy (§9) and terms describe junior profiles from this change on.
+A parent, coach or club admin can add a profile for a diver **under 13**. Nobody signs in to it: the row has no password, email, device or push subscription. Direct use stays 13+ (signup declaration, sign-in refusal for known under-13 birthdays), so the audience decision above stands. The service now holds data **about** under-13s, always entered by an adult account holder:
+
+| Data about the child | Entered by | Who can see it |
+|---|---|---|
+| Full name | The adult adding the profile | Public on results, scoreboards and records like any diver |
+| Date of birth, gender, club | The adult adding the profile; editable by parents, the club and the federation | The child's linked parents and coaches, the club's and region's admins, the federation's admins |
+| Dive entries, scores, results | Coaches and meet officials, as for any diver | Public on results; the child's profile page and analytics are **not** public and the child is excluded from diver search |
+| Who added the profile, as what, who confirmed a parent agreed and when; who confirmed it | Recorded by the server | The admins above; audit log |
+| Guardian and coach links | Recorded by the server | The adults linked and the admins above |
+
+Notifications and the meet-live and results emails addressed to the child go to the linked parents instead (`lib/push.js`, `lib/email.js`), so no device data about the child exists. At 13 a parent or the club emails a one-time link to the child's own address; the profile becomes an ordinary account from then on, and the existing account-level answers apply to it.
+
+### Google Play
+
+- **Target audience:** unchanged, **13–15, 16–17, 18+**. Children under 13 never use the app; the adult who adds a profile is the user. Do not add under-13 age groups for this feature.
+- **Data safety:** no new data types. The saved 14-type declaration covers junior profiles once each type's scope includes data the user provides about a child they look after:
+  - Personal info → **Name**: the child's name. Collected, optional (only when an adult adds a junior), shared with organisation officials and public results as for adults.
+  - Personal info → **Other info**: date of birth, gender, club, the agreement record. Optional, shared with the organisation officials above.
+  - Health and fitness → **Fitness info**: the child's results. Optional, shared as for adults.
+  - **Contacts** (social graph): guardian and coach links.
+  - App activity → **App interactions / Other actions**: confirmations, merges, handovers in the audit log.
+  - Purposes stay App functionality and Account management. No advertising, analytics or personalisation use of child data exists.
+- **Data deletion:** a parent or the club deletes a junior profile from Junior divers → **Delete profile**; anyone can also ask by email. The public `/delete-account` page now says so ("A junior diver's profile" section), so the existing deletion URL covers it.
+- **Families policy:** not in scope for a 13+ target audience. Keep the facts it would test true anyway: no ads SDK, no analytics on child data, child profile pages not public, notifications go to parents.
+- **Review notes (App access):** add one line, *"Divers under 13 can't have accounts; adults add junior profiles nobody signs in to (Account menu → Junior divers). The review accounts don't need one."*
+
+### Apple App Store
+
+- **Privacy label:** no new types. The published 12 types already include Name, Other Data Types (birthday, gender, club, agreement record), Fitness (results) and Contacts (guardian and coach links), all linked, not tracking, App Functionality. Junior data falls inside those; the label needs no change.
+- **`PrivacyInfo.xcprivacy`:** no change, for the same reason.
+- **Age rating / Kids:** stays 13+ calculated rating; **Made for Kids: No**; Kids Category not selected. The app isn't directed at children: they can't sign in.
+- **App Review notes:** add the same line as Google's.
+
+### What this doesn't settle
+
+The agreement tick is a recorded declaration, not verified parental consent, and the organiser stays responsible for the lawful basis to hold and publish a child's results (privacy policy §9). This record maps implemented behaviour onto the store forms; it is not legal advice about any country's child-data rules.
 
 ## Current prepared release — 13 October 2026
 

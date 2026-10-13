@@ -13,7 +13,8 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
-import { showError } from '@/composables/useNotify'
+import { showError, showSuccess } from '@/composables/useNotify'
+import { confirmAction } from '@/composables/useConfirm'
 import EmptyState from '@/components/EmptyState.vue'
 import LoadError from '@/components/LoadError.vue'
 
@@ -76,6 +77,30 @@ async function decide(kind, row, decision) {
   }
 }
 
+// "Same child": a pending junior that's a diver the club already has under
+// another spelling. The adder is linked to that profile and this one goes
+// (POST /api/juniors/:id/merge), so a parent never has to track down who
+// runs the club to get linked.
+async function merge(j, d) {
+  if (!await confirmAction({
+    title: t('juniors.merge_title', { name: d.full_name }),
+    body: t('juniors.merge_body', { adder: j.added_by?.full_name || j.added_by?.username || '?', name: d.full_name }),
+    confirmLabel: t('juniors.merge_confirm'),
+    cancelLabel: t('common.cancel'),
+  })) return
+  busyId.value = j.id
+  try {
+    await auth.apiFetch(`/api/juniors/${j.id}/merge`, { method: 'POST', body: JSON.stringify({ into: d.id }) })
+    juniors.value = juniors.value.filter(r => r.id !== j.id)
+    showSuccess(t('juniors.merged', { name: d.full_name }))
+  } catch (err) {
+    if (err.status === 409) juniors.value = juniors.value.filter(r => r.id !== j.id)
+    showError(err.message)
+  } finally {
+    busyId.value = null
+  }
+}
+
 onMounted(load)
 </script>
 
@@ -102,7 +127,11 @@ onMounted(load)
               <template v-if="showClub && j.club_name"> · {{ j.club_name }}</template>
             </span>
             <span class="meta">{{ addedBy(j) }}<template v-if="j.added_by?.username"> (@{{ j.added_by.username }})</template></span>
-            <span v-if="j.possible_duplicate" class="warn">{{ $t('juniors.queue_duplicate') }}</span>
+            <span v-for="d in j.duplicates || []" :key="d.id" class="dup" data-testid="junior-queue-duplicate">
+              <span class="warn">{{ $t('juniors.queue_duplicate_of', { name: d.full_name }) }}</span>
+              <button type="button" class="btn btn-ghost btn-sm" :disabled="busyId === j.id"
+                      @click="merge(j, d)">{{ $t('juniors.queue_same_child') }}</button>
+            </span>
           </div>
           <div class="actions">
             <button class="btn btn-ghost btn-sm" :disabled="busyId === j.id"
@@ -146,6 +175,7 @@ onMounted(load)
 .name { font-weight: 600; color: var(--fg); overflow-wrap: anywhere; }
 .meta { font-size: var(--text-xs); color: var(--fg-3); }
 .warn { font-size: var(--text-xs); color: var(--warn-fg); font-weight: 600; }
+.dup { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; margin-top: 2px; }
 .actions { display: flex; gap: var(--space-2); flex-shrink: 0; }
 .muted { color: var(--fg-3); font-size: var(--text-sm); margin: 0; max-width: 64ch; }
 @media (max-width: 720px) {

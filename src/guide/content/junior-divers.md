@@ -52,7 +52,7 @@ Someone who looks after the club's divers now checks that your child really dive
 | No federation on DivingHQ yet (the clubs run things) | Your child's club admins. If the club has nobody, the region's admins, then the DivingHQ team | **My club** (or **My region**) |
 | The federation runs DivingHQ | The federation's admins | **User Manager**, on the **Pending** tab |
 
-They get a notification and an email the moment you add your child. There's no fixed wait: it depends on when they next look, so if a few days go by, have a word with the club.
+The card tells you who it's waiting for, for example *"Waiting for Bondi Diving Club's admins to confirm"*. You don't need to know who those people are or how to reach them: DivingHQ sends them a notification and an email the moment you add your child. There's no fixed wait, it depends on when they next look. If a few days go by, mention it to the coach or at the pool; whoever runs the club's admin side will know.
 
 While you wait:
 
@@ -67,9 +67,12 @@ If the club turns it down, the profile is removed. Usually that means they didn'
 
 ## If your child is already on DivingHQ
 
-Your child's club, or their coach, may have added them before you got there. If you add a child whose **name, date of birth and club** all match one that's already here, DivingHQ doesn't make a second profile. It asks the club to link you to the existing one instead, and you'll get a notification once they do. You don't see anything about that profile that you didn't type yourself.
+Your child's club, or their coach, may have added them before you got there. You don't need to find out, or work out who to ask: **add your child the normal way**.
 
-You can also ask the club admin to add you directly. Give them your DivingHQ **username** (the one you sign in with) and they'll add you under **Parents** on your child's card.
+- If the **name, date of birth and club** all match a profile that's already here, DivingHQ doesn't make a second one. It asks the club to link you to the existing profile, and you get a notification once they have. You don't see anything about that profile that you didn't type yourself.
+- If the name is spelled differently ("Mia" against "Mia Rose"), your request goes to the club as usual. They see the profile they already have with the same birthday, press **Same child**, and you're linked to it; the duplicate is removed. You get a notification saying your child was already on DivingHQ.
+
+If the club does ask for your DivingHQ **username** (the one you sign in with), it's shown at the top of **Junior divers**. They can add you under **Parents** on your child's card with it.
 
 Is there a second parent? Once you're linked, add them the same way: type their username under **Parents** and press **Add a parent**. They need their own account first, and the club approves them, just as it did you.
 
@@ -128,7 +131,7 @@ Where your country has no federation on DivingHQ yet, you're the one who confirm
 
 - **Confirm** only if you know the diver is in your club and the person who added them is who they say they are. Confirming lets the junior be entered in meets and links the parent (or coach) who added them.
 - **Turn down** removes the profile. The person who added it is told.
-- A warning shows when another junior in the club already has the same name and date of birth.
+- A warning shows when someone in your club already has the same date of birth, naming them. If it's the same child under another spelling, press **Same child**: the person who added the new one is linked to the existing profile (as its parent, or its coach) and the duplicate is removed. That's how a parent gets linked without having to know who runs the club.
 - Parents asking to be linked to an existing junior wait in the same list.
 - Nobody confirms something they're part of: if you added your own child as their parent, another admin, the region or DivingHQ confirms it.
 
@@ -160,6 +163,10 @@ No. Accounts are for people 13 and over, and nobody should sign in with someone 
 ### "My child is 13 or older"
 
 They can [create an account](/register) of their own. If they already have a junior profile, [hand it over](#when-your-child-turns-13) instead so their results come with them.
+
+### "Who runs my child's club on DivingHQ? How do I contact them?"
+
+DivingHQ doesn't list the club's admins for parents, and you don't need them: everything you send (adding your child, asking to be linked) goes to them automatically, and your child's card says who it's waiting for. If something seems stuck, ask the coach or someone at the pool; they'll know who does the club's admin. Still stuck? Write to [support@divinghq.app](mailto:support@divinghq.app) with your child's name and club and we'll chase it.
 
 ### "I can't find my child in the diver search"
 
