@@ -8,6 +8,7 @@ Tell us what you were trying to do, what happened, and your device and app versi
 
 - **Using DivingHQ:** read the [user guide](/guide) for the different roles and meet-day workflows.
 - **Notifications:** sign in, open Settings and use the Notifications section. Check notification permission in your device settings too.
+- **Children under 13:** a parent or the club adds a junior profile from **Junior divers**; the [parents' guide](/guide/junior-divers) explains confirmation, notifications and taking over the profile at 13.
 - **Account access:** use [password reset](/forgot-password), or email us if you cannot access your account's email address.
 - **Delete your account or request data removal:** visit [Delete your DivingHQ account](/delete-account). This includes a request option if you have already uninstalled the app.
 - **Privacy or safeguarding:** email us with your concern. For a competition result, include the event and the organisation that ran it so we can work with them.
