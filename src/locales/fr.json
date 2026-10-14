@@ -11,7 +11,10 @@
     "dashboard": "← Tableau de bord",
     "error_generic": "Une erreur est survenue",
     "load_failed": "Chargement impossible. Vérifiez votre connexion et réessayez.",
-    "retry": "Réessayer"
+    "retry": "Réessayer",
+    "get_app": "Téléchargez l'app :",
+    "app_android": "App Android",
+    "app_iphone": "App iPhone"
   },
   "auth": {
     "login": {

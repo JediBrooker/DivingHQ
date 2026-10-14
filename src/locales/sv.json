@@ -11,7 +11,10 @@
     "dashboard": "← Översikt",
     "error_generic": "Något gick fel",
     "load_failed": "Kunde inte läsas in. Kontrollera anslutningen och försök igen.",
-    "retry": "Försök igen"
+    "retry": "Försök igen",
+    "get_app": "Hämta appen:",
+    "app_android": "Android-app",
+    "app_iphone": "iPhone-app"
   },
   "auth": {
     "login": {

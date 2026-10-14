@@ -11,7 +11,10 @@
     "dashboard": "← Nástěnka",
     "error_generic": "Něco se pokazilo",
     "load_failed": "Nepodařilo se načíst. Zkontrolujte připojení a zkuste to znovu.",
-    "retry": "Zkusit znovu"
+    "retry": "Zkusit znovu",
+    "get_app": "Stáhněte si aplikaci:",
+    "app_android": "Aplikace pro Android",
+    "app_iphone": "Aplikace pro iPhone"
   },
   "auth": {
     "login": {

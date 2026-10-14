@@ -11,7 +11,10 @@
     "dashboard": "← 控制台",
     "error_generic": "出现错误",
     "load_failed": "无法加载。请检查网络连接后重试。",
-    "retry": "重试"
+    "retry": "重试",
+    "get_app": "获取应用：",
+    "app_android": "Android 应用",
+    "app_iphone": "iPhone 应用"
   },
   "auth": {
     "login": {

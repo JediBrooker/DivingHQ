@@ -11,7 +11,10 @@
     "dashboard": "← Dasbor",
     "error_generic": "Terjadi kesalahan",
     "load_failed": "Gagal memuat. Periksa koneksi Anda dan coba lagi.",
-    "retry": "Coba lagi"
+    "retry": "Coba lagi",
+    "get_app": "Unduh aplikasinya:",
+    "app_android": "Aplikasi Android",
+    "app_iphone": "Aplikasi iPhone"
   },
   "auth": {
     "login": {

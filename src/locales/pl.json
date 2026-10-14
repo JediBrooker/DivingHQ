@@ -11,7 +11,10 @@
     "dashboard": "← Panel",
     "error_generic": "Coś poszło nie tak",
     "load_failed": "Nie udało się wczytać. Sprawdź połączenie i spróbuj ponownie.",
-    "retry": "Spróbuj ponownie"
+    "retry": "Spróbuj ponownie",
+    "get_app": "Pobierz aplikację:",
+    "app_android": "Aplikacja na Androida",
+    "app_iphone": "Aplikacja na iPhone’a"
   },
   "auth": {
     "login": {

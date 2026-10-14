@@ -11,7 +11,10 @@
     "dashboard": "← Hallintapaneeli",
     "error_generic": "Jotain meni vikaan",
     "load_failed": "Lataus epäonnistui. Tarkista yhteys ja yritä uudelleen.",
-    "retry": "Yritä uudelleen"
+    "retry": "Yritä uudelleen",
+    "get_app": "Lataa sovellus:",
+    "app_android": "Android-sovellus",
+    "app_iphone": "iPhone-sovellus"
   },
   "auth": {
     "login": {

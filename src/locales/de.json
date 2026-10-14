@@ -11,7 +11,10 @@
     "dashboard": "← Übersicht",
     "error_generic": "Etwas ist schiefgelaufen",
     "load_failed": "Konnte nicht geladen werden. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
-    "retry": "Erneut versuchen"
+    "retry": "Erneut versuchen",
+    "get_app": "App herunterladen:",
+    "app_android": "Android-App",
+    "app_iphone": "iPhone-App"
   },
   "auth": {
     "login": {

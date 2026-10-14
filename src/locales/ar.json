@@ -11,7 +11,10 @@
     "dashboard": "← لوحة التحكم",
     "error_generic": "حدث خطأ ما",
     "load_failed": "تعذّر التحميل. تحقّق من اتصالك وحاول مرة أخرى.",
-    "retry": "حاول مرة أخرى"
+    "retry": "حاول مرة أخرى",
+    "get_app": "احصل على التطبيق:",
+    "app_android": "تطبيق Android",
+    "app_iphone": "تطبيق iPhone"
   },
   "auth": {
     "login": {

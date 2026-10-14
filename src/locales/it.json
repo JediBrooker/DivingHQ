@@ -11,7 +11,10 @@
     "dashboard": "← Pannello",
     "error_generic": "Qualcosa è andato storto",
     "load_failed": "Impossibile caricare. Controlla la connessione e riprova.",
-    "retry": "Riprova"
+    "retry": "Riprova",
+    "get_app": "Scarica l'app:",
+    "app_android": "App per Android",
+    "app_iphone": "App per iPhone"
   },
   "auth": {
     "login": {

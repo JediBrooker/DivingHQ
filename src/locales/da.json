@@ -11,7 +11,10 @@
     "dashboard": "← Oversigt",
     "error_generic": "Noget gik galt",
     "load_failed": "Kunne ikke indlæses. Tjek din forbindelse, og prøv igen.",
-    "retry": "Prøv igen"
+    "retry": "Prøv igen",
+    "get_app": "Hent appen:",
+    "app_android": "Android-app",
+    "app_iphone": "iPhone-app"
   },
   "auth": {
     "login": {

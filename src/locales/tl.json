@@ -11,7 +11,10 @@
     "dashboard": "← Dashboard board",
     "error_generic": "May nangyaring mali",
     "load_failed": "Hindi ma-load. Suriin ang iyong koneksyon at subukang muli.",
-    "retry": "Subukang muli"
+    "retry": "Subukang muli",
+    "get_app": "Kunin ang app:",
+    "app_android": "App para sa Android",
+    "app_iphone": "App para sa iPhone"
   },
   "auth": {
     "login": {

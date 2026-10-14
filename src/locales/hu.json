@@ -11,7 +11,10 @@
     "dashboard": "← Vezérlőpult",
     "error_generic": "Hiba történt",
     "load_failed": "Nem sikerült betölteni. Ellenőrizze a kapcsolatot, és próbálja újra.",
-    "retry": "Újrapróbálás"
+    "retry": "Újrapróbálás",
+    "get_app": "Töltsd le az alkalmazást:",
+    "app_android": "Android-alkalmazás",
+    "app_iphone": "iPhone-alkalmazás"
   },
   "auth": {
     "login": {
