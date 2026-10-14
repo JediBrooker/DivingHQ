@@ -11,7 +11,10 @@
     "dashboard": "← Panel",
     "error_generic": "Algo salió mal",
     "load_failed": "No se pudo cargar. Comprueba tu conexión e inténtalo de nuevo.",
-    "retry": "Reintentar"
+    "retry": "Reintentar",
+    "get_app": "Descarga la app:",
+    "app_android": "App para Android",
+    "app_iphone": "App para iPhone"
   },
   "auth": {
     "login": {

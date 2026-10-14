@@ -11,7 +11,10 @@
     "dashboard": "← ダッシュボード",
     "error_generic": "問題が発生しました",
     "load_failed": "読み込めませんでした。接続を確認して、もう一度お試しください。",
-    "retry": "再試行"
+    "retry": "再試行",
+    "get_app": "アプリを入手:",
+    "app_android": "Android アプリ",
+    "app_iphone": "iPhone アプリ"
   },
   "auth": {
     "login": {

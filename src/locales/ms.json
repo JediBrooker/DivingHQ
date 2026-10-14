@@ -11,7 +11,10 @@
     "dashboard": "← Papan pemuka",
     "error_generic": "Terdapat ralat",
     "load_failed": "Gagal dimuatkan. Semak sambungan anda dan cuba lagi.",
-    "retry": "Cuba lagi"
+    "retry": "Cuba lagi",
+    "get_app": "Dapatkan aplikasi:",
+    "app_android": "Aplikasi Android",
+    "app_iphone": "Aplikasi iPhone"
   },
   "auth": {
     "login": {

@@ -11,7 +11,10 @@
     "dashboard": "← Nadzorna ploča",
     "error_generic": "Nešto je pošlo po zlu",
     "load_failed": "Učitavanje nije uspjelo. Provjerite vezu i pokušajte ponovno.",
-    "retry": "Pokušaj ponovno"
+    "retry": "Pokušaj ponovno",
+    "get_app": "Preuzmite aplikaciju:",
+    "app_android": "Aplikacija za Android",
+    "app_iphone": "Aplikacija za iPhone"
   },
   "auth": {
     "login": {

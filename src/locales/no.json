@@ -11,7 +11,10 @@
     "dashboard": "← Oversikt",
     "error_generic": "Noe gikk galt",
     "load_failed": "Kunne ikke lastes inn. Sjekk tilkoblingen og prøv igjen.",
-    "retry": "Prøv igjen"
+    "retry": "Prøv igjen",
+    "get_app": "Last ned appen:",
+    "app_android": "Android-app",
+    "app_iphone": "iPhone-app"
   },
   "auth": {
     "login": {

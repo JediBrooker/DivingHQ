@@ -11,7 +11,10 @@
     "dashboard": "← Painel",
     "error_generic": "Algo correu mal",
     "load_failed": "Não foi possível carregar. Verifique a sua ligação e tente novamente.",
-    "retry": "Tentar novamente"
+    "retry": "Tentar novamente",
+    "get_app": "Baixe o app:",
+    "app_android": "App para Android",
+    "app_iphone": "App para iPhone"
   },
   "auth": {
     "login": {

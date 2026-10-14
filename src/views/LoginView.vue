@@ -9,6 +9,7 @@ import { showWarning } from '@/composables/useNotify'
 import LocaleSwitcher from '@/components/LocaleSwitcher.vue'
 import ThemeToggle from '@/components/ThemeToggle.vue'
 import { CircleHelp } from '@lucide/vue'
+import StoreBadges from '@/components/StoreBadges.vue'
 // Migration 053: reunite-on-return prompt fires on every login
 // when there are deleted-account candidates in the user's org
 // with the same name. The modal is dismissable, and checking is
@@ -291,6 +292,8 @@ async function handleTotpSubmit() {
       </div>
     </div>
 
+    <StoreBadges class="login-apps" />
+
     <ClaimCandidatesModal
       v-if="claimCandidates"
       variant="signup"
@@ -400,4 +403,5 @@ h1 {
 }
 .footer-links .legal-links a { font-size: 12px; color: var(--fg-3); }
 .footer-links .legal-links a:hover { color: var(--accent); }
+.login-apps { margin-top: 1.5rem; }
 </style>

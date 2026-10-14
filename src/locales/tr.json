@@ -11,7 +11,10 @@
     "dashboard": "← Panel",
     "error_generic": "Bir şeyler ters gitti",
     "load_failed": "Yüklenemedi. Bağlantınızı kontrol edip tekrar deneyin.",
-    "retry": "Tekrar dene"
+    "retry": "Tekrar dene",
+    "get_app": "Uygulamayı indirin:",
+    "app_android": "Android uygulaması",
+    "app_iphone": "iPhone uygulaması"
   },
   "auth": {
     "login": {

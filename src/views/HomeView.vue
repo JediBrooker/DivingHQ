@@ -6,6 +6,7 @@ import LocaleSwitcher from '@/components/LocaleSwitcher.vue'
 import ThemeToggle from '@/components/ThemeToggle.vue'
 import LogoMark from '@/components/LogoMark.vue'
 import FlagAU from '@/components/FlagAU.vue'
+import StoreBadges from '@/components/StoreBadges.vue'
 import { CircleHelp } from '@lucide/vue'
 import { useSupportEmail } from '@/composables/useSupportEmail'
 
@@ -78,6 +79,7 @@ onMounted(() => {
         <RouterLink to="/guide" class="hero-guide-link">{{ $t('home.hero.guide_link') }}</RouterLink>
         <RouterLink to="/register-org" class="hero-guide-link" data-testid="hero-federation">{{ $t('home.hero.federation_link') }}</RouterLink>
       </div>
+      <StoreBadges class="hero-apps" />
 
       <!-- Product-preview mock (decorative) -->
       <div class="preview" aria-hidden="true">
@@ -340,6 +342,7 @@ onMounted(() => {
   border-bottom: 1px dashed transparent; transition: color var(--dur) var(--ease), border-color var(--dur) var(--ease);
 }
 .hero-guide-link:hover { color: var(--accent); border-bottom-color: var(--accent); }
+.hero-apps { margin-top: 1.5rem; }
 
 /* ── Product-preview mock ── */
 .preview {

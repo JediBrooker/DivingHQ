@@ -11,7 +11,10 @@
     "dashboard": "← Dashboard",
     "error_generic": "Something went wrong",
     "load_failed": "Couldn't load this. Check your connection and try again.",
-    "retry": "Try again"
+    "retry": "Try again",
+    "get_app": "Get the app:",
+    "app_android": "Android app",
+    "app_iphone": "iPhone app"
   },
   "auth": {
     "login": {

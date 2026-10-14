@@ -11,7 +11,10 @@
     "dashboard": "← 대시보드",
     "error_generic": "문제가 발생했습니다",
     "load_failed": "불러오지 못했습니다. 연결을 확인한 후 다시 시도하세요.",
-    "retry": "다시 시도"
+    "retry": "다시 시도",
+    "get_app": "앱 받기:",
+    "app_android": "Android 앱",
+    "app_iphone": "iPhone 앱"
   },
   "auth": {
     "login": {
