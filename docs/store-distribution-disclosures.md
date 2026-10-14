@@ -244,14 +244,19 @@ Notifications and the meet-live and results emails addressed to the child go to 
   - Purposes stay App functionality and Account management. No advertising, analytics or personalisation use of child data exists.
 - **Data deletion:** a parent or the club deletes a junior profile from Junior divers → **Delete profile**; anyone can also ask by email. The public `/delete-account` page now says so ("A junior diver's profile" section), so the existing deletion URL covers it.
 - **Families policy:** not in scope for a 13+ target audience. Keep the facts it would test true anyway: no ads SDK, no analytics on child data, child profile pages not public, notifications go to parents.
-- **Review notes (App access):** add one line, *"Divers under 13 can't have accounts; adults add junior profiles nobody signs in to (Account menu → Junior divers). The review accounts don't need one."*
+- **Sign-in details (formerly App access):** the **diver** set's instructions end, since 14 October 2026, with *"Under-13s can't sign in: an adult adds them from Menu > Junior divers and the child's notifications go to the parents. This account can open that page."* That takes them to 485 of Play's 500 characters, and the officials set is already at 457, so the note lives on the diver set only. Usernames and passwords didn't change. Sent for review on its own on 14 October, after 1.2 (7) had already been published.
 
 ### Apple App Store
 
 - **Privacy label:** no new types. The published 12 types already include Name, Other Data Types (birthday, gender, club, agreement record), Fitness (results) and Contacts (guardian and coach links), all linked, not tracking, App Functionality. Junior data falls inside those; the label needs no change.
 - **`PrivacyInfo.xcprivacy`:** no change, for the same reason.
 - **Age rating / Kids:** stays 13+ calculated rating; **Made for Kids: No**; Kids Category not selected. The app isn't directed at children: they can't sign in.
-- **App Review notes:** add the same line as Google's.
+- **App Review notes:** the 1.2 (7) notes carry a longer paragraph than Google's limit allows: *"JUNIOR DIVERS (new in this build): divers under 13 cannot have accounts or sign in. A parent, coach or club admin adds a junior profile for them from Menu > Junior divers; nobody signs in to it, the club (or federation) confirms it, and the child's meet notifications go to the linked parents. At 13 the diver takes the profile over through an emailed one-time link. The review accounts do not need one; the diver or coach account can open Junior divers to see the page and the add form."*
+
+### Where 1.2 (7) stands — 14 October 2026
+
+- **Google Play:** release **1.2 (7)** (versionCode 7) went to production on 13 October as submission 3 and is **published**. The sign-in note above went in separately the next day and is in review; managed publishing is off, so it applies once Google approves it.
+- **Apple:** **1.2 (7)** was submitted on 13 October in place of the earlier 1.2 submission, which was cancelled, and is **waiting for review**.
 
 ### What this doesn't settle
 
