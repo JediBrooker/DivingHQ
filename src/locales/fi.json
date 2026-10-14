@@ -648,7 +648,7 @@
         "step_1_link": "Tulostaulu ja tulokset",
         "step_2": "Valitse mikä tahansa käynnissä oleva kisalaji lähetysasettelua varten tai päättynyt kisa katsausta varten",
         "step_3": "Napauta minkä tahansa tuomarin pistemerkkiä → avautuu kyseisen tuomarin julkinen analyysi",
-        "step_4": "Lisää aloitusnäytölle (iOS / Android) saadaksesi nopeamman, selaimettoman näkymän",
+        "step_4": "Androidilla lataa DivingHQ-sovellus {play} -kaupasta. iPhonella valitse Safarissa <strong>Lisää aloitusnäytölle</strong>, niin saat nopeamman koko ruudun näkymän",
         "cta": "Tulostaulun opas ↗"
       }
     },
@@ -656,7 +656,7 @@
       "register_q": "Rekisteröidyin juuri, mutta en pääse vielä kirjautumaan sisään.",
       "register_a": "Vahvista ensin sähköpostiosoitteesi: napsauta linkkiä vahvistusviestissä, jonka lähetimme rekisteröityessäsi. Eikö viestiä näy? Tarkista roskapostikansio tai yritä kirjautua sisään ja pyydä uusi linkki. Roolit eivät estä kirjautumista: aloitat katsojana ja saat lisää, kun seurasi tai liittosi ylläpitäjä hyväksyy.",
       "judge_device_q": "Olen tuomari — millä laitteella kannattaa toimia?",
-      "judge_device_a": "Mikä tahansa moderni puhelin selaimella toimii. iPhone 12 / Pixel 6 tai uudempi on ihanteellinen. Näkymä on suunniteltu mobiilille; tulet näpäyttämään numeroita koko kisan ajan, joten yhdellä kädellä mukavasti pidettävä puhelin on oikea valinta. Wifi on parempi kuin 4G, jos halli sellaisen tarjoaa — pisteet synkronoituvat myös 4G:n kautta, mutta verkon edestakainen viive on selvästi pidempi.",
+      "judge_device_a": "Mikä tahansa moderni puhelin toimii: Androidilla lataa DivingHQ-sovellus {play} -kaupasta, iPhonella käytä Safaria. iPhone 12 / Pixel 6 tai uudempi on ihanteellinen. Näkymä on suunniteltu mobiilille; tulet näpäyttämään numeroita koko kisan ajan, joten yhdellä kädellä mukavasti pidettävä puhelin on oikea valinta. Wifi on parempi kuin 4G, jos halli sellaisen tarjoaa — pisteet synkronoituvat myös 4G:n kautta, mutta verkon edestakainen viive on selvästi pidempi.",
       "scoring_q": "Miten pisteytys toimii?",
       "scoring_a": "Jokainen tuomari pisteyttää hypyn välillä <strong>0,0–10,0</strong> 0,5 askelin. 5-jäsenisessä paneelissa korkein ja matalin pudotetaan, ja kolme keskimmäistä jäävät (ne ovat «leikatut» pisteet). Jäljelle jäävät pisteet kerrotaan hypyn vaikeuskertoimella <strong>DD</strong>, jolloin saadaan hypyn pisteet. Synkronihypyissä kolme alipaneelia pisteyttää eri osa-alueet (Exec A, Exec B, Sync), ja laskenta yhdistää ne World Aquaticsin artiklan 8 mukaan.",
       "broadcast_q": "Haluan heijastaa tulostaulun yleisölle.",
@@ -666,7 +666,7 @@
       "bug_q": "Miten raportoin virheestä?",
       "bug_a": "Napsauta etusivun tai paneelin alalaidassa olevaa linkkiä <strong>🐛 Raportoi virhe</strong>. Avautuu valmiiksi täytetty GitHub-issue, jossa voit kuvata ongelman. Kuvakaappaukset auttavat paljon. Eikö sinulla ole GitHub-tiliä? Kirjoita osoitteeseen {email}.",
       "install_q": "Miten asennan DivingHQ:n sovelluksena?",
-      "install_a": "iPhonella: avaa sivusto Safarissa, napauta Jaa-painiketta ja valitse sitten <strong>Lisää aloitusnäytölle</strong>. Androidilla: avaa Chromessa, napauta valikkoa ja valitse sitten <strong>Asenna sovellus</strong>. Kuvake käynnistää koko ruudun selaimettoman näkymän — nopeampi käynnistys, ei selainpalkkia.",
+      "install_a": "Androidilla: lataa <strong>DivingHQ</strong> {play} -kaupasta ja kirjaudu tavallisella tililläsi. iPhonella ja iPadilla: avaa sivusto Safarissa, napauta Jaa-painiketta ja valitse sitten <strong>Lisää aloitusnäytölle</strong>: kuvake avaa koko ruudun näkymän ilman selainpalkkia.",
       "tfa_q": "Miten otan kaksivaiheisen tunnistuksen käyttöön?",
       "tfa_a": "Avaa <strong>Oma profiili</strong> → <strong>Turvallisuus</strong> → <strong>Kaksivaiheinen tunnistus</strong> ja skannaa QR-koodi todennussovelluksellasi (1Password, Authy, Google Authenticator). Tallenna palautuskoodit turvalliseen paikkaan — ne ovat ainoa tie takaisin, jos kadotat puhelimesi.",
       "account_q": "Miten vaihdan sähköpostini tai salasanani tai poistan tilini?",

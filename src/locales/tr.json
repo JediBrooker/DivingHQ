@@ -637,7 +637,7 @@
         "step_1_link": "Skor Tahtası ve Sonuçlar",
         "step_2": "Yayın düzeni için herhangi bir canlı etkinliği veya özet için tamamlanmış herhangi bir yarışmayı seçin",
         "step_3": "Herhangi bir hakem puan çipine dokunun → o hakemin herkese açık analizi açılır",
-        "step_4": "Daha hızlı, çerçevesiz bir görünüm için Ana Ekrana Ekle (iOS / Android)",
+        "step_4": "Android'de DivingHQ uygulamasını {play}'den indirin. iPhone'da daha hızlı, tam ekran bir görünüm için Safari'de <strong>Ana Ekrana Ekle</strong>'yi kullanın",
         "cta": "Skor tahtası kılavuzu ↗"
       }
     },
@@ -645,7 +645,7 @@
       "register_q": "Yeni kaydoldum ama henüz giriş yapamıyorum.",
       "register_a": "Önce e-postanızı doğrulayın: kaydolduğunuzda gönderdiğimiz doğrulama e-postasındaki bağlantıya tıklayın. Göremiyor musunuz? Spam klasörüne bakın ya da giriş yapmayı deneyip yeni bir bağlantı isteyin. Roller girişi engellemez: izleyici olarak başlarsınız, kulübünüzün veya federasyonunuzun yöneticisi onayladığında daha fazlasını alırsınız.",
       "judge_device_q": "Hakemim — hangi cihazı kullanmalıyım?",
-      "judge_device_a": "Tarayıcısı olan herhangi bir modern telefon çalışır. iPhone 12 / Pixel 6 ve yenisi idealdir. Görünüm mobile-first; yarışı sayıları tıklayarak geçireceksiniz, bu yüzden tek elle rahatça tutabildiğiniz bir telefon doğru seçimdir. Mekânda WiFi varsa 4G'ye tercih edilir — puanlarınız 4G üzerinden de senkronize olur ama ağın gidiş-dönüşü gözle görülür biçimde uzar.",
+      "judge_device_a": "Herhangi bir modern telefon çalışır: Android'de DivingHQ uygulamasını {play}'den indirin, iPhone'da Safari'yi kullanın. iPhone 12 / Pixel 6 ve yenisi idealdir. Görünüm mobile-first; yarışı sayıları tıklayarak geçireceksiniz, bu yüzden tek elle rahatça tutabildiğiniz bir telefon doğru seçimdir. Mekânda WiFi varsa 4G'ye tercih edilir — puanlarınız 4G üzerinden de senkronize olur ama ağın gidiş-dönüşü gözle görülür biçimde uzar.",
       "scoring_q": "Puanlama nasıl çalışır?",
       "scoring_a": "Her hakem atlamayı yarım puanlık adımlarla <strong>0.0 ile 10.0</strong> arasında puanlar. 5 kişilik panelde en yüksek ve en düşük atılır, ortadaki üçü tutulur (\"trim\"). Tutulan puanlar atlamanın <strong>DD</strong> (Zorluk Derecesi) ile çarpılarak atlamanın puanı bulunur. Senkron için üç alt panel farklı bileşenleri (Exec A, Exec B, Sync) puanlar ve hesap, World Aquatics Madde 8'e göre birleştirilir.",
       "broadcast_q": "Skor tahtasını seyircimize yansıtmak istiyorum.",
@@ -655,7 +655,7 @@
       "bug_q": "Bir hatayı nasıl bildiririm?",
       "bug_a": "Ana sayfanın veya panonuzun altındaki <strong>🐛 Hata bildir</strong> bağlantısına tıklayın. Sorunu açıklamanız için önceden doldurulmuş bir GitHub konusu açılır. Ekran görüntüleri çok yardımcı olur. GitHub hesabınız yok mu? Bunun yerine {email} adresine yazın.",
       "install_q": "DivingHQ'yu uygulama olarak nasıl kurarım?",
-      "install_a": "iPhone'da: siteyi Safari'de açın, Paylaş düğmesine dokunun, ardından <strong>Ana Ekrana Ekle</strong>'ye dokunun. Android'de: Chrome'da açın, menüye dokunun, ardından <strong>Uygulamayı yükle</strong>'ye dokunun. Simge, çerçevesiz tam ekran bir görünüm açar — daha hızlı başlatma, tarayıcı çubuğu yok.",
+      "install_a": "Android'de: <strong>DivingHQ</strong> uygulamasını {play}'den indirin ve her zamanki hesabınızla oturum açın. iPhone ve iPad'de: siteyi Safari'de açın, Paylaş düğmesine dokunun, ardından <strong>Ana Ekrana Ekle</strong>'ye dokunun: simge, tarayıcı çubuğu olmayan tam ekran bir görünüm açar.",
       "tfa_q": "İki adımlı doğrulamayı nasıl etkinleştiririm?",
       "tfa_a": "<strong>Profilim</strong> → <strong>Güvenlik</strong> → <strong>İki adımlı doğrulama</strong>'yı açın ve QR kodunu kimlik doğrulayıcı uygulamanızla (1Password, Authy, Google Authenticator) tarayın. Kurtarma kodlarını güvenli bir yere kaydedin — telefonunuzu kaybederseniz geri dönmenin tek yolu onlardır.",
       "account_q": "E-postamı, parolamı nasıl değiştiririm veya hesabımı nasıl silerim?",

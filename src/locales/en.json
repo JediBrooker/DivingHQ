@@ -637,7 +637,7 @@
         "step_1_link": "Scoreboard & Results",
         "step_2": "Pick any live event for the broadcast layout, or any completed meet for the recap",
         "step_3": "Tap any judge score chip → opens that judge's public analysis",
-        "step_4": "Add to Home Screen (iOS / Android) for a faster, chromeless view",
+        "step_4": "On Android, get the DivingHQ app from {play}. On iPhone, use <strong>Add to Home Screen</strong> in Safari for a faster, full-screen view",
         "cta": "Scoreboard guide ↗"
       }
     },
@@ -645,7 +645,7 @@
       "register_q": "I just registered, but I can't sign in yet.",
       "register_a": "Confirm your email first: click the link in the confirmation email we sent when you signed up. Nothing there? Check your spam folder, or try signing in and ask for a new link. Roles don't block sign-in: you start as a spectator and get more once your club or federation admin approves.",
       "judge_device_q": "I'm a judge — what device should I use?",
-      "judge_device_a": "Any modern phone with a browser works. iPhone 12 / Pixel 6 and newer is ideal. The view is mobile-first; you'll spend the meet tapping numbers, so a phone you can grip comfortably in one hand is the right call. WiFi is preferred over 4G if the venue has it — your scores still sync over 4G but the network round trip is noticeably longer.",
+      "judge_device_a": "Any modern phone works: on Android, get the DivingHQ app from {play}; on an iPhone, use Safari. iPhone 12 / Pixel 6 and newer is ideal. The view is mobile-first; you'll spend the meet tapping numbers, so a phone you can grip comfortably in one hand is the right call. WiFi is preferred over 4G if the venue has it — your scores still sync over 4G but the network round trip is noticeably longer.",
       "scoring_q": "How does scoring work?",
       "scoring_a": "Each judge scores a dive from <strong>0.0 to 10.0</strong> in half-point steps. With a 5-judge panel, the highest and lowest are dropped and the middle three are kept (the \"trim\"). The kept scores are multiplied by the dive's <strong>DD</strong> (Degree of Difficulty) to get the dive's points. For synchro, three sub-panels score different aspects (Exec A, Exec B, Sync) and the math combines them per World Aquatics Article 8.",
       "broadcast_q": "I want to project the scoreboard for our audience.",
@@ -655,7 +655,7 @@
       "bug_q": "How do I report a bug?",
       "bug_a": "Click the <strong>🐛 Report a bug</strong> link at the bottom of the home page or your dashboard. It opens a pre-filled GitHub issue ready for you to describe the problem. Screenshots help a lot. No GitHub account? Email {email} instead.",
       "install_q": "How do I install DivingHQ as an app?",
-      "install_a": "On iPhone: open the site in Safari, tap the Share button, then <strong>Add to Home Screen</strong>. On Android: open in Chrome, tap the menu, then <strong>Install app</strong>. The icon launches a chromeless full-screen view — faster startup, no browser bar.",
+      "install_a": "On Android, get <strong>DivingHQ</strong> from {play} and sign in with your usual account. On iPhone and iPad, open the site in Safari, tap the Share button, then <strong>Add to Home Screen</strong>: the icon opens a full-screen view with no browser bar.",
       "tfa_q": "How do I enable two-factor authentication?",
       "tfa_a": "Open <strong>My Profile</strong> → <strong>Security</strong> → <strong>Two-factor authentication</strong> and scan the QR code with your authenticator app (1Password, Authy, Google Authenticator). Save the recovery codes somewhere safe — they're the only way back in if you lose your phone.",
       "account_q": "How do I change my email, password, or delete my account?",

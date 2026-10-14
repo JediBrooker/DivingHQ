@@ -637,7 +637,7 @@
         "step_1_link": "Scoreboard at Mga Resulta",
         "step_2": "Pumili ng anumang live event para sa broadcast layout, o anumang tapos na meet para sa recap",
         "step_3": "I-tap ang anumang judge score chip → magbubukas ang public analysis ng judge",
-        "step_4": "Idagdag sa Home Screen (iOS / Android) para sa mas mabilis at chromeless na view",
+        "step_4": "Sa Android, kunin ang DivingHQ app sa {play}. Sa iPhone, gamitin ang <strong>Add to Home Screen</strong> sa Safari para sa mas mabilis na full-screen view",
         "cta": "Gabay sa Scoreboard ↗"
       }
     },
@@ -645,7 +645,7 @@
       "register_q": "Bagong rehistro lang ako, pero hindi pa ako makasign-in.",
       "register_a": "Kumpirmahin muna ang email mo: i-click ang link sa confirmation email na ipinadala namin noong nag-sign up ka. Wala? Tingnan ang spam folder, o subukang mag-sign in at humingi ng bagong link. Hindi hinaharangan ng mga role ang pag-sign in: magsisimula ka bilang spectator at magkakaroon ng higit pa kapag inaprubahan ng admin ng iyong club o pederasyon.",
       "judge_device_q": "Judge ako — anong device ang dapat kong gamitin?",
-      "judge_device_a": "Anumang modernong phone na may browser ay gagana. iPhone 12 / Pixel 6 at mas bago ang ideal. Mobile-first ang view; gagamitin mo ang meet na nag-ta-tap ng numero, kaya ang phone na komportableng hawakan ng isang kamay ang tamang pili. Mas inirerekomenda ang WiFi kaysa 4G kung may WiFi ang venue — magsi-sync pa rin ang scores mo sa 4G pero mas mahaba ang round trip ng network.",
+      "judge_device_a": "Gagana ang anumang modernong phone: sa Android, kunin ang DivingHQ app sa {play}; sa iPhone, gamitin ang Safari. iPhone 12 / Pixel 6 at mas bago ang ideal. Mobile-first ang view; gagamitin mo ang meet na nag-ta-tap ng numero, kaya ang phone na komportableng hawakan ng isang kamay ang tamang pili. Mas inirerekomenda ang WiFi kaysa 4G kung may WiFi ang venue — magsi-sync pa rin ang scores mo sa 4G pero mas mahaba ang round trip ng network.",
       "scoring_q": "Paano gumagana ang scoring?",
       "scoring_a": "Sina-score ng bawat judge ang sisid mula <strong>0.0 hanggang 10.0</strong> sa half-point steps. Sa 5-judge panel, ibinabasura ang pinakamataas at pinakamababa at ang gitnang tatlo ang pinanghahawakan (ang \"trim\"). Ang nanatili ay minu-multiply sa <strong>DD</strong> (Degree of Difficulty) ng sisid para makuha ang points. Para sa synchro, tatlong sub-panel ang nagsa-score ng iba't ibang aspeto (Exec A, Exec B, Sync) at pinagsasama ang math ayon sa World Aquatics Article 8.",
       "broadcast_q": "Gusto kong i-project ang scoreboard para sa aming audience.",
@@ -655,7 +655,7 @@
       "bug_q": "Paano mag-report ng bug?",
       "bug_a": "I-click ang <strong>🐛 Report a bug</strong> link sa ibaba ng home page o ng iyong dashboard. Magbubukas ang isang pre-filled GitHub issue na handa mong ilarawan ang problema. Malaking tulong ang screenshots. Walang GitHub account? Mag-email sa {email}.",
       "install_q": "Paano i-install ang DivingHQ bilang isang app?",
-      "install_a": "Sa iPhone: buksan ang site sa Safari, i-tap ang Share button, saka <strong>Add to Home Screen</strong>. Sa Android: buksan sa Chrome, i-tap ang menu, saka <strong>Install app</strong>. Ang icon ay naglulunsad ng chromeless full-screen view — mas mabilis ang startup, walang browser bar.",
+      "install_a": "Sa Android: kunin ang <strong>DivingHQ</strong> sa {play} at mag-sign in gamit ang karaniwan mong account. Sa iPhone at iPad: buksan ang site sa Safari, i-tap ang Share button, saka <strong>Add to Home Screen</strong>: magbubukas ang icon ng full-screen view na walang browser bar.",
       "tfa_q": "Paano paganahin ang two-factor authentication?",
       "tfa_a": "Buksan ang <strong>My Profile</strong> → <strong>Security</strong> → <strong>Two-factor authentication</strong> at i-scan ang QR code gamit ang iyong authenticator app (1Password, Authy, Google Authenticator). I-save ang recovery codes sa ligtas na lugar — iyon lang ang paraan para makabalik kung mawala ang iyong phone.",
       "account_q": "Paano palitan ang aking email, password, o burahin ang aking account?",

@@ -648,7 +648,7 @@
         "step_1_link": "Eredménytábla és eredmények",
         "step_2": "Válasszon bármely élő eseményt a közvetítési elrendezéshez, vagy bármely befejezett versenyt az összefoglalóhoz",
         "step_3": "Koppintson bármely bíró pontszámcsippjére → megnyitja a bíró nyilvános elemzését",
-        "step_4": "Adja a Kezdőképernyőhöz (iOS / Android) gyorsabb, vezérlőelem-mentes nézethez",
+        "step_4": "Androidon töltse le a DivingHQ alkalmazást a {play} áruházból. iPhone-on a Safariban válassza a <strong>Hozzáadás a kezdőképernyőhöz</strong> lehetőséget a gyorsabb, teljes képernyős nézetért",
         "cta": "Eredménytábla útmutató ↗"
       }
     },
@@ -656,7 +656,7 @@
       "register_q": "Most regisztráltam, de még nem tudok bejelentkezni.",
       "register_a": "Először erősítse meg az e-mail-címét: kattintson a regisztrációkor küldött megerősítő e-mailben lévő linkre. Nem találja? Nézze meg a spam mappát, vagy próbáljon bejelentkezni, és kérjen új linket. A szerepkörök nem akadályozzák a bejelentkezést: nézőként kezd, és továbbiakat kap, amint a klubja vagy szövetsége adminisztrátora jóváhagyja.",
       "judge_device_q": "Pontozóbíró vagyok — milyen eszközt használjak?",
-      "judge_device_a": "Bármely modern, böngészővel rendelkező telefon működik. iPhone 12 / Pixel 6 vagy újabb ideális. A nézet mobil-első; a verseny során számokat fog koppintani, ezért egy kézzel kényelmesen tartható telefon a jó választás. A WiFi előnyösebb a 4G-nél, ha a helyszín támogatja — a pontszámok 4G-n is szinkronizálódnak, de a hálózati körút észrevehetően hosszabb.",
+      "judge_device_a": "Bármely modern telefon működik: Androidon töltse le a DivingHQ alkalmazást a {play} áruházból, iPhone-on használja a Safarit. iPhone 12 / Pixel 6 vagy újabb ideális. A nézet mobil-első; a verseny során számokat fog koppintani, ezért egy kézzel kényelmesen tartható telefon a jó választás. A WiFi előnyösebb a 4G-nél, ha a helyszín támogatja — a pontszámok 4G-n is szinkronizálódnak, de a hálózati körút észrevehetően hosszabb.",
       "scoring_q": "Hogyan működik a pontozás?",
       "scoring_a": "Minden pontozóbíró <strong>0,0-tól 10,0-ig</strong> pontoz egy ugrást félpontos lépésekben. Öttagú testületnél a legmagasabb és legalacsonyabb pontszámot eldobják, a középső hármat megtartják (a „trim\"). A megtartott pontszámokat megszorozzák az ugrás <strong>DD</strong> értékével (Nehézségi fok), így kapják az ugrás pontjait. Szinkronnál három alpanel pontoz különböző szempontokat (Exec A, Exec B, Sync), és a matematika a World Aquatics 8. cikke szerint kombinálja őket.",
       "broadcast_q": "Vetíteni szeretném az eredménytáblát a közönségnek.",
@@ -666,7 +666,7 @@
       "bug_q": "Hogyan jelenthetek hibát?",
       "bug_a": "Kattintson a <strong>🐛 Hibajelentés</strong> linkre a kezdőlap vagy az irányítópult alján. Megnyit egy előre kitöltött GitHub-issue-t, amelyben leírhatja a problémát. A képernyőképek sokat segítenek. Nincs GitHub-fiókja? Írjon a(z) {email} címre.",
       "install_q": "Hogyan telepítem a DivingHQ-t alkalmazásként?",
-      "install_a": "iPhone-on: nyissa meg az oldalt Safariban, koppintson a Megosztás gombra, majd a <strong>Hozzáadás a kezdőképernyőhöz</strong> elemre. Androidon: nyissa meg Chrome-ban, koppintson a menüre, majd az <strong>Alkalmazás telepítése</strong> elemre. Az ikon vezérlőelem-mentes, teljes képernyős nézetet indít — gyorsabb indulás, böngészősáv nélkül.",
+      "install_a": "Androidon: töltse le a <strong>DivingHQ</strong> alkalmazást a {play} áruházból, és jelentkezzen be a megszokott fiókjával. iPhone-on és iPaden: nyissa meg az oldalt Safariban, koppintson a Megosztás gombra, majd a <strong>Hozzáadás a kezdőképernyőhöz</strong> elemre: az ikon teljes képernyős nézetet nyit böngészősáv nélkül.",
       "tfa_q": "Hogyan kapcsolom be a kétlépcsős hitelesítést?",
       "tfa_a": "Nyissa meg a <strong>Saját profil</strong> → <strong>Biztonság</strong> → <strong>Kétlépcsős hitelesítés</strong> menüt, és olvassa be a QR-kódot a hitelesítő alkalmazásával (1Password, Authy, Google Authenticator). Mentse a helyreállítási kódokat biztonságos helyre — ezek az egyetlen módja a visszajutásnak, ha elveszíti a telefonját.",
       "account_q": "Hogyan módosítom az e-mail-címem, a jelszavam, vagy hogyan törlöm a fiókom?",

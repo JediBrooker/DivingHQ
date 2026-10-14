@@ -648,7 +648,7 @@
         "step_1_link": "Marcador e Resultados",
         "step_2": "Escolhe uma prova em direto para o formato de transmissão, ou uma prova terminada para o resumo",
         "step_3": "Toca em qualquer chip de pontuação de juiz → abre a análise pública desse juiz",
-        "step_4": "Adiciona ao ecrã principal (iOS / Android) para uma vista mais rápida e sem barras de navegador",
+        "step_4": "No Android, descarrega a app DivingHQ no {play}. No iPhone, usa <strong>Adicionar ao ecrã principal</strong> no Safari para uma vista de ecrã inteiro mais rápida",
         "cta": "Guia do marcador ↗"
       }
     },
@@ -656,7 +656,7 @@
       "register_q": "Acabei de me registar, mas ainda não consigo entrar.",
       "register_a": "Confirma primeiro o teu e-mail: clica no link do e-mail de confirmação que te enviámos quando te registaste. Não o encontras? Vê a pasta de spam, ou tenta iniciar sessão e pede um novo link. Os papéis não impedem o início de sessão: começas como espectador e recebes mais quando o administrador do teu clube ou da tua federação aprovar.",
       "judge_device_q": "Sou juiz — que dispositivo devo usar?",
-      "judge_device_a": "Qualquer telemóvel moderno com navegador funciona. O ideal é iPhone 12 / Pixel 6 ou mais recente. A vista foi desenhada para telemóvel; vais passar a prova a tocar em números, por isso um telemóvel que consigas segurar confortavelmente com uma mão é a escolha certa. O wifi é preferível ao 4G se o pavilhão tiver — as pontuações também sincronizam por 4G, mas o tempo de ida e volta da rede é notavelmente mais longo.",
+      "judge_device_a": "Qualquer telemóvel moderno funciona: no Android, descarrega a app DivingHQ no {play}; no iPhone, usa o Safari. O ideal é iPhone 12 / Pixel 6 ou mais recente. A vista foi desenhada para telemóvel; vais passar a prova a tocar em números, por isso um telemóvel que consigas segurar confortavelmente com uma mão é a escolha certa. O wifi é preferível ao 4G se o pavilhão tiver — as pontuações também sincronizam por 4G, mas o tempo de ida e volta da rede é notavelmente mais longo.",
       "scoring_q": "Como funciona a pontuação?",
       "scoring_a": "Cada juiz pontua um salto de <strong>0,0 a 10,0</strong> em passos de meio ponto. Com um painel de 5 juízes, descartam-se a pontuação mais alta e a mais baixa e ficam as três do meio (o \"trim\"). As pontuações mantidas multiplicam-se pelo <strong>DD</strong> (Grau de Dificuldade) do salto para obter os pontos do salto. Em sincronizados, três subpainéis pontuam aspetos diferentes (Exec A, Exec B, Sync) e o cálculo combina-os segundo o Artigo 8 da World Aquatics.",
       "broadcast_q": "Quero projetar o marcador para o nosso público.",
@@ -666,7 +666,7 @@
       "bug_q": "Como reporto um erro?",
       "bug_a": "Clica no link <strong>🐛 Reportar um erro</strong> no fundo da página inicial ou do teu painel. Abre uma issue do GitHub pré-preenchida, pronta para descreveres o problema. As capturas de ecrã ajudam muito. Não tens conta no GitHub? Escreve para {email}.",
       "install_q": "Como instalo o DivingHQ como aplicação?",
-      "install_a": "No iPhone: abre o site no Safari, toca no botão Partilhar e depois em <strong>Adicionar ao ecrã principal</strong>. No Android: abre no Chrome, toca no menu e depois em <strong>Instalar app</strong>. O ícone abre uma vista de ecrã inteiro sem barras — arranque mais rápido, sem barra de navegador.",
+      "install_a": "No Android: descarrega o <strong>DivingHQ</strong> no {play} e inicia sessão com a tua conta habitual. No iPhone e iPad: abre o site no Safari, toca no botão Partilhar e depois em <strong>Adicionar ao ecrã principal</strong>: o ícone abre uma vista de ecrã inteiro sem barra de navegador.",
       "tfa_q": "Como ativo a autenticação de dois fatores?",
       "tfa_a": "Abre <strong>O Meu Perfil</strong> → <strong>Segurança</strong> → <strong>Autenticação de dois fatores</strong> e lê o código QR com a tua app de autenticação (1Password, Authy, Google Authenticator). Guarda os códigos de recuperação num sítio seguro — são a única forma de voltar a entrar se perderes o telemóvel.",
       "account_q": "Como altero o meu email, a palavra-passe, ou elimino a minha conta?",

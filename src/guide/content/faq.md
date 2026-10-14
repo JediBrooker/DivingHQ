@@ -6,7 +6,7 @@ Common questions, error states, and "why is X happening" answers, plus a glossar
 
 | If the problem is about… | Start here |
 |---|---|
-| Signing up, confirming your email, signing in | [Getting started](#getting-started) |
+| Signing up, confirming your email, signing in, the Android app | [Getting started](#getting-started) |
 | Clubs, regions, federations and claims | [Clubs and federations](#clubs-and-federations) |
 | Start Event, Control Room, scoring, judges | [Running a meet](#running-a-meet) |
 | Boards, warmups, judge overlaps, delays | [Session scheduler](#session-scheduler) |
@@ -31,6 +31,12 @@ Roles don't hold up signing in. Everyone starts as a spectator, and the role you
 13 or older. The sign-up form asks you to tick **I am 13 years old or older**; it doesn't ask for a date of birth just for that. If a profile's date of birth shows someone under 13, that account can't sign in, and the sign-in page says why. Write to [support@divinghq.app](mailto:support@divinghq.app) if the date on your profile is wrong.
 
 Younger divers still compete, through a **junior profile**: a parent (or their coach, or their club) adds it from **Junior divers**, the club confirms it, and the child can then be entered in meets while their notifications go to the parent. At 13 they take it over with all their results. [Junior Divers](/guide/junior-divers) walks parents through it, screenshots and all. Divers aged 13 to 17 should sign up with a parent or guardian involved.
+
+### "Is there a DivingHQ app?"
+
+On Android, yes: get [DivingHQ from Google Play](https://play.google.com/store/apps/details?id=app.divinghq.mobile). It's the same DivingHQ as the website with the same account, so sign in with the username and password you already have, or sign up in the app. On top of the website it keeps a judge's screen on while they score, shares results and PDFs through your phone's share menu, and sends notifications once you turn them on in **Settings**.
+
+On iPhone and iPad, use [divinghq.app](https://divinghq.app) in Safari for now. Add it to your Home Screen (**Share → Add to Home Screen**) and it opens full screen like an app, which is also what lets Safari show notifications. On a laptop or desktop, any up-to-date browser works.
 
 ### "Where's the sidebar on my phone?"
 
@@ -117,7 +123,7 @@ Past `entries_close_at`, divers can't self-submit lists. The meet manager has th
 
 Check their connection pill (top of the judge view). If it's amber for more than a few seconds, they've lost the socket. Common causes:
 
-- Phone went to sleep — keep the screen on or use the PWA-installed app
+- Phone went to sleep: keep the screen on. The Android app does that by itself while they're scoring; in a browser, keep DivingHQ in front between dives
 - Wifi flake — try mobile data or a different access point
 - Two devices logged in for the same judge — one will be kicked, ask them to use only one
 
@@ -293,7 +299,9 @@ Open your profile and click **🔐 Two-Factor Auth**. Scan the QR code with an a
 
 Open **Settings** (`/settings`): it's in the account menu, and it's the **Settings** tab at the bottom of a phone screen. The Notifications section shows whether this device gets push notifications and turns them on or off. It's per device, so switching them off on your laptop leaves your phone alone.
 
-Your browser may ask about notifications the first time you sign in on it. If you said no, Settings shows **Blocked in browser settings**: allow notifications for divinghq.app in the browser's own settings, then come back and turn them on.
+In the [Android app](https://play.google.com/store/apps/details?id=app.divinghq.mobile), Android may ask for permission the first time you turn them on. If you said no, Settings shows **Blocked in device settings**: press **Device notification settings**, allow notifications for DivingHQ, then come back and press **Refresh status**. **Send test notification** checks one actually reaches the phone. Notifications on the lock screen keep the details private; open the app to read them.
+
+In a browser, it may ask about notifications the first time you sign in on it. If you said no, Settings shows **Blocked in browser settings**: allow notifications for divinghq.app in the browser's own settings, then come back and turn them on.
 
 On an iPhone or iPad, Safari only offers notifications once DivingHQ is on your Home Screen (**Share → Add to Home Screen**) and you've opened it from there.
 
@@ -309,9 +317,9 @@ Can't sign in any more? [Delete your DivingHQ account](/delete-account) explains
 
 ### "The scoreboard feels sluggish"
 
-The scoreboard is PWA-installable — install it for faster reloads, service-worker caching, and offline resilience. On iOS / Android Chrome, look for "Add to Home Screen" / "Install".
+On Android, the [DivingHQ app](https://play.google.com/store/apps/details?id=app.divinghq.mobile) is the quickest way to follow a meet: its screens are part of the app, so it doesn't download the page every time you open it. On iPhone, add DivingHQ to your Home Screen from Safari (**Share → Add to Home Screen**) for faster reloads and a full-screen view; desktop Chrome and Edge offer **Install** in the address bar.
 
-If install isn't available and the live broadcast is consistently slow, check:
+If that doesn't help and the live broadcast is consistently slow, check:
 
 - Your network — websockets need stable bandwidth, not just throughput
 - The number of events open simultaneously — each subscribes to its own room, ten tabs is heavy
