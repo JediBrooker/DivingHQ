@@ -278,8 +278,10 @@ test("httpMiddleware: replay returns identical body + X-Idempotent header", asyn
   assert.equal(first.body.ok, true);
   assert.equal(first.body.echoed.something, "echo me");
 
-  // Wait for the fire-and-forget cache write to land.
-  await new Promise((r) => setTimeout(r, 150));
+  // The middleware caches the response fire-and-forget too, and a flat
+  // 150ms wasn't always enough on a CI runner (the replay header came
+  // back missing). Wait for the row, same as the socket tests do.
+  await waitForStored(key);
 
   const second = await harnessRequest({ body, headers });
   assert.equal(second.status, 200);
@@ -300,7 +302,7 @@ test("httpMiddleware: reusing key with different body returns 422", async (t) =>
 
   const first = await harnessRequest({ body: { x: 1 }, headers });
   assert.equal(first.status, 200);
-  await new Promise((r) => setTimeout(r, 150));
+  await waitForStored(key);
 
   const second = await harnessRequest({ body: { x: 2 }, headers });
   assert.equal(second.status, 422);
