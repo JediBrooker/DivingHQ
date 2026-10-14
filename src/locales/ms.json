@@ -637,7 +637,7 @@
         "step_1_link": "Papan Markah & Keputusan",
         "step_2": "Pilih mana-mana acara langsung untuk susun atur siaran, atau pertandingan selesai untuk ringkasan",
         "step_3": "Ketik mana-mana cip markah hakim → buka analisis awam hakim itu",
-        "step_4": "Tambah ke Skrin Utama (iOS / Android) untuk paparan lebih pantas tanpa bingkai",
+        "step_4": "Pada Android, muat turun aplikasi DivingHQ dari {play}. Pada iPhone, gunakan <strong>Tambah ke Skrin Utama</strong> dalam Safari untuk paparan skrin penuh yang lebih pantas",
         "cta": "Panduan papan markah ↗"
       }
     },
@@ -645,7 +645,7 @@
       "register_q": "Saya baru sahaja mendaftar, tetapi belum boleh log masuk.",
       "register_a": "Sahkan e-mel anda dahulu: klik pautan dalam e-mel pengesahan yang kami hantar semasa anda mendaftar. Tiada? Semak folder spam, atau cuba log masuk dan minta pautan baharu. Peranan tidak menghalang log masuk: anda bermula sebagai penonton dan mendapat lebih apabila pentadbir kelab atau persekutuan anda meluluskannya.",
       "judge_device_q": "Saya hakim — peranti apa yang patut saya gunakan?",
-      "judge_device_a": "Mana-mana telefon moden dengan pelayar berfungsi. iPhone 12 / Pixel 6 dan lebih baharu ialah ideal. Paparan dibuat khas untuk mudah alih; anda akan menghabiskan masa pertandingan mengetik nombor, jadi telefon yang selesa digenggam sebelah tangan adalah pilihan tepat. WiFi lebih diutamakan daripada 4G jika tempat itu ada — markah anda tetap menyelaras menerusi 4G tetapi laluan rangkaian lebih lambat.",
+      "judge_device_a": "Mana-mana telefon moden berfungsi: pada Android, muat turun aplikasi DivingHQ dari {play}; pada iPhone, gunakan Safari. iPhone 12 / Pixel 6 dan lebih baharu ialah ideal. Paparan dibuat khas untuk mudah alih; anda akan menghabiskan masa pertandingan mengetik nombor, jadi telefon yang selesa digenggam sebelah tangan adalah pilihan tepat. WiFi lebih diutamakan daripada 4G jika tempat itu ada — markah anda tetap menyelaras menerusi 4G tetapi laluan rangkaian lebih lambat.",
       "scoring_q": "Bagaimana pemarkahan berfungsi?",
       "scoring_a": "Setiap hakim menilai terjunan dari <strong>0.0 hingga 10.0</strong> dalam langkah setengah mata. Dengan panel 5-hakim, yang tertinggi dan terendah dibuang dan tiga di tengah dikekalkan (\"trim\"). Markah yang dikekalkan didarab dengan <strong>DD</strong> (Degree of Difficulty) terjunan untuk mendapat mata terjunan. Untuk synchro, tiga sub-panel menilai aspek berlainan (Exec A, Exec B, Sync) dan kiraan menggabungkannya mengikut World Aquatics Artikel 8.",
       "broadcast_q": "Saya mahu memaparkan papan markah untuk penonton kami.",
@@ -655,7 +655,7 @@
       "bug_q": "Bagaimana saya melaporkan pepijat?",
       "bug_a": "Klik pautan <strong>🐛 Laporkan pepijat</strong> di bahagian bawah halaman utama atau papan pemuka anda. Ia membuka isu GitHub yang telah diisi terdahulu sedia untuk anda menerangkan masalah. Tangkapan skrin amat membantu. Tiada akaun GitHub? E-mel {email}.",
       "install_q": "Bagaimana saya memasang DivingHQ sebagai aplikasi?",
-      "install_a": "Pada iPhone: buka tapak di Safari, ketik butang Kongsi, kemudian <strong>Tambah ke Skrin Utama</strong>. Pada Android: buka di Chrome, ketik menu, kemudian <strong>Pasang aplikasi</strong>. Ikon tersebut melancarkan paparan skrin penuh tanpa bingkai — permulaan lebih pantas, tiada bar pelayar.",
+      "install_a": "Pada Android: muat turun <strong>DivingHQ</strong> dari {play} dan log masuk dengan akaun biasa anda. Pada iPhone dan iPad: buka tapak di Safari, ketik butang Kongsi, kemudian <strong>Tambah ke Skrin Utama</strong>: ikon itu membuka paparan skrin penuh tanpa bar pelayar.",
       "tfa_q": "Bagaimana saya mengaktifkan pengesahan dua faktor?",
       "tfa_a": "Buka <strong>Profil Saya</strong> → <strong>Keselamatan</strong> → <strong>Pengesahan dua faktor</strong> dan imbas kod QR dengan aplikasi pengesah anda (1Password, Authy, Google Authenticator). Simpan kod pemulihan di tempat yang selamat — itulah satu-satunya cara masuk semula jika anda kehilangan telefon.",
       "account_q": "Bagaimana saya menukar e-mel, kata laluan, atau memadam akaun saya?",

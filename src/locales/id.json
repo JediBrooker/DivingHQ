@@ -637,7 +637,7 @@
         "step_1_link": "Papan Skor & Hasil",
         "step_2": "Pilih acara langsung mana pun untuk tata letak siaran, atau kompetisi yang selesai untuk ringkasannya",
         "step_3": "Ketuk chip skor juri mana pun → buka analisis publik juri tersebut",
-        "step_4": "Tambahkan ke Layar Utama (iOS / Android) untuk tampilan lebih cepat dan tanpa bingkai",
+        "step_4": "Di Android, unduh aplikasi DivingHQ dari {play}. Di iPhone, gunakan <strong>Tambahkan ke Layar Utama</strong> di Safari untuk tampilan layar penuh yang lebih cepat",
         "cta": "Panduan papan skor ↗"
       }
     },
@@ -645,7 +645,7 @@
       "register_q": "Saya baru saja mendaftar tapi belum bisa masuk.",
       "register_a": "Konfirmasi email Anda dulu: klik tautan di email konfirmasi yang kami kirim saat Anda mendaftar. Tidak ada? Periksa folder spam, atau coba masuk dan minta tautan baru. Peran tidak menghalangi masuk: Anda mulai sebagai penonton dan mendapat lebih banyak setelah admin klub atau federasi Anda menyetujui.",
       "judge_device_q": "Saya juri — perangkat apa yang sebaiknya saya pakai?",
-      "judge_device_a": "Setiap ponsel modern dengan peramban bisa. iPhone 12 / Pixel 6 dan yang lebih baru ideal. Tampilan dirancang untuk seluler; Anda akan menghabiskan kompetisi mengetuk angka, jadi ponsel yang nyaman digenggam satu tangan adalah pilihan tepat. WiFi lebih disukai daripada 4G jika venue memiliki — skor Anda tetap tersinkron lewat 4G tapi waktu tempuh jaringan jelas lebih lama.",
+      "judge_device_a": "Ponsel modern apa pun bisa: di Android, unduh aplikasi DivingHQ dari {play}; di iPhone, gunakan Safari. iPhone 12 / Pixel 6 dan yang lebih baru ideal. Tampilan dirancang untuk seluler; Anda akan menghabiskan kompetisi mengetuk angka, jadi ponsel yang nyaman digenggam satu tangan adalah pilihan tepat. WiFi lebih disukai daripada 4G jika venue memiliki — skor Anda tetap tersinkron lewat 4G tapi waktu tempuh jaringan jelas lebih lama.",
       "scoring_q": "Bagaimana cara penilaian bekerja?",
       "scoring_a": "Setiap juri menilai loncatan dari <strong>0,0 hingga 10,0</strong> dengan kelipatan setengah poin. Dengan panel 5 juri, skor tertinggi dan terendah dibuang dan tiga di tengah dipertahankan (\"trim\"). Skor yang dipertahankan dikalikan dengan <strong>DD</strong> (Degree of Difficulty) loncatan untuk mendapatkan poin loncatan. Untuk sinkro, tiga sub-panel menilai aspek berbeda (Exec A, Exec B, Sync) dan perhitungannya digabungkan sesuai World Aquatics Pasal 8.",
       "broadcast_q": "Saya ingin memproyeksikan papan skor untuk penonton kami.",
@@ -655,7 +655,7 @@
       "bug_q": "Bagaimana cara melaporkan bug?",
       "bug_a": "Klik tautan <strong>🐛 Laporkan bug</strong> di bagian bawah halaman beranda atau dasbor Anda. Itu membuka isu GitHub yang sudah terisi siap untuk Anda jelaskan masalahnya. Tangkapan layar sangat membantu. Tidak punya akun GitHub? Kirim email ke {email}.",
       "install_q": "Bagaimana cara memasang DivingHQ sebagai aplikasi?",
-      "install_a": "Di iPhone: buka situs di Safari, ketuk tombol Bagikan, lalu <strong>Tambahkan ke Layar Utama</strong>. Di Android: buka di Chrome, ketuk menu, lalu <strong>Pasang aplikasi</strong>. Ikon tersebut meluncurkan tampilan layar penuh tanpa bingkai — startup lebih cepat, tanpa bilah peramban.",
+      "install_a": "Di Android: unduh <strong>DivingHQ</strong> dari {play} lalu masuk dengan akun Anda yang biasa. Di iPhone dan iPad: buka situs di Safari, ketuk tombol Bagikan, lalu <strong>Tambahkan ke Layar Utama</strong>: ikon tersebut membuka tampilan layar penuh tanpa bilah peramban.",
       "tfa_q": "Bagaimana cara mengaktifkan autentikasi dua faktor?",
       "tfa_a": "Buka <strong>Profil Saya</strong> → <strong>Keamanan</strong> → <strong>Autentikasi dua faktor</strong> dan pindai kode QR dengan aplikasi autentikator Anda (1Password, Authy, Google Authenticator). Simpan kode pemulihan di tempat yang aman — itulah satu-satunya cara masuk kembali jika Anda kehilangan ponsel.",
       "account_q": "Bagaimana cara mengubah email, kata sandi, atau menghapus akun saya?",
