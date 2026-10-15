@@ -45,17 +45,20 @@ import FlagAU from '@/components/FlagAU.vue'
 import { useFeaturesStore } from '@/stores/features'
 import { Waves, Gavel, GraduationCap, MonitorPlay, Building2, Globe, Users, Map, Baby } from '@lucide/vue'
 import { useSupportEmail, DEFAULT_SUPPORT_EMAIL } from '@/composables/useSupportEmail'
-import { PLAY_STORE_URL } from '@/lib/storeLinks'
+import { PLAY_STORE_URL, APP_STORE_URL } from '@/lib/storeLinks'
 
 const supportEmail = useSupportEmail()
 // The FAQ answers print the address inline. Until /api/public-config has
 // answered, show the hosted one rather than a hole in the sentence.
 const contactEmail = computed(() => supportEmail.value || DEFAULT_SUPPORT_EMAIL)
 
-// The answers that mention the Android app are v-html, so the store link
-// goes in as markup. "Google Play" is the store's own name and no locale
-// translates it, which keeps the URL out of 26 locale files.
-const playLink = `<a href="${PLAY_STORE_URL}" target="_blank" rel="noopener">Google Play</a>`
+// The answers that mention the apps are v-html, so the store links go in
+// as markup. "Google Play" and "App Store" are the stores' own names and
+// no locale translates them, which keeps the URLs out of 26 locale files.
+const storeLinks = {
+  play: `<a href="${PLAY_STORE_URL}" target="_blank" rel="noopener">Google Play</a>`,
+  appstore: `<a href="${APP_STORE_URL}" target="_blank" rel="noopener">App Store</a>`,
+}
 
 // Payments and classes are switched off at launch (migration 085). Their
 // guide pages stay out of the bookmarks until the flags come on, rather
@@ -331,7 +334,7 @@ onBeforeUnmount(() => observer?.disconnect())
                 </i18n-t>
                 <li v-html="$t('guide.role.spectator.step_2')"></li>
                 <li v-html="$t('guide.role.spectator.step_3')"></li>
-                <li v-html="$t('guide.role.spectator.step_4', { play: playLink })"></li>
+                <li v-html="$t('guide.role.spectator.step_4', storeLinks)"></li>
               </ol>
               <RouterLink to="/guide/scoreboard" class="role-cta">{{ $t('guide.role.spectator.cta') }}</RouterLink>
             </article>
@@ -410,7 +413,7 @@ onBeforeUnmount(() => observer?.disconnect())
 
             <details class="guide-faq-item">
               <summary>{{ $t('guide.faq.judge_device_q') }}</summary>
-              <div class="guide-faq-body" v-html="$t('guide.faq.judge_device_a', { play: playLink })"></div>
+              <div class="guide-faq-body" v-html="$t('guide.faq.judge_device_a', storeLinks)"></div>
             </details>
 
             <details class="guide-faq-item">
@@ -448,7 +451,7 @@ onBeforeUnmount(() => observer?.disconnect())
 
             <details class="guide-faq-item">
               <summary>{{ $t('guide.faq.install_q') }}</summary>
-              <div class="guide-faq-body" v-html="$t('guide.faq.install_a', { play: playLink })"></div>
+              <div class="guide-faq-body" v-html="$t('guide.faq.install_a', storeLinks)"></div>
             </details>
 
             <details class="guide-faq-item">

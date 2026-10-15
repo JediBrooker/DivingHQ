@@ -340,7 +340,7 @@ A book whose country or state hasn't been claimed by its governing body yet show
 
 ## Spectator-side performance
 
-On Android, the [DivingHQ app](https://play.google.com/store/apps/details?id=app.divinghq.mobile) is the fastest way to follow a meet. Its screens are built in, so opening it doesn't wait on the page to download, it runs full screen, and the **Share** button on the scoreboard sends a link to the event you're watching. You don't need an account to watch.
+On a phone, the DivingHQ app ([Google Play](https://play.google.com/store/apps/details?id=app.divinghq.mobile) for Android, the [App Store](https://apps.apple.com/app/id6820469893) for iPhone and iPad) is the fastest way to follow a meet. Its screens are built in, so opening it doesn't wait on the page to download, it runs full screen, and the **Share** button on the scoreboard sends a link to the event you're watching. You don't need an account to watch.
 
 In a browser, the scoreboard is **PWA-installable**. On iPhone (Safari: **Share → Add to Home Screen**) or desktop Chrome and Edge (**Install** in the address bar), the page becomes a standalone app with a service-worker cache. Effects:
 
@@ -348,7 +348,7 @@ In a browser, the scoreboard is **PWA-installable**. On iPhone (Safari: **Share 
 - **Resilient on flaky 4G.** A drop doesn't blank the page — the last good state stays painted.
 - **No browser chrome.** Full-screen scoreboard on phones.
 
-The scoreboard intentionally never asks for location, contacts, camera, or any other permission — installation is purely about caching and the chromeless launch experience. The Android app only asks about notifications, and only when you turn them on in **Settings**.
+The scoreboard intentionally never asks for location, contacts, camera, or any other permission — installation is purely about caching and the chromeless launch experience. The DivingHQ app only asks about notifications, and only when you turn them on in **Settings**.
 
 ## What spectators can NOT see
 

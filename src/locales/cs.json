@@ -640,7 +640,7 @@
         "step_1_link": "Výsledková tabule a výsledky",
         "step_2": "Vyberte libovolnou živou disciplínu pro vysílací rozvržení nebo libovolný dokončený závod pro souhrn",
         "step_3": "Klepněte na libovolný čip se známkou rozhodčího → otevře se veřejná analýza daného rozhodčího",
-        "step_4": "Na Androidu si stáhněte aplikaci DivingHQ z {play}. Na iPhonu použijte v Safari <strong>Přidat na plochu</strong> pro rychlejší zobrazení na celou obrazovku",
+        "step_4": "Stáhněte si aplikaci DivingHQ z {play} nebo z {appstore} pro rychlejší zobrazení na celou obrazovku",
         "cta": "Příručka k výsledkové tabuli ↗"
       }
     },
@@ -648,7 +648,7 @@
       "register_q": "Právě jsem se zaregistroval, ale ještě se nemohu přihlásit.",
       "register_a": "Nejprve potvrďte svůj e-mail: klikněte na odkaz v potvrzovacím e-mailu, který jsme vám poslali při registraci. Nic nepřišlo? Podívejte se do spamu, nebo se zkuste přihlásit a požádejte o nový odkaz. Role přihlášení neblokují: začínáte jako divák a další role získáte, jakmile je schválí administrátor vašeho klubu nebo federace.",
       "judge_device_q": "Jsem rozhodčí — jaké zařízení mám použít?",
-      "judge_device_a": "Stačí jakýkoli moderní telefon: na Androidu si stáhněte aplikaci DivingHQ z {play}, na iPhonu použijte Safari. Ideální je iPhone 12 / Pixel 6 a novější. Zobrazení je primárně pro mobil; po celý závod budete klepat na čísla, takže telefon, který pohodlně udržíte v jedné ruce, je správná volba. Pokud je k dispozici, je wi-fi lepší než 4G — známky se synchronizují i přes 4G, ale cesta po síti je znatelně delší.",
+      "judge_device_a": "Stačí jakýkoli moderní telefon: stáhněte si aplikaci DivingHQ z {play} nebo z {appstore}, případně použijte prohlížeč v telefonu. Ideální je iPhone 12 / Pixel 6 a novější. Zobrazení je primárně pro mobil; po celý závod budete klepat na čísla, takže telefon, který pohodlně udržíte v jedné ruce, je správná volba. Pokud je k dispozici, je wi-fi lepší než 4G — známky se synchronizují i přes 4G, ale cesta po síti je znatelně delší.",
       "scoring_q": "Jak funguje bodování?",
       "scoring_a": "Každý rozhodčí boduje skok od <strong>0,0 do 10,0</strong> po půlbodových krocích. U pětičlenného panelu se nejvyšší a nejnižší známka škrtne a ponechají se prostřední tři (tzv. „ořez“). Ponechané známky se vynásobí <strong>DD</strong> (koeficient obtížnosti) skoku a získají se body za skok. U synchronu tři dílčí panely hodnotí různé aspekty (Provedení A, Provedení B, Synchron) a výpočet je kombinuje podle článku 8 World Aquatics.",
       "broadcast_q": "Chci promítat výsledkovou tabuli pro naše publikum.",
@@ -658,7 +658,7 @@
       "bug_q": "Jak nahlásím chybu?",
       "bug_a": "Klepněte na odkaz <strong>🐛 Nahlásit chybu</strong> v dolní části úvodní stránky nebo vaší nástěnky. Otevře se předvyplněné hlášení na GitHubu připravené k popisu problému. Snímky obrazovky velmi pomáhají. Nemáte účet na GitHubu? Napište na {email}.",
       "install_q": "Jak nainstaluji DivingHQ jako aplikaci?",
-      "install_a": "Na Androidu: stáhněte si <strong>DivingHQ</strong> z {play} a přihlaste se svým běžným účtem. Na iPhonu a iPadu: otevřete web v Safari, klepněte na tlačítko Sdílet a poté na <strong>Přidat na plochu</strong>: ikona otevře zobrazení na celou obrazovku bez lišty prohlížeče.",
+      "install_a": "Stáhněte si <strong>DivingHQ</strong> z {play} na Androidu nebo z {appstore} na iPhonu a iPadu a přihlaste se svým běžným účtem. Na počítači funguje jakýkoli aktuální prohlížeč.",
       "tfa_q": "Jak zapnu dvoufaktorové ověření?",
       "tfa_a": "Otevřete <strong>Můj profil</strong> → <strong>Zabezpečení</strong> → <strong>Dvoufaktorové ověření</strong> a naskenujte QR kód svou ověřovací aplikací (1Password, Authy, Google Authenticator). Záložní kódy uložte na bezpečné místo — jsou jedinou cestou zpět, pokud telefon ztratíte.",
       "account_q": "Jak změním e-mail, heslo nebo smažu účet?",

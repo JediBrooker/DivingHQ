@@ -14,7 +14,7 @@ When the meet manager assigns the panel for an event, you become officially elig
 
 ## Logging in
 
-1. Open DivingHQ on your phone. On Android, the [DivingHQ app from Google Play](https://play.google.com/store/apps/details?id=app.divinghq.mobile) is the best way in, because it keeps the screen on while you judge. Any phone's browser works too (on an iPhone, use Safari, ideally added to your Home Screen).
+1. Open DivingHQ on your phone. The DivingHQ app, from [Google Play](https://play.google.com/store/apps/details?id=app.divinghq.mobile) or the [App Store](https://apps.apple.com/app/id6820469893), is the best way in, because it keeps the screen on while you judge. Any phone's browser works too (on an iPhone, use Safari, ideally added to your Home Screen).
 2. Sign in with your username + password.
 3. The dashboard shows a **Judge** tile listing every event you're assigned to. Tap one to enter the judge view.
 
@@ -100,7 +100,7 @@ After the round, the audience-facing scoreboard shows every judge's score (with 
 - **Wrong panel slot.** If your displayed judge number doesn't match the panel slot you're seated in, tell the meet manager before the event goes Live. They reorder via Assign Judges.
 - **Stale dive code.** If the dive code on screen doesn't match what the diver just did, **don't submit**. Flag the operator — the active-diver state on your phone is wrong.
 - **Two devices logged in.** Only one device per judge per event. If you log in on a second phone, the first one will be kicked. Stick to one device.
-- **Phone goes to sleep.** The Android app keeps the screen on while you're on an event's scoring pad. In a browser DivingHQ asks the phone to stay awake where the browser lets it, but iOS Safari still suspends a tab you switch away from, so keep DivingHQ in front between dives to avoid reconnect churn.
+- **Phone goes to sleep.** The DivingHQ app, Android or iPhone, keeps the screen on while you're on an event's scoring pad. In a browser DivingHQ asks the phone to stay awake where the browser lets it, but iOS Safari still suspends a tab you switch away from, so keep DivingHQ in front between dives to avoid reconnect churn.
 
 ## After the meet
 
