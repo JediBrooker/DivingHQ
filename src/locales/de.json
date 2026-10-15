@@ -651,7 +651,7 @@
         "step_1_link": "Anzeigetafel & Ergebnisse",
         "step_2": "Wählen Sie einen Live-Wettbewerb für das Broadcast-Layout oder einen abgeschlossenen Wettkampf für die Zusammenfassung",
         "step_3": "Tippen Sie auf einen Kampfrichter-Wertungs-Chip → öffnet die öffentliche Analyse dieses Kampfrichters",
-        "step_4": "Auf Android die DivingHQ-App bei {play} herunterladen. Auf dem iPhone in Safari <strong>Zum Home-Bildschirm</strong> wählen, für eine schnellere Vollbildansicht",
+        "step_4": "Die DivingHQ-App bei {play} oder im {appstore} herunterladen, für eine schnellere Vollbildansicht",
         "cta": "Leitfaden Anzeigetafel ↗"
       }
     },
@@ -659,7 +659,7 @@
       "register_q": "Ich habe mich gerade registriert, kann mich aber noch nicht anmelden.",
       "register_a": "Bestätigen Sie zuerst Ihre E-Mail-Adresse: Klicken Sie auf den Link in der Bestätigungs-E-Mail, die wir Ihnen bei der Registrierung geschickt haben. Nichts angekommen? Sehen Sie im Spam-Ordner nach, oder versuchen Sie sich anzumelden und fordern Sie einen neuen Link an. Rollen blockieren die Anmeldung nicht: Sie beginnen als Zuschauer und erhalten mehr, sobald Ihr Vereins- oder Verbandsadmin zustimmt.",
       "judge_device_q": "Ich bin Kampfrichter — welches Gerät soll ich verwenden?",
-      "judge_device_a": "Jedes moderne Smartphone funktioniert: Auf Android laden Sie die DivingHQ-App bei {play} herunter, auf dem iPhone nutzen Sie Safari. iPhone 12 / Pixel 6 oder neuer ist ideal. Die Ansicht ist mobile-first; Sie werden den Wettkampf über tippen, daher ist ein Smartphone, das Sie bequem in einer Hand halten können, die richtige Wahl. WLAN ist gegenüber 4G zu bevorzugen, falls die Halle es bietet — die Wertungen werden zwar auch über 4G synchronisiert, aber die Netzwerklaufzeit ist spürbar länger.",
+      "judge_device_a": "Jedes moderne Smartphone funktioniert: Laden Sie die DivingHQ-App bei {play} oder im {appstore} herunter, oder nutzen Sie den Browser des Telefons. iPhone 12 / Pixel 6 oder neuer ist ideal. Die Ansicht ist mobile-first; Sie werden den Wettkampf über tippen, daher ist ein Smartphone, das Sie bequem in einer Hand halten können, die richtige Wahl. WLAN ist gegenüber 4G zu bevorzugen, falls die Halle es bietet — die Wertungen werden zwar auch über 4G synchronisiert, aber die Netzwerklaufzeit ist spürbar länger.",
       "scoring_q": "Wie funktioniert die Wertung?",
       "scoring_a": "Jeder Kampfrichter wertet einen Sprung von <strong>0,0 bis 10,0</strong> in Halbpunktschritten. Bei einem 5er-Panel werden die höchste und die niedrigste Wertung gestrichen und die mittleren drei behalten (der „Trim\"). Die behaltenen Wertungen werden mit dem <strong>SG</strong> (Schwierigkeitsgrad) des Sprungs multipliziert, um die Punkte des Sprungs zu erhalten. Bei Synchron werten drei Subpanels unterschiedliche Aspekte (Ausführung A, Ausführung B, Synchronität) und die Berechnung kombiniert sie gemäß World Aquatics Artikel 8.",
       "broadcast_q": "Ich möchte die Anzeigetafel für unser Publikum projizieren.",
@@ -669,7 +669,7 @@
       "bug_q": "Wie melde ich einen Fehler?",
       "bug_a": "Klicken Sie auf den Link <strong>🐛 Fehler melden</strong> unten auf der Startseite oder Ihrem Dashboard. Das öffnet ein vorgefülltes GitHub-Issue, in dem Sie das Problem beschreiben können. Screenshots helfen sehr. Kein GitHub-Konto? Schreiben Sie stattdessen an {email}.",
       "install_q": "Wie installiere ich DivingHQ als App?",
-      "install_a": "Auf Android: Laden Sie <strong>DivingHQ</strong> bei {play} herunter und melden Sie sich mit Ihrem gewohnten Konto an. Auf iPhone und iPad: Öffnen Sie die Seite in Safari, tippen Sie auf die Teilen-Schaltfläche und dann auf <strong>Zum Home-Bildschirm</strong>: Das Symbol öffnet eine Vollbildansicht ohne Browserleiste.",
+      "install_a": "Laden Sie <strong>DivingHQ</strong> auf Android bei {play} oder auf iPhone und iPad im {appstore} herunter und melden Sie sich mit Ihrem gewohnten Konto an. Am Computer funktioniert jeder aktuelle Browser.",
       "tfa_q": "Wie aktiviere ich die Zwei-Faktor-Authentifizierung?",
       "tfa_a": "Öffnen Sie <strong>Mein Profil</strong> → <strong>Sicherheit</strong> → <strong>Zwei-Faktor-Authentifizierung</strong> und scannen Sie den QR-Code mit Ihrer Authenticator-App (1Password, Authy, Google Authenticator). Bewahren Sie die Wiederherstellungscodes an einem sicheren Ort auf — sie sind der einzige Weg zurück, falls Sie Ihr Smartphone verlieren.",
       "account_q": "Wie ändere ich meine E-Mail, mein Passwort oder lösche mein Konto?",

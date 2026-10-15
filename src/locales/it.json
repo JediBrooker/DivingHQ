@@ -651,7 +651,7 @@
         "step_1_link": "Tabellone e Risultati",
         "step_2": "Scelga una gara dal vivo per il formato broadcast, o una gara conclusa per la sintesi",
         "step_3": "Tocchi un chip di punteggio del giudice → apre l'analisi pubblica di quel giudice",
-        "step_4": "Su Android scarichi l'app DivingHQ da {play}. Su iPhone usi <strong>Aggiungi alla schermata Home</strong> in Safari per una vista a schermo intero più veloce",
+        "step_4": "Scarichi l'app DivingHQ da {play} o dall'{appstore} per una vista a schermo intero più veloce",
         "cta": "Guida del tabellone ↗"
       }
     },
@@ -659,7 +659,7 @@
       "register_q": "Mi sono appena registrato, ma non riesco ancora ad accedere.",
       "register_a": "Prima confermi la sua email: clicchi il link nell'email di conferma che le abbiamo inviato alla registrazione. Non la trova? Controlli la cartella spam, oppure provi ad accedere e chieda un nuovo link. I ruoli non bloccano l'accesso: si parte come spettatore e si ottiene di più quando l'admin del suo club o della federazione approva.",
       "judge_device_q": "Sono un giudice — quale dispositivo devo usare?",
-      "judge_device_a": "Qualsiasi telefono moderno funziona: su Android scarichi l'app DivingHQ da {play}, su iPhone usi Safari. L'ideale è iPhone 12 / Pixel 6 o più recenti. La vista è pensata per il mobile; passerà la gara a digitare numeri, quindi un telefono che riesca a tenere comodamente in una mano è la scelta giusta. Il wifi è preferibile al 4G se l'impianto ne dispone — i punteggi si sincronizzano anche in 4G, ma il round trip di rete è sensibilmente più lungo.",
+      "judge_device_a": "Qualsiasi telefono moderno funziona: scarichi l'app DivingHQ da {play} o dall'{appstore}, oppure usi il browser del telefono. L'ideale è iPhone 12 / Pixel 6 o più recenti. La vista è pensata per il mobile; passerà la gara a digitare numeri, quindi un telefono che riesca a tenere comodamente in una mano è la scelta giusta. Il wifi è preferibile al 4G se l'impianto ne dispone — i punteggi si sincronizzano anche in 4G, ma il round trip di rete è sensibilmente più lungo.",
       "scoring_q": "Come funziona la valutazione?",
       "scoring_a": "Ogni giudice valuta un tuffo da <strong>0,0 a 10,0</strong> a passi di mezzo punto. Con un panel di 5 giudici, si scartano il voto più alto e quello più basso e si tengono i tre centrali (il \"trim\"). I voti tenuti vengono moltiplicati per il <strong>DD</strong> (Grado di Difficoltà) del tuffo per ottenere i punti del tuffo. Nei sincronizzati, tre sotto-panel valutano aspetti diversi (Esec A, Esec B, Sync) e il calcolo li combina secondo l'Articolo 8 di World Aquatics.",
       "broadcast_q": "Voglio proiettare il tabellone per il nostro pubblico.",
@@ -669,7 +669,7 @@
       "bug_q": "Come segnalo un bug?",
       "bug_a": "Clicchi il link <strong>🐛 Segnala un bug</strong> in fondo alla home page o alla sua dashboard. Apre una issue GitHub precompilata pronta perché possa descrivere il problema. Gli screenshot aiutano molto. Non ha un account GitHub? Scriva a {email}.",
       "install_q": "Come installo DivingHQ come applicazione?",
-      "install_a": "Su Android: scarichi <strong>DivingHQ</strong> da {play} e acceda con il suo solito account. Su iPhone e iPad: apra il sito in Safari, tocchi il pulsante Condividi, poi <strong>Aggiungi alla schermata Home</strong>: l'icona apre una vista a schermo intero senza barra del browser.",
+      "install_a": "Scarichi <strong>DivingHQ</strong> da {play} su Android o dall'{appstore} su iPhone e iPad e acceda con il suo solito account. Sul computer funziona qualsiasi browser aggiornato.",
       "tfa_q": "Come abilito l'autenticazione a due fattori?",
       "tfa_a": "Apra <strong>Il mio profilo</strong> → <strong>Sicurezza</strong> → <strong>Autenticazione a due fattori</strong> e scansioni il codice QR con la sua app di autenticazione (1Password, Authy, Google Authenticator). Salvi i codici di recupero in un luogo sicuro — sono l'unico modo per rientrare se perde il telefono.",
       "account_q": "Come cambio email, password, o elimino il mio account?",

@@ -38,7 +38,7 @@ The first section groups features **by persona** — pick your role to see what 
 | Live scoreboard | Click any judge score chip → open that judge's public analysis | [Scoreboard → Click any judge score](/guide/scoreboard#click-any-judge-score-to-see-the-judges-analysis) |
 | Live scoreboard | See the Hold / Resume banner when the meet is paused | [Scoreboard → Hold / Resume banner](/guide/scoreboard#hold--resume-banner) |
 | Live scoreboard | See the Connection-lost banner if wifi drops (no silent stale data) | [Scoreboard → Connection-lost banner](/guide/scoreboard#connection-lost-banner) |
-| Live scoreboard | Android app from Google Play, or "Add to home screen" on iPhone, for faster loads that hold up on flaky 4G | [Scoreboard → Spectator-side performance](/guide/scoreboard#spectator-side-performance) |
+| Live scoreboard | DivingHQ app from Google Play or the App Store, or "Add to home screen" in a browser, for faster loads that hold up on flaky 4G | [Scoreboard → Spectator-side performance](/guide/scoreboard#spectator-side-performance) |
 | Recap | View the podium spotlight + full standings + dive-by-dive breakdown | [Scoreboard → Recap layout](/guide/scoreboard#recap-layout-completed-events) |
 | Recap | See the **Judge Ranking Analysis** matrix (per-judge hypothetical rankings) | [Scoreboard → Judge Ranking Analysis](/guide/scoreboard#judge-ranking-analysis-completed-events) |
 | Recap | Download per-event PDFs (program, start list, score sheet, results) and CSV | [Scoreboard → Recap layout](/guide/scoreboard#recap-layout-completed-events) |
@@ -313,7 +313,7 @@ See the [Org admin](#-org-admin) and [System administrator](#-system-administrat
 
 | Persona | Feature | Where |
 |---|---|---|
-| Spectator | Android app from Google Play, or PWA install on iPhone and desktop (service-worker cache, chromeless launch), resilient on flaky 4G | [Scoreboard → Spectator-side performance](/guide/scoreboard#spectator-side-performance) |
+| Spectator | DivingHQ app from Google Play or the App Store, or PWA install in a browser (service-worker cache, chromeless launch), resilient on flaky 4G | [Scoreboard → Spectator-side performance](/guide/scoreboard#spectator-side-performance) |
 | Spectator | Last-good-state-stays-painted on connection drop (no silent stale data) | [Scoreboard → Connection-lost banner](/guide/scoreboard#connection-lost-banner) |
 | Spectator | Cached-data banner while a fresh refresh is in flight | [Scoreboard → Results Archive](/guide/scoreboard#completed-meets-index-scoreboard) |
 | Judge | Local score queue on connection drop, syncs when back online | [Judging → Connection drops](/guide/judging#connection-drops) |

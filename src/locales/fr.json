@@ -651,7 +651,7 @@
         "step_1_link": "Tableau d'Affichage et Résultats",
         "step_2": "Choisis n'importe quelle épreuve en direct pour la mise en page diffusion, ou n'importe quelle compétition terminée pour le récap",
         "step_3": "Tape sur n'importe quel chip de note de juge → ouvre l'analyse publique de ce juge",
-        "step_4": "Sur Android, télécharge l'app DivingHQ sur {play}. Sur iPhone, utilise <strong>Sur l'écran d'accueil</strong> dans Safari pour une vue plein écran plus rapide",
+        "step_4": "Télécharge l'app DivingHQ sur {play} ou sur l'{appstore} pour une vue plein écran plus rapide",
         "cta": "Guide du tableau d'affichage ↗"
       }
     },
@@ -659,7 +659,7 @@
       "register_q": "Je viens de m'inscrire, mais je ne peux pas encore me connecter.",
       "register_a": "Confirme d'abord ton e-mail : clique sur le lien de l'e-mail de confirmation envoyé à ton inscription. Rien reçu ? Regarde dans tes spams, ou essaie de te connecter et demande un nouveau lien. Les rôles ne bloquent pas la connexion : tu commences comme spectateur et tu en obtiens davantage dès que l'admin de ton club ou de ta fédération valide.",
       "judge_device_q": "Je suis juge — quel appareil dois-je utiliser ?",
-      "judge_device_a": "Tout téléphone moderne fonctionne : sur Android, télécharge l'app DivingHQ sur {play} ; sur iPhone, utilise Safari. L'idéal est un iPhone 12 / Pixel 6 ou plus récent. La vue est conçue mobile-first ; tu vas passer la compétition à taper des chiffres, donc un téléphone que tu peux tenir confortablement d'une main est le bon choix. Le wifi est préférable à la 4G si la salle en dispose — les notes se synchronisent aussi en 4G mais l'aller-retour réseau est sensiblement plus long.",
+      "judge_device_a": "Tout téléphone moderne fonctionne : télécharge l'app DivingHQ sur {play} ou sur l'{appstore}, ou utilise le navigateur du téléphone. L'idéal est un iPhone 12 / Pixel 6 ou plus récent. La vue est conçue mobile-first ; tu vas passer la compétition à taper des chiffres, donc un téléphone que tu peux tenir confortablement d'une main est le bon choix. Le wifi est préférable à la 4G si la salle en dispose — les notes se synchronisent aussi en 4G mais l'aller-retour réseau est sensiblement plus long.",
       "scoring_q": "Comment fonctionne la notation ?",
       "scoring_a": "Chaque juge note un plongeon de <strong>0,0 à 10,0</strong> par pas d'un demi-point. Avec un panel de 5 juges, la note la plus haute et la plus basse sont éliminées et les trois du milieu sont conservées (le « trim »). Les notes conservées sont multipliées par le <strong>DD</strong> (Coefficient de Difficulté) du plongeon pour obtenir les points du plongeon. En synchronisé, trois sous-panels notent différents aspects (Exéc A, Exéc B, Sync) et le calcul les combine selon l'Article 8 de World Aquatics.",
       "broadcast_q": "Je veux projeter le tableau d'affichage pour notre public.",
@@ -669,7 +669,7 @@
       "bug_q": "Comment signaler un bug ?",
       "bug_a": "Clique sur le lien <strong>🐛 Signaler un bug</strong> en bas de la page d'accueil ou de ton tableau de bord. Cela ouvre un ticket GitHub pré-rempli prêt à décrire le problème. Les captures d'écran aident beaucoup. Pas de compte GitHub ? Écris à {email}.",
       "install_q": "Comment installer DivingHQ comme application ?",
-      "install_a": "Sur Android : télécharge <strong>DivingHQ</strong> sur {play} et connecte-toi avec ton compte habituel. Sur iPhone et iPad : ouvre le site dans Safari, touche le bouton Partager, puis <strong>Sur l'écran d'accueil</strong> : l'icône ouvre une vue plein écran sans barre de navigateur.",
+      "install_a": "Télécharge <strong>DivingHQ</strong> sur {play} (Android) ou sur l'{appstore} (iPhone et iPad) et connecte-toi avec ton compte habituel. Sur ordinateur, n'importe quel navigateur à jour fonctionne.",
       "tfa_q": "Comment activer l'authentification à deux facteurs ?",
       "tfa_a": "Ouvre <strong>Mon profil</strong> → <strong>Sécurité</strong> → <strong>Authentification à deux facteurs</strong> et scanne le code QR avec ton application d'authentification (1Password, Authy, Google Authenticator). Conserve les codes de récupération en lieu sûr — c'est le seul moyen de te reconnecter si tu perds ton téléphone.",
       "account_q": "Comment changer mon e-mail, mon mot de passe, ou supprimer mon compte ?",

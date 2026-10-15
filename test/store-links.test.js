@@ -1,7 +1,6 @@
 // Unit tests for storesFor() in src/lib/storeLinks.js: which "Get the app"
-// buttons the home and sign-in pages offer. The thing to pin is that the
-// App Store button can't show up before Apple approves, and that a phone
-// isn't offered the other platform's store.
+// buttons the home and sign-in pages offer. The thing to pin is that a
+// phone isn't offered the other platform's store.
 
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
@@ -22,25 +21,16 @@ const UA = {
 };
 const stores = (list) => list.map((s) => s.store);
 
-test("the App Store stays hidden until the listing is switched on", async () => {
-  const { storesFor, APP_STORE_LIVE } = await load();
-  if (APP_STORE_LIVE) return; // flipped on, nothing left to guard
-  assert.deepEqual(stores(storesFor({ userAgent: UA.iphone })), []);
-  assert.deepEqual(stores(storesFor({ userAgent: UA.windows })), ["play"]);
-});
-
 test("a phone only gets its own store", async () => {
   const { storesFor, PLAY_STORE_URL, APP_STORE_URL } = await load();
-  const live = { appStoreLive: true };
-  assert.deepEqual(storesFor({ userAgent: UA.android }, live), [{ store: "play", url: PLAY_STORE_URL }]);
-  assert.deepEqual(storesFor({ userAgent: UA.iphone }, live), [{ store: "apple", url: APP_STORE_URL }]);
-  assert.deepEqual(stores(storesFor({ userAgent: UA.ipad, maxTouchPoints: 5 }, live)), ["apple"]);
+  assert.deepEqual(storesFor({ userAgent: UA.android }), [{ store: "play", url: PLAY_STORE_URL }]);
+  assert.deepEqual(storesFor({ userAgent: UA.iphone }), [{ store: "apple", url: APP_STORE_URL }]);
+  assert.deepEqual(stores(storesFor({ userAgent: UA.ipad, maxTouchPoints: 5 })), ["apple"]);
 });
 
 test("a computer gets both", async () => {
   const { storesFor } = await load();
-  const live = { appStoreLive: true };
-  assert.deepEqual(stores(storesFor({ userAgent: UA.mac, maxTouchPoints: 0 }, live)), ["play", "apple"]);
-  assert.deepEqual(stores(storesFor({ userAgent: UA.windows }, live)), ["play", "apple"]);
-  assert.deepEqual(stores(storesFor({}, live)), ["play", "apple"]);
+  assert.deepEqual(stores(storesFor({ userAgent: UA.mac, maxTouchPoints: 0 })), ["play", "apple"]);
+  assert.deepEqual(stores(storesFor({ userAgent: UA.windows })), ["play", "apple"]);
+  assert.deepEqual(stores(storesFor({})), ["play", "apple"]);
 });

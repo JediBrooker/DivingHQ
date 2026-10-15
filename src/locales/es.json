@@ -640,7 +640,7 @@
         "step_1_link": "Marcador y Resultados",
         "step_2": "Elige cualquier evento en vivo para el formato de retransmisión, o cualquier competición terminada para el resumen",
         "step_3": "Pulsa cualquier chip de puntuación de juez → abre el análisis público de ese juez",
-        "step_4": "En Android, descarga la app DivingHQ de {play}. En iPhone, usa <strong>Añadir a la pantalla de inicio</strong> en Safari para una vista más rápida a pantalla completa",
+        "step_4": "Descarga la app DivingHQ de {play} o de la {appstore} para una vista más rápida a pantalla completa",
         "cta": "Guía del marcador ↗"
       }
     },
@@ -648,7 +648,7 @@
       "register_q": "Acabo de registrarme, pero todavía no puedo iniciar sesión.",
       "register_a": "Primero confirma tu correo: haz clic en el enlace del correo de confirmación que te enviamos al registrarte. ¿No lo ves? Revisa la carpeta de spam, o intenta iniciar sesión y pide un enlace nuevo. Los roles no bloquean el inicio de sesión: empiezas como espectador y obtienes más cuando el administrador de tu club o de tu federación lo aprueba.",
       "judge_device_q": "Soy juez — ¿qué dispositivo debo usar?",
-      "judge_device_a": "Cualquier móvil moderno funciona: en Android, descarga la app DivingHQ de {play}; en iPhone, usa Safari. Lo ideal es iPhone 12 / Pixel 6 o más nuevos. La vista está pensada para móvil; pasarás la competición pulsando números, así que un móvil que puedas sujetar cómodamente con una mano es la mejor opción. El wifi es preferible al 4G si el pabellón lo tiene — las puntuaciones se sincronizan también por 4G, pero la latencia de red es notablemente mayor.",
+      "judge_device_a": "Cualquier móvil moderno funciona: descarga la app DivingHQ de {play} o de la {appstore}, o usa el navegador del móvil. Lo ideal es iPhone 12 / Pixel 6 o más nuevos. La vista está pensada para móvil; pasarás la competición pulsando números, así que un móvil que puedas sujetar cómodamente con una mano es la mejor opción. El wifi es preferible al 4G si el pabellón lo tiene — las puntuaciones se sincronizan también por 4G, pero la latencia de red es notablemente mayor.",
       "scoring_q": "¿Cómo funciona la puntuación?",
       "scoring_a": "Cada juez puntúa un salto de <strong>0,0 a 10,0</strong> en intervalos de medio punto. Con un panel de 5 jueces, se descartan la nota más alta y la más baja y se conservan las tres del medio (el \"trim\"). Las notas conservadas se multiplican por el <strong>DD</strong> (Grado de Dificultad) del salto para obtener los puntos del salto. En sincronizados, tres subpaneles puntúan distintos aspectos (Ejec A, Ejec B, Sync) y el cálculo los combina según el Artículo 8 de World Aquatics.",
       "broadcast_q": "Quiero proyectar el marcador para nuestro público.",
@@ -658,7 +658,7 @@
       "bug_q": "¿Cómo informo de un error?",
       "bug_a": "Haz clic en el enlace <strong>🐛 Informar de un error</strong> al pie de la página de inicio o de tu panel. Abrirá un issue de GitHub prerellenado listo para que describas el problema. Las capturas de pantalla ayudan mucho. ¿No tienes cuenta de GitHub? Escribe a {email}.",
       "install_q": "¿Cómo instalo DivingHQ como aplicación?",
-      "install_a": "En Android: descarga <strong>DivingHQ</strong> de {play} e inicia sesión con tu cuenta de siempre. En iPhone y iPad: abre el sitio en Safari, toca el botón Compartir y luego <strong>Añadir a la pantalla de inicio</strong>: el icono abre una vista a pantalla completa sin barra del navegador.",
+      "install_a": "Descarga <strong>DivingHQ</strong> de {play} en Android o de la {appstore} en iPhone y iPad, e inicia sesión con tu cuenta de siempre. En un ordenador funciona cualquier navegador actualizado.",
       "tfa_q": "¿Cómo activo la verificación en dos pasos?",
       "tfa_a": "Abre <strong>Mi Perfil</strong> → <strong>Seguridad</strong> → <strong>Verificación en dos pasos</strong> y escanea el código QR con tu app de autenticación (1Password, Authy, Google Authenticator). Guarda los códigos de recuperación en un lugar seguro — son la única forma de volver a entrar si pierdes el móvil.",
       "account_q": "¿Cómo cambio mi correo, mi contraseña o elimino mi cuenta?",

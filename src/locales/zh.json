@@ -640,7 +640,7 @@
         "step_1_link": "记分牌与成绩",
         "step_2": "选择任何实时赛事查看转播布局,或选择任何已完成的比赛查看回顾",
         "step_3": "点击任何裁判分数标签 → 打开该裁判的公开分析",
-        "step_4": "在 Android 上，从 {play} 下载 DivingHQ 应用。在 iPhone 上，在 Safari 中使用 <strong>添加到主屏幕</strong>，获得更快的全屏视图",
+        "step_4": "从 {play} 或 {appstore} 下载 DivingHQ 应用，获得更快的全屏视图",
         "cta": "记分牌指南 ↗"
       }
     },
@@ -648,7 +648,7 @@
       "register_q": "我刚刚注册,但还无法登录。",
       "register_a": "请先确认您的邮箱：点击注册时我们发送的确认邮件中的链接。没收到？请查看垃圾邮件文件夹，或尝试登录并申请新链接。角色不会妨碍登录：您先以观众身份开始，俱乐部或联合会管理员批准后即可获得更多权限。",
       "judge_device_q": "我是裁判员 — 我应该使用什么设备?",
-      "judge_device_a": "任何现代手机都可以：Android 上请从 {play} 下载 DivingHQ 应用，iPhone 上请使用 Safari。iPhone 12 / Pixel 6 及更新机型最佳。视图为移动端优先;您整场比赛都将点击数字,所以一部可以单手舒适握持的手机是正确选择。如果场馆有 WiFi,推荐使用 WiFi 而不是 4G — 您的分数在 4G 下也能同步,但网络往返明显更长。",
+      "judge_device_a": "任何现代手机都可以：请从 {play} 或 {appstore} 下载 DivingHQ 应用，也可以使用手机浏览器。iPhone 12 / Pixel 6 及更新机型最佳。视图为移动端优先;您整场比赛都将点击数字,所以一部可以单手舒适握持的手机是正确选择。如果场馆有 WiFi,推荐使用 WiFi 而不是 4G — 您的分数在 4G 下也能同步,但网络往返明显更长。",
       "scoring_q": "打分如何运作?",
       "scoring_a": "每位裁判员对一个动作打 <strong>0.0 到 10.0</strong> 分,以半分为步长。5 人裁判组,最高分和最低分被去掉,保留中间三个(「修剪」)。保留的分数乘以动作的 <strong>DD</strong>(难度系数)得到该动作的得分。双人同步项目中,三个子裁判组评分不同方面(Exec A、Exec B、Sync),计算方法按 World Aquatics 第 8 条规则组合。",
       "broadcast_q": "我想为观众投影记分牌。",
@@ -658,7 +658,7 @@
       "bug_q": "我如何报告 bug?",
       "bug_a": "点击主页或您的面板底部的 <strong>🐛 报告 bug</strong> 链接。它会打开一个预填好的 GitHub issue 供您描述问题。截图非常有帮助。没有 GitHub 账户？请发送邮件至 {email}。",
       "install_q": "如何将 DivingHQ 安装为应用？",
-      "install_a": "在 Android 上：从 {play} 下载 <strong>DivingHQ</strong>，并用您平常的账号登录。在 iPhone 和 iPad 上：用 Safari 打开本站，点按分享按钮，然后选择 <strong>添加到主屏幕</strong>：该图标会打开没有浏览器地址栏的全屏视图。",
+      "install_a": "在 Android 上从 {play}、在 iPhone 和 iPad 上从 {appstore} 下载 <strong>DivingHQ</strong>，并用您平常的账号登录。在电脑上，任何最新的浏览器都可以使用。",
       "tfa_q": "如何启用双重验证？",
       "tfa_a": "打开 <strong>我的资料</strong> → <strong>安全</strong> → <strong>双重验证</strong>，然后用您的身份验证器应用（1Password、Authy、Google Authenticator）扫描 QR 码。请将恢复代码保存在安全的地方 — 万一您丢失手机，它们是唯一的找回方式。",
       "account_q": "如何更改我的邮箱、密码，或删除我的账户？",

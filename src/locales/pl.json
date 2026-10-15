@@ -651,7 +651,7 @@
         "step_1_link": "Tablica Wyników i Rezultaty",
         "step_2": "Wybierz dowolną konkurencję na żywo, aby zobaczyć układ transmisyjny, albo zakończony mityng, aby zobaczyć podsumowanie",
         "step_3": "Stuknij dowolny chip oceny sędziego → otworzy się publiczna analiza tego sędziego",
-        "step_4": "Na Androidzie pobierz aplikację DivingHQ z {play}. Na iPhonie użyj w Safari opcji <strong>Dodaj do ekranu początkowego</strong>, aby uzyskać szybszy widok pełnoekranowy",
+        "step_4": "Pobierz aplikację DivingHQ z {play} lub {appstore}, aby uzyskać szybszy widok pełnoekranowy",
         "cta": "Przewodnik tablicy wyników ↗"
       }
     },
@@ -659,7 +659,7 @@
       "register_q": "Właśnie się zarejestrowałem, ale jeszcze nie mogę się zalogować.",
       "register_a": "Najpierw potwierdź e-mail: kliknij link w wiadomości potwierdzającej, którą wysłaliśmy przy rejestracji. Nie ma jej? Sprawdź folder spam albo spróbuj się zalogować i poproś o nowy link. Role nie blokują logowania: zaczynasz jako widz, a więcej uprawnień dostajesz, gdy zatwierdzi je administrator twojego klubu lub federacji.",
       "judge_device_q": "Jestem sędzią — jakiego urządzenia powinienem użyć?",
-      "judge_device_a": "Wystarczy dowolny współczesny telefon: na Androidzie pobierz aplikację DivingHQ z {play}, na iPhonie użyj Safari. Idealnie iPhone 12 / Pixel 6 lub nowszy. Widok jest projektowany pod telefon; spędzisz zawody, stukając w cyfry, więc telefon, który wygodnie trzymasz w jednej dłoni, to dobry wybór. Wifi jest lepsze od 4G, jeśli obiekt je oferuje — noty zsynchronizują się i przez 4G, ale czas podróży po sieci jest zauważalnie dłuższy.",
+      "judge_device_a": "Wystarczy dowolny współczesny telefon: pobierz aplikację DivingHQ z {play} lub {appstore} albo użyj przeglądarki w telefonie. Idealnie iPhone 12 / Pixel 6 lub nowszy. Widok jest projektowany pod telefon; spędzisz zawody, stukając w cyfry, więc telefon, który wygodnie trzymasz w jednej dłoni, to dobry wybór. Wifi jest lepsze od 4G, jeśli obiekt je oferuje — noty zsynchronizują się i przez 4G, ale czas podróży po sieci jest zauważalnie dłuższy.",
       "scoring_q": "Jak działa ocenianie?",
       "scoring_a": "Każdy sędzia ocenia skok od <strong>0,0 do 10,0</strong> w krokach co pół punktu. Przy panelu 5-sędziowskim odrzuca się najwyższą i najniższą notę, a trzy środkowe zostają (tzw. \"trim\"). Zachowane noty mnoży się przez <strong>DD</strong> (Stopień Trudności) skoku, aby uzyskać punkty za skok. W synchro trzy podpanele oceniają różne aspekty (Exec A, Exec B, Sync), a obliczenia łączą je zgodnie z Artykułem 8 World Aquatics.",
       "broadcast_q": "Chcę wyświetlać tablicę wyników dla publiczności.",
@@ -669,7 +669,7 @@
       "bug_q": "Jak zgłosić błąd?",
       "bug_a": "Kliknij link <strong>🐛 Zgłoś błąd</strong> u dołu strony głównej lub Twojej tablicy. Otworzy się wstępnie wypełnione zgłoszenie na GitHubie, gotowe, abyś opisał problem. Zrzuty ekranu bardzo pomagają. Nie masz konta na GitHubie? Napisz na {email}.",
       "install_q": "Jak zainstalować DivingHQ jako aplikację?",
-      "install_a": "Na Androidzie: pobierz <strong>DivingHQ</strong> z {play} i zaloguj się swoim zwykłym kontem. Na iPhonie i iPadzie: otwórz stronę w Safari, dotknij przycisku Udostępnij, a następnie <strong>Dodaj do ekranu początkowego</strong>: ikona otwiera widok pełnoekranowy bez paska przeglądarki.",
+      "install_a": "Pobierz <strong>DivingHQ</strong> z {play} na Androidzie lub z {appstore} na iPhonie i iPadzie i zaloguj się swoim zwykłym kontem. Na komputerze działa każda aktualna przeglądarka.",
       "tfa_q": "Jak włączyć uwierzytelnianie dwuskładnikowe?",
       "tfa_a": "Otwórz <strong>Mój profil</strong> → <strong>Bezpieczeństwo</strong> → <strong>Uwierzytelnianie dwuskładnikowe</strong> i zeskanuj kod QR aplikacją uwierzytelniającą (1Password, Authy, Google Authenticator). Zapisz kody odzyskiwania w bezpiecznym miejscu — to jedyna droga powrotu, jeśli zgubisz telefon.",
       "account_q": "Jak zmienić e-mail, hasło lub usunąć konto?",

@@ -6,7 +6,7 @@ Common questions, error states, and "why is X happening" answers, plus a glossar
 
 | If the problem is about… | Start here |
 |---|---|
-| Signing up, confirming your email, signing in, the Android app | [Getting started](#getting-started) |
+| Signing up, confirming your email, signing in, the DivingHQ app | [Getting started](#getting-started) |
 | Clubs, regions, federations and claims | [Clubs and federations](#clubs-and-federations) |
 | Start Event, Control Room, scoring, judges | [Running a meet](#running-a-meet) |
 | Boards, warmups, judge overlaps, delays | [Session scheduler](#session-scheduler) |
@@ -34,9 +34,9 @@ Younger divers still compete, through a **junior profile**: a parent (or their c
 
 ### "Is there a DivingHQ app?"
 
-On Android, yes: get [DivingHQ from Google Play](https://play.google.com/store/apps/details?id=app.divinghq.mobile). It's the same DivingHQ as the website with the same account, so sign in with the username and password you already have, or sign up in the app. On top of the website it keeps a judge's screen on while they score, shares results and PDFs through your phone's share menu, and sends notifications once you turn them on in **Settings**.
+Yes, for Android and iPhone: get DivingHQ from [Google Play](https://play.google.com/store/apps/details?id=app.divinghq.mobile) or the [App Store](https://apps.apple.com/app/id6820469893). The iPhone app runs on iPads too. It's the same DivingHQ as the website with the same account, so sign in with the username and password you already have, or sign up in the app. On top of the website it keeps a judge's screen on while they score, shares results and PDFs through your phone's share menu, and sends notifications once you turn them on in **Settings**.
 
-On iPhone and iPad, use [divinghq.app](https://divinghq.app) in Safari for now. Add it to your Home Screen (**Share → Add to Home Screen**) and it opens full screen like an app, which is also what lets Safari show notifications. On a laptop or desktop, any up-to-date browser works.
+You don't have to install anything, though. [divinghq.app](https://divinghq.app) works in any up-to-date browser, on a phone or on a laptop or desktop.
 
 ### "Where's the sidebar on my phone?"
 
@@ -123,7 +123,7 @@ Past `entries_close_at`, divers can't self-submit lists. The meet manager has th
 
 Check their connection pill (top of the judge view). If it's amber for more than a few seconds, they've lost the socket. Common causes:
 
-- Phone went to sleep: keep the screen on. The Android app does that by itself while they're scoring; in a browser, keep DivingHQ in front between dives
+- Phone went to sleep: keep the screen on. The DivingHQ app (Android or iPhone) does that by itself while they're scoring; in a browser, keep DivingHQ in front between dives
 - Wifi flake — try mobile data or a different access point
 - Two devices logged in for the same judge — one will be kicked, ask them to use only one
 
@@ -299,11 +299,11 @@ Open your profile and click **🔐 Two-Factor Auth**. Scan the QR code with an a
 
 Open **Settings** (`/settings`): it's in the account menu, and it's the **Settings** tab at the bottom of a phone screen. The Notifications section shows whether this device gets push notifications and turns them on or off. It's per device, so switching them off on your laptop leaves your phone alone.
 
-In the [Android app](https://play.google.com/store/apps/details?id=app.divinghq.mobile), Android may ask for permission the first time you turn them on. If you said no, Settings shows **Blocked in device settings**: press **Device notification settings**, allow notifications for DivingHQ, then come back and press **Refresh status**. **Send test notification** checks one actually reaches the phone. Notifications on the lock screen keep the details private; open the app to read them.
+In the DivingHQ app ([Android](https://play.google.com/store/apps/details?id=app.divinghq.mobile) or [iPhone](https://apps.apple.com/app/id6820469893)), your phone may ask for permission the first time you turn them on. If you said no, Settings shows **Blocked in device settings**: press **Device notification settings**, allow notifications for DivingHQ, then come back and press **Refresh status**. **Send test notification** checks one actually reaches the phone. Notifications on the lock screen keep the details private; open the app to read them.
 
 In a browser, it may ask about notifications the first time you sign in on it. If you said no, Settings shows **Blocked in browser settings**: allow notifications for divinghq.app in the browser's own settings, then come back and turn them on.
 
-On an iPhone or iPad, Safari only offers notifications once DivingHQ is on your Home Screen (**Share → Add to Home Screen**) and you've opened it from there.
+In Safari on an iPhone or iPad, notifications only work once DivingHQ is on your Home Screen (**Share → Add to Home Screen**) and you've opened it from there. The iPhone app doesn't need any of that.
 
 Everything sent to you also lands in your **Inbox** (`/inbox`), so a notification you missed, or switched off, isn't lost.
 
@@ -317,7 +317,7 @@ Can't sign in any more? [Delete your DivingHQ account](/delete-account) explains
 
 ### "The scoreboard feels sluggish"
 
-On Android, the [DivingHQ app](https://play.google.com/store/apps/details?id=app.divinghq.mobile) is the quickest way to follow a meet: its screens are part of the app, so it doesn't download the page every time you open it. On iPhone, add DivingHQ to your Home Screen from Safari (**Share → Add to Home Screen**) for faster reloads and a full-screen view; desktop Chrome and Edge offer **Install** in the address bar.
+On a phone, the DivingHQ app ([Google Play](https://play.google.com/store/apps/details?id=app.divinghq.mobile) or the [App Store](https://apps.apple.com/app/id6820469893)) is the quickest way to follow a meet: its screens are part of the app, so it doesn't download the page every time you open it. In a browser, add DivingHQ to your Home Screen (Safari: **Share → Add to Home Screen**) for faster reloads and a full-screen view; desktop Chrome and Edge offer **Install** in the address bar.
 
 If that doesn't help and the live broadcast is consistently slow, check:
 

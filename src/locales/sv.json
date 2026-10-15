@@ -651,7 +651,7 @@
         "step_1_link": "Poängtavla och resultat",
         "step_2": "Välj en pågående gren för sändningslayouten, eller en avslutad tävling för sammanfattningen",
         "step_3": "Tryck på valfri domarpoäng → öppnar den domarens publika analys",
-        "step_4": "På Android laddar du ner DivingHQ-appen från {play}. På iPhone använder du <strong>Lägg till på hemskärmen</strong> i Safari för en snabbare helskärmsvy",
+        "step_4": "Ladda ner DivingHQ-appen från {play} eller {appstore} för en snabbare helskärmsvy",
         "cta": "Guide till poängtavlan ↗"
       }
     },
@@ -659,7 +659,7 @@
       "register_q": "Jag har precis registrerat mig men kan inte logga in än.",
       "register_a": "Bekräfta din e-post först: klicka på länken i bekräftelsemejlet vi skickade när du registrerade dig. Inget där? Kolla skräpposten, eller försök logga in och be om en ny länk. Roller hindrar inte inloggning: du börjar som åskådare och får mer när din klubb- eller förbundsadministratör godkänner det.",
       "judge_device_q": "Jag är domare — vilken enhet ska jag använda?",
-      "judge_device_a": "Vilken modern mobil som helst funkar: på Android laddar du ner DivingHQ-appen från {play}, på iPhone använder du Safari. iPhone 12 / Pixel 6 eller nyare är idealiskt. Vyn är gjord för mobilen; du kommer trycka in siffror hela tävlingen, så en mobil du kan greppa bekvämt med en hand är rätt val. Wifi är att föredra framför 4G om lokalen har det — poängen synkas via 4G också, men svarstiden är märkbart längre.",
+      "judge_device_a": "Vilken modern mobil som helst funkar: ladda ner DivingHQ-appen från {play} eller {appstore}, eller använd mobilens webbläsare. iPhone 12 / Pixel 6 eller nyare är idealiskt. Vyn är gjord för mobilen; du kommer trycka in siffror hela tävlingen, så en mobil du kan greppa bekvämt med en hand är rätt val. Wifi är att föredra framför 4G om lokalen har det — poängen synkas via 4G också, men svarstiden är märkbart längre.",
       "scoring_q": "Hur fungerar poängsättningen?",
       "scoring_a": "Varje domare bedömer ett hopp från <strong>0,0 till 10,0</strong> i halvpoängssteg. Med en 5-mans panel räknas högsta och lägsta bort och de tre mittersta behålls (den «trimmade» poängen). De räknade poängen multipliceras med hoppets <strong>DD</strong> (svårighetsgrad) för att få hoppets poäng. För synkro bedömer tre delpaneler olika aspekter (Exec A, Exec B, Sync) och uträkningen sätter ihop dem enligt World Aquatics Article 8.",
       "broadcast_q": "Jag vill projicera poängtavlan för publiken.",
@@ -669,7 +669,7 @@
       "bug_q": "Hur rapporterar jag en bugg?",
       "bug_a": "Klicka på länken <strong>🐛 Rapportera en bugg</strong> längst ned på hemsidan eller din panel. Den öppnar ett färdigfyllt GitHub-ärende där du kan beskriva problemet. Skärmbilder hjälper mycket. Inget GitHub-konto? Mejla {email} i stället.",
       "install_q": "Hur installerar jag DivingHQ som en app?",
-      "install_a": "På Android: ladda ner <strong>DivingHQ</strong> från {play} och logga in med ditt vanliga konto. På iPhone och iPad: öppna sidan i Safari, tryck på Dela-knappen och sedan på <strong>Lägg till på hemskärmen</strong>: ikonen öppnar en helskärmsvy utan webbläsarrad.",
+      "install_a": "Ladda ner <strong>DivingHQ</strong> från {play} på Android eller {appstore} på iPhone och iPad och logga in med ditt vanliga konto. På en dator funkar vilken uppdaterad webbläsare som helst.",
       "tfa_q": "Hur aktiverar jag tvåfaktorsautentisering?",
       "tfa_a": "Öppna <strong>Min profil</strong> → <strong>Säkerhet</strong> → <strong>Tvåfaktorsautentisering</strong> och skanna QR-koden med din autentiseringsapp (1Password, Authy, Google Authenticator). Spara återställningskoderna på ett säkert ställe — de är enda vägen tillbaka in om du tappar bort mobilen.",
       "account_q": "Hur byter jag e-post, lösenord eller tar bort mitt konto?",

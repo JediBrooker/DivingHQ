@@ -651,7 +651,7 @@
         "step_1_link": "Scoretavle og resultater",
         "step_2": "Velg en pågående konkurranse for sendingsoppsettet, eller en avsluttet stevne for oppsummeringen",
         "step_3": "Trykk på en dommer-scorebrikke → åpner den dommerens offentlige analyse",
-        "step_4": "På Android laster du ned DivingHQ-appen fra {play}. På iPhone bruker du <strong>Legg til på Hjem-skjerm</strong> i Safari for en raskere fullskjermsvisning",
+        "step_4": "Last ned DivingHQ-appen fra {play} eller {appstore} for en raskere fullskjermsvisning",
         "cta": "Veiledning til scoretavlen ↗"
       }
     },
@@ -659,7 +659,7 @@
       "register_q": "Jeg har akkurat registrert meg, men kan ikke logge inn enda.",
       "register_a": "Bekreft e-posten din først: klikk på lenken i bekreftelses-e-posten vi sendte da du registrerte deg. Ingenting der? Sjekk søppelposten, eller prøv å logge inn og be om en ny lenke. Roller blokkerer ikke innlogging: du starter som tilskuer og får mer når klubb- eller forbundsadministratoren din godkjenner det.",
       "judge_device_q": "Jeg er dommer — hvilken enhet bør jeg bruke?",
-      "judge_device_a": "Enhver moderne telefon fungerer: på Android laster du ned DivingHQ-appen fra {play}, på iPhone bruker du Safari. iPhone 12 / Pixel 6 eller nyere er ideelt. Visningen er laget for mobil; du kommer til å trykke tall hele stevnet, så en telefon du holder behagelig med én hånd er riktig valg. Wifi foretrekkes framfor 4G hvis hallen har det — poengsummene synkroniseres også via 4G, men nettverkets svartid er merkbart lengre.",
+      "judge_device_a": "Enhver moderne telefon fungerer: last ned DivingHQ-appen fra {play} eller {appstore}, eller bruk telefonens nettleser. iPhone 12 / Pixel 6 eller nyere er ideelt. Visningen er laget for mobil; du kommer til å trykke tall hele stevnet, så en telefon du holder behagelig med én hånd er riktig valg. Wifi foretrekkes framfor 4G hvis hallen har det — poengsummene synkroniseres også via 4G, men nettverkets svartid er merkbart lengre.",
       "scoring_q": "Hvordan fungerer poenggivningen?",
       "scoring_a": "Hver dommer bedømmer et stup fra <strong>0,0 til 10,0</strong> i halvpoengs-trinn. Med et 5-mannspanel droppes høyeste og laveste, og de tre midterste beholdes (den «trimmede» summen). De beholdte poengsummene multipliseres med stupets <strong>DD</strong> (vanskelighetsgrad) for å få stupets poeng. Ved synkron bedømmer tre delpaneler ulike aspekter (Exec A, Exec B, Sync), og utregningen kombinerer dem etter World Aquatics Article 8.",
       "broadcast_q": "Jeg vil projisere scoretavlen for publikum.",
@@ -669,7 +669,7 @@
       "bug_q": "Hvordan rapporterer jeg en feil?",
       "bug_a": "Klikk på lenken <strong>🐛 Rapporter en feil</strong> nederst på hjemmesiden eller panelet ditt. Den åpner en forhåndsutfylt GitHub-sak hvor du kan beskrive problemet. Skjermbilder hjelper mye. Ingen GitHub-konto? Skriv til {email} i stedet.",
       "install_q": "Hvordan installerer jeg DivingHQ som en app?",
-      "install_a": "På Android: last ned <strong>DivingHQ</strong> fra {play}, og logg inn med den vanlige kontoen din. På iPhone og iPad: åpne siden i Safari, trykk på Del-knappen, og velg så <strong>Legg til på Hjem-skjerm</strong>: ikonet åpner en fullskjermsvisning uten nettleserlinje.",
+      "install_a": "Last ned <strong>DivingHQ</strong> fra {play} på Android eller {appstore} på iPhone og iPad, og logg inn med den vanlige kontoen din. På en datamaskin fungerer enhver oppdatert nettleser.",
       "tfa_q": "Hvordan slår jeg på tofaktorautentisering?",
       "tfa_a": "Åpne <strong>Min profil</strong> → <strong>Sikkerhet</strong> → <strong>Tofaktorautentisering</strong> og skann QR-koden med autentiseringsappen din (1Password, Authy, Google Authenticator). Lagre gjenopprettingskodene et trygt sted — de er den eneste veien inn igjen hvis du mister telefonen.",
       "account_q": "Hvordan endrer jeg e-post eller passord, eller sletter kontoen min?",

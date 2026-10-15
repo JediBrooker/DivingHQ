@@ -65,7 +65,7 @@ The most important thing: **a dropped connection during scoring is not an emerge
 - **Position access points** near the judges' seating and Control Room operator, not just in the lobby.
 - **Bring a mobile hotspot as backup.** A phone hotspot can keep a meet running if venue Wi-Fi fails entirely.
 - **Brief judges before the meet starts.** They should know that an amber indicator means "your scores are queued, keep going" — not "something is broken, stop scoring."
-- **Get DivingHQ onto officials' phones properly.** On Android, install the [DivingHQ app](https://play.google.com/store/apps/details?id=app.divinghq.mobile): its screens are built in, so a weak signal only has to carry the live data, and it keeps a judge's screen on while they score. On iPhones and iPads, add divinghq.app to the Home Screen from Safari (it installs as a Progressive Web App) for faster reconnection on flaky networks.
+- **Get DivingHQ onto officials' phones properly.** Install the DivingHQ app from [Google Play](https://play.google.com/store/apps/details?id=app.divinghq.mobile) or the [App Store](https://apps.apple.com/app/id6820469893): its screens are built in, so a weak signal only has to carry the live data, and it keeps a judge's screen on while they score. Anyone who'd rather not install it can add divinghq.app to the Home Screen from the browser (it installs as a Progressive Web App) for faster reconnection on flaky networks.
 
 ## What to do if something goes wrong
 

@@ -28,7 +28,7 @@ Nothing arrived after a few minutes? Check your spam folder. Then try signing in
 
 Copy your club's **invite link** from **My club** (`/club`, in the sidebar, or under **Menu** on a phone) and send it to your members. It opens the sign-up form with your country and club already picked. Each person chooses the role they want: diver, coach, judge or referee.
 
-Members with an Android phone can also get the [DivingHQ app](https://play.google.com/store/apps/details?id=app.divinghq.mobile). It's the same account, so they can sign up from your link and then sign in to the app.
+Members can also get the DivingHQ app on their phone, from [Google Play](https://play.google.com/store/apps/details?id=app.divinghq.mobile) or the [App Store](https://apps.apple.com/app/id6820469893). It's the same account, so they can sign up from your link and then sign in to the app.
 
 Their requests land on My club too. Approve or reject each one there. A referee request is the exception: in a country with no federation on DivingHQ yet it goes to DivingHQ, because a referee can act at any club's meet in the country.
 
