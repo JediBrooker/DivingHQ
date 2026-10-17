@@ -201,9 +201,9 @@
     "dashboard": {
       "label": "Trenerens oversikt",
       "title": "Mine stupere",
-      "subtitle": "For hver tilknyttet stuper: neste stup, gjeldende plassering og siste fullførte stup. Be administratoren i organisasjonen din om å legge til eller fjerne tilknytninger i Brukeradministrasjon.",
+      "subtitle": "For hver tilknyttet stuper: neste stup, gjeldende plassering og siste fullførte stup. Forbundets administrator legger til eller fjerner tilknytninger i Brukeradministrasjon; i et land som ennå ikke har et forbund på DivingHQ, kontakter du DivingHQ-support.",
       "no_divers_title": "Ingen tilknyttede stupere",
-      "no_divers_body": "Når administratoren i organisasjonen din knytter deg til stuperne du trener, vises stevnene, resultatene og analysen deres her. Be administratoren i forbundet om å åpne Brukeradministrasjon → din rad → Trenertilknytninger og legge til stuperne du har ansvar for.",
+      "no_divers_body": "Når du er tilknyttet stuperne du trener, vises stevnene, resultatene og analysene deres her. Be forbundets administrator åpne Brukeradministrasjon → din rad → Trenertilknytninger og legge dem til; i et land som ennå ikke har et forbund på DivingHQ, kontakter du DivingHQ-support. En junior du selv legger til, blir tilknyttet deg når klubben bekrefter vedkommende.",
       "loading": "Laster stuperne dine…",
       "section_live": "🔴 Stuper nå",
       "section_upcoming": "📅 Kommende",

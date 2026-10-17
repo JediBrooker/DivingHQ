@@ -201,9 +201,9 @@
     "dashboard": {
       "label": "Painel do Treinador",
       "title": "Os Meus Saltadores",
-      "subtitle": "Para cada saltador associado: o próximo salto, classificação atual e o último salto completado. Peça ao admin da sua organização para adicionar ou remover associações no Gestor de Utilizadores.",
+      "subtitle": "Para cada saltador associado: o próximo salto, classificação atual e o último salto completado. O admin da sua federação adiciona ou remove associações no Gestor de Utilizadores; num país que ainda não tem federação no DivingHQ, contacte o suporte do DivingHQ.",
       "no_divers_title": "Sem saltadores associados",
-      "no_divers_body": "Assim que o admin da sua organização o associar aos saltadores que treina, as provas, resultados e análises aparecerão aqui. Peça ao admin da sua federação para abrir Gestor de Utilizadores → a sua linha → Associações de Treinador e adicionar os saltadores que orienta.",
+      "no_divers_body": "Quando estiver associado aos saltadores que treina, os eventos, resultados e análises deles aparecem aqui. Peça ao admin da sua federação para abrir Gestor de Utilizadores → a sua linha → Associações de treinador e adicioná-los; num país que ainda não tem federação no DivingHQ, contacte o suporte do DivingHQ. Um júnior que você próprio adicionar fica associado a si quando o clube o confirmar.",
       "loading": "A carregar os seus saltadores…",
       "section_live": "🔴 A Saltar Agora",
       "section_upcoming": "📅 Próximas",

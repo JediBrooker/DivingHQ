@@ -201,9 +201,9 @@
     "dashboard": {
       "label": "Antrenör Paneli",
       "title": "Atlamacılarım",
-      "subtitle": "Bağlı her atlamacı için: sıradaki atlaması, mevcut sıralaması ve en son tamamlanan atlaması. Kuruluş yöneticinizden Kullanıcı Yöneticisi üzerinden bağlantı ekleyip kaldırmasını isteyin.",
+      "subtitle": "Bağlı her atlamacı için: sıradaki atlaması, mevcut sıralaması ve en son tamamlanan atlaması. Bağlantıları federasyonunuzun yöneticisi Kullanıcı Yöneticisi'nde ekler veya kaldırır; henüz DivingHQ'da federasyonu olmayan bir ülkede DivingHQ desteğine başvurun.",
       "no_divers_title": "Henüz bağlı atlamacı yok",
-      "no_divers_body": "Kuruluş yöneticiniz sizi çalıştırdığınız atlamacılara bağladığında, etkinlikleri, sonuçları ve analizleri burada görünecek. Federasyonunuzun yöneticisinden Kullanıcı Yöneticisi → satırınız → Antrenör Bağlantıları'nı açarak yetiştirdiğiniz atlamacıları eklemesini isteyin.",
+      "no_divers_body": "Çalıştırdığınız atlamacılarla bağlandığınızda yarışmaları, sonuçları ve analizleri burada görünür. Federasyonunuzun yöneticisinden Kullanıcı Yöneticisi → satırınız → Antrenör Bağlantıları'nı açıp onları eklemesini isteyin; henüz DivingHQ'da federasyonu olmayan bir ülkede DivingHQ desteğine başvurun. Kendi eklediğiniz bir genç atlamacı, kulüp onayladığında size bağlanır.",
       "loading": "Atlamacılarınız yükleniyor…",
       "section_live": "🔴 Şu Anda Atlıyor",
       "section_upcoming": "📅 Yaklaşan",

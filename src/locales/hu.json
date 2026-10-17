@@ -201,9 +201,9 @@
     "dashboard": {
       "label": "Edzői vezérlőpult",
       "title": "Műugróim",
-      "subtitle": "Minden összekapcsolt műugróhoz: a következő ugrás, az aktuális helyezés és az utolsó teljesített ugrás. Kérje meg a szervezet adminisztrátorát, hogy adjon hozzá vagy távolítson el kapcsolatokat a Felhasználókezelőből.",
+      "subtitle": "Minden összekapcsolt műugróhoz: a következő ugrás, az aktuális helyezés és az utolsó teljesített ugrás. A kapcsolatokat a szövetség adminisztrátora adja hozzá vagy távolítja el a Felhasználókezelőben; olyan országban, ahol még nincs szövetség a DivingHQ-n, forduljon a DivingHQ ügyfélszolgálatához.",
       "no_divers_title": "Nincs összekapcsolt műugró",
-      "no_divers_body": "Amint a szervezet adminisztrátora összekapcsolja Önt az edzett műugrókkal, az ő versenyeik, eredményeik és elemzéseik itt jelennek meg. Kérje meg a szövetség adminisztrátorát, hogy nyissa meg a Felhasználókezelő → az Ön sora → Edzői kapcsolatok menüpontot, és adja hozzá az Ön által vezetett műugrókat.",
+      "no_divers_body": "Amint össze van kapcsolva az edzett műugrókkal, itt jelennek meg a versenyeik, eredményeik és elemzéseik. Kérje meg a szövetség adminisztrátorát, hogy nyissa meg a Felhasználókezelő → az Ön sora → Edzői kapcsolatok menüt, és adja hozzá őket; olyan országban, ahol még nincs szövetség a DivingHQ-n, forduljon a DivingHQ ügyfélszolgálatához. Az Ön által felvett junior akkor kapcsolódik Önhöz, amikor a klub megerősíti.",
       "loading": "Műugrók betöltése…",
       "section_live": "🔴 Most ugranak",
       "section_upcoming": "📅 Hamarosan",

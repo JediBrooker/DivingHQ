@@ -201,9 +201,9 @@
     "dashboard": {
       "label": "Tränarens översikt",
       "title": "Mina hoppare",
-      "subtitle": "För varje länkad hoppare: nästa hopp, aktuell placering och senast genomförda hopp. Be administratören för din organisation att lägga till eller ta bort länkar i Användarhanteraren.",
+      "subtitle": "För varje länkad hoppare: nästa hopp, aktuell placering och senast genomförda hopp. Förbundets administratör lägger till eller tar bort länkar i Användarhanteraren; i ett land som ännu inte har något förbund på DivingHQ kontaktar du DivingHQ-supporten.",
       "no_divers_title": "Inga länkade hoppare",
-      "no_divers_body": "Så snart administratören för din organisation har länkat dig till hopparna du tränar visas deras tävlingar, resultat och analyser här. Be förbundets administratör att öppna Användarhanteraren → din rad → Tränarlänkar och lägga till de hoppare du leder.",
+      "no_divers_body": "När du är länkad till de hoppare du tränar visas deras tävlingar, resultat och analyser här. Be förbundets administratör öppna Användarhanteraren → din rad → Tränarlänkar och lägga till dem; i ett land som ännu inte har något förbund på DivingHQ kontaktar du DivingHQ-supporten. En junior du själv lägger till länkas till dig när klubben bekräftar hen.",
       "loading": "Laddar dina hoppare…",
       "section_live": "🔴 Hoppar just nu",
       "section_upcoming": "📅 Kommande",

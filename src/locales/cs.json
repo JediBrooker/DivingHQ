@@ -201,9 +201,9 @@
     "dashboard": {
       "label": "Nástěnka trenéra",
       "title": "Moji skokani",
-      "subtitle": "Pro každého propojeného skokana: jeho další skok, aktuální pořadí a poslední dokončený skok. Požádejte administrátora organizace o přidání nebo odebrání propojení ve Správě uživatelů.",
+      "subtitle": "Pro každého propojeného skokana: jeho další skok, aktuální pořadí a poslední dokončený skok. Propojení přidává nebo odebírá administrátor vaší federace ve Správě uživatelů; v zemi, která na DivingHQ zatím federaci nemá, se obraťte na podporu DivingHQ.",
       "no_divers_title": "Zatím nejsou propojeni žádní skokani",
-      "no_divers_body": "Jakmile vás administrátor organizace propojí se skokany, které trénujete, objeví se zde jejich disciplíny, výsledky a analýzy. Požádejte administrátora své federace, aby otevřel Správu uživatelů → váš řádek → Propojení trenérů a přidal skokany, které vedete.",
+      "no_divers_body": "Jakmile budete propojeni se skokany, které trénujete, zobrazí se zde jejich závody, výsledky a analýzy. Požádejte administrátora své federace, aby otevřel Správu uživatelů → váš řádek → Propojení trenéra a přidal je; v zemi, která na DivingHQ zatím federaci nemá, se obraťte na podporu DivingHQ. Juniora, kterého přidáte sami, s vámi klub propojí při potvrzení.",
       "loading": "Načítání vašich skokanů…",
       "section_live": "🔴 Právě skáče",
       "section_upcoming": "📅 Nadcházející",

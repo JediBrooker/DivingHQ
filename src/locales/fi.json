@@ -201,9 +201,9 @@
     "dashboard": {
       "label": "Valmentajan paneeli",
       "title": "Omat hyppääjät",
-      "subtitle": "Jokaiselle linkitetylle hyppääjälle: seuraava hyppy, nykyinen sijoitus ja viimeisin suoritettu hyppy. Pyydä organisaatiosi pääkäyttäjää lisäämään tai poistamaan linkityksiä Käyttäjähallinnasta.",
+      "subtitle": "Jokaiselle linkitetylle hyppääjälle: seuraava hyppy, nykyinen sijoitus ja viimeisin suoritettu hyppy. Liittosi pääkäyttäjä lisää tai poistaa linkityksiä Käyttäjähallinnassa; maassa, jolla ei vielä ole liittoa DivingHQ:ssa, ota yhteyttä DivingHQ:n tukeen.",
       "no_divers_title": "Ei linkitettyjä hyppääjiä",
-      "no_divers_body": "Kun organisaatiosi pääkäyttäjä linkittää sinut valmentamiisi hyppääjiin, heidän kilpailunsa, tuloksensa ja analytiikkansa näkyvät täällä. Pyydä liittosi pääkäyttäjää avaamaan Käyttäjähallinta → oma rivisi → Valmentajalinkit ja lisäämään ohjaamasi hyppääjät.",
+      "no_divers_body": "Kun sinut on linkitetty valmentamiisi hyppääjiin, heidän kilpailunsa, tuloksensa ja analytiikkansa näkyvät tässä. Pyydä liittosi pääkäyttäjää avaamaan Käyttäjähallinta → oma rivisi → Valmentajalinkitykset ja lisäämään heidät; maassa, jolla ei vielä ole liittoa DivingHQ:ssa, ota yhteyttä DivingHQ:n tukeen. Itse lisäämäsi juniori linkitetään sinuun, kun seura vahvistaa hänet.",
       "loading": "Ladataan hyppääjiäsi…",
       "section_live": "🔴 Hyppäämässä juuri nyt",
       "section_upcoming": "📅 Tulossa",

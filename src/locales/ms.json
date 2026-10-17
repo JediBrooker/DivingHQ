@@ -201,9 +201,9 @@
     "dashboard": {
       "label": "Papan Pemuka Jurulatih",
       "title": "Peterjun saya",
-      "subtitle": "Untuk setiap peterjun yang terpaut: terjunan seterusnya, kedudukan semasa, dan terjunan terbaharu yang selesai. Minta admin organisasi anda menambah atau membuang pautan dalam Pengurus Pengguna.",
+      "subtitle": "Untuk setiap peterjun yang terpaut: terjunan seterusnya, kedudukan semasa, dan terjunan terbaharu yang selesai. Admin persekutuan anda menambah atau membuang pautan dalam Pengurus Pengguna; di negara yang belum mempunyai persekutuan di DivingHQ, hubungi sokongan DivingHQ.",
       "no_divers_title": "Belum ada peterjun yang dipautkan",
-      "no_divers_body": "Setelah admin organisasi anda memaut anda dengan peterjun yang anda latih, acara, keputusan, dan analitik mereka akan muncul di sini. Minta admin persekutuan anda membuka Pengurus Pengguna → baris anda → Pautan Jurulatih dan tambah peterjun yang anda bimbing.",
+      "no_divers_body": "Setelah anda dipautkan dengan peterjun yang anda latih, acara, keputusan dan analitik mereka akan muncul di sini. Minta admin persekutuan anda membuka Pengurus Pengguna → baris anda → Pautan Jurulatih dan menambah mereka; di negara yang belum mempunyai persekutuan di DivingHQ, hubungi sokongan DivingHQ. Peterjun junior yang anda tambah sendiri akan dipautkan kepada anda apabila kelab mengesahkannya.",
       "loading": "Memuatkan peterjun anda…",
       "section_live": "🔴 Sedang terjun",
       "section_upcoming": "📅 Akan datang",

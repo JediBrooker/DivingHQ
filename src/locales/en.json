@@ -201,9 +201,9 @@
     "dashboard": {
       "label": "Coach Dashboard",
       "title": "My Divers",
-      "subtitle": "For each linked diver: their next dive, current rank, and most-recent completed dive. Ask your org admin to add or remove links from the User Manager.",
+      "subtitle": "For each linked diver: their next dive, current rank, and most-recent completed dive. Your federation's admin adds or removes links in the User Manager; in a country with no federation on DivingHQ yet, ask DivingHQ support.",
       "no_divers_title": "No divers linked yet",
-      "no_divers_body": "Once your org admin links you to the divers you coach, their events, results, and analytics will appear here. Ask your federation's admin to open User Manager → your row → Coach Links and add the divers you mentor.",
+      "no_divers_body": "Once you're linked to the divers you coach, their events, results, and analytics will appear here. Ask your federation's admin to open User Manager → your row → Coach Links and add them; in a country with no federation on DivingHQ yet, ask DivingHQ support. A junior you add yourself is linked to you when the club confirms them.",
       "loading": "Loading your divers…",
       "section_live": "🔴 Diving Now",
       "section_upcoming": "📅 Upcoming",
