@@ -352,7 +352,9 @@ const routes = [
   {
     path: '/assign-judges',
     component: () => import('@/views/AssignJudgesView.vue'),
-    meta: { requiresAuth: true, requiresRole: ['org_admin', 'meet_manager'] },
+    // allowDelegateAdmin: a club or region admin seats the panels on
+    // the meets they host (the view narrows its event list to those).
+    meta: { requiresAuth: true, requiresRole: ['org_admin', 'meet_manager'], allowDelegateAdmin: true },
   },
   {
     // /profile/:id is a PUBLIC profile page, anonymous spectators

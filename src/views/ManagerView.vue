@@ -2135,6 +2135,17 @@ onUnmounted(() => {
                           @click="openEdit(ev); overflowOpenEventId = null">
                     Edit event
                   </button>
+                  <!-- The panel is seated on its own page. Deep-link with
+                       this event picked, so a club admin (who has no
+                       dashboard tile for it) can reach it from the row. -->
+                  <RouterLink :to="`/assign-judges?event=${ev.id}`"
+                              class="dropdown-item"
+                              data-testid="event-assign-judges"
+                              v-tip="ev.number_of_judges
+                                ? `Seat the ${ev.number_of_judges}-judge panel for this event, in order`
+                                : 'Seat the judge panel for this event, in order'">
+                    Assign judges…
+                  </RouterLink>
                   <RouterLink v-if="!clubMode" :to="`/events/${ev.id}/audit`"
                               class="dropdown-item">
                     Audit log
