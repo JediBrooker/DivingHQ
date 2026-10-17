@@ -1,9 +1,15 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useClubScope } from '@/composables/useClubScope'
 
 const auth = useAuthStore()
+const route = useRoute()
+const router = useRouter()
+// A club or region admin (no org role) only seats panels on the meets
+// they host; the server refuses the rest, so don't list them.
+const { clubMode, narrowEvents } = useClubScope()
 
 const events = ref([])
 const allJudges = ref([])
@@ -64,6 +70,13 @@ const panelReviewRows = computed(() => {
 
 async function onEventChange() {
   saveMsg.value = ''
+  // Keep the pick in the URL so the page can be reloaded or shared with
+  // the event already chosen (Meet Manager's row and the Control Room's
+  // checklist link here the same way).
+  const wanted = selectedEventId.value || undefined
+  if ((route.query.event || undefined) !== wanted) {
+    router.replace({ query: { ...route.query, event: wanted } })
+  }
   if (!selectedEventId.value) {
     currentEvent.value = null
     panel.value = []
@@ -161,15 +174,25 @@ const loading = ref(true)
 
 onMounted(async () => {
   try {
+    // The judge list failing mustn't take the events with it: each
+    // event's eligible-judges read refills the picker anyway.
     const [evs, jdgs] = await Promise.all([
       auth.apiFetch('/api/events'),
-      auth.apiFetch('/api/judges'),
+      auth.apiFetch('/api/judges').catch(() => []),
     ])
-    events.value = evs
+    events.value = await narrowEvents(Array.isArray(evs) ? evs : [])
     baseJudges = Array.isArray(jdgs) ? jdgs : []
     allJudges.value = baseJudges
   } finally {
     loading.value = false
+  }
+  // ?event=<id> preselects (Meet Manager's "Assign judges…" and the
+  // Control Room's "Judge panel seated" link arrive this way). An id
+  // that isn't one of ours is ignored rather than left dangling.
+  const asked = typeof route.query.event === 'string' ? route.query.event : ''
+  if (asked && events.value.some(e => e.id === asked)) {
+    selectedEventId.value = asked
+    await onEventChange()
   }
 })
 </script>
@@ -186,12 +209,18 @@ onMounted(async () => {
     <!-- Step 1: select event -->
     <div v-else class="card">
       <label class="label" style="margin-bottom:0.75rem;display:block">Step 1 — Select Event</label>
-      <select class="select" v-model="selectedEventId" @change="onEventChange">
+      <select class="select" v-model="selectedEventId" data-testid="assign-event-select" @change="onEventChange">
         <option value="">— Choose Event —</option>
         <option v-for="ev in events" :key="ev.id" :value="ev.id">{{ ev.name }}</option>
       </select>
       <p v-if="!events.length" class="hint" style="margin-top:0.6rem">
-        No events have been created yet — head to <strong>Manager</strong> to set one up.
+        <template v-if="clubMode">
+          No events in the meets your club hosts yet — head to
+          <RouterLink to="/manager">Meet Manager</RouterLink> to set one up.
+        </template>
+        <template v-else>
+          No events have been created yet — head to <strong>Manager</strong> to set one up.
+        </template>
       </p>
     </div>
 

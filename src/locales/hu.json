@@ -494,7 +494,9 @@
       "step_code": "Állítsd be a klub rövid kódját",
       "step_code_desc": "Klubversenyeken a műugróid mellett jelenik meg.",
       "step_guide": "Olvasd el a klubadminisztrátori útmutatót",
-      "step_guide_desc": "Mit tehetsz az első versenytől a verseny napjáig."
+      "step_guide_desc": "Mit tehetsz az első versenytől a verseny napjáig.",
+      "step_panel": "Állítsa fel a bírói panelt",
+      "step_panel_desc": "Válassza ki egy versenyszám bíróit sorrendben a Bírók kijelölése oldalon."
     }
   },
   "role": {

@@ -297,7 +297,9 @@ For mixed-board events, add a `height` column.
 
 ## Setting up the panel
 
-From the event row, click **Assign Judges** → pick judges from your federation's user list. Order matters: the first judge you pick becomes Judge 1, the second Judge 2, etc. — this maps to the synchro sub-panel slots above.
+Open the event row's **⋯** menu in Meet Manager and choose **Assign judges…**. It opens the **Assign Judges** page with that event picked (the page is also a tile on the meet manager's dashboard, and the Control Room's readiness checklist links to it from **Judge panel seated** while the panel is short). The picker lists everyone holding the judge role in your federation, plus the judges of any participating federation. Order matters: the first judge you pick becomes Judge 1, the second Judge 2, etc. — this maps to the synchro sub-panel slots above. **Save Panel** shows what changes slot by slot before it writes anything.
+
+A club or region admin seats panels the same way on the meets their club or region hosts, with no federation role needed; the page only lists those meets' events.
 
 The same pattern works for **referees**, but a referee isn't on the panel — they're the supervising official. Add at least one referee to your federation (from User Manager); the **Sign Off** step in the Control Room workflow needs one to authorise the event going Live.
 

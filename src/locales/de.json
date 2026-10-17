@@ -494,7 +494,9 @@
       "step_code": "Vereinskürzel festlegen",
       "step_code_desc": "Erscheint bei Vereinswettkämpfen neben Ihren Springern.",
       "step_guide": "Leitfaden für Vereinsadmins lesen",
-      "step_guide_desc": "Was Sie tun können, vom ersten Wettkampf bis zum Wettkampftag."
+      "step_guide_desc": "Was Sie tun können, vom ersten Wettkampf bis zum Wettkampftag.",
+      "step_panel": "Ein Richterpanel besetzen",
+      "step_panel_desc": "Wählen Sie unter „Richter zuweisen“ die Richter eines Wettbewerbs der Reihe nach aus."
     }
   },
   "role": {

@@ -494,7 +494,9 @@
       "step_code": "Ustaw krótki kod klubu",
       "step_code_desc": "Wyświetlany obok Twoich skoczków na zawodach klubowych.",
       "step_guide": "Przeczytaj przewodnik administratora klubu",
-      "step_guide_desc": "Co możesz zrobić, od pierwszych zawodów po dzień startów."
+      "step_guide_desc": "Co możesz zrobić, od pierwszych zawodów po dzień startów.",
+      "step_panel": "Obsadź panel sędziowski",
+      "step_panel_desc": "Wybierz sędziów konkurencji, po kolei, na stronie Przydziel sędziów."
     }
   },
   "role": {

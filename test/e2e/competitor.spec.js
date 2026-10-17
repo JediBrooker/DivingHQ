@@ -141,6 +141,51 @@ test("diver registers, gates on email verification, then submits a dive list", a
   await setup.deleteOrg(orgId);
 });
 
+// The "My club" card on Dive Sheets reads the diver's real club off the
+// session (users.club_id via /api/auth/me). It used to derive the club
+// from the diver's club-change requests alone, so everyone who had never
+// filed one, which is nearly everyone, saw "No club set" next to a
+// "Request club change" button.
+test("Dive Sheets shows the diver's club without a club-change request", async ({ request, page }) => {
+  test.setTimeout(60_000);
+  const { orgId } = await setup.createOrgAndAdmin(request);
+  try {
+    const club = await setup.insertClub({ orgId, name: "Harbour Springboard Club", shortCode: "HSC" });
+    const diver = await setup.insertUser({ orgId, role: "diver", fullName: "Clubbed Diver", clubId: club.clubId });
+    const loner = await setup.insertUser({ orgId, role: "diver", fullName: "Clubless Diver" });
+
+    await setup.bypassRoleTour(page);
+    const signIn = async (username) => {
+      const r = await page.request.post("/api/auth/login", {
+        data: { username, password: setup.TEST_PASSWORD },
+      });
+      expect(r.status(), await r.text()).toBe(200);
+    };
+
+    await signIn(diver.username);
+    await page.goto("/competitor");
+    const card = page.locator('[data-test-id="my-club-current"]');
+    await expect(card).toHaveText("Harbour Springboard Club");
+    await expect(card).not.toContainText("awaiting approval");
+    // No request is open, so the change button is still offered.
+    await expect(page.getByRole("button", { name: "Request club change" })).toBeVisible();
+
+    // A club that is still waiting for its federation isn't one you're in.
+    await setup.pool.query("UPDATE clubs SET status = 'pending' WHERE id = $1", [club.clubId]);
+    await page.reload();
+    await expect(card).toContainText("Harbour Springboard Club");
+    await expect(card).toContainText("awaiting approval");
+
+    // "No club set" is only for a diver whose club_id really is null.
+    await page.request.post("/api/auth/logout");
+    await signIn(loner.username);
+    await page.goto("/competitor");
+    await expect(card).toHaveText("No club set");
+  } finally {
+    await setup.deleteOrg(orgId).catch(() => {});
+  }
+});
+
 // pool teardown left to process exit (Playwright tears down the
 // worker process anyway). Calling pool.end() here was a foot-gun
 // when two specs landed in the same worker, the second one hit a

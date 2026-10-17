@@ -494,7 +494,9 @@
       "step_code": "Tetapkan kod ringkas kelab anda",
       "step_code_desc": "Dipaparkan di sebelah penerjun anda dalam kejohanan kelab.",
       "step_guide": "Baca panduan pentadbir kelab",
-      "step_guide_desc": "Apa yang boleh anda lakukan, dari kejohanan pertama hingga hari pertandingan."
+      "step_guide_desc": "Apa yang boleh anda lakukan, dari kejohanan pertama hingga hari pertandingan.",
+      "step_panel": "Susun panel pengadil",
+      "step_panel_desc": "Pilih pengadil untuk sesuatu acara, mengikut urutan, di Tugaskan Pengadil."
     }
   },
   "profile": {

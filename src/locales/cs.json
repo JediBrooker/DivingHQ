@@ -494,7 +494,9 @@
       "step_code": "Nastavte kód klubu",
       "step_code_desc": "Zobrazuje se u vašich skokanů na klubových závodech.",
       "step_guide": "Přečtěte si průvodce pro správce klubu",
-      "step_guide_desc": "Co všechno můžete dělat, od prvních závodů po den závodu."
+      "step_guide_desc": "Co všechno můžete dělat, od prvních závodů po den závodu.",
+      "step_panel": "Obsaďte panel rozhodčích",
+      "step_panel_desc": "Na stránce Přiřadit rozhodčí vyberte rozhodčí pro disciplínu v pořadí."
     }
   },
   "profile": {

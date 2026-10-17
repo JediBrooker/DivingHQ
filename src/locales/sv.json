@@ -494,7 +494,9 @@
       "step_code": "Ange klubbens kortkod",
       "step_code_desc": "Visas bredvid dina hoppare vid klubbtävlingar.",
       "step_guide": "Läs guiden för klubbadministratörer",
-      "step_guide_desc": "Vad du kan göra, från första tävlingen till tävlingsdagen."
+      "step_guide_desc": "Vad du kan göra, från första tävlingen till tävlingsdagen.",
+      "step_panel": "Tillsätt en domarpanel",
+      "step_panel_desc": "Välj domarna för en gren i ordning under Tilldela domare."
     }
   },
   "role": {

@@ -494,7 +494,9 @@
       "step_code": "Postavite kratku oznaku kluba",
       "step_code_desc": "Prikazuje se uz vaše skakače na klupskim natjecanjima.",
       "step_guide": "Pročitajte vodič za administratore kluba",
-      "step_guide_desc": "Što sve možete, od prvog natjecanja do dana natjecanja."
+      "step_guide_desc": "Što sve možete, od prvog natjecanja do dana natjecanja.",
+      "step_panel": "Sastavite sudački panel",
+      "step_panel_desc": "Odaberite suce za disciplinu, po redu, na stranici Dodijelite suce."
     }
   },
   "profile": {

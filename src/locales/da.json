@@ -494,7 +494,9 @@
       "step_code": "Angiv din klubs kortkode",
       "step_code_desc": "Vises ved dine udspringere til klubstævner.",
       "step_guide": "Læs vejledningen for klubadministratorer",
-      "step_guide_desc": "Hvad du kan, fra det første stævne til stævnedagen."
+      "step_guide_desc": "Hvad du kan, fra det første stævne til stævnedagen.",
+      "step_panel": "Besæt et dommerpanel",
+      "step_panel_desc": "Vælg dommerne til en øvelse i rækkefølge under Tildel dommere."
     }
   },
   "role": {

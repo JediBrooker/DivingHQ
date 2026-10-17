@@ -494,7 +494,9 @@
       "step_code": "Kulübün kısa kodunu belirleyin",
       "step_code_desc": "Kulüp yarışmalarında atlayıcılarınızın yanında görünür.",
       "step_guide": "Kulüp yöneticisi rehberini okuyun",
-      "step_guide_desc": "İlk yarışmadan yarışma gününe kadar yapabilecekleriniz."
+      "step_guide_desc": "İlk yarışmadan yarışma gününe kadar yapabilecekleriniz.",
+      "step_panel": "Hakem paneli oluşturun",
+      "step_panel_desc": "Hakem Atama sayfasında bir yarışmanın hakemlerini sırayla seçin."
     }
   },
   "profile": {

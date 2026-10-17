@@ -5172,6 +5172,54 @@ test("club admins: club_admin_of says who runs the org, and self-removal drops t
   }
 });
 
+// The session body says which club its owner is in (users.club_id), so
+// the SPA's "My club" surfaces read the real club rather than guessing
+// from the diver's club-change requests. Body-only: an approved change
+// lands between sign-ins and /api/auth/me has to pick it up.
+test("session body carries the member's club, and a pending club reads as pending", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const fx = await setupFixture({ withEvent: false });
+  try {
+    const clubId = (await pool.query(
+      "INSERT INTO clubs (org_id, name, short_code) VALUES ($1, 'Session Club', 'SES') RETURNING id", [fx.orgId],
+    )).rows[0].id;
+    const divername = `int-clubbed-${fx.slug}`;
+    const diverId = await insertUser({ orgId: fx.orgId, username: divername, fullName: "Clubbed Diver", role: "diver" });
+    await pool.query("UPDATE users SET club_id = $1 WHERE id = $2", [clubId, diverId]);
+
+    const login = await claimKit.login(divername, "not-used-here");
+    assert.equal(login.club_id, clubId);
+    assert.equal(login.club_name, "Session Club");
+    assert.equal(login.club_short_code, "SES");
+    assert.equal(login.club_status, "active");
+    const me = await fetchJson("GET", "/api/auth/me", { token: login.token });
+    assert.equal(me.status, 200);
+    assert.equal(me.body.user.club_id, clubId);
+    assert.equal(me.body.user.club_name, "Session Club");
+    assert.equal(me.body.user.club_status, "active");
+
+    // The club waits for its federation (migration 096): still named, but pending.
+    await pool.query("UPDATE clubs SET status = 'pending' WHERE id = $1", [clubId]);
+    const pending = await fetchJson("GET", "/api/auth/me", { token: login.token });
+    assert.equal(pending.body.user.club_id, clubId);
+    assert.equal(pending.body.user.club_status, "pending");
+
+    // No club: the keys are there and null, so the SPA can tell "none" from "unknown".
+    await pool.query("UPDATE users SET club_id = NULL WHERE id = $1", [diverId]);
+    const none = await fetchJson("GET", "/api/auth/me", { token: login.token });
+    assert.equal(none.body.user.club_id, null);
+    assert.equal(none.body.user.club_name, null);
+    assert.equal(none.body.user.club_short_code, null);
+    assert.equal(none.body.user.club_status, null);
+    assert.ok("club_id" in none.body.user);
+  } finally {
+    await pool.query("DELETE FROM users WHERE org_id = $1 AND username LIKE 'int-clubbed-%'", [fx.orgId]).catch(() => {});
+    await pool.query("DELETE FROM clubs WHERE org_id = $1", [fx.orgId]).catch(() => {});
+    await teardownFixture(fx);
+  }
+});
+
 // The Clubs screen only offers "Set up regions" where the seed route can
 // work, which is decided by lib/regions.json having a list for the org's
 // country. Pending orgs so nobody's by-country lookup trips over them.
@@ -5372,10 +5420,39 @@ test("club setup: a founder's progress, invite parts and short code", async (t) 
               email: `${member}@example.test`, country_code: CODE, club_id: A.clubId },
     });
     assert.equal(joined.status, 201, JSON.stringify(joined.body));
-    assert.equal((await fetchJson("POST", "/api/meets", { token: A.token, body: { name: "Philipsburg Club Night" } })).status, 201);
+    const meet = await fetchJson("POST", "/api/meets", { token: A.token, body: { name: "Philipsburg Club Night" } });
+    assert.equal(meet.status, 201, JSON.stringify(meet.body));
     const later = (await fetchJson("GET", `/api/clubs/${A.clubId}/setup`, { token: A.token })).body;
     assert.equal(later.member_count, 2);
     assert.equal(later.meet_count, 1);
+    assert.equal(later.panel_count, 0);
+
+    // The panel step ticks once an event in one of the club's meets has
+    // its full panel, seated by the club's admin with no org role at all.
+    const ev = await fetchJson("POST", "/api/events", {
+      token: A.token,
+      body: { name: "Philipsburg Women 1m", gender: "Female", number_of_judges: 5, total_rounds: 3,
+              height: "1m", event_type: "individual", meet_id: meet.body.id },
+    });
+    assert.equal(ev.status, 201, JSON.stringify(ev.body));
+    const orgId = (await pool.query("SELECT org_id FROM clubs WHERE id = $1", [A.clubId])).rows[0].org_id;
+    const judgeIds = [];
+    for (let i = 1; i <= 5; i++) {
+      const u = await pool.query(
+        `INSERT INTO users (username, full_name, org_id, club_id, email_verified_at)
+         VALUES ($1, $2, $3, $4, now()) RETURNING id`,
+        [`int-pj-${crypto.randomBytes(4).toString("hex")}`, `Philipsburg Judge ${i}`, orgId, A.clubId],
+      );
+      await pool.query("INSERT INTO user_org_roles (user_id, org_id, role) VALUES ($1, $2, 'judge')", [u.rows[0].id, orgId]);
+      judgeIds.push(u.rows[0].id);
+    }
+    // Four judges on a five-judge event isn't a seated panel.
+    assert.equal((await fetchJson("POST", `/api/events/${ev.body.id}/judges`, { token: A.token, body: { judgeIds: judgeIds.slice(0, 4) } })).status, 200);
+    assert.equal((await fetchJson("GET", `/api/clubs/${A.clubId}/setup`, { token: A.token })).body.panel_count, 0);
+    assert.equal((await fetchJson("POST", `/api/events/${ev.body.id}/judges`, { token: A.token, body: { judgeIds } })).status, 200);
+    assert.equal((await fetchJson("GET", `/api/clubs/${A.clubId}/setup`, { token: A.token })).body.panel_count, 1);
+    // Another club's admin in the same country can't touch that panel.
+    assert.equal((await fetchJson("POST", `/api/events/${ev.body.id}/judges`, { token: B.token, body: { judgeIds } })).status, 403);
 
     // The code: trimmed, upper-cased, validated, unique within the country.
     const set = await fetchJson("PUT", `/api/clubs/${A.clubId}/short-code`, { token: A.token, body: { short_code: " phi " } });

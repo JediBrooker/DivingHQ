@@ -74,7 +74,13 @@ module.exports = function createClubSetupRouter({ pool, verifyToken }) {
                   WHERE club_id = $1 AND deleted_at IS NULL) AS member_count,
                 EXISTS (SELECT 1 FROM users
                          WHERE id = $2 AND club_id = $1) AS you_are_member,
-                (SELECT count(*)::int FROM meets WHERE host_club_id = $1) AS meet_count`,
+                (SELECT count(*)::int FROM meets WHERE host_club_id = $1) AS meet_count,
+                (SELECT count(*)::int FROM events e
+                   JOIN meets m ON m.id = e.meet_id
+                  WHERE m.host_club_id = $1
+                    AND e.number_of_judges > 0
+                    AND (SELECT count(*) FROM event_judges ej WHERE ej.event_id = e.id)
+                        >= e.number_of_judges) AS panel_count`,
         [club.id, req.user.id],
       );
       res.json({

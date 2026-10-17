@@ -494,7 +494,9 @@
       "step_code": "Imposta il codice breve del club",
       "step_code_desc": "Mostrato accanto ai tuoi tuffatori nelle gare di club.",
       "step_guide": "Leggi la guida per gli amministratori di club",
-      "step_guide_desc": "Cosa puoi fare, dalla prima gara al giorno della competizione."
+      "step_guide_desc": "Cosa puoi fare, dalla prima gara al giorno della competizione.",
+      "step_panel": "Comporre una giuria",
+      "step_panel_desc": "Scegli i giudici di una gara, in ordine, su Assegna giudici."
     }
   },
   "role": {

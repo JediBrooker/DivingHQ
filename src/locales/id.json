@@ -494,7 +494,9 @@
       "step_code": "Tetapkan kode singkat klub",
       "step_code_desc": "Tampil di samping atlet Anda di kompetisi klub.",
       "step_guide": "Baca panduan admin klub",
-      "step_guide_desc": "Apa saja yang bisa Anda lakukan, dari kompetisi pertama hingga hari pertandingan."
+      "step_guide_desc": "Apa saja yang bisa Anda lakukan, dari kompetisi pertama hingga hari pertandingan.",
+      "step_panel": "Susun panel hakim",
+      "step_panel_desc": "Pilih hakim untuk suatu nomor lomba, sesuai urutan, di Tugaskan Hakim."
     }
   },
   "profile": {

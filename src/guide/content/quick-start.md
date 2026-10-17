@@ -61,7 +61,7 @@ Open **Meet Manager** (`/manager`). The left rail lists your meets; the right pa
    - **Judge Panel Size**: 5 for most individual events; 7, 9 or 11 for synchro
    - **Rounds**: add one row per round with **+ Add Dive**
 4. **Entries.** Divers submit their own dive lists from **Submit Dive Sheets** (`/competitor`) while the event is Upcoming and entries are open. You can also add divers yourself, or import a CSV roster from the event's **Edit** dialog.
-5. **Judges.** From the event row, open **Assign Judges** and put the panel in order (Judge 1 first).
+5. **Judges.** Open the event row's **⋯** menu and choose **Assign judges…**. The event is already picked; click judges in panel order (Judge 1 first) and **Save Panel**. The same page is the **Assign Judges** tile on a meet manager's dashboard, and the Control Room's readiness checklist links to it from **Judge panel seated** until the panel is full. As a club admin, your **Get started** checklist has a **Seat a judge panel** step for it too.
 
 ![The Assign Judges page, with the available judges on one side and the ordered panel slots on the other](/guide-screenshots/assign-judges.png)
 

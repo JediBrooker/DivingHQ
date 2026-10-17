@@ -494,7 +494,9 @@
       "step_code": "Angi klubbens kortkode",
       "step_code_desc": "Vises ved stuperne dine på klubbstevner.",
       "step_guide": "Les veiledningen for klubbadministratorer",
-      "step_guide_desc": "Hva du kan gjøre, fra første stevne til stevnedagen."
+      "step_guide_desc": "Hva du kan gjøre, fra første stevne til stevnedagen.",
+      "step_panel": "Sett opp et dommerpanel",
+      "step_panel_desc": "Velg dommerne til en øvelse i rekkefølge under Tildel dommere."
     }
   },
   "role": {

@@ -494,7 +494,9 @@
       "step_code": "Aseta seurasi lyhenne",
       "step_code_desc": "Näkyy hyppääjiesi vieressä seurakilpailuissa.",
       "step_guide": "Lue seuran ylläpitäjän opas",
-      "step_guide_desc": "Mitä voit tehdä ensimmäisestä kilpailusta kilpailupäivään."
+      "step_guide_desc": "Mitä voit tehdä ensimmäisestä kilpailusta kilpailupäivään.",
+      "step_panel": "Kokoa tuomaripaneeli",
+      "step_panel_desc": "Valitse lajin tuomarit järjestyksessä Nimeä tuomarit -sivulla."
     }
   },
   "role": {
