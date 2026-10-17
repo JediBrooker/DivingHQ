@@ -49,9 +49,9 @@ The dial only accepts half-point increments (0.0, 0.5, 1.0, …, 10.0). DivingHQ
 
 ### Re-submitting a corrected score
 
-If you tapped wrong and want to re-submit before the round advances, just tap a new score and submit again. The server treats your last submission for that diver-round as authoritative — older entries from the same judge get overwritten.
+Once you tap **Submit**, the keypad locks, so a stray second tap can't change your mark. If you tapped wrong and the round hasn't advanced yet, tap **Signal Referee**: the keypad unlocks and the button reads **Submit Corrected Score**. Submitting the new mark replaces your earlier one for that dive and clears your flag. While the flag is up the referee sees it on the Control Room, which is the point: a correction is something the panel should know about.
 
-After the round advances (the operator clicks Next Diver, or auto-advance fires), corrections need to go through the meet manager via the **Score Correction** modal in the Control Room. Tell them which judge-diver-round to fix and what the correct score is.
+After the round advances (the operator clicks Next Diver, or auto-advance fires), you can't change the score from your phone. The meet manager corrects it from the Control Room: clicking the dive in **History** opens **Amend Score**, where they enter the new mark and a reason, and the change is audit-logged. Tell them which diver and round to fix and what the correct score is.
 
 ## Synchro events
 

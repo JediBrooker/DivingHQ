@@ -63,7 +63,7 @@ const SLIDES = {
       body: 'Tap "Signal Referee" if you missed a dive or the dive list looks wrong. The referee gets a flag on the Control Room — tap again to clear it.' },
     { emoji: '✓',
       title: 'Score, then wait',
-      body: 'Once you submit, the keypad locks until the next diver — no double-tap risk. To amend a score, the meet manager opens score correction with you in the room.',
+      body: 'Once you submit, the keypad locks; tap "Signal Referee" to unlock it and send a corrected score before the next diver, and after that the meet manager amends it from the Control Room.',
       cta: { label: 'Open the dashboard', to: '/dashboard' },
     },
   ],
