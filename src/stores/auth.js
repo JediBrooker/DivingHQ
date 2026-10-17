@@ -215,6 +215,17 @@ export const useAuthStore = defineStore('auth', () => {
   // someone runs their club's meets without an org role. UI gating only,
   // the server checks club_admins itself on every club-scoped route.
   const clubAdminOf = computed(() => user.value?.club_admin_of || [])
+  // The club this person belongs to (users.club_id), from the same two
+  // bodies: { id, name, short_code, status } or null when they're in none.
+  // undefined while signed out or when the body predates the field, so a
+  // reader can tell "no club" from "don't know". A 'pending' status is a
+  // club still waiting for its federation (migration 096), not one joined.
+  const memberClub = computed(() => {
+    const u = user.value
+    if (!u || !('club_id' in u)) return undefined
+    if (!u.club_id) return null
+    return { id: u.club_id, name: u.club_name, short_code: u.club_short_code, status: u.club_status }
+  })
   const isClubAdmin = computed(() => clubAdminOf.value.length > 0)
   // Same for regions (states / provinces, migration 088).
   const regionAdminOf = computed(() => user.value?.region_admin_of || [])
@@ -357,7 +368,7 @@ export const useAuthStore = defineStore('auth', () => {
   const roleLine = computed(() => roleLabels(user.value, i18n.global.t).join(' · '))
 
   return {
-    user, isLoggedIn, fingerprint, hasDependents, clubAdminOf, isClubAdmin,
+    user, isLoggedIn, fingerprint, hasDependents, memberClub, clubAdminOf, isClubAdmin,
     regionAdminOf, isRegionAdmin, hasClaim, pendingClub,
     saveSession, clearSession, fetchMe,
     saveLocale, adoptAccountLocale, notePickedLocale,

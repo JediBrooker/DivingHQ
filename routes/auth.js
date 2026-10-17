@@ -129,6 +129,24 @@ async function loadClubAdminOf(pool, userId) {
   return r.rows;
 }
 
+// The club this user belongs to (users.club_id), { id, name, short_code,
+// status } or null. Body-only like club_admin_of: a club change lands when
+// an admin approves it, and the JWT would carry the old club until the
+// next sign-in. The SPA's "My club" card on Dive Sheets reads it; before
+// this it derived the club from the diver's club-change requests and told
+// everyone who had never filed one that they had no club. status is
+// 'pending' while the club waits for its federation (migration 096), and
+// a pending club isn't a club you're in yet.
+async function loadMemberClub(pool, userId) {
+  const r = await pool.query(
+    `SELECT c.id, c.name, c.short_code, c.status
+       FROM users u JOIN clubs c ON c.id = u.club_id
+      WHERE u.id = $1`,
+    [userId],
+  );
+  return r.rows[0] || null;
+}
+
 // Regions this user admins, [{ id, name, short_code, org_claim_state }].
 // Body-only like club_admin_of, for the SPA's meet screens and region page.
 // org_claim_state tells My region whether role requests come to it (only
@@ -184,6 +202,11 @@ async function countryOrgs(client, country, status) {
 // has_claim was about to be the fourth copy-pasted line in each.
 async function addSessionExtras(pool, payload, userId) {
   payload.has_dependents = await loadHasDependents(pool, userId);
+  const club = await loadMemberClub(pool, userId);
+  payload.club_id = club?.id ?? null;
+  payload.club_name = club?.name ?? null;
+  payload.club_short_code = club?.short_code ?? null;
+  payload.club_status = club?.status ?? null;
   payload.club_admin_of = await loadClubAdminOf(pool, userId);
   payload.region_admin_of = await loadRegionAdminOf(pool, userId);
   // A claimant signs in as a plain spectator; this is what puts Claims
