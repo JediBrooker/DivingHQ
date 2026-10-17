@@ -5170,6 +5170,54 @@ test("club admins: club_admin_of says who runs the org, and self-removal drops t
   }
 });
 
+// The session body says which club its owner is in (users.club_id), so
+// the SPA's "My club" surfaces read the real club rather than guessing
+// from the diver's club-change requests. Body-only: an approved change
+// lands between sign-ins and /api/auth/me has to pick it up.
+test("session body carries the member's club, and a pending club reads as pending", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const fx = await setupFixture({ withEvent: false });
+  try {
+    const clubId = (await pool.query(
+      "INSERT INTO clubs (org_id, name, short_code) VALUES ($1, 'Session Club', 'SES') RETURNING id", [fx.orgId],
+    )).rows[0].id;
+    const divername = `int-clubbed-${fx.slug}`;
+    const diverId = await insertUser({ orgId: fx.orgId, username: divername, fullName: "Clubbed Diver", role: "diver" });
+    await pool.query("UPDATE users SET club_id = $1 WHERE id = $2", [clubId, diverId]);
+
+    const login = await claimKit.login(divername, "not-used-here");
+    assert.equal(login.club_id, clubId);
+    assert.equal(login.club_name, "Session Club");
+    assert.equal(login.club_short_code, "SES");
+    assert.equal(login.club_status, "active");
+    const me = await fetchJson("GET", "/api/auth/me", { token: login.token });
+    assert.equal(me.status, 200);
+    assert.equal(me.body.user.club_id, clubId);
+    assert.equal(me.body.user.club_name, "Session Club");
+    assert.equal(me.body.user.club_status, "active");
+
+    // The club waits for its federation (migration 096): still named, but pending.
+    await pool.query("UPDATE clubs SET status = 'pending' WHERE id = $1", [clubId]);
+    const pending = await fetchJson("GET", "/api/auth/me", { token: login.token });
+    assert.equal(pending.body.user.club_id, clubId);
+    assert.equal(pending.body.user.club_status, "pending");
+
+    // No club: the keys are there and null, so the SPA can tell "none" from "unknown".
+    await pool.query("UPDATE users SET club_id = NULL WHERE id = $1", [diverId]);
+    const none = await fetchJson("GET", "/api/auth/me", { token: login.token });
+    assert.equal(none.body.user.club_id, null);
+    assert.equal(none.body.user.club_name, null);
+    assert.equal(none.body.user.club_short_code, null);
+    assert.equal(none.body.user.club_status, null);
+    assert.ok("club_id" in none.body.user);
+  } finally {
+    await pool.query("DELETE FROM users WHERE org_id = $1 AND username LIKE 'int-clubbed-%'", [fx.orgId]).catch(() => {});
+    await pool.query("DELETE FROM clubs WHERE org_id = $1", [fx.orgId]).catch(() => {});
+    await teardownFixture(fx);
+  }
+});
+
 // The Clubs screen only offers "Set up regions" where the seed route can
 // work, which is decided by lib/regions.json having a list for the org's
 // country. Pending orgs so nobody's by-country lookup trips over them.

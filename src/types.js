@@ -33,6 +33,14 @@
  * @property {number}   iat             issued-at, set by jsonwebtoken
  * @property {number}   exp             expiry, set by jsonwebtoken
  * @property {boolean}  [has_dependents] Body-only (login + /api/auth/me), never in the JWT.
+ * @property {?string}  [club_id]        Body-only: users.club_id, the club this person belongs
+ *   to. null when they're in none. Rides on the body, not the JWT, because an
+ *   approved club change lands between sign-ins (routes/auth.js loadMemberClub).
+ * @property {?string}  [club_name]      Body-only: that club's name, null with club_id.
+ * @property {?string}  [club_short_code] Body-only: that club's short code, may be null.
+ * @property {?('active'|'pending')} [club_status] Body-only: clubs.status (migration 096).
+ *   'pending' means the club is still waiting for its federation, so the
+ *   person isn't in a club yet in any sense a meet can use.
  * @property {{id: string, name: string, region_id: ?string, org_claim_state: 'claimed'|'unclaimed'}[]} [club_admin_of]
  *   Body-only (login + /api/auth/me): clubs this user admins, and whether
  *   their org has a federation (claimed) or the clubs run it (unclaimed).

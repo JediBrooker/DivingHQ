@@ -704,11 +704,14 @@ async function declinePairing(p) {
 // My club: current club + request-a-change flow.
 // The diver can request to move clubs within their org (or, if
 // the backend resolves a different to_org_id, an org transfer).
-// Current club is sourced pragmatically: if the diver already
-// has a pending request its `from_club_name` is the live truth,
-// otherwise we show the picker without a "current" label since
-// the JWT carries no club info and the clubs list alone can't
-// tell us which one is theirs.
+// Current club comes off the session body (auth.memberClub, from
+// users.club_id): that's what the server writes when a change is
+// approved. A pending request's `from_club_name` is the same club
+// as of filing, and a move finalised on this page is read off the
+// request until the session is re-fetched. Before the session
+// carried the club, this card derived it from the diver's
+// club-change requests alone and told everyone who'd never filed
+// one that they had no club.
 // =========================================================
 const isDiver = computed(() => auth.user?.org_roles?.includes('diver') ?? false)
 const orgClubs = ref([])               // clubs in the diver's org
@@ -732,18 +735,42 @@ const needsMyConfirm = computed(() => {
   return !!(r && r.kind === 'org_transfer' && !r.diver_confirmed_at)
 })
 
-// Current club name, from the pending request's source, else the
-// most recent finalised request's source. Null when unknown.
+// A request this page saw finalise (approved, or a leave, which applies
+// straight away). It wins over the session's club until fetchMe has
+// caught up; cleared once it has.
+const clubMovedHere = ref(null)
+
+// Current club name. A pending request's source first, then a move
+// finalised on this page (the session still says the old club until
+// fetchMe lands), then the session's club. Null when the diver is in
+// no club, which is the only time the card says so.
 const currentClubName = computed(() => {
   if (myPendingClubRequest.value) return myPendingClubRequest.value.from_club_name || null
+  if (clubMovedHere.value) return clubMovedHere.value.to_club_name || null
+  const club = auth.memberClub
+  if (club !== undefined) return club?.name || null
+  // A session body from before the club rode on it: the request
+  // history is all there is to go on.
   const mine = clubRequests.value
     .filter(r => r.user_id === auth.user?.id)
     .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-  // After a finalised move the target club is current.
   const finalised = mine.find(r => r.status === 'approved')
   if (finalised) return finalised.to_club_name || null
   return mine[0]?.from_club_name || null
 })
+
+// The club is waiting for its federation (clubs.status, migration 096):
+// the diver isn't in it yet in any sense a meet can use, so say so.
+const currentClubPending = computed(() =>
+  !myPendingClubRequest.value && !clubMovedHere.value && auth.memberClub?.status === 'pending',
+)
+
+async function noteClubMoved(requestId) {
+  await loadMyClubRequests()
+  clubMovedHere.value = clubRequests.value.find(r => r.id === requestId) || null
+  await auth.fetchMe()
+  clubMovedHere.value = null
+}
 
 const myRequestTargetClub = computed(() => {
   const r = myPendingClubRequest.value
@@ -784,8 +811,9 @@ async function submitClubChange() {
     showClubForm.value = false
     clubChoice.value = ''
     clubNote.value = ''
-    await loadMyClubRequests()
     // Leaving a club ("No club") applies straight away, joining one waits.
+    if (made?.finalised) await noteClubMoved(made.id)
+    else await loadMyClubRequests()
     showSuccess(made?.finalised ? 'Club updated' : 'Club change requested')
   } catch (err) {
     clubError.value = err.message || 'Failed to submit request'
@@ -810,8 +838,9 @@ async function confirmClubTransfer() {
   const r = myPendingClubRequest.value
   if (!r) return
   try {
-    await auth.apiFetch(`/api/club-change-requests/${r.id}/confirm`, { method: 'POST' })
-    await loadMyClubRequests()
+    const out = await auth.apiFetch(`/api/club-change-requests/${r.id}/confirm`, { method: 'POST' })
+    if (out?.finalised) await noteClubMoved(r.id)
+    else await loadMyClubRequests()
     showSuccess('Transfer confirmed')
   } catch (err) {
     showError(err.message || 'Failed to confirm transfer')
@@ -915,8 +944,8 @@ watch(currentEvent, async (ev) => {
       <div class="my-club-head">
         <div>
           <label class="label" style="margin:0">My club</label>
-          <div class="my-club-current">
-            <template v-if="currentClubName">{{ currentClubName }}</template>
+          <div class="my-club-current" data-test-id="my-club-current">
+            <template v-if="currentClubName">{{ currentClubName }}<span v-if="currentClubPending" class="my-club-awaiting"> · awaiting approval</span></template>
             <template v-else>No club set</template>
           </div>
         </div>
@@ -1627,6 +1656,8 @@ watch(currentEvent, async (ev) => {
   font-family: var(--font-display); font-size: 16px; font-weight: 700;
   color: var(--text); margin-top: 0.3rem;
 }
+/* The diver's club is still waiting for its federation (clubs.status). */
+.my-club-awaiting { color: var(--fg-3); font-weight: 400; }
 .my-club-pending {
   display: flex; align-items: center; justify-content: space-between;
   gap: 1rem; flex-wrap: wrap;
