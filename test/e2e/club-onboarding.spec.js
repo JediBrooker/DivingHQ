@@ -8,6 +8,8 @@
 //     and its club code editor
 //   * a club admin's new meet defaulting "Divers represent" to club, and
 //     Edit meet not mounting (or fetching) the federation-only fee panels
+//   * a club admin seating a judge panel from the event row's menu, with
+//     no federation role, and another club's admin being refused
 //   * the check-inbox panel's resend cooldown after signing up
 //   * with the payments flag off: no fee panels, no Billing column, no
 //     payouts in the club admin blurb, no Payments / Classes guide pages
@@ -78,8 +80,8 @@ test("a club founder's checklist, invite link, club code and first meet", async 
 
   const panel = page.getByTestId("club-getting-started");
   await expect(panel).toContainText("Papeete Divers");
-  await expect(panel).toContainText("0 of 4 done");
-  for (const id of ["meet", "invite", "code", "guide"]) {
+  await expect(panel).toContainText("0 of 5 done");
+  for (const id of ["meet", "panel", "invite", "code", "guide"]) {
     await expect(page.getByTestId(`gs-step-${id}`)).toHaveAttribute("data-done", "false");
   }
   // The sidebar section with My club no longer claims to be a federation.
@@ -161,7 +163,8 @@ test("a club founder's checklist, invite link, club code and first meet", async 
   await expect(page.locator("#club-admin")).toBeInViewport();
   await expect(page.locator("#club-admin")).toContainText("share your club's invite link");
   await page.goto("/dashboard");
-  await expect(panel).toContainText("4 of 4 done");
+  // The panel step is the next test's.
+  await expect(panel).toContainText("4 of 5 done");
 
   // Hidden stays hidden.
   await page.getByTestId("club-getting-started-dismiss").click();
@@ -169,6 +172,78 @@ test("a club founder's checklist, invite link, club code and first meet", async 
   await page.reload();
   await expect(page.locator(".tab-strip")).toBeVisible();
   await expect(panel).toHaveCount(0);
+});
+
+test("a club admin seats the panel from the event row; another club's admin is refused", async ({ page, request }) => {
+  test.setTimeout(90_000);
+  await setup.installClickHighlight(page);
+  const F = await founder(request, "Faaa Divers");
+  const other = await founder(request, "Punaauia Divers");
+  const orgId = (await setup.pool.query("SELECT org_id FROM users WHERE username = $1", [F.username])).rows[0].org_id;
+  const judges = [];
+  for (let i = 1; i <= 5; i++) {
+    const name = `Faaa Judge ${i}`;
+    judges.push({ name, ...(await setup.insertUser({ orgId, role: "judge", fullName: name, clubId: F.clubId })) });
+  }
+  // The founder holds no org role (spectator aside): the meet and event
+  // are theirs as the host club's admin.
+  const { token } = await setup.loginAs(request, F.username);
+  const meet = await request.post("/api/meets", {
+    headers: { Authorization: `Bearer ${token}` }, data: { name: "Faaa Open" },
+  });
+  expect(meet.status()).toBe(201);
+  const ev = await setup.createEvent(request, {
+    adminToken: token, name: "Faaa Women 1m", meet_id: (await meet.json()).id, number_of_judges: 5,
+  });
+
+  // Same country, same org, another club: none of the panel reads or
+  // the write are theirs.
+  const H = { Authorization: `Bearer ${(await setup.loginAs(request, other.username)).token}` };
+  expect((await request.get(`/api/events/${ev.id}/judges`, { headers: H })).status()).toBe(403);
+  expect((await request.get(`/api/events/${ev.id}/eligible-judges`, { headers: H })).status()).toBe(403);
+  const refused = await request.post(`/api/events/${ev.id}/judges`, {
+    headers: H, data: { judgeIds: judges.map((j) => j.userId) },
+  });
+  expect(refused.status()).toBe(403);
+  const seated = () => setup.pool.query(
+    "SELECT judge_id FROM event_judges WHERE event_id = $1 ORDER BY judge_number", [ev.id],
+  ).then((r) => r.rows.map((x) => x.judge_id));
+  expect(await seated()).toEqual([]);
+
+  await signIn(page, F.username);
+  await expect(page.getByTestId("gs-step-panel")).toHaveAttribute("data-done", "false");
+
+  // Meet Manager -> the event row's menu -> Assign judges, event picked.
+  await page.goto("/manager");
+  await page.locator(".mgr-acc-header", { hasText: "Faaa Open" }).click();
+  const row = page.locator(".event-item", { hasText: "Faaa Women 1m" });
+  await expect(row).toBeVisible();
+  await row.locator(".dropdown-host button", { hasText: "⋯" }).first().click();
+  await row.getByTestId("event-assign-judges").click();
+  await page.waitForURL(new RegExp(`/assign-judges\\?event=${ev.id}$`));
+  const select = page.getByTestId("assign-event-select");
+  await expect(select).toHaveValue(ev.id);
+  // Only the club's own meets' events are offered (plus the blank).
+  await expect(select.locator("option")).toHaveCount(2);
+  await expect(page.getByText("0 of 5 judges assigned")).toBeVisible();
+
+  for (const j of judges) await page.locator(".judge-item", { hasText: j.name }).click();
+  await expect(page.getByText("5 of 5 judges assigned")).toBeVisible();
+  await page.getByRole("button", { name: "Save Panel" }).click();
+  const review = page.locator(".panel-review-modal");
+  await expect(review).toContainText("Confirm judge assignment");
+  await expect(review.locator(".panel-review-row")).toHaveCount(5);
+  await review.getByRole("button", { name: "Confirm save" }).click();
+  await expect(page.locator(".msg-success")).toContainText("Panel saved");
+  expect(await seated()).toEqual(judges.map((j) => j.userId));
+
+  // A reload keeps the event and shows the saved panel; the checklist
+  // step ticks itself off.
+  await page.reload();
+  await expect(select).toHaveValue(ev.id);
+  await expect(page.locator(".slot.filled")).toHaveCount(5);
+  await page.goto("/dashboard");
+  await expect(page.getByTestId("gs-step-panel")).toHaveAttribute("data-done", "true");
 });
 
 test("invite parameters that don't check out leave the signup form alone", async ({ page, request }) => {

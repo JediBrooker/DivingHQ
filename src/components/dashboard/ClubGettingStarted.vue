@@ -7,6 +7,8 @@
 // club usable, each linking to where it's done:
 //
 //   create a meet   /manager         ticked once the club hosts one
+//   seat a panel    /assign-judges   ticked once an event in one of its
+//                                    meets has its full panel
 //   invite members  /club (link)     ticked once someone besides you joins
 //   set the code    /club (code)     ticked once it has one; hidden when the
 //                                    federation owns the code and hasn't set it
@@ -46,8 +48,9 @@ const steps = computed(() => {
   if (!s) return []
   const others = s.member_count - (s.you_are_member ? 1 : 0)
   const list = [
-    { id: 'meet',   to: '/manager', done: s.meet_count > 0 },
-    { id: 'invite', to: '/club',    done: others > 0 },
+    { id: 'meet',   to: '/manager',       done: s.meet_count > 0 },
+    { id: 'panel',  to: '/assign-judges', done: s.panel_count > 0 },
+    { id: 'invite', to: '/club',          done: others > 0 },
   ]
   if (s.can_edit_code || s.short_code) list.push({ id: 'code', to: '/club', done: !!s.short_code })
   list.push({ id: 'guide', to: '/guide#club-admin', done: guideRead.value })
@@ -55,6 +58,7 @@ const steps = computed(() => {
 })
 const STEP_KEYS = {
   meet:   { title: 'dashboard.getting_started.step_meet',   desc: 'dashboard.getting_started.step_meet_desc' },
+  panel:  { title: 'dashboard.getting_started.step_panel',  desc: 'dashboard.getting_started.step_panel_desc' },
   invite: { title: 'dashboard.getting_started.step_invite', desc: 'dashboard.getting_started.step_invite_desc' },
   code:   { title: 'dashboard.getting_started.step_code',   desc: 'dashboard.getting_started.step_code_desc' },
   guide:  { title: 'dashboard.getting_started.step_guide',  desc: 'dashboard.getting_started.step_guide_desc' },

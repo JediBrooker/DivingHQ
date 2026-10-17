@@ -6,6 +6,7 @@
 // P2-migrated modals. Mutates the shared event object's workflow stamps
 // so the V2 stage derivation (orderWorkflowState) advances in place.
 import { ref, computed, watch, onMounted, defineAsyncComponent } from 'vue'
+import { RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { orderWorkflowStateFor } from '@/composables/useControlStage'
 import { competingQueue } from '@/composables/useLivePools'
@@ -169,6 +170,14 @@ function onSignoffClosed() {
 
 watch(() => props.event?.id, loadReadiness, { immediate: true })
 
+// Where an open step gets done, when that's another screen. The readiness
+// rows carry a `to` (lib/workflow.js); the ones pointing back at the
+// Control Room are this stage's own button, so they don't link.
+function stepLink(step) {
+  const to = typeof step?.to === 'string' ? step.to : ''
+  return to && !to.startsWith('/control') ? to : ''
+}
+
 // Once the order's drawn it's what the referee is signing off, so list it
 // here too. The draw dialog showed it once, but after Confirm there was
 // nothing on this screen to point at. One row per diver (the order is the
@@ -211,7 +220,13 @@ watch(
       <ul class="setup-checklist" aria-label="Pre-meet readiness">
         <li v-for="s in readiness.steps" :key="s.key" class="setup-step" :class="{ done: s.done }">
           <span class="setup-step-mark" aria-hidden="true">{{ s.done ? '✓' : '○' }}</span>
-          <span class="setup-step-label">{{ s.label }}</span>
+          <!-- A step done somewhere else (the panel on Assign Judges, the
+               roster in Meet Manager) links there while it's open; the
+               ones done here have the button below. -->
+          <RouterLink v-if="!s.done && stepLink(s)" :to="stepLink(s)" class="setup-step-label setup-step-link">
+            {{ s.label }}
+          </RouterLink>
+          <span v-else class="setup-step-label">{{ s.label }}</span>
           <span v-if="!s.done && s.hint" class="setup-step-hint">{{ s.hint }}</span>
         </li>
       </ul>
@@ -273,6 +288,8 @@ watch(
 .setup-step-mark { font-size: 14px; }
 .setup-step.done .setup-step-mark { color: var(--green); }
 .setup-step-label { flex: 1; }
+.setup-step-link { color: var(--cyan); text-decoration: underline; text-underline-offset: 2px; }
+.setup-step-link:hover, .setup-step-link:focus-visible { color: var(--text); }
 .setup-step-hint { font-size: 11px; color: var(--text-3); }
 .setup-order { margin-top: 1.25rem; }
 .setup-order-title {

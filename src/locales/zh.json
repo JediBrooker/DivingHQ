@@ -479,7 +479,9 @@
       "step_code": "设置俱乐部简码",
       "step_code_desc": "在俱乐部比赛中显示在你的运动员旁边。",
       "step_guide": "阅读俱乐部管理员指南",
-      "step_guide_desc": "从第一场比赛到比赛当天，你能做的一切。"
+      "step_guide_desc": "从第一场比赛到比赛当天，你能做的一切。",
+      "step_panel": "组建裁判组",
+      "step_panel_desc": "在“安排裁判”中按顺序选择某个项目的裁判。"
     }
   },
   "profile": {

@@ -479,7 +479,9 @@
       "step_code": "Itakda ang maikling code ng club",
       "step_code_desc": "Ipinapakita sa tabi ng iyong mga diver sa mga club meet.",
       "step_guide": "Basahin ang gabay para sa club admin",
-      "step_guide_desc": "Ang mga magagawa mo, mula sa unang meet hanggang sa araw ng meet."
+      "step_guide_desc": "Ang mga magagawa mo, mula sa unang meet hanggang sa araw ng meet.",
+      "step_panel": "Bumuo ng panel ng mga hukom",
+      "step_panel_desc": "Piliin ang mga hukom ng isang event, ayon sa pagkakasunod, sa Magtalaga ng mga Hukom."
     }
   },
   "profile": {
