@@ -78,6 +78,20 @@ function openSocket(baseURL, token) {
   });
 }
 
+// Drive the event from a socket the way the Control Room does: claim the
+// progression lease first (protocol 2, taking it over from whoever held
+// it), then send set_active_diver with the token the claim handed back.
+// Without the claim the server acks control_lost and broadcasts nothing,
+// so the board keeps showing "up next" instead of the diver we put on it.
+async function putOnBoard(sock, payload) {
+  const claim = await new Promise((resolve) =>
+    sock.emit("claim_event_control", { event_id: payload.event_id, protocol: 2, takeover: true }, resolve));
+  if (!claim?.ok) throw new Error(`claim_event_control failed: ${JSON.stringify(claim)}`);
+  const ack = await new Promise((resolve) =>
+    sock.emit("set_active_diver", { ...payload, control_token: claim.control_token }, resolve));
+  if (!ack?.ok) throw new Error(`set_active_diver failed: ${JSON.stringify(ack)}`);
+}
+
 function awaitAck(sock) {
   return new Promise((resolve, reject) => {
     const cleanup = () => {
@@ -164,6 +178,21 @@ async function snap(page, name, opts = {}) {
     fullPage: opts.fullPage !== false,
     ...(opts.clip ? { clip: opts.clip } : {}),
   });
+}
+
+// The auth screens (login, register, register-org) scroll inside
+// AuthLayout's fixed, overflow:auto wrapper rather than the window, so a
+// fullPage shot of them is just the viewport and the fields below the fold
+// (date of birth, gender, the 13+ tick) never make it into the guide. Grow
+// the viewport to the wrapper's scroll height for the shot, then put it back.
+async function snapAuth(page, name) {
+  const wrapper = page.locator(".auth-layout").first();
+  await expect(wrapper).toBeVisible({ timeout: 10_000 });
+  const height = await wrapper.evaluate((el) => el.scrollHeight);
+  await page.setViewportSize({ width: VIEWPORT.width, height: Math.min(Math.max(height, VIEWPORT.height), 3000) });
+  await settle(page, 300);
+  await snap(page, name, { fullPage: false });
+  await page.setViewportSize(VIEWPORT);
 }
 
 // Screenshot a single element rather than the page. Used where the
@@ -812,15 +841,15 @@ test("public: home / login / register / register-org", async ({ page }) => {
 
   await page.goto("/login");
   await settle(page);
-  await snap(page, "login");
+  await snapAuth(page, "login");
 
   await page.goto("/register");
   await settle(page);
-  await snap(page, "register");
+  await snapAuth(page, "register");
 
   await page.goto("/register-org");
   await settle(page);
-  await snap(page, "register-org");
+  await snapAuth(page, "register-org");
 });
 
 // =============================================================
@@ -862,7 +891,7 @@ test("spectator: scoreboard list + live + archive + meet", async ({ page, reques
     world.adminToken,
   );
   adminSocket.emit("subscribe_event", { event_id: world.liveEvent.id });
-  adminSocket.emit("set_active_diver", {
+  await putOnBoard(adminSocket, {
     event_id:      world.liveEvent.id,
     competitor_id: world.thirdDiverId,
     diverName:     world.liveDivers[2].fullName,
@@ -948,7 +977,7 @@ test("operator: dashboard / control-room / meet-manager", async ({ page, baseURL
     world.adminToken,
   );
   adminSocket.emit("subscribe_event", { event_id: world.liveEvent.id });
-  adminSocket.emit("set_active_diver", {
+  await putOnBoard(adminSocket, {
     event_id:      world.liveEvent.id,
     competitor_id: world.thirdDiverId,
     diverName:     world.liveDivers[2].fullName,
@@ -960,6 +989,9 @@ test("operator: dashboard / control-room / meet-manager", async ({ page, baseURL
     position:      "B",
     eventName:     world.liveEvent.name,
   });
+  // Drop the lease before the Control Room loads, or it opens to an
+  // "another window has control" notice instead of a working pool.
+  adminSocket.disconnect();
 
   await page.goto(`/control?event=${world.liveEvent.id}`);
   // V2 auto-focuses the ?event= deep-link; wait for its top-bar chip to
@@ -984,7 +1016,6 @@ test("operator: dashboard / control-room / meet-manager", async ({ page, baseURL
   await settle(page, 600);
   await snapEl(page, ".obs-instructions", "broadcast-overlay-picker", 10);
   await page.keyboard.press("Escape");
-  adminSocket.disconnect();
 
   // 3. meet-manager.png: /manager.
   await page.goto("/manager");
@@ -1044,7 +1075,7 @@ test("operator: dashboard / control-room / meet-manager", async ({ page, baseURL
   // Re-announce the first event's mid-meet diver so its pool reads live.
   const simSocket = await openSocket(baseURL || world.baseURL, world.adminToken);
   simSocket.emit("subscribe_event", { event_id: world.liveEvent.id });
-  simSocket.emit("set_active_diver", {
+  await putOnBoard(simSocket, {
     event_id:      world.liveEvent.id,
     competitor_id: world.thirdDiverId,
     diverName:     world.liveDivers[2].fullName,
@@ -1056,13 +1087,15 @@ test("operator: dashboard / control-room / meet-manager", async ({ page, baseURL
     position:      "B",
     eventName:     world.liveEvent.name,
   });
+  // Drop the lease before the Control Room loads, or it opens to an
+  // "another window has control" notice instead of a working pool.
+  simSocket.disconnect();
 
   await page.goto(`/control?event=${world.liveEvent.id}`);
   await expect(page.locator(".cv2-pool")).toHaveCount(2, { timeout: 15_000 });
   await expect(page.locator(".cv2-pool .cv2-live-diver").first()).toBeVisible({ timeout: 15_000 });
   await settle(page, 1500);
   await snap(page, "control-room-simultaneous");
-  simSocket.disconnect();
 });
 
 // =============================================================
@@ -1081,7 +1114,7 @@ test("judge: judge.png", async ({ page, baseURL }) => {
     world.adminToken,
   );
   adminSocket.emit("subscribe_event", { event_id: world.liveEvent.id });
-  adminSocket.emit("set_active_diver", {
+  await putOnBoard(adminSocket, {
     event_id:      world.liveEvent.id,
     competitor_id: world.thirdDiverId,
     diverName:     world.liveDivers[2].fullName,
@@ -1380,7 +1413,7 @@ test("offline: connection indicator", async ({ page, baseURL }) => {
 
   const adminSocket = await openSocket(baseURL || world.baseURL, world.adminToken);
   adminSocket.emit("subscribe_event", { event_id: world.liveEvent.id });
-  adminSocket.emit("set_active_diver", {
+  await putOnBoard(adminSocket, {
     event_id:      world.liveEvent.id,
     competitor_id: world.thirdDiverId,
     diverName:     world.liveDivers[2].fullName,
