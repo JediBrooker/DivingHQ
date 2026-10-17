@@ -173,7 +173,7 @@ async function createOrgAndAdmin(request, opts = {}) {
   // every spec here wants an org of its own, so the real code goes
   // on in step 2 along with the approval.
   const reg = await request.post("/api/auth/register-org", {
-    data: { age_13_or_older: true,
+    data: { age_13_or_older: true, date_of_birth: "1990-06-15", gender: "female",
       org_name:     orgName,
       country_code: "TST",
       slug,
@@ -224,15 +224,21 @@ async function createOrgAndAdmin(request, opts = {}) {
 // the history card / Up Next / scoreboard rows show a club_name
 // + club_code line. Tests that don't care about affiliation can
 // omit it; the column is nullable.
-async function insertUser({ orgId, role, fullName, clubId = null }) {
+//
+// `gender` / `dob`: entry eligibility (lib/entry-eligibility.js) checks a
+// diver's profile against the event's gender and age group on every
+// entry path, and createEvent() below defaults to a Female event, so a
+// fixture diver is an adult woman unless the test says otherwise. Pass
+// gender: "male" for a Men's event, or a dob for an age-group one.
+async function insertUser({ orgId, role, fullName, clubId = null, gender = "female", dob = "1995-06-15" }) {
   const username = `e2e-${role}-${rand()}`;
   // bcrypt cost 4, kinda low but fine for a fixture user nobody
   // will brute force; default 12 would add ~150ms per insertion.
   const hash = await bcrypt.hash(TEST_PASSWORD, 4);
   const r = await pool.query(
-    `INSERT INTO users (username, password, full_name, org_id, club_id, email_verified_at)
-     VALUES ($1, $2, $3, $4, $5, now()) RETURNING id`,
-    [username, hash, fullName || `E2E ${role}`, orgId, clubId],
+    `INSERT INTO users (username, password, full_name, org_id, club_id, email_verified_at, gender, date_of_birth)
+     VALUES ($1, $2, $3, $4, $5, now(), $6, $7) RETURNING id`,
+    [username, hash, fullName || `E2E ${role}`, orgId, clubId, gender, dob],
   );
   const userId = r.rows[0].id;
   await pool.query(

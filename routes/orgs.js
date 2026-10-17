@@ -37,6 +37,7 @@ const clubApprovals = require("../lib/club-approvals");
 const notices = require("../lib/notices");
 const { supportContact } = require("../lib/support");
 const { UUID_RE, requireUuidParam } = require("../lib/uuid");
+const { checkEntryEligibility, EVENT_ELIGIBILITY_COLUMNS } = require("../lib/entry-eligibility");
 
 module.exports = function createOrgsRouter({
   pool,
@@ -324,8 +325,26 @@ module.exports = function createOrgsRouter({
       // (including a freshly-registered spectator) enumerate the
       // org's username space and feed a credential-stuffing run
       // against /api/auth/login.
+      // ?event_id= adds entry_eligibility per diver for that event (the
+      // Control Room's late-entry picker and the synchro partner picker
+      // show only who can be entered, and why the rest can't). The event
+      // has to be the org's own; anything else is a 404.
+      let event = null;
+      const eventId = req.query.event_id;
+      if (eventId !== undefined) {
+        if (!UUID_RE.test(String(eventId))) return res.status(404).json({ error: "Event not found" });
+        const ev = await pool.query(
+          `SELECT e.id, ${EVENT_ELIGIBILITY_COLUMNS}
+             FROM events e LEFT JOIN meets m ON m.id = e.meet_id
+            WHERE e.id = $1 AND e.org_id = $2`,
+          [eventId, req.params.id],
+        );
+        if (!ev.rows.length) return res.status(404).json({ error: "Event not found" });
+        event = ev.rows[0];
+      }
       const r = await pool.query(
-        `SELECT u.id, u.full_name, cl.name AS club_name, cl.short_code AS club_code
+        `SELECT u.id, u.full_name, cl.name AS club_name, cl.short_code AS club_code,
+                u.gender, to_char(u.date_of_birth, 'YYYY-MM-DD') AS date_of_birth
          FROM users u
          JOIN user_org_roles r ON r.user_id = u.id AND r.org_id = u.org_id AND r.role = 'diver'
          LEFT JOIN clubs cl ON cl.id = u.club_id
@@ -334,7 +353,11 @@ module.exports = function createOrgsRouter({
          ORDER BY u.full_name ASC`,
         [req.params.id],
       );
-      res.json(r.rows);
+      // Gender and date of birth stay server-side: the picker needs the
+      // verdict, not another member's birthday.
+      res.json(r.rows.map(({ gender, date_of_birth, ...row }) => (event
+        ? { ...row, entry_eligibility: checkEntryEligibility({ event, diver: { ...row, gender, date_of_birth } }) }
+        : row)));
     } catch (err) {
       console.error("[Org Divers Error]", err.message);
       res.status(500).json([]);

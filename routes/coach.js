@@ -26,6 +26,7 @@ const { recordAudit } = require("../lib/audit");
 const submitDiveList = require("../lib/dive-list-submit");
 const { perDivePointsCte, standingsPerDiveForEventsCte } = require("../lib/scoring-sql");
 const { uuidParams } = require("../lib/uuid-params");
+const { checkEntryEligibility } = require("../lib/entry-eligibility");
 
 module.exports = function createCoachRouter({
   pool,
@@ -644,7 +645,8 @@ module.exports = function createCoachRouter({
         `SELECT e.id, e.name, e.height, e.event_type, e.status,
                 e.org_id, e.total_rounds, e.round_rules,
                 e.entries_close_at, e.dive_list_locks_at,
-                e.meet_id, m.name AS meet_name
+                e.meet_id, m.name AS meet_name,
+                e.gender, e.age_group, e.scheduled_at, m.start_date AS meet_start_date
            FROM events e
            LEFT JOIN meets m ON m.id = e.meet_id
           WHERE e.id = $1`,
@@ -666,7 +668,8 @@ module.exports = function createCoachRouter({
         pool.query(
           `WITH my_divers AS (
              SELECT u.id, u.full_name, u.org_id,
-                    o.country_code,
+                    o.country_code, u.gender,
+                    to_char(u.date_of_birth, 'YYYY-MM-DD') AS date_of_birth,
                     cl.name AS club_name, cl.short_code AS club_code,
                     BOOL_OR(link.org_id = $3) AS coach_host_federation,
                     BOOL_OR(
@@ -691,7 +694,7 @@ module.exports = function createCoachRouter({
                   )
                 )
               GROUP BY u.id, u.full_name, u.org_id,
-                       o.country_code, cl.name, cl.short_code
+                       o.country_code, u.gender, u.date_of_birth, cl.name, cl.short_code
            ),
            diver_dives AS (
              SELECT cdl.competitor_id,
@@ -711,6 +714,7 @@ module.exports = function createCoachRouter({
                   /* The meet's representation code (migration 090). */
                   event_rep_code($2, md.id, md.country_code) AS country_code,
                   md.club_name, md.club_code, md.org_id,
+                  md.gender, md.date_of_birth,
                   md.coach_host_federation,
                   md.coach_invited_federation,
                   /* aggregate to one row per diver with their dive_list as a JSON array */
@@ -741,6 +745,7 @@ module.exports = function createCoachRouter({
              LEFT JOIN diver_dives dd ON dd.competitor_id = md.id
             GROUP BY md.id, md.full_name, md.country_code,
                      md.club_name, md.club_code, md.org_id,
+                     md.gender, md.date_of_birth,
                      md.coach_host_federation, md.coach_invited_federation
             ORDER BY md.full_name`,
           [req.user.id, req.params.event_id, event.org_id],
@@ -776,16 +781,26 @@ module.exports = function createCoachRouter({
           coach_host_federation,
           coach_invited_federation,
           active_dive_row_count,
+          gender,
+          date_of_birth,
           ...diverRow
         } = row;
         const writable = coach_host_federation || coach_invited_federation;
+        // The event's gender and age group against the diver's profile
+        // (lib/entry-eligibility.js). The submit route refuses the same
+        // way; here it hides the button and says why. Birthday and gender
+        // themselves stay off the wire.
+        const entryEligibility = checkEntryEligibility({
+          event, diver: { full_name: diverRow.full_name, gender, date_of_birth },
+        });
         return {
           ...diverRow,
           is_reserve: Boolean(diverRow.is_reserve),
+          entry_eligibility: entryEligibility,
           coach_eligibility: buildCoachEligibility({
             hostFederation: coach_host_federation,
             invitedFederation: coach_invited_federation,
-            canSubmit: writable && submitOpen && !diverRow.withdrawn_at,
+            canSubmit: writable && submitOpen && !diverRow.withdrawn_at && entryEligibility.allowed,
             canWithdraw: writable && event.status !== "Completed" && Number(active_dive_row_count || 0) > 0,
           }),
         };
@@ -950,6 +965,7 @@ module.exports = function createCoachRouter({
         await client.query("ROLLBACK");
         if (err.status) {
           const body = { error: err.message };
+          if (err.code) body.code = err.code;
           if (err.violations) body.violations = err.violations;
           return res.status(err.status).json(body);
         }

@@ -50,6 +50,7 @@ const bcrypt  = require("bcrypt");
 const createAuthLinks = require("../lib/auth-links");
 const { recordAudit, auditFromReq } = require("../lib/audit");
 const { supportContact } = require("../lib/support");
+const { dateOfBirthError, genderError } = require("../lib/account-rules");
 const { ADMIN_ORG_ID } = require("../lib/admin-org");
 const { isOrgAdminOf, orgAdminHold, lastOrgAdminRefusal } = require("../lib/admin-rows");
 const { isUuid, requireUuidParam } = require("../lib/uuid");
@@ -1320,21 +1321,17 @@ module.exports = function createUsersRouter({
       }
       if (date_of_birth !== undefined) {
         const dob = date_of_birth || null;
-        // The shape alone let 2020-02-30 through to Postgres, which
-        // refused it and the route answered 500. Round-trip it through a
-        // real date so only ones that exist pass.
-        // Year 0000 still got through (JS takes it, Postgres doesn't) and so
-        // did 1066 or 2999, so it has to be a plausible birthday as well:
-        // 1900 on, and not past tomorrow (a day of slack for timezones).
-        const parsed = typeof dob === "string" ? new Date(`${dob}T00:00:00Z`) : null;
-        const latest = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
-        if (dob && (!/^\d{4}-\d{2}-\d{2}$/.test(String(dob)) || Number.isNaN(parsed.getTime())
-            || parsed.toISOString().slice(0, 10) !== dob || dob < "1900-01-01" || dob > latest))
-          return res.status(400).json({ error: "Date of birth must be a real date, YYYY-MM-DD" });
+        // Same rule as signup and the member's own editor
+        // (lib/account-rules.js): a day that exists, 1900 on, not in
+        // the future.
+        const dobErr = dateOfBirthError(dob);
+        if (dobErr) return res.status(400).json({ error: dobErr });
         sets.push(`date_of_birth = $${i++}`); vals.push(dob);
       }
       if (gender !== undefined) {
-        sets.push(`gender = $${i++}`); vals.push(gender ? String(gender).slice(0, 20) : null);
+        const genErr = genderError(gender);
+        if (genErr) return res.status(400).json({ error: genErr });
+        sets.push(`gender = $${i++}`); vals.push(gender ? String(gender).trim().toLowerCase() : null);
       }
       if (nationality !== undefined) {
         const nat = nationality ? String(nationality).toUpperCase().replace(/[^A-Z]/g, "").slice(0, 3) : null;

@@ -202,9 +202,11 @@ async function insertUser({ orgId, username, fullName, role }) {
   // these synthetic fixtures with the email-verification gate
   // added in Migration 021. Mirrors "user clicked the email link",
   // the production gate itself is unaffected.
+  // An adult woman by default: entry eligibility checks gender and age
+  // against the event on every entry path (lib/entry-eligibility.js).
   const u = await pool.query(
-    `INSERT INTO users (username, password, full_name, org_id, email_verified_at)
-     VALUES ($1, $2, $3, $4, now()) RETURNING id`,
+    `INSERT INTO users (username, password, full_name, org_id, email_verified_at, gender, date_of_birth)
+     VALUES ($1, $2, $3, $4, now(), 'female', '1995-06-15') RETURNING id`,
     [username, hash, fullName, orgId],
   );
   const id = u.rows[0].id;
@@ -234,7 +236,7 @@ async function setupFixture({ withEvent = true } = {}) {
   const slug = `int-${crypto.randomBytes(4).toString("hex")}`;
   const username = `int-admin-${slug}`;
   const reg = await fetchJson("POST", "/api/auth/register-org", {
-    body: { age_13_or_older: true,
+    body: { age_13_or_older: true, date_of_birth: "1990-06-15", gender: "female",
       org_name:     `Integration Test ${slug}`,
       country_code: "TST",
       slug,
@@ -327,10 +329,10 @@ test("account creation is gated off when signups are disabled", async (t) => {
   try {
     const status = await fetchJson("GET", "/api/auth/signups-status");
     assert.equal(status.body.enabled, false);
-    const reg = await fetchJson("POST", "/api/auth/register-org", { body: { age_13_or_older: true, org_name: "x" } });
+    const reg = await fetchJson("POST", "/api/auth/register-org", { body: { age_13_or_older: true, date_of_birth: "1990-06-15", gender: "female", org_name: "x" } });
     assert.equal(reg.status, 403, `expected 403, got ${reg.status}: ${JSON.stringify(reg.body)}`);
     assert.equal(reg.body.code, "signups_disabled");
-    const self = await fetchJson("POST", "/api/auth/register", { body: { age_13_or_older: true, username: "x" } });
+    const self = await fetchJson("POST", "/api/auth/register", { body: { age_13_or_older: true, date_of_birth: "1990-06-15", gender: "female", username: "x" } });
     assert.equal(self.status, 403);
     assert.equal(self.body.code, "signups_disabled");
   } finally {
@@ -353,7 +355,7 @@ test("end-to-end happy path", async (t) => {
       const slug = `int-${crypto.randomBytes(4).toString("hex")}`;
       const username = `int-admin-${slug}`;
       const res = await fetchJson("POST", "/api/auth/register-org", {
-        body: { age_13_or_older: true,
+        body: { age_13_or_older: true, date_of_birth: "1990-06-15", gender: "female",
           org_name:     `Integration Test ${slug}`,
           country_code: "TST",
           slug,
@@ -690,7 +692,7 @@ test("the Administration org is hidden from public signup", async (t) => {
   assert.ok(!list.body.some((o) => o.id === ADMIN_ORG_ID), "admin org must not be listed");
 
   const reg = await fetchJson("POST", "/api/auth/register", {
-    body: { age_13_or_older: true,
+    body: { age_13_or_older: true, date_of_birth: "1990-06-15", gender: "female",
       username:  `int-sneak-${crypto.randomBytes(4).toString("hex")}`,
       full_name: "Sneaky Registrant",
       email:     "sneak@example.test",
@@ -807,7 +809,7 @@ test("club-first signup starts an unclaimed country account", async (t) => {
   };
   await wipe();
   const reg = (body) => fetchJson("POST", "/api/auth/register", {
-    body: { age_13_or_older: true,
+    body: { age_13_or_older: true, date_of_birth: "1990-06-15", gender: "female",
       username:  `int-cf-${crypto.randomBytes(4).toString("hex")}`,
       full_name: "Club Founder",
       email:     `cf-${crypto.randomBytes(4).toString("hex")}@example.test`,
@@ -852,7 +854,7 @@ test("club-first signup starts an unclaimed country account", async (t) => {
     // claims theirs (phase 3). These clubs are brand new, so nobody's
     // eligible to vote and it goes to the sysadmin.
     const fed = await fetchJson("POST", "/api/auth/register-org", {
-      body: { age_13_or_older: true,
+      body: { age_13_or_older: true, date_of_birth: "1990-06-15", gender: "female",
         org_name: "Nauru Diving Federation", country_code: "NRU", slug: `int-nru-${state.slug}`,
         username: `int-nrufed-${state.slug}`, password: TEST_PASSWORD, full_name: "Fed Person",
         email: `nrufed-${state.slug}@example.test`,
@@ -915,7 +917,7 @@ test("club admins run their own club's meets and nobody else's", async (t) => {
   const founder = async (clubName) => {
     const username = `int-ca-${crypto.randomBytes(4).toString("hex")}`;
     const r = await fetchJson("POST", "/api/auth/register", {
-      body: { age_13_or_older: true,
+      body: { age_13_or_older: true, date_of_birth: "1990-06-15", gender: "female",
         username, full_name: `${clubName} Admin`, password: TEST_PASSWORD,
         email: `${username}@example.test`, country_code: CODE, new_club_name: clubName,
       },
@@ -993,7 +995,7 @@ test("club admins review their own members' role requests", async (t) => {
   const signUp = async (body) => {
     const username = `int-rr-${crypto.randomBytes(4).toString("hex")}`;
     const r = await fetchJson("POST", "/api/auth/register", {
-      body: { age_13_or_older: true, username, full_name: username, password: TEST_PASSWORD, email: `${username}@example.test`, country_code: CODE, ...body },
+      body: { age_13_or_older: true, date_of_birth: "1990-06-15", gender: "female", username, full_name: username, password: TEST_PASSWORD, email: `${username}@example.test`, country_code: CODE, ...body },
     });
     assert.equal(r.status, 201, JSON.stringify(r.body));
     await pool.query("UPDATE users SET email_verified_at = now() WHERE username = $1", [username]);
@@ -1076,7 +1078,7 @@ test("regions: built-in lists, signup, club moves and region admins", async (t) 
   const signUp = async (body) => {
     const username = `int-rg-${crypto.randomBytes(4).toString("hex")}`;
     const r = await fetchJson("POST", "/api/auth/register", {
-      body: { age_13_or_older: true, username, full_name: username, password: TEST_PASSWORD, email: `${username}@example.test`, ...body },
+      body: { age_13_or_older: true, date_of_birth: "1990-06-15", gender: "female", username, full_name: username, password: TEST_PASSWORD, email: `${username}@example.test`, ...body },
     });
     if (r.status !== 201) return { status: r.status, body: r.body };
     await pool.query("UPDATE users SET email_verified_at = now() WHERE username = $1", [username]);
@@ -1170,7 +1172,7 @@ test("region admins run their region's meets and nothing across the border", asy
   const signUp = async (body) => {
     const username = `int-ra-${crypto.randomBytes(4).toString("hex")}`;
     const r = await fetchJson("POST", "/api/auth/register", {
-      body: { age_13_or_older: true, username, full_name: username, password: TEST_PASSWORD, email: `${username}@example.test`, country_code: CODE, ...body },
+      body: { age_13_or_older: true, date_of_birth: "1990-06-15", gender: "female", username, full_name: username, password: TEST_PASSWORD, email: `${username}@example.test`, country_code: CODE, ...body },
     });
     assert.equal(r.status, 201, JSON.stringify(r.body));
     await pool.query("UPDATE users SET email_verified_at = now() WHERE username = $1", [username]);
@@ -1247,7 +1249,7 @@ const claimKit = {
   async founder(code, clubName, extra = {}) {
     const username = `int-cl-${crypto.randomBytes(4).toString("hex")}`;
     const r = await fetchJson("POST", "/api/auth/register", {
-      body: { age_13_or_older: true, username, full_name: clubName + " Admin", password: TEST_PASSWORD,
+      body: { age_13_or_older: true, date_of_birth: "1990-06-15", gender: "female", username, full_name: clubName + " Admin", password: TEST_PASSWORD,
               email: `${username}@example.test`, country_code: code, new_club_name: clubName, ...extra },
     });
     assert.equal(r.status, 201, JSON.stringify(r.body));
@@ -1267,7 +1269,7 @@ const claimKit = {
   async claim(body) {
     const username = `int-cf-${crypto.randomBytes(4).toString("hex")}`;
     const r = await fetchJson("POST", "/api/auth/register-org", {
-      body: { age_13_or_older: true, slug: `claim-${crypto.randomBytes(3).toString("hex")}`, username, password: TEST_PASSWORD,
+      body: { age_13_or_older: true, date_of_birth: "1990-06-15", gender: "female", slug: `claim-${crypto.randomBytes(3).toString("hex")}`, username, password: TEST_PASSWORD,
               full_name: "Claimant", email: `${username}@claimant.example.org`, ...body },
     });
     const id = (await pool.query("SELECT id FROM users WHERE username = $1", [username])).rows[0]?.id;
@@ -1676,7 +1678,7 @@ test("email verification: the link signs you in, a lost one can be resent", asyn
   try {
     const username = `int-cl-${crypto.randomBytes(4).toString("hex")}`;
     const reg = await fetchJson("POST", "/api/auth/register", {
-      body: { age_13_or_older: true, username, full_name: "Tarawa Admin", password: TEST_PASSWORD,
+      body: { age_13_or_older: true, date_of_birth: "1990-06-15", gender: "female", username, full_name: "Tarawa Admin", password: TEST_PASSWORD,
               email: `${username}@example.test`, country_code: CODE, new_club_name: "Tarawa Divers" },
     });
     assert.equal(reg.status, 201, JSON.stringify(reg.body));
@@ -1710,7 +1712,7 @@ test("email verification: the link signs you in, a lost one can be resent", asyn
     // real country opens a claim now, covered further down.)
     const pendingUser = `int-cf-${crypto.randomBytes(4).toString("hex")}`;
     const pend = await fetchJson("POST", "/api/auth/register-org", {
-      body: { age_13_or_older: true, org_name: "Test Land Diving", country_code: "TST", slug: `tst-${crypto.randomBytes(3).toString("hex")}`,
+      body: { age_13_or_older: true, date_of_birth: "1990-06-15", gender: "female", org_name: "Test Land Diving", country_code: "TST", slug: `tst-${crypto.randomBytes(3).toString("hex")}`,
               username: pendingUser, password: TEST_PASSWORD, full_name: "TST Admin", email: `${pendingUser}@example.test` },
     });
     assert.equal(pend.status, 201, JSON.stringify(pend.body));
@@ -1721,7 +1723,7 @@ test("email verification: the link signs you in, a lost one can be resent", asyn
     // A password reset proves the inbox too.
     const u2 = `int-cl-${crypto.randomBytes(4).toString("hex")}`;
     await fetchJson("POST", "/api/auth/register", {
-      body: { age_13_or_older: true, username: u2, full_name: "Betio Admin", password: TEST_PASSWORD,
+      body: { age_13_or_older: true, date_of_birth: "1990-06-15", gender: "female", username: u2, full_name: "Betio Admin", password: TEST_PASSWORD,
               email: `${u2}@example.test`, country_code: CODE, new_club_name: "Betio Divers" },
     });
     const row = (await pool.query("SELECT id, password FROM users WHERE username = $1", [u2])).rows[0];
@@ -1808,7 +1810,7 @@ test("register-org: country is required and the slug comes from the name", async
   const register = async (body) => {
     const username = `int-slug-${crypto.randomBytes(4).toString("hex")}`;
     const r = await fetchJson("POST", "/api/auth/register-org", {
-      body: { age_13_or_older: true, username, password: TEST_PASSWORD, full_name: "Slug Tester", email: `${username}@example.test`, ...body },
+      body: { age_13_or_older: true, date_of_birth: "1990-06-15", gender: "female", username, password: TEST_PASSWORD, full_name: "Slug Tester", email: `${username}@example.test`, ...body },
     });
     if (r.body?.org_id) made.push(r.body.org_id);
     return r;
@@ -1878,7 +1880,7 @@ test("a pending federation blocks a parallel country account", async (t) => {
 
       const username = `int-spm-${crypto.randomBytes(4).toString("hex")}`;
       const club = await fetchJson("POST", "/api/auth/register", {
-        body: { age_13_or_older: true, username, full_name: "Club Founder", password: TEST_PASSWORD, email: `${username}@example.test`,
+        body: { age_13_or_older: true, date_of_birth: "1990-06-15", gender: "female", username, full_name: "Club Founder", password: TEST_PASSWORD, email: `${username}@example.test`,
                 country_code: CODE, new_club_name: "Saint-Pierre Plongeon" },
       });
       assert.equal(club.status, 409, `${code}: ${JSON.stringify(club.body)}`);
@@ -1927,7 +1929,7 @@ test("a federation stored with an alpha-2 code is still found by country", async
 
     const username = `int-msr-${crypto.randomBytes(4).toString("hex")}`;
     const reg = await fetchJson("POST", "/api/auth/register", {
-      body: { age_13_or_older: true, username, full_name: "Plymouth Diver", password: TEST_PASSWORD, email: `${username}@example.test`, country_code: CODE },
+      body: { age_13_or_older: true, date_of_birth: "1990-06-15", gender: "female", username, full_name: "Plymouth Diver", password: TEST_PASSWORD, email: `${username}@example.test`, country_code: CODE },
     });
     assert.equal(reg.status, 201, JSON.stringify(reg.body));
     assert.equal((await pool.query("SELECT org_id FROM users WHERE username = $1", [username])).rows[0].org_id, fedId);
@@ -2866,7 +2868,7 @@ test("claims: a state body made org_admin still can't approve its own claim", as
 async function delegateSignUp(body) {
   const username = `int-dg-${crypto.randomBytes(4).toString("hex")}`;
   const r = await fetchJson("POST", "/api/auth/register", {
-    body: { age_13_or_older: true, username, full_name: body.full_name || username, password: TEST_PASSWORD,
+    body: { age_13_or_older: true, date_of_birth: "1990-06-15", gender: "female", username, full_name: body.full_name || username, password: TEST_PASSWORD,
             email: `${username}@example.test`, ...body },
   });
   assert.equal(r.status, 201, JSON.stringify(r.body));
@@ -5309,7 +5311,7 @@ test("new meets default 'divers represent' to the host's level", async (t) => {
     )).rows[0].id;
     const rUser = `int-ra-${crypto.randomBytes(4).toString("hex")}`;
     const reg = await fetchJson("POST", "/api/auth/register", {
-      body: { age_13_or_older: true, username: rUser, full_name: "Region Admin", password: TEST_PASSWORD,
+      body: { age_13_or_older: true, date_of_birth: "1990-06-15", gender: "female", username: rUser, full_name: "Region Admin", password: TEST_PASSWORD,
               email: `${rUser}@example.test`, country_code: CODE, club_id: A.clubId },
     });
     assert.equal(reg.status, 201, JSON.stringify(reg.body));
@@ -5366,7 +5368,7 @@ test("club setup: a founder's progress, invite parts and short code", async (t) 
     // Someone follows the invite link (country + club), and a meet lands.
     const member = `int-inv-${crypto.randomBytes(4).toString("hex")}`;
     const joined = await fetchJson("POST", "/api/auth/register", {
-      body: { age_13_or_older: true, username: member, full_name: "Invited Diver", password: TEST_PASSWORD,
+      body: { age_13_or_older: true, date_of_birth: "1990-06-15", gender: "female", username: member, full_name: "Invited Diver", password: TEST_PASSWORD,
               email: `${member}@example.test`, country_code: CODE, club_id: A.clubId },
     });
     assert.equal(joined.status, 201, JSON.stringify(joined.body));
@@ -5450,7 +5452,7 @@ const approvalKit = {
   async signUp(code, clubName, extra = {}, { verify = false } = {}) {
     const username = `int-ap-${crypto.randomBytes(4).toString("hex")}`;
     const r = await fetchJson("POST", "/api/auth/register", {
-      body: { age_13_or_older: true, username, full_name: `${clubName} Founder`, password: TEST_PASSWORD,
+      body: { age_13_or_older: true, date_of_birth: "1990-06-15", gender: "female", username, full_name: `${clubName} Founder`, password: TEST_PASSWORD,
               email: `${username}@example.test`, country_code: code, new_club_name: clubName, ...extra },
     });
     assert.equal(r.status, 201, JSON.stringify(r.body));
@@ -5518,7 +5520,7 @@ test("club approval: a new club under a federation waits, unseen, until its foun
     const by = await fetchJson("GET", `/api/orgs/by-country/${CODE}`);
     assert.equal(by.body[0].auto_approve_clubs, false);
     const joiner = await fetchJson("POST", "/api/auth/register", {
-      body: { age_13_or_older: true, username: `int-apj-${crypto.randomBytes(3).toString("hex")}`, full_name: "Joiner", password: TEST_PASSWORD,
+      body: { age_13_or_older: true, date_of_birth: "1990-06-15", gender: "female", username: `int-apj-${crypto.randomBytes(3).toString("hex")}`, full_name: "Joiner", password: TEST_PASSWORD,
               email: `j-${crypto.randomBytes(3).toString("hex")}@example.test`, country_code: CODE, club_id: A.clubId },
     });
     assert.equal(joiner.status, 400, JSON.stringify(joiner.body));
@@ -6776,7 +6778,7 @@ test("club short codes: signup and the Clubs screen follow the same rule as club
     const signUp = (clubName, code) => {
       const username = `int-sc-${crypto.randomBytes(4).toString("hex")}`;
       return fetchJson("POST", "/api/auth/register", {
-        body: { age_13_or_older: true, username, full_name: `${clubName} Admin`, password: TEST_PASSWORD, email: `${username}@example.test`,
+        body: { age_13_or_older: true, date_of_birth: "1990-06-15", gender: "female", username, full_name: `${clubName} Admin`, password: TEST_PASSWORD, email: `${username}@example.test`,
                 country_code: CODE, new_club_name: clubName, new_club_short_code: code },
       });
     };
@@ -7273,7 +7275,7 @@ test("signup into a claimed region asks it, once the founder has verified", asyn
     const signUp = async (clubName, regionCode) => {
       const username = `int-ra-${crypto.randomBytes(4).toString("hex")}`;
       const r = await fetchJson("POST", "/api/auth/register", {
-        body: { age_13_or_older: true, username, full_name: `${clubName} Admin`, password: TEST_PASSWORD, email: `${username}@example.test`,
+        body: { age_13_or_older: true, date_of_birth: "1990-06-15", gender: "female", username, full_name: `${clubName} Admin`, password: TEST_PASSWORD, email: `${username}@example.test`,
                 country_code: CODE, new_club_name: clubName, region_code: regionCode },
       });
       assert.equal(r.status, 201, JSON.stringify(r.body));
@@ -8241,11 +8243,14 @@ const compKit = {
     );
     return r.rows[0].id;
   },
-  async user(orgId, name, roles, { sysadmin = false, clubId = null } = {}) {
+  // An adult woman by default (entry eligibility reads gender and date of
+  // birth on every entry path, lib/entry-eligibility.js); pass gender /
+  // dob for a Men's or age-group event.
+  async user(orgId, name, roles, { sysadmin = false, clubId = null, gender = "female", dob = "1995-06-15" } = {}) {
     const r = await pool.query(
-      `INSERT INTO users (username, full_name, org_id, email_verified_at, is_system_admin, club_id)
-       VALUES ($1, $2, $3, now(), $4, $5) RETURNING id, token_version`,
-      [`${name}-${crypto.randomBytes(4).toString("hex")}`.slice(0, 50), name, orgId, sysadmin, clubId],
+      `INSERT INTO users (username, full_name, org_id, email_verified_at, is_system_admin, club_id, gender, date_of_birth)
+       VALUES ($1, $2, $3, now(), $4, $5, $6, $7) RETURNING id, token_version`,
+      [`${name}-${crypto.randomBytes(4).toString("hex")}`.slice(0, 50), name, orgId, sysadmin, clubId, gender, dob],
     );
     for (const role of roles) {
       await pool.query("INSERT INTO user_org_roles (user_id, org_id, role) VALUES ($1, $2, $3)", [r.rows[0].id, orgId, role]);
@@ -9725,7 +9730,7 @@ test("forgot-password finds an account whatever case its email was typed in, and
     const tag = crypto.randomBytes(3).toString("hex");
     const typed = `John.Smith.${tag}@Example.test`;
     const reg = await fetchJson("POST", "/api/auth/register", {
-      body: { age_13_or_older: true, username: `int-b3fp-${tag}`, password: TEST_PASSWORD, full_name: "John Smith", email: typed, org_id: st.orgId },
+      body: { age_13_or_older: true, date_of_birth: "1990-06-15", gender: "female", username: `int-b3fp-${tag}`, password: TEST_PASSWORD, full_name: "John Smith", email: typed, org_id: st.orgId },
     });
     assert.equal(reg.status, 201, JSON.stringify(reg.body));
     const found = await resetAccountsFor(pool, `  john.smith.${tag}@example.test `);
@@ -9950,7 +9955,7 @@ test("register refuses an email longer than the column with a 400, not a 500", a
   const st = await setupFixture({ withEvent: false });
   try {
     const r = await fetchJson("POST", "/api/auth/register", {
-      body: { age_13_or_older: true, username: `int-b3le-${st.slug}`, password: TEST_PASSWORD, full_name: "Long Mail",
+      body: { age_13_or_older: true, date_of_birth: "1990-06-15", gender: "female", username: `int-b3le-${st.slug}`, password: TEST_PASSWORD, full_name: "Long Mail",
               email: `${"a".repeat(290)}@example.test`, org_id: st.orgId },
     });
     assert.equal(r.status, 400, JSON.stringify(r.body));
@@ -9965,7 +9970,7 @@ test("a taken username at signup is a 409 username_taken without the database's 
   const st = await setupFixture({ withEvent: false });
   try {
     const again = await fetchJson("POST", "/api/auth/register", {
-      body: { age_13_or_older: true, username: st.username, password: TEST_PASSWORD, full_name: "Copy Cat",
+      body: { age_13_or_older: true, date_of_birth: "1990-06-15", gender: "female", username: st.username, password: TEST_PASSWORD, full_name: "Copy Cat",
               email: `copy-${st.slug}@example.test`, org_id: st.orgId },
     });
     assert.equal(again.status, 409, JSON.stringify(again.body));
@@ -9973,7 +9978,7 @@ test("a taken username at signup is a 409 username_taken without the database's 
     assert.doesNotMatch(again.body.error, /Key \(|already exists/);
 
     const org = await fetchJson("POST", "/api/auth/register-org", {
-      body: { age_13_or_older: true, org_name: `Copy Fed ${st.slug}`, country_code: "TST", username: st.username, password: TEST_PASSWORD,
+      body: { age_13_or_older: true, date_of_birth: "1990-06-15", gender: "female", org_name: `Copy Fed ${st.slug}`, country_code: "TST", username: st.username, password: TEST_PASSWORD,
               full_name: "Copy Cat", email: `copy2-${st.slug}@example.test` },
     });
     assert.equal(org.status, 409, JSON.stringify(org.body));
@@ -10238,8 +10243,8 @@ test("malformed ids and impossible dates in the accounts and org routes are 4xx,
     const tok = st.adminToken;
     const probes = [
       ["GET", "/api/orgs/nope/clubs", null, null],
-      ["POST", "/api/auth/register", null, { age_13_or_older: true, username: `int-b3bad-${st.slug}`, password: TEST_PASSWORD, full_name: "X", email: `bad-${st.slug}@example.test`, org_id: "nope" }],
-      ["POST", "/api/auth/register", null, { age_13_or_older: true, username: `int-b3bad2-${st.slug}`, password: TEST_PASSWORD, full_name: "X", email: `bad2-${st.slug}@example.test`, org_id: st.orgId, club_id: "nope" }],
+      ["POST", "/api/auth/register", null, { age_13_or_older: true, date_of_birth: "1990-06-15", gender: "female", username: `int-b3bad-${st.slug}`, password: TEST_PASSWORD, full_name: "X", email: `bad-${st.slug}@example.test`, org_id: "nope" }],
+      ["POST", "/api/auth/register", null, { age_13_or_older: true, date_of_birth: "1990-06-15", gender: "female", username: `int-b3bad2-${st.slug}`, password: TEST_PASSWORD, full_name: "X", email: `bad2-${st.slug}@example.test`, org_id: st.orgId, club_id: "nope" }],
       ["PUT", "/api/users/nope/roles", sys, { roles: ["diver"] }],
       ["PUT", "/api/users/nope/profile", tok, { full_name: "X" }],
       ["POST", "/api/users/nope/suspend", tok, {}],
@@ -12189,7 +12194,7 @@ test("self-registration refuses an over-long email with a 400", async (t) => {
   const st = await setupFixture({ withEvent: false });
   try {
     const r = await fetchJson("POST", "/api/auth/register", {
-      body: { age_13_or_older: true,
+      body: { age_13_or_older: true, date_of_birth: "1990-06-15", gender: "female",
         username: `int-sw-long-${st.slug}`, password: TEST_PASSWORD, full_name: "Long Address",
         email: `${"a".repeat(250)}@example.test`, org_id: st.orgId,
       },

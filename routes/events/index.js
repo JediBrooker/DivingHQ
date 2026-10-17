@@ -42,6 +42,7 @@ const { canSeeEvent } = require("../../lib/event-visibility");
 const { isUuid } = require("../../lib/uuid");
 const { scoreAuthoritySql } = require("../../lib/middleware");
 const { customDivesOutOfRange } = require("../../lib/custom-dive-dd");
+const { checkEntryEligibility, loadEntryProfiles } = require("../../lib/entry-eligibility");
 
 // Migration 039: shape-check operator-prescribed round_dives. We
 // only validate structure here (round numbering 1..N contiguous,
@@ -377,6 +378,17 @@ module.exports = function createEventsRouter({
         sql += ` LIMIT $${params.length}`;
       }
       const result = await pool.query(sql, params);
+      // entry_eligibility: may the caller themselves enter this event
+      // (gender and age group against their profile, lib/entry-eligibility.js).
+      // Divers only: Dive Sheets lists the events they can enter and says
+      // why the rest are out. Everyone else (and anonymous) gets no field.
+      if (req.user && Array.isArray(req.user.org_roles) && req.user.org_roles.includes("diver")) {
+        const me = (await loadEntryProfiles(pool, [req.user.id])).get(req.user.id) || { id: req.user.id };
+        const diver = { gender: me.gender, date_of_birth: me.date_of_birth };
+        for (const row of result.rows) {
+          row.entry_eligibility = checkEntryEligibility({ event: row, diver });
+        }
+      }
       res.json(result.rows);
     } catch (err) {
       console.error("[Events List Error]", err.message);

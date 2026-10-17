@@ -106,6 +106,7 @@ module.exports = function createCompetitorRouter({
           // Validation error from the shared helper, just return its
           // structured shape with optional `violations`.
           const body = { error: err.message };
+          if (err.code) body.code = err.code;
           if (err.violations) body.violations = err.violations;
           return res.status(err.status).json(body);
         }

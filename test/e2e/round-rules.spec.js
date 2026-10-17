@@ -86,7 +86,7 @@ test("round-rules: 4 @ 7.6 + 4 unlimited blocks bad lists, accepts good ones", a
 
   // Sign in as a diver so submit-list has a real user_id.
   const diver = await setup.insertUser({
-    orgId, role: "diver", fullName: "Test Diver",
+    orgId, role: "diver", fullName: "Test Diver", gender: "male", // the event is Men's
   });
   const diverLogin = await setup.loginAs(request, diver.username);
 
