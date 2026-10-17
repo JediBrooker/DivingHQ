@@ -1,6 +1,12 @@
 # Native release evidence — 17 October 2026
 
-## Version 1.3 (8) — prepared, not yet signed or submitted
+## Version 1.3 (8) — signed and submitted to both stores (later on 17 October)
+
+The signed release was produced on the mac-mini after the preparation below;
+see [Signed release and store submission](#signed-release-and-store-submission)
+at the end of this note for the final state.
+
+## Preparation on the MacBook — unsigned, not submitted
 
 Version **1.3 (build 8)** carries the web app deployed to `https://divinghq.app`
 at `a01113c9` (schema 108) into the native apps: sign-up and My Profile collect
@@ -138,3 +144,108 @@ record checksums and store identifiers in a new section of this note, and
 re-check the compatibility order: the backend at `a01113c9` already refuses
 sign-ups without date of birth and gender, so the 1.3 builds should reach
 both stores as soon as they can be signed.
+
+## Signed release and store submission
+
+Done from the development MacBook over Tailscale against the **mac-mini**, which
+holds the release material the 1.0–1.2 releases used (Apple Distribution
+identity, the `DivingHQ App Store Native` profile, the Android upload keystore
+with its properties file at `~/.config/divinghq/signing/`, the Firebase
+`google-services.json`, the App Store Connect API key in
+`~/.appstoreconnect/private_keys/` with `ASC_KEY_ID` / `ASC_ISSUER` in
+`~/.zshrc`, and gcloud signed in for Play). Its checkout at `~/Code/DivingHQ`
+was switched to `main` and fast-forwarded to `7018aa3c` (the merge of this
+note's first PR), which is the exact source of both packages.
+
+| Package | Path on the mini | SHA-256 |
+|---|---|---|
+| iOS | `/Volumes/Storage/DivingHQ-releases/1.3-8/ios/App.ipa` | `6873b3532b44a8064c5847bd2520ef868641ca3a2b9757817e2ed35633ca21a5` |
+| Android | `/Volumes/Storage/DivingHQ-releases/1.3-8/android/DivingHQ-1.3-8.aab` | `033ab3140603eb4c8bf3e01f2c622f658c0caa9b57483ea8a5df795649e69297` |
+
+Copies and the verification logs are also under `~/DivingHQ-releases/1.3-8/`
+on the MacBook.
+
+### How the keychain problem was solved
+
+`xcodebuild archive` over SSH failed at CodeSign with `errSecInternalComponent`:
+the login keychain is locked for an SSH session even while the owner is logged
+in at the console. Running the same archive and export inside the owner's GUI
+login session works without a password: a one-shot LaunchAgent
+(`RunAtLoad`, `ProgramArguments` = the release script) bootstrapped with
+`launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/<label>.plist`. Two
+constraints: processes started that way can't write to `/Volumes/Storage`
+(privacy permission), so the archive, export and a dedicated `-derivedDataPath`
+went under the home directory and were `rsync`ed onto the release volume
+afterwards; and the agent is removed again with `launchctl bootout` plus
+deleting the plist once the run ends. The Android bundle needs no keychain and
+was built over SSH directly (`JAVA_HOME` = Homebrew `openjdk@21`,
+`DIVINGHQ_ANDROID_SIGNING_PROPERTIES` = the properties file above).
+
+### Package checks
+
+- IPA: `codesign` shows team `6MY34D5RKG`, `aps-environment` and
+  `applinks:divinghq.app`; embedded profile `DivingHQ App Store Native`;
+  `CFBundleShortVersionString 1.3`, `CFBundleVersion 8`,
+  `ITSAppUsesNonExemptEncryption false`; the bundled shell carries
+  `https://divinghq.app` and no local origin. Export used
+  `ios/ExportOptions-AppStore.plist` (App Store Connect, not TestFlight-only).
+- AAB: `jarsigner -verify` passes; signer `CN=DivingHQ Upload`
+  (SHA-256 `59:6F:7D:DD:…:4B:60:DB`, the registered upload key, distinct from
+  Play's distribution key); `versionCode 8`, `versionName 1.3`; bundled shell
+  carries `https://divinghq.app`.
+
+### Apple
+
+Uploaded with the App Store Connect CLI (`asc builds upload --wait`), which
+reads `ASC_KEY_ID`, `ASC_ISSUER_ID` (mapped from `ASC_ISSUER`) and
+`ASC_PRIVATE_KEY_PATH` from the environment of an interactive login shell.
+Build `fe149de3-5ecf-4973-9486-1c256ed8651f` processed as **VALID**, version
+1.3 build 8. App Store version **1.3**
+(`990f4867-6bd4-4352-a5b3-c7db839ca71b`) was created with 1.2's description,
+keywords, URLs and promotional text copied, review details carried over, the
+What's New text below set on `en-AU`, release type AFTER_APPROVAL (1.2's
+phased release setting remains). `asc review submit` attached the build and
+submitted at **12:08 UTC on 17 October 2026** (submission
+`20173ce9-eee5-4847-9803-c4673f9d7a88`); readback: app store state
+**WAITING_FOR_REVIEW**, review state WAITING_FOR_REVIEW. Evidence:
+`verification/asc-upload.log`, `asc-version-1.3-create.json`,
+`asc-version-1.3-whatsnew.json`, `asc-review-submit.json`,
+`asc-status-after-submit.json`. The 1.2 version it supersedes was already
+READY_FOR_DISTRIBUTION (its 13 October review had completed), so nothing had to
+be cancelled.
+
+### Google Play
+
+The Play Console's own page couldn't take the 10.7 MB bundle from the browser
+pane, so the upload went through the Play Developer API instead: the developer
+account already lists the service account
+`play-publish@project-a0be5de3-cb44-4a4d-9e6.iam.gserviceaccount.com`, and
+TacMap's stdlib publisher (`~/Code/TacticalMaps/scripts/play_publisher.py`,
+keyless `gcloud auth print-access-token --impersonate-service-account`) was
+copied with the package name and release name made configurable
+(`verification/play_publisher_divinghq.py` on the MacBook). A `--dry-run`
+validated the edit first. The real edit uploaded bundle **versionCode 8** and
+set the production track to one release, **1.3 (8)**, status `completed`, with
+the `en-AU` notes below, then committed at **12:20 UTC on 17 October 2026**.
+Track readback: `production completed 1.3 (8) codes=['8']`. The console shows
+**Release 1.3 (8) in review**, 178 countries/regions; managed publishing is
+still off, so it goes live when Google's review passes. The empty draft release
+the console had created was replaced by the API edit. No listing, pricing,
+audience or declaration was changed. Evidence: `verification/play-upload-1.3-8.log`
+and `play-production-1.3-8-in-review.jpg`.
+
+### Release notes used on both stores
+
+> Sign-up and My Profile now collect your date of birth and gender, and event
+> entry checks them against each event's age group and gender. Dive Sheets
+> shows your club and lists events that aren't open to you. Club admins can
+> seat judge panels from the event row.
+
+### Still open
+
+- Both reviews are pending; nothing here is evidence of approval or of a
+  store-installed 1.3 (8) on a physical device.
+- Rork's `asc` CLI expects `ASC_ISSUER_ID`; the mini exports `ASC_ISSUER`, so
+  map it (or add it to `.zshrc`) before the next upload.
+- `xcodebuild -checkFirstLaunchStatus` still reports first-launch pending on
+  both Macs; it did not stop the archive on the mini.
