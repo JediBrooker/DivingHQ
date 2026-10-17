@@ -201,9 +201,9 @@
     "dashboard": {
       "label": "Trainer-Dashboard",
       "title": "Meine Springer",
-      "subtitle": "Für jeden verknüpften Springer: nächster Sprung, aktueller Rang und zuletzt abgeschlossener Sprung. Bitten Sie den Org-Admin, Verknüpfungen im Benutzer-Manager hinzuzufügen oder zu entfernen.",
+      "subtitle": "Für jeden verknüpften Springer: nächster Sprung, aktueller Rang und zuletzt abgeschlossener Sprung. Der Admin Ihres Verbands fügt Verknüpfungen im Benutzer-Manager hinzu oder entfernt sie; in einem Land, das noch keinen Verband auf DivingHQ hat, wenden Sie sich an den DivingHQ-Support.",
       "no_divers_title": "Noch keine Springer verknüpft",
-      "no_divers_body": "Sobald der Org-Admin Sie mit den Springern verknüpft hat, die Sie betreuen, erscheinen deren Events, Ergebnisse und Auswertungen hier. Bitten Sie den Verbands-Admin, im Benutzer-Manager → Ihre Zeile → Trainer-Verknüpfungen die von Ihnen betreuten Springer hinzuzufügen.",
+      "no_divers_body": "Sobald Sie mit den Springern verknüpft sind, die Sie trainieren, erscheinen hier deren Wettkämpfe, Ergebnisse und Auswertungen. Bitten Sie den Admin Ihres Verbands, im Benutzer-Manager → Ihre Zeile → Trainer-Verknüpfungen die Springer hinzuzufügen; in einem Land, das noch keinen Verband auf DivingHQ hat, wenden Sie sich an den DivingHQ-Support. Ein Junior, den Sie selbst anlegen, wird mit Ihnen verknüpft, sobald der Verein ihn bestätigt.",
       "loading": "Lade Ihre Springer…",
       "section_live": "🔴 Springt jetzt",
       "section_upcoming": "📅 Demnächst",

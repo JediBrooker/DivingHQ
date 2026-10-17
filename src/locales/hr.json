@@ -201,9 +201,9 @@
     "dashboard": {
       "label": "Trenerova ploča",
       "title": "Moji skakači",
-      "subtitle": "Za svakog povezanog skakača: sljedeći skok, trenutni poredak i posljednji odrađeni skok. Zatražite od admina organizacije da doda ili ukloni veze u Upravitelju korisnika.",
+      "subtitle": "Za svakog povezanog skakača: sljedeći skok, trenutni poredak i posljednji odrađeni skok. Admin vašeg saveza dodaje ili uklanja veze u Upravitelju korisnika; u zemlji koja još nema savez na DivingHQ-u obratite se podršci DivingHQ-a.",
       "no_divers_title": "Nema povezanih skakača",
-      "no_divers_body": "Kad vas admin organizacije poveže sa skakačima koje trenirate, njihova natjecanja, rezultati i analize pojavit će se ovdje. Zatražite od admina federacije da otvori Upravitelj korisnika → vaš redak → Trenerove veze i doda skakače koje vodite.",
+      "no_divers_body": "Kad budete povezani sa skakačima koje trenirate, ovdje će se prikazati njihova natjecanja, rezultati i analitika. Zatražite od admina svog saveza da otvori Upravitelj korisnika → vaš redak → Trenerske veze i doda ih; u zemlji koja još nema savez na DivingHQ-u obratite se podršci DivingHQ-a. Junior kojeg sami dodate povezuje se s vama kad ga klub potvrdi.",
       "loading": "Učitavanje skakača…",
       "section_live": "🔴 Skaču upravo sada",
       "section_upcoming": "📅 Nadolazeći",

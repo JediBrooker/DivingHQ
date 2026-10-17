@@ -201,9 +201,9 @@
     "dashboard": {
       "label": "Tableau de bord Entraîneur",
       "title": "Mes Plongeurs",
-      "subtitle": "Pour chaque plongeur lié : son prochain plongeon, son classement actuel et son dernier plongeon. Demandez à l'admin de votre organisation d'ajouter ou supprimer des liens depuis le Gestionnaire d'utilisateurs.",
+      "subtitle": "Pour chaque plongeur lié : son prochain plongeon, son classement actuel et son dernier plongeon. L'admin de votre fédération ajoute ou supprime les liens depuis le Gestionnaire d'utilisateurs ; dans un pays sans fédération sur DivingHQ pour l'instant, contactez le support DivingHQ.",
       "no_divers_title": "Aucun plongeur lié",
-      "no_divers_body": "Une fois que l'admin de votre organisation vous aura lié aux plongeurs que vous entraînez, leurs événements, résultats et analyses apparaîtront ici. Demandez à l'admin de votre fédération d'ouvrir Gestionnaire d'utilisateurs → votre ligne → Liens Entraîneur et d'ajouter les plongeurs que vous encadrez.",
+      "no_divers_body": "Une fois lié aux plongeurs que vous entraînez, leurs épreuves, résultats et analyses apparaîtront ici. Demandez à l'admin de votre fédération d'ouvrir Gestionnaire d'utilisateurs → votre ligne → Liens entraîneur et de les ajouter ; dans un pays sans fédération sur DivingHQ pour l'instant, contactez le support DivingHQ. Un junior que vous ajoutez vous-même vous est lié dès que le club le confirme.",
       "loading": "Chargement de vos plongeurs…",
       "section_live": "🔴 En cours",
       "section_upcoming": "📅 À venir",

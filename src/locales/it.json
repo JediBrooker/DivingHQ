@@ -201,9 +201,9 @@
     "dashboard": {
       "label": "Pannello Allenatore",
       "title": "I Miei Tuffatori",
-      "subtitle": "Per ogni tuffatore collegato: il prossimo tuffo, la posizione attuale e l'ultimo tuffo completato. Chiedi all'admin della tua organizzazione di aggiungere o rimuovere collegamenti dal Gestore Utenti.",
+      "subtitle": "Per ogni tuffatore collegato: il prossimo tuffo, la posizione attuale e l'ultimo tuffo completato. L'admin della tua federazione aggiunge o rimuove i collegamenti dal Gestore Utenti; in un paese che non ha ancora una federazione su DivingHQ, scrivi al supporto DivingHQ.",
       "no_divers_title": "Nessun tuffatore collegato",
-      "no_divers_body": "Una volta che l'admin della tua organizzazione ti avrà collegato ai tuffatori che alleni, le loro gare, i risultati e le analisi appariranno qui. Chiedi all'admin della tua federazione di aprire Gestore Utenti → la tua riga → Collegamenti Allenatore e aggiungere i tuffatori che segui.",
+      "no_divers_body": "Una volta collegato ai tuffatori che alleni, qui compariranno le loro gare, i risultati e le analisi. Chiedi all'admin della tua federazione di aprire Gestore Utenti → la tua riga → Collegamenti allenatore e di aggiungerli; in un paese che non ha ancora una federazione su DivingHQ, scrivi al supporto DivingHQ. Un junior che aggiungi tu stesso viene collegato a te quando il club lo conferma.",
       "loading": "Caricamento dei tuoi tuffatori…",
       "section_live": "🔴 In Gara",
       "section_upcoming": "📅 Prossimamente",

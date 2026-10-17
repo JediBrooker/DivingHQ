@@ -201,9 +201,9 @@
     "dashboard": {
       "label": "Trænerens oversigt",
       "title": "Mine udspringere",
-      "subtitle": "For hver tilknyttet udspringer: næste udspring, aktuel placering og seneste gennemførte udspring. Bed administratoren for din organisation om at tilføje eller fjerne tilknytninger i Brugerhåndteringen.",
+      "subtitle": "For hver tilknyttet udspringer: næste udspring, aktuel placering og seneste gennemførte udspring. Dit forbunds administrator tilføjer eller fjerner tilknytninger i Brugerhåndteringen; i et land uden forbund på DivingHQ endnu kontakter du DivingHQ-support.",
       "no_divers_title": "Ingen tilknyttede udspringere",
-      "no_divers_body": "Når administratoren for din organisation tilknytter dig de udspringere, du træner, vises deres stævner, resultater og analyser her. Bed forbundets administrator om at åbne Brugerhåndtering → din række → Trænertilknytninger og tilføje de udspringere, du står for.",
+      "no_divers_body": "Når du er tilknyttet de udspringere, du træner, vises deres stævner, resultater og analyser her. Bed dit forbunds administrator om at åbne Brugerhåndtering → din række → Trænertilknytninger og tilføje dem; i et land uden forbund på DivingHQ endnu kontakter du DivingHQ-support. En junior, du selv tilføjer, tilknyttes dig, når klubben bekræfter vedkommende.",
       "loading": "Indlæser dine udspringere…",
       "section_live": "🔴 Springer lige nu",
       "section_upcoming": "📅 Kommende",

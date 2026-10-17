@@ -201,9 +201,9 @@
     "dashboard": {
       "label": "Dashboard ng coach",
       "title": "Mga diver ko",
-      "subtitle": "Para sa bawat naka-link na diver: ang kanilang susunod na sisid, kasalukuyang ranggo, at pinakabagong natapos na sisid. Hilingin sa iyong org admin na magdagdag o mag-alis ng mga link mula sa User Manager.",
+      "subtitle": "Para sa bawat naka-link na diver: ang kanilang susunod na sisid, kasalukuyang ranggo, at pinakabagong natapos na sisid. Ang admin ng iyong pederasyon ang nagdadagdag o nag-aalis ng mga link sa User Manager; sa bansang wala pang pederasyon sa DivingHQ, makipag-ugnayan sa DivingHQ support.",
       "no_divers_title": "Wala pang naka-link na diver",
-      "no_divers_body": "Kapag na-link ka na ng iyong org admin sa mga diver na tinatrenahan mo, lalabas dito ang kanilang mga event, resulta, at analytics. Hilingin sa admin ng iyong pederasyon na buksan ang User Manager → iyong row → Coach Links at idagdag ang mga diver na ginagabayan mo.",
+      "no_divers_body": "Kapag naka-link ka na sa mga diver na sinasanay mo, lalabas dito ang kanilang mga event, resulta, at analytics. Hilingin sa admin ng iyong pederasyon na buksan ang User Manager → ang iyong row → Coach Links at idagdag sila; sa bansang wala pang pederasyon sa DivingHQ, makipag-ugnayan sa DivingHQ support. Ang junior na ikaw mismo ang nagdagdag ay mali-link sa iyo kapag kinumpirma siya ng club.",
       "loading": "Naglo-load ng iyong mga diver…",
       "section_live": "🔴 Nagsisisid ngayon",
       "section_upcoming": "📅 Paparating",

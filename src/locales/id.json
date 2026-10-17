@@ -201,9 +201,9 @@
     "dashboard": {
       "label": "Dasbor Pelatih",
       "title": "Peloncat saya",
-      "subtitle": "Untuk setiap peloncat terhubung: loncatan berikutnya, peringkat saat ini, dan loncatan terbaru yang selesai. Minta admin organisasi Anda untuk menambahkan atau menghapus tautan di Pengelola Pengguna.",
+      "subtitle": "Untuk setiap peloncat terhubung: loncatan berikutnya, peringkat saat ini, dan loncatan terbaru yang selesai. Admin federasi Anda menambahkan atau menghapus tautan di Pengelola Pengguna; di negara yang belum memiliki federasi di DivingHQ, hubungi dukungan DivingHQ.",
       "no_divers_title": "Belum ada peloncat terhubung",
-      "no_divers_body": "Setelah admin organisasi menghubungkan Anda dengan peloncat yang Anda latih, nomor, hasil, dan analisis mereka akan muncul di sini. Minta admin federasi Anda membuka Pengelola Pengguna → baris Anda → Tautan Pelatih dan tambahkan peloncat yang Anda bimbing.",
+      "no_divers_body": "Setelah Anda terhubung dengan peloncat yang Anda latih, acara, hasil, dan analitik mereka akan muncul di sini. Minta admin federasi Anda membuka Pengelola Pengguna → baris Anda → Tautan Pelatih dan menambahkan mereka; di negara yang belum memiliki federasi di DivingHQ, hubungi dukungan DivingHQ. Peloncat junior yang Anda tambahkan sendiri akan terhubung dengan Anda saat klub mengonfirmasinya.",
       "loading": "Memuat peloncat Anda…",
       "section_live": "🔴 Sedang meloncat",
       "section_upcoming": "📅 Akan datang",

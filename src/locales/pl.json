@@ -201,9 +201,9 @@
     "dashboard": {
       "label": "Panel Trenera",
       "title": "Moi Skoczkowie",
-      "subtitle": "Dla każdego powiązanego skoczka: następny skok, aktualna pozycja i ostatni ukończony skok. Poproś admina organizacji o dodanie lub usunięcie powiązań w Menedżerze Użytkowników.",
+      "subtitle": "Dla każdego powiązanego skoczka: następny skok, aktualna pozycja i ostatni ukończony skok. Powiązania dodaje lub usuwa admin Twojej federacji w Menedżerze Użytkowników; w kraju, który nie ma jeszcze federacji w DivingHQ, skontaktuj się z pomocą DivingHQ.",
       "no_divers_title": "Brak powiązanych skoczków",
-      "no_divers_body": "Gdy admin Twojej organizacji powiąże Cię ze skoczkami, których trenujesz, ich zawody, wyniki i analizy pojawią się tutaj. Poproś admina federacji, aby otworzył Menedżer Użytkowników → Twój wiersz → Powiązania Trenera i dodał skoczków, których prowadzisz.",
+      "no_divers_body": "Gdy zostaniesz powiązany ze skoczkami, których trenujesz, ich zawody, wyniki i analizy pojawią się tutaj. Poproś admina swojej federacji, aby otworzył Menedżer Użytkowników → Twój wiersz → Powiązania trenera i ich dodał; w kraju, który nie ma jeszcze federacji w DivingHQ, skontaktuj się z pomocą DivingHQ. Junior, którego dodasz samodzielnie, zostaje z Tobą powiązany, gdy klub go potwierdzi.",
       "loading": "Ładowanie skoczków…",
       "section_live": "🔴 Skacze teraz",
       "section_upcoming": "📅 Nadchodzące",
