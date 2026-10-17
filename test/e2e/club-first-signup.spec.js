@@ -260,8 +260,6 @@ test("a federation claims a country and the clubs vote it in", async ({ page, re
     await page.locator('input[autocomplete="username"]').fill(fedUser);
     await page.locator('input[autocomplete="new-password"]').fill(setup.TEST_PASSWORD);
     await page.getByTestId("age-confirmation").check();
-    await page.getByTestId("dob").fill("1990-06-15");
-    await page.getByTestId("gender").selectOption("female");
     await page.getByRole("button", { name: /Submit Registration/i }).click();
     await expect(page.getByTestId("check-inbox")).toContainText(`${fedUser}@fsmdiving.example.org`);
     await expect(page.getByTestId("register-org-next")).toContainText("clubs already on DivingHQ there vote");
@@ -340,8 +338,6 @@ test("register-org explains what registering does for each kind of country", asy
     await page.locator('input[autocomplete="username"]').fill(fedUser);
     await page.locator('input[autocomplete="new-password"]').fill(setup.TEST_PASSWORD);
     await page.getByTestId("age-confirmation").check();
-    await page.getByTestId("dob").fill("1990-06-15");
-    await page.getByTestId("gender").selectOption("female");
     await page.getByRole("button", { name: /Submit Registration/i }).click();
     await expect(page.getByTestId("register-org-next")).toContainText("the DivingHQ team reviews it");
 

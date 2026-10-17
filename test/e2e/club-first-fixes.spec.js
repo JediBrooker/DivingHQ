@@ -153,8 +153,6 @@ test("a claimant finds their claim after signing in; a failed load offers a retr
   await page.locator('input[autocomplete="username"]').fill(fedUser);
   await page.locator('input[autocomplete="new-password"]').fill(setup.TEST_PASSWORD);
   await page.getByTestId("age-confirmation").check();
-  await page.getByTestId("dob").fill("1990-06-15");
-  await page.getByTestId("gender").selectOption("female");
   await page.getByRole("button", { name: /Submit Registration/i }).click();
   await expect(page.getByTestId("register-org-next")).toBeVisible();
   const claimRow = await setup.pool.query(
