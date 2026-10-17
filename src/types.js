@@ -268,6 +268,7 @@
  * @property {number}  member_count   everyone in the club, the caller included if they're a member
  * @property {boolean} you_are_member
  * @property {number}  meet_count     meets this club hosts
+ * @property {number}  panel_count    events in those meets with a full judge panel seated
  */
 
 /**

@@ -479,7 +479,9 @@
       "step_code": "Set your club's short code",
       "step_code_desc": "Shown next to your divers at club meets.",
       "step_guide": "Read the club admin guide",
-      "step_guide_desc": "What you can do, from the first meet to meet day."
+      "step_guide_desc": "What you can do, from the first meet to meet day.",
+      "step_panel": "Seat a judge panel",
+      "step_panel_desc": "Pick the judges for an event, in order, on Assign Judges."
     }
   },
   "profile": {

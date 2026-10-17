@@ -479,7 +479,9 @@
       "step_code": "Define el código corto de tu club",
       "step_code_desc": "Aparece junto a tus saltadores en las competiciones de club.",
       "step_guide": "Lee la guía para administradores de club",
-      "step_guide_desc": "Lo que puedes hacer, desde la primera competición hasta el día de la prueba."
+      "step_guide_desc": "Lo que puedes hacer, desde la primera competición hasta el día de la prueba.",
+      "step_panel": "Formar un panel de jueces",
+      "step_panel_desc": "Elige los jueces de una prueba, en orden, en Asignar jueces."
     }
   },
   "profile": {

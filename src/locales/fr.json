@@ -479,7 +479,9 @@
       "step_code": "Définissez le code court du club",
       "step_code_desc": "Affiché à côté de vos plongeurs lors des compétitions de club.",
       "step_guide": "Lisez le guide de l'administrateur de club",
-      "step_guide_desc": "Ce que vous pouvez faire, de la première compétition au jour J."
+      "step_guide_desc": "Ce que vous pouvez faire, de la première compétition au jour J.",
+      "step_panel": "Constituer un jury",
+      "step_panel_desc": "Choisissez les juges d'une épreuve, dans l'ordre, sur Attribuer des juges."
     }
   },
   "role": {

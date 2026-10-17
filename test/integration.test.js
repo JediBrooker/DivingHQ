@@ -5370,10 +5370,39 @@ test("club setup: a founder's progress, invite parts and short code", async (t) 
               email: `${member}@example.test`, country_code: CODE, club_id: A.clubId },
     });
     assert.equal(joined.status, 201, JSON.stringify(joined.body));
-    assert.equal((await fetchJson("POST", "/api/meets", { token: A.token, body: { name: "Philipsburg Club Night" } })).status, 201);
+    const meet = await fetchJson("POST", "/api/meets", { token: A.token, body: { name: "Philipsburg Club Night" } });
+    assert.equal(meet.status, 201, JSON.stringify(meet.body));
     const later = (await fetchJson("GET", `/api/clubs/${A.clubId}/setup`, { token: A.token })).body;
     assert.equal(later.member_count, 2);
     assert.equal(later.meet_count, 1);
+    assert.equal(later.panel_count, 0);
+
+    // The panel step ticks once an event in one of the club's meets has
+    // its full panel, seated by the club's admin with no org role at all.
+    const ev = await fetchJson("POST", "/api/events", {
+      token: A.token,
+      body: { name: "Philipsburg Women 1m", gender: "Female", number_of_judges: 5, total_rounds: 3,
+              height: "1m", event_type: "individual", meet_id: meet.body.id },
+    });
+    assert.equal(ev.status, 201, JSON.stringify(ev.body));
+    const orgId = (await pool.query("SELECT org_id FROM clubs WHERE id = $1", [A.clubId])).rows[0].org_id;
+    const judgeIds = [];
+    for (let i = 1; i <= 5; i++) {
+      const u = await pool.query(
+        `INSERT INTO users (username, full_name, org_id, club_id, email_verified_at)
+         VALUES ($1, $2, $3, $4, now()) RETURNING id`,
+        [`int-pj-${crypto.randomBytes(4).toString("hex")}`, `Philipsburg Judge ${i}`, orgId, A.clubId],
+      );
+      await pool.query("INSERT INTO user_org_roles (user_id, org_id, role) VALUES ($1, $2, 'judge')", [u.rows[0].id, orgId]);
+      judgeIds.push(u.rows[0].id);
+    }
+    // Four judges on a five-judge event isn't a seated panel.
+    assert.equal((await fetchJson("POST", `/api/events/${ev.body.id}/judges`, { token: A.token, body: { judgeIds: judgeIds.slice(0, 4) } })).status, 200);
+    assert.equal((await fetchJson("GET", `/api/clubs/${A.clubId}/setup`, { token: A.token })).body.panel_count, 0);
+    assert.equal((await fetchJson("POST", `/api/events/${ev.body.id}/judges`, { token: A.token, body: { judgeIds } })).status, 200);
+    assert.equal((await fetchJson("GET", `/api/clubs/${A.clubId}/setup`, { token: A.token })).body.panel_count, 1);
+    // Another club's admin in the same country can't touch that panel.
+    assert.equal((await fetchJson("POST", `/api/events/${ev.body.id}/judges`, { token: B.token, body: { judgeIds } })).status, 403);
 
     // The code: trimmed, upper-cased, validated, unique within the country.
     const set = await fetchJson("PUT", `/api/clubs/${A.clubId}/short-code`, { token: A.token, body: { short_code: " phi " } });

@@ -479,7 +479,9 @@
       "step_code": "클럽 약칭 코드 설정하기",
       "step_code_desc": "클럽 대회에서 선수 이름 옆에 표시됩니다.",
       "step_guide": "클럽 관리자 가이드 읽기",
-      "step_guide_desc": "첫 대회부터 대회 당일까지 할 수 있는 일을 알려 드립니다."
+      "step_guide_desc": "첫 대회부터 대회 당일까지 할 수 있는 일을 알려 드립니다.",
+      "step_panel": "심판 패널 구성하기",
+      "step_panel_desc": "심판 배정에서 종목의 심판을 순서대로 선택하세요."
     }
   },
   "profile": {
