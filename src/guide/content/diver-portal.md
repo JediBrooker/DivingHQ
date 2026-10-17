@@ -10,6 +10,16 @@ All three work on phone (most divers use phones) or desktop. The signed-in app s
 
 You need to be 13 or older to have an account. Younger divers have a junior profile that a parent or the club looks after; see [Junior Divers](/guide/junior-divers).
 
+## Competition details: date of birth and gender
+
+Sign-up asks for your **date of birth** and **gender**, and you can change both under **Competition details** on your own profile (`/profile`). They decide which events you can be entered in, on every path an entry can take (your own Dive Sheets, your coach's workbench, a late entry or CSV import in the Control Room):
+
+- A **men's** or **women's** event takes divers whose profile says male or female respectively. A **mixed** event takes anyone.
+- An **age-group** event (Junior Group A/B/C/D, Masters, or a range such as 14-15) takes your age **on 31 December of the competition year**, World Aquatics Part Four Article 1.8, not your age on the day. Group A is 16-18 (Article 13.2.2), Group B 14-15 (13.2.1), Group C 12-13 (13.3.1); Group D (11 and under) is the common federation extension Article 13.3 allows. Masters are 25 and over in five-year groups (Masters Diving Rules Article 4.3.1). An **Open** event has no age check.
+- If either field is **missing**, a men's, women's or age-group event refuses the entry and says what to add. Nothing is assumed from a blank. The dashboard shows a prompt until both are set.
+
+An account made before sign-up asked for these has neither; fill them in once and every meet from then on reads them. Each change is audit-logged, so a meet manager can see a birthday that moved before an entry.
+
 ## Meet day view
 
 When an event you're entered in goes Live, the **Diver tab** of your dashboard surfaces a **Meet day · live now** card at the top. Tapping it lands on `/me/meet/<eventId>` — a focused, phone-first surface designed for the exact two minutes you have between drying off and walking up to the platform. No history, no analytics, no ads — just three things:
@@ -50,7 +60,7 @@ The page subscribes to the event-room socket. Every score that lands and every c
 
 ![The Diver Portal dive-list editor, with one dive picker per round and a running degree-of-difficulty total](/guide-screenshots/competitor.png)
 
-From the dashboard, tap **Diver Portal**. You'll see a list of every event you're eligible for — events in your federation that are `Upcoming` and haven't passed `entries_close_at`.
+From the dashboard, tap **Diver Portal**. You'll see a list of every event you're eligible for — events in your federation that are `Upcoming` and haven't passed `entries_close_at`, and whose gender and age group your profile fits (see [Competition details](#competition-details-date-of-birth-and-gender)). Events open for entries that you can't enter are listed under **Not eligible** with the reason, so a missing date of birth or a men's-only event never just looks like an empty list.
 
 Pick one. The dive list builder shows:
 
@@ -99,6 +109,7 @@ Click **Submit Dive List**. The form validates:
 - Every round has a dive
 - Every DD respects the per-round cap
 - The partner_id (if synchro) is a valid diver in your org
+- You (and your synchro partner) fit the event's gender and age group; the server refuses the list with the reason otherwise
 
 Once submitted, your name appears in the event's roster on the operator's Control Room. You can re-submit any time before the event goes Live (or before `entries_close_at` for fully gated events) — the new list overwrites the previous one.
 

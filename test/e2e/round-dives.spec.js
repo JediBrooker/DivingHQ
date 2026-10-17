@@ -73,7 +73,7 @@ test("round-dives: operator pins dives, server enforces on diver submit", async 
 
   // ---- Diver setup ------------------------------------------
   const diver = await setup.insertUser({
-    orgId, role: "diver", fullName: "Round-Dives Diver",
+    orgId, role: "diver", fullName: "Round-Dives Diver", gender: "male", // the event is Men's
   });
   const diverLogin = await setup.loginAs(request, diver.username);
 

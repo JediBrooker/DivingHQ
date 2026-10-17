@@ -58,6 +58,7 @@ function isAcceptingEntries(ev) {
 
 function notAcceptingReason(ev) {
   if (!ev) return ''
+  if (!isEligible(ev)) return ineligibleReason(ev)
   if (ev.status && ev.status !== 'Upcoming') {
     return `"${ev.name}" has already started — entries are closed.`
   }
@@ -67,17 +68,36 @@ function notAcceptingReason(ev) {
   return ''
 }
 
+// Entry eligibility (lib/entry-eligibility.js): /api/events says per
+// event whether this diver's gender and age fit it. An event with no
+// verdict (an older server) counts as eligible; the submit would still
+// be refused with the same reason.
+function isEligible(ev) {
+  return !ev?.entry_eligibility || ev.entry_eligibility.allowed !== false
+}
+function ineligibleReason(ev) {
+  return ev?.entry_eligibility?.reason || ''
+}
+
 // Show open events first, then closed ones (greyed out and
 // labelled). Hiding closed events outright would leave divers
 // confused about why their event "disappeared", so we just keep
-// them visible but un-selectable.
+// them visible but un-selectable. Events this diver can't enter
+// (a men's event, another age group) get their own group with the
+// reason, so a diver whose profile lacks a date of birth sees what
+// to fix rather than an empty list.
 const eventOptions = computed(() => {
-  const open = events.value.filter(isAcceptingEntries)
+  const open = events.value.filter((e) => isAcceptingEntries(e) && isEligible(e))
+  const ineligible = events.value.filter((e) => isAcceptingEntries(e) && !isEligible(e))
   const closed = events.value.filter((e) => !isAcceptingEntries(e))
-  return { open, closed }
+  return { open, ineligible, closed }
 })
+// One line per distinct reason, for the empty state when nothing is open to this diver.
+const ineligibleReasons = computed(() =>
+  [...new Set(eventOptions.value.ineligible.map(ineligibleReason).filter(Boolean))],
+)
 
-const isCurrentEventOpen = computed(() => isAcceptingEntries(currentEvent.value))
+const isCurrentEventOpen = computed(() => isAcceptingEntries(currentEvent.value) && isEligible(currentEvent.value))
 
 // Migration 041: post-advance dive-list lock state. The banner
 // shown above the dive picker reads `dive_list_locks_at` off the
@@ -1019,6 +1039,15 @@ watch(currentEvent, async (ev) => {
       :on-action="loadEntryData"
     />
     <EmptyState
+      v-else-if="!eventOptions.open.length && !eventOptions.closed.length && eventOptions.ineligible.length"
+      icon="🪪"
+      title="No events you can enter"
+      :body="ineligibleReasons.join(' ')"
+      action-label="Open My Profile"
+      action-to="/profile"
+      data-test-id="ineligible-empty"
+    />
+    <EmptyState
       v-else-if="!eventOptions.open.length && !eventOptions.closed.length"
       icon="📭"
       title="No events open for entries"
@@ -1041,6 +1070,11 @@ watch(currentEvent, async (ev) => {
             </template>
           </option>
         </optgroup>
+        <optgroup v-if="eventOptions.ineligible.length" label="Not eligible">
+          <option v-for="ev in eventOptions.ineligible" :key="ev.id" :value="ev.id" disabled>
+            {{ ev.name }} — {{ ineligibleReason(ev) }}
+          </option>
+        </optgroup>
         <optgroup v-if="eventOptions.closed.length" label="Entries closed">
           <option v-for="ev in eventOptions.closed" :key="ev.id" :value="ev.id" disabled>
             {{ ev.name }} — {{ ev.status !== 'Upcoming' ? ev.status.toLowerCase() : 'closed' }}
@@ -1049,6 +1083,12 @@ watch(currentEvent, async (ev) => {
       </select>
       <p v-if="currentEvent && !isCurrentEventOpen" class="msg msg-error" style="margin-top:0.75rem">
         {{ notAcceptingReason(currentEvent) }}
+      </p>
+      <p v-if="eventOptions.ineligible.length && (!currentEvent || isCurrentEventOpen)" class="hint-line" style="margin-top:0.5rem" data-test-id="ineligible-hint">
+        {{ eventOptions.ineligible.length === 1 ? 'One event' : `${eventOptions.ineligible.length} events` }}
+        accepting entries {{ eventOptions.ineligible.length === 1 ? 'isn\'t' : 'aren\'t' }} open to you:
+        {{ ineligibleReasons.join(' ') }}
+        <RouterLink to="/profile">Check your Competition details.</RouterLink>
       </p>
       <p v-else-if="currentEvent && currentEvent.entries_close_at" class="hint-line" style="margin-top:0.5rem">
         Entries close {{ new Date(currentEvent.entries_close_at).toLocaleString() }}.

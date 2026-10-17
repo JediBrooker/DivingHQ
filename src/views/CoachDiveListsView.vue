@@ -339,6 +339,12 @@ onMounted(load)
               </span>
               <span v-if="diver.is_reserve" class="diver-reserve">{{ t('coach.dive_lists.reserve_tag') }}</span>
               <span v-if="diver.withdrawn_at" class="diver-withdrawn">{{ t('coach.dive_lists.withdrawn_tag') }}</span>
+              <span v-if="diver.entry_eligibility && diver.entry_eligibility.allowed === false"
+                    class="badge badge-amber eligibility-badge"
+                    data-test-id="entry-ineligible"
+                    v-tip="diver.entry_eligibility.reason">
+                {{ t('coach.dive_lists.badge_ineligible') }}
+              </span>
               <span v-for="badge in coachEligibilityBadges(diver.coach_eligibility)"
                     :key="`${diver.diver_id}-${badge.label}`"
                     :class="['badge', `badge-${badge.tone}`, 'eligibility-badge']"

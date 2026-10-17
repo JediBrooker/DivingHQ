@@ -43,7 +43,7 @@ async function signIn(page, username) {
 async function founder(request, clubName) {
   const username = `e2e-ctpl-${setup.rand()}`;
   const r = await request.post("/api/auth/register", {
-    data: { age_13_or_older: true, username, full_name: `${clubName} Admin`, password: setup.TEST_PASSWORD,
+    data: { age_13_or_older: true, date_of_birth: "1990-06-15", gender: "female", username, full_name: `${clubName} Admin`, password: setup.TEST_PASSWORD,
             email: `${username}@example.test`, country_code: COUNTRY, new_club_name: clubName },
   });
   expect(r.status()).toBe(201);

@@ -44,6 +44,8 @@ test("a founder signs up by country and runs their club's first meet", async ({ 
   await page.locator('input[autocomplete="email"]').fill(`${world.username}@example.test`);
   await page.locator('input[autocomplete="new-password"]').fill(setup.TEST_PASSWORD);
   await page.getByTestId("age-confirmation").check();
+  await page.getByTestId("dob").fill("1990-06-15");
+  await page.getByTestId("gender").selectOption("female");
 
   // Country first; nobody from Tonga is on DivingHQ yet.
   const country = page.locator("select").first();
@@ -143,6 +145,8 @@ test("a new club's short code is checked at signup", async ({ page }) => {
   await page.locator('input[autocomplete="email"]').fill(`${username}@example.test`);
   await page.locator('input[autocomplete="new-password"]').fill(setup.TEST_PASSWORD);
   await page.getByTestId("age-confirmation").check();
+  await page.getByTestId("dob").fill("1990-06-15");
+  await page.getByTestId("gender").selectOption("female");
   await page.locator("select").first().selectOption(COUNTRY);
   await page.locator("select").filter({ has: page.locator('option[value="new"]') }).selectOption("new");
   await page.getByPlaceholder("e.g. Sydney Springboard").fill("Vava'u Divers");
@@ -180,6 +184,8 @@ test("a founder in a country with provinces picks one", async ({ page }) => {
     await page.locator('input[autocomplete="email"]').fill(`${username}@example.test`);
     await page.locator('input[autocomplete="new-password"]').fill(setup.TEST_PASSWORD);
     await page.getByTestId("age-confirmation").check();
+    await page.getByTestId("dob").fill("1990-06-15");
+    await page.getByTestId("gender").selectOption("female");
     await page.locator("select").first().selectOption(CAN);
 
     const province = page.locator("#reg-region");
@@ -222,7 +228,7 @@ test("a federation claims a country and the clubs vote it in", async ({ page, re
     for (const name of ["Pohnpei Divers", "Chuuk Divers"]) {
       const username = `e2e-fsm-${setup.rand()}`;
       const r = await request.post("/api/auth/register", {
-        data: { age_13_or_older: true, username, full_name: `${name} Admin`, password: setup.TEST_PASSWORD,
+        data: { age_13_or_older: true, date_of_birth: "1990-06-15", gender: "female", username, full_name: `${name} Admin`, password: setup.TEST_PASSWORD,
                 email: `${username}@example.test`, country_code: FSM, new_club_name: name },
       });
       expect(r.status()).toBe(201);

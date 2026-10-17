@@ -11,7 +11,7 @@
 // since (club-first signup, claims, 2FA).
 
 const express = require("express");
-const { AGE_RESTRICTION, isKnownUnderMinimumAge, requireAgeDeclaration } = require("../lib/direct-use-age");
+const { AGE_RESTRICTION, isKnownUnderMinimumAge, requireAgeDeclaration, MINIMUM_DIRECT_USE_AGE } = require("../lib/direct-use-age");
 const bcrypt  = require("bcrypt");
 const jwt     = require("jsonwebtoken");
 const rateLimit = require("express-rate-limit");
@@ -28,12 +28,12 @@ const roleRequests = require("../lib/role-requests");
 const clubApprovals = require("../lib/club-approvals");
 const { withTx } = clubApprovals;
 const notices = require("../lib/notices");
-const { recordAudit } = require("../lib/audit");
+const { recordAudit, auditFromReq } = require("../lib/audit");
 const createAuthLinks = require("../lib/auth-links");
 const { isUuid } = require("../lib/uuid");
 const { mintSocketTicket } = require("../lib/socket-ticket");
 // Shared with the junior handover (routes/juniors.js).
-const { EMAIL_RE, USERNAME_RE, validatePassword, safeText } = require("../lib/account-rules");
+const { EMAIL_RE, USERNAME_RE, validatePassword, safeText, dateOfBirthError, genderError } = require("../lib/account-rules");
 
 // Plant the JWT in the httpOnly session cookie. This is the SPA's
 // session of record, browser JS can neither read nor exfiltrate it.
@@ -214,6 +214,15 @@ async function addSessionExtras(pool, payload, userId) {
   payload.has_claim = await claims.hasOwnClaim(pool, userId);
   // A founder whose club is waiting on the federation (migration 096).
   payload.pending_club = await clubApprovals.pendingClubFor(pool, userId);
+  // Competition details (date of birth, gender): what entry eligibility
+  // reads (lib/entry-eligibility.js). The dashboard prompts a diver to
+  // fill them in and the profile editor shows the current values.
+  const details = await pool.query(
+    "SELECT to_char(date_of_birth, 'YYYY-MM-DD') AS date_of_birth, gender FROM users WHERE id = $1",
+    [userId],
+  );
+  payload.date_of_birth = details.rows[0]?.date_of_birth || null;
+  payload.gender = details.rows[0]?.gender || null;
   return payload;
 }
 
@@ -837,6 +846,7 @@ module.exports = function createAuthRouter({
     const {
       username, password, email, org_id, country_code, requested_role, note,
       club_id, new_club_name, new_club_short_code, region_code,
+      date_of_birth, gender,
     } = req.body || {};
     // Club-first signup (migration 087) sends a country instead of an org.
     // org_id still wins when both are present: that's the form telling us
@@ -880,6 +890,24 @@ module.exports = function createAuthRouter({
     if (typeof email !== "string" || email.length > 254 || !EMAIL_RE.test(email)) {
       return res.status(400).json({ error: "A valid email address is required for verification" });
     }
+    // Competition details. Every entry path checks the event's gender and
+    // age group against these (lib/entry-eligibility.js), so an account
+    // starts with them rather than an org admin typing them in later.
+    const dobErr = dateOfBirthError(date_of_birth, { required: true });
+    if (dobErr) return res.status(400).json({ error: dobErr, code: "date_of_birth_required" });
+    const genErr = genderError(gender, { required: true });
+    if (genErr) return res.status(400).json({ error: genErr, code: "gender_required" });
+    // Same rule as login (lib/direct-use-age.js): accounts are 13+, a
+    // younger diver gets a junior profile a parent or the club looks after.
+    if (isKnownUnderMinimumAge(date_of_birth)) {
+      return res.status(403).json({
+        error: `DivingHQ accounts are for people aged ${MINIMUM_DIRECT_USE_AGE} and older. `
+          + "A parent, coach or club admin can add a younger diver as a junior profile instead.",
+        code: "minimum_age",
+        junior_profiles: "/guide/junior-divers",
+      });
+    }
+    const cleanGender = gender.trim().toLowerCase();
 
     const client = await pool.connect();
     let newUserId = null;
@@ -1036,8 +1064,9 @@ module.exports = function createAuthRouter({
       // email_verified_at left NULL on purpose: gates login until
       // the user clicks the verification link.
       const uRes = await client.query(
-        "INSERT INTO users (username, password, full_name, email, org_id, club_id) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id",
-        [cleanUsername, hash, fullName, email, orgId, resolvedClubId],
+        `INSERT INTO users (username, password, full_name, email, org_id, club_id, date_of_birth, gender)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id`,
+        [cleanUsername, hash, fullName, email, orgId, resolvedClubId, date_of_birth, cleanGender],
       );
       newUserId = uRes.rows[0].id;
 
@@ -1575,6 +1604,71 @@ module.exports = function createAuthRouter({
       res.status(500).json({ error: "Password change failed" });
     } finally {
       client.release();
+    }
+  });
+
+  // -------------------------------------------------------------
+  // PUT /api/users/me/details
+  //
+  // Competition details a member sets for themselves: date of birth and
+  // gender. Accounts made before signup asked for them have neither, and
+  // in a club-first country there is no org admin to type them into the
+  // User Manager drawer, so until this every member there was
+  // ineligible for a men's, women's or age-group event. Entry
+  // eligibility (lib/entry-eligibility.js) reads exactly these two.
+  //
+  // Body: { date_of_birth?: "YYYY-MM-DD", gender?: "female" | "male" |
+  // "other" | "prefer_not_to_say" }. A field left out is unchanged; an
+  // empty string clears it. A date of birth under 13 is refused rather
+  // than saved: the account would be locked out on its next sign-in
+  // (lib/direct-use-age.js), and that diver belongs on a junior profile.
+  // Audit-logged as user.details_updated with the old and new values, so
+  // a meet manager can see a birthday that moved before an entry.
+  // -------------------------------------------------------------
+  router.put("/api/users/me/details", verifyToken, async (req, res) => {
+    const { date_of_birth, gender } = req.body || {};
+    if (date_of_birth === undefined && gender === undefined) {
+      return res.status(400).json({ error: "Nothing to update" });
+    }
+    const dobErr = dateOfBirthError(date_of_birth);
+    if (dobErr) return res.status(400).json({ error: dobErr });
+    const genErr = genderError(gender);
+    if (genErr) return res.status(400).json({ error: genErr });
+    if (date_of_birth && isKnownUnderMinimumAge(date_of_birth)) {
+      return res.status(403).json({
+        error: `DivingHQ accounts are for people aged ${MINIMUM_DIRECT_USE_AGE} and older. `
+          + `Contact ${supportContact()} if your date of birth needs correcting.`,
+        code: "minimum_age",
+      });
+    }
+    try {
+      const before = (await pool.query(
+        "SELECT to_char(date_of_birth, 'YYYY-MM-DD') AS date_of_birth, gender, full_name FROM users WHERE id = $1",
+        [req.user.id],
+      )).rows[0];
+      if (!before) return res.status(404).json({ error: "User not found" });
+      const nextDob = date_of_birth === undefined ? before.date_of_birth : (date_of_birth || null);
+      const nextGender = gender === undefined ? before.gender : (gender ? gender.trim().toLowerCase() : null);
+      await pool.query(
+        "UPDATE users SET date_of_birth = $1, gender = $2 WHERE id = $3",
+        [nextDob, nextGender, req.user.id],
+      );
+      await recordAudit(pool, {
+        ...auditFromReq(req),
+        org_id: req.user.org_id,
+        entity_type: "user",
+        entity_id: req.user.id,
+        entity_name: before.full_name,
+        action: "user.details_updated",
+        metadata: {
+          date_of_birth: { from: before.date_of_birth, to: nextDob },
+          gender: { from: before.gender, to: nextGender },
+        },
+      });
+      res.json({ ok: true, date_of_birth: nextDob, gender: nextGender });
+    } catch (err) {
+      console.error("[Details Update Error]", err.message);
+      res.status(500).json({ error: "Could not save your details" });
     }
   });
 

@@ -37,6 +37,7 @@ const { isUuid } = require("../lib/uuid");
 const { PUBLIC_CLUB_JOIN } = require("../lib/club-approvals");
 const { canSeeEvent } = require("../lib/event-visibility");
 const { customDivesOutOfRange } = require("../lib/custom-dive-dd");
+const { checkEntryEligibility, EVENT_ELIGIBILITY_COLUMNS } = require("../lib/entry-eligibility");
 const { expirePendingSignoffs, announceSignoffClosed } = require("./control-room-signoff");
 
 const EVENT_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -236,7 +237,8 @@ module.exports = function createControlRoomRouter({
       if (commit) await client.query(`SAVEPOINT row_${rowN}`);
       try {
         const u = await client.query(
-          "SELECT id, full_name FROM users WHERE username = $1 AND org_id = $2",
+          `SELECT id, full_name, gender, to_char(date_of_birth, 'YYYY-MM-DD') AS date_of_birth
+             FROM users WHERE username = $1 AND org_id = $2`,
           [username, event.org_id],
         );
         if (!u.rows.length) {
@@ -246,6 +248,15 @@ module.exports = function createControlRoomRouter({
         }
         const competitorId = u.rows[0].id;
         previewRow.full_name = u.rows[0].full_name;
+        // Same gender / age-group rule as every other entry path
+        // (lib/entry-eligibility.js); a row that fails it is reported
+        // like a bad dive code and the rest of the file still imports.
+        const eligibility = checkEntryEligibility({ event, diver: u.rows[0] });
+        if (!eligibility.allowed) {
+          stats.errors.push({ username, error: eligibility.reason, code: "ineligible" });
+          stats.rows.push(previewRow);
+          continue;
+        }
 
         let partnerId = null;
         if (partnerIdx >= 0) {
@@ -253,11 +264,18 @@ module.exports = function createControlRoomRouter({
           if (partnerName) {
             previewRow.partner_username = partnerName;
             const p = await client.query(
-              "SELECT id, full_name FROM users WHERE username = $1 AND org_id = $2",
+              `SELECT id, full_name, gender, to_char(date_of_birth, 'YYYY-MM-DD') AS date_of_birth
+                 FROM users WHERE username = $1 AND org_id = $2`,
               [partnerName, event.org_id],
             );
             if (!p.rows.length) {
               stats.errors.push({ username, error: `Partner ${partnerName} not found` });
+              stats.rows.push(previewRow);
+              continue;
+            }
+            const partnerEligibility = checkEntryEligibility({ event, diver: p.rows[0] });
+            if (!partnerEligibility.allowed) {
+              stats.errors.push({ username, error: `Partner ${partnerName}: ${partnerEligibility.reason}`, code: "ineligible" });
               stats.rows.push(previewRow);
               continue;
             }
@@ -1106,7 +1124,9 @@ module.exports = function createControlRoomRouter({
     }
     try {
       const ev = await pool.query(
-        "SELECT id, org_id, name, total_rounds FROM events WHERE id = $1 AND ($2::boolean OR org_id = $3)",
+        `SELECT e.id, e.org_id, e.name, e.total_rounds, ${EVENT_ELIGIBILITY_COLUMNS}
+           FROM events e LEFT JOIN meets m ON m.id = e.meet_id
+          WHERE e.id = $1 AND ($2::boolean OR e.org_id = $3)`,
         [req.params.id, !!req.user.is_system_admin, req.user.org_id],
       );
       if (!ev.rows.length) return res.status(404).json({ error: "Event not found" });
@@ -1123,11 +1143,19 @@ module.exports = function createControlRoomRouter({
       }
 
       const u = await pool.query(
-        "SELECT id, org_id, full_name FROM users WHERE id = $1",
+        `SELECT id, org_id, full_name, gender, to_char(date_of_birth, 'YYYY-MM-DD') AS date_of_birth
+           FROM users WHERE id = $1`,
         [competitor_id],
       );
       if (!u.rows.length || u.rows[0].org_id !== eventOrgId) {
         return res.status(400).json({ error: "Competitor must belong to this organisation" });
+      }
+      // A walk-up is still an entry: the event's gender and age group
+      // apply to the diver (and the synchro partner below) the same as
+      // on Dive Sheets (lib/entry-eligibility.js).
+      const eligibility = checkEntryEligibility({ event: ev.rows[0], diver: u.rows[0] });
+      if (!eligibility.allowed) {
+        return res.status(400).json({ error: eligibility.reason, code: "ineligible", eligibility_code: eligibility.code });
       }
 
       // An attached partner / team must belong to the same org as the
@@ -1137,11 +1165,16 @@ module.exports = function createControlRoomRouter({
       // and would leak that foreign user's name + country.
       if (partner_id) {
         const p = await pool.query(
-          "SELECT 1 FROM users WHERE id = $1 AND org_id = $2",
+          `SELECT id, full_name, gender, to_char(date_of_birth, 'YYYY-MM-DD') AS date_of_birth
+             FROM users WHERE id = $1 AND org_id = $2`,
           [partner_id, eventOrgId],
         );
         if (!p.rows.length) {
           return res.status(400).json({ error: "Partner must belong to this organisation" });
+        }
+        const partnerEligibility = checkEntryEligibility({ event: ev.rows[0], diver: p.rows[0] });
+        if (!partnerEligibility.allowed) {
+          return res.status(400).json({ error: partnerEligibility.reason, code: "ineligible", eligibility_code: partnerEligibility.code });
         }
       }
       if (team_id) {
@@ -1229,7 +1262,9 @@ module.exports = function createControlRoomRouter({
       let inTransaction = false;
       try {
         const ev = await client.query(
-          "SELECT id, org_id, height, total_rounds, event_type FROM events WHERE id = $1 AND ($2::boolean OR org_id = $3)",
+          `SELECT e.id, e.org_id, e.height, e.total_rounds, e.event_type, ${EVENT_ELIGIBILITY_COLUMNS}
+             FROM events e LEFT JOIN meets m ON m.id = e.meet_id
+            WHERE e.id = $1 AND ($2::boolean OR e.org_id = $3)`,
           [req.params.id, !!req.user.is_system_admin, req.user.org_id],
         );
         if (!ev.rows.length) {

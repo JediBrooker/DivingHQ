@@ -85,7 +85,12 @@
       "founder_role_note": "Као оснивач клуба не можете да одобрите сопствени захтев за тренера или судију, па га прегледају администратори ваше регије или DivingHQ.",
       "spectator_note_see_above": "Сви налози почињу као Гледалац. Улога коју горе затражите прегледа се како каже напомена испод ње. Моћи ћете да се пријавите након потврде е-поште.",
       "username_taken": "То корисничко име је заузето. Изаберите друго.",
-      "age_confirmation": "Имам 13 година или више."
+      "age_confirmation": "Имам 13 година или више.",
+      "date_of_birth": "Datum rođenja",
+      "dob_hint": "Određuje u kojim uzrasnim kategorijama možete nastupati. Uzrast se računa na dan 31. decembra godine takmičenja (World Aquatics, član 1.8).",
+      "gender": "Pol",
+      "gender_hint": "Muške i ženske discipline to proveravaju; mešovite discipline otvorene su za sve.",
+      "under_13": "DivingHQ nalozi su za osobe od 13 godina i starije. Roditelj, trener ili administrator kluba može umesto toga dodati mlađeg skakača kao juniorski profil (vidi Juniori u vodiču)."
     },
     "register_org": {
       "title": "Регистрација организације",
@@ -185,6 +190,13 @@
       "next_claim_sysadmin": "Након потврде ваш захтев се отвара, а разматра га тим DivingHQ-а. Можете да се пријавите док се одлучује."
     }
   },
+  "genders": {
+    "placeholder": "— Izaberite —",
+    "female": "Ženski",
+    "male": "Muški",
+    "other": "Drugo",
+    "prefer_not_to_say": "Ne želim da kažem"
+  },
   "coach": {
     "dashboard": {
       "label": "Тренерова табла",
@@ -262,7 +274,8 @@
       "badge_can_withdraw": "Може да повуче",
       "badge_can_withdraw_tip": "Пријављене скакаче можете да повучете са овог такмичења.",
       "badge_read_only": "Само читање",
-      "badge_read_only_tip": "Ово такмичење можете да прегледате, али измене су затворене или их ваша тренерска веза не дозвољава."
+      "badge_read_only_tip": "Ово такмичење можете да прегледате, али измене су затворене или их ваша тренерска веза не дозвољава.",
+      "badge_ineligible": "Nema pravo nastupa"
     }
   },
   "home": {
@@ -431,7 +444,9 @@
     },
     "diver_panel": {
       "live_meta": "Додирните да видите свој следећи скок, тренутни пласман и шта вам је потребно да бисте остварили резултат",
-      "next_fallback": "Прођите кроз алатку за састављање листе скокова"
+      "next_fallback": "Прођите кроз алатку за састављање листе скокова",
+      "details_title": "Dopunite svoje takmičarske podatke",
+      "details_body": "Dodajte datum rođenja i pol da biste mogli da budete prijavljeni na muške, ženske i uzrasne discipline."
     },
     "activity": {
       "view_full_log": "Погледајте пун дневник ревизије →",
@@ -527,7 +542,17 @@
       "conflict": "Спајање није могуће: и стари налог и твој тренутни налог имају записе за исти догађај и круг. Уклони ознаку са кандидата који је у сукобу или пиши на {email} па ћемо их спојити ручно.",
       "success_toast": "Прошли резултати поново повезани са твојим профилом."
     },
-    "club_request_sent": "Захтев је послат. Прелазак ће бити обављен када буде одобрен: од вашег савеза или, где га још нема, од администратора новог клуба."
+    "club_request_sent": "Захтев је послат. Прелазак ће бити обављен када буде одобрен: од вашег савеза или, где га још нема, од администратора новог клуба.",
+    "details": {
+      "title": "Takmičarski podaci",
+      "body": "Vaš datum rođenja i pol određuju na koje discipline možete da se prijavite: muške i ženske discipline proveravaju pol, a uzrasne kategorije računaju vaš uzrast na dan 31. decembra godine takmičenja.",
+      "missing": "Popunite oboje pre prijave na disciplinu. Muška, ženska ili uzrasna disciplina ne može da vas primi bez toga.",
+      "date_of_birth": "Datum rođenja",
+      "gender": "Pol",
+      "save": "Sačuvaj",
+      "saved": "Sačuvano",
+      "failed": "Vaši podaci nisu mogli da budu sačuvani"
+    }
   },
   "scoreboard": {
     "page_label": "Семафор",

@@ -85,7 +85,12 @@
       "founder_role_note": "Seuran perustajana et voi hyväksyä omaa valmentaja- tai tuomaripyyntöäsi, joten sen käsittelevät alueesi ylläpitäjät tai DivingHQ.",
       "spectator_note_see_above": "Kaikki tilit alkavat katsojan oikeuksilla. Yllä pyytämäsi rooli käsitellään sen alla olevan huomautuksen mukaisesti. Voit kirjautua, kun sähköpostisi on vahvistettu.",
       "username_taken": "Käyttäjätunnus on jo käytössä. Valitse toinen.",
-      "age_confirmation": "Olen vähintään 13-vuotias."
+      "age_confirmation": "Olen vähintään 13-vuotias.",
+      "date_of_birth": "Syntymäaika",
+      "dob_hint": "Määrää, mihin ikäluokkiin voit osallistua. Ikä lasketaan kilpailuvuoden 31. joulukuuta (World Aquatics, artikla 1.8).",
+      "gender": "Sukupuoli",
+      "gender_hint": "Miesten ja naisten kilpailut tarkistavat tämän; sekakilpailut ovat avoimia kaikille.",
+      "under_13": "DivingHQ-tilit on tarkoitettu 13 vuotta täyttäneille. Vanhempi, valmentaja tai seuran ylläpitäjä voi sen sijaan lisätä nuoremman hyppääjän junioriprofiilina (katso oppaan kohta Juniorihyppääjät)."
     },
     "register_org": {
       "title": "Rekisteröi organisaatio",
@@ -185,6 +190,13 @@
       "next_claim_sysadmin": "Vahvistuksen jälkeen vaateesi avataan ja DivingHQ-tiimi käsittelee sen. Voit kirjautua sisään päätöksen aikana."
     }
   },
+  "genders": {
+    "placeholder": "— Valitse —",
+    "female": "Nainen",
+    "male": "Mies",
+    "other": "Muu",
+    "prefer_not_to_say": "En halua sanoa"
+  },
   "coach": {
     "dashboard": {
       "label": "Valmentajan paneeli",
@@ -262,7 +274,8 @@
       "badge_can_withdraw": "Voi vetää pois",
       "badge_can_withdraw_tip": "Voit vetää ilmoittautuneita hyppääjiä pois tästä kilpailusta.",
       "badge_read_only": "Vain luku",
-      "badge_read_only_tip": "Voit katsoa tätä kilpailua, mutta muokkaus on suljettu tai valmentajalinkkisi ei salli sitä."
+      "badge_read_only_tip": "Voit katsoa tätä kilpailua, mutta muokkaus on suljettu tai valmentajalinkkisi ei salli sitä.",
+      "badge_ineligible": "Ei osallistumisoikeutta"
     }
   },
   "home": {
@@ -431,7 +444,9 @@
     },
     "diver_panel": {
       "live_meta": "Napauta nähdäksesi seuraavan hyppysi, nykyisen sijoituksesi ja mitä sinun tarvitsee tehdä saadaksesi pisteitä",
-      "next_fallback": "Käy hyppylistan rakentaja läpi"
+      "next_fallback": "Käy hyppylistan rakentaja läpi",
+      "details_title": "Täydennä kilpailutietosi",
+      "details_body": "Lisää syntymäaikasi ja sukupuolesi, jotta sinut voidaan ilmoittaa miesten, naisten ja ikäluokkakilpailuihin."
     },
     "activity": {
       "view_full_log": "Näytä koko audit-loki →",
@@ -538,7 +553,17 @@
       "conflict": "Yhdistäminen ei onnistu: sekä vanhalla tilillä että nykyisellä tililläsi on merkintöjä samasta tapahtumasta ja erästä. Poista rasti ristiriitaiselta ehdokkaalta, tai kirjoita osoitteeseen {email}, niin yhdistämme tilit käsin.",
       "success_toast": "Aiemmat tulokset uudelleenliitetty profiiliisi."
     },
-    "club_request_sent": "Pyyntö lähetetty. Siirryt, kun se on hyväksytty: liittosi tai, jos liittoa ei vielä ole, uuden seuran ylläpitäjät hyväksyvät sen."
+    "club_request_sent": "Pyyntö lähetetty. Siirryt, kun se on hyväksytty: liittosi tai, jos liittoa ei vielä ole, uuden seuran ylläpitäjät hyväksyvät sen.",
+    "details": {
+      "title": "Kilpailutiedot",
+      "body": "Syntymäaikasi ja sukupuolesi määräävät, mihin kilpailuihin voit ilmoittautua: miesten ja naisten kilpailut tarkistavat sukupuolen, ja ikäluokkakilpailut käyttävät ikääsi kilpailuvuoden 31. joulukuuta.",
+      "missing": "Täytä molemmat ennen kilpailuun ilmoittautumista. Miesten, naisten tai ikäluokkakilpailu ei voi ottaa sinua ilman niitä.",
+      "date_of_birth": "Syntymäaika",
+      "gender": "Sukupuoli",
+      "save": "Tallenna",
+      "saved": "Tallennettu",
+      "failed": "Tietojasi ei voitu tallentaa"
+    }
   },
   "scoreboard": {
     "page_label": "Tulostaulu",

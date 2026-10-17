@@ -85,7 +85,12 @@
       "founder_role_note": "Como fundador del club no puedes aprobar tu propia solicitud de entrenador o juez, así que la revisan los administradores de tu región o DivingHQ.",
       "spectator_note_see_above": "Todas las cuentas empiezan como Espectador. El rol que solicites arriba se revisa como indica la nota que tiene debajo. Podrás iniciar sesión cuando verifiques tu correo.",
       "username_taken": "Ese nombre de usuario ya está en uso. Elige otro.",
-      "age_confirmation": "Tengo 13 años o más."
+      "age_confirmation": "Tengo 13 años o más.",
+      "date_of_birth": "Fecha de nacimiento",
+      "dob_hint": "Determina en qué categorías de edad puedes participar. La edad se toma a 31 de diciembre del año de la competición (World Aquatics, artículo 1.8).",
+      "gender": "Género",
+      "gender_hint": "Las pruebas masculinas y femeninas lo comprueban; las pruebas mixtas admiten a cualquiera.",
+      "under_13": "Las cuentas de DivingHQ son para personas de 13 años o más. Un padre, madre, entrenador o administrador de club puede añadir a un saltador más joven como perfil júnior (consulta Saltadores júnior en la guía)."
     },
     "register_org": {
       "title": "Registrar Organización",
@@ -185,6 +190,13 @@
       "next_claim_sysadmin": "Cuando lo verifiques, tu solicitud se abrirá y el equipo de DivingHQ la revisará. Puedes iniciar sesión mientras se decide."
     }
   },
+  "genders": {
+    "placeholder": "— Seleccionar —",
+    "female": "Femenino",
+    "male": "Masculino",
+    "other": "Otro",
+    "prefer_not_to_say": "Prefiero no decirlo"
+  },
   "coach": {
     "dashboard": {
       "label": "Panel de Entrenador",
@@ -262,7 +274,8 @@
       "badge_can_withdraw": "Puede retirar",
       "badge_can_withdraw_tip": "Puedes retirar a saltadores inscritos de esta prueba.",
       "badge_read_only": "Solo lectura",
-      "badge_read_only_tip": "Puedes ver esta prueba, pero los cambios están cerrados o tu vínculo de entrenador no los permite."
+      "badge_read_only_tip": "Puedes ver esta prueba, pero los cambios están cerrados o tu vínculo de entrenador no los permite.",
+      "badge_ineligible": "No elegible"
     }
   },
   "home": {
@@ -431,7 +444,9 @@
     },
     "diver_panel": {
       "live_meta": "Tocad para ver vuestro siguiente salto, la posición actual y lo que necesitáis para puntuar",
-      "next_fallback": "Recorred el asistente de creación de listas de saltos"
+      "next_fallback": "Recorred el asistente de creación de listas de saltos",
+      "details_title": "Completa tus datos de competición",
+      "details_body": "Añade tu fecha de nacimiento y tu género para poder inscribirte en pruebas masculinas, femeninas y por categoría de edad."
     },
     "activity": {
       "view_full_log": "Ver el registro de auditoría completo →",
@@ -527,7 +542,17 @@
       "conflict": "No se puede fusionar: la cuenta antigua y tu cuenta actual tienen ambas inscripciones para el mismo evento y ronda. Desmarca el candidato en conflicto, o escribe a {email} y las fusionaremos a mano.",
       "success_toast": "Resultados anteriores re-vinculados a tu perfil."
     },
-    "club_request_sent": "Solicitud enviada. Te cambiarás cuando se apruebe: por tu federación o, donde aún no la haya, por los administradores del nuevo club."
+    "club_request_sent": "Solicitud enviada. Te cambiarás cuando se apruebe: por tu federación o, donde aún no la haya, por los administradores del nuevo club.",
+    "details": {
+      "title": "Datos de competición",
+      "body": "Tu fecha de nacimiento y tu género determinan en qué pruebas puedes inscribirte: las pruebas masculinas y femeninas comprueban el género, y las pruebas por categoría de edad toman tu edad a 31 de diciembre del año de la competición.",
+      "missing": "Añade ambos antes de inscribirte en una prueba. Una prueba masculina, femenina o por categoría de edad no puede admitirte sin ellos.",
+      "date_of_birth": "Fecha de nacimiento",
+      "gender": "Género",
+      "save": "Guardar",
+      "saved": "Guardado",
+      "failed": "No se pudieron guardar tus datos"
+    }
   },
   "scoreboard": {
     "page_label": "Marcador",

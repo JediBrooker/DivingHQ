@@ -85,7 +85,12 @@
       "founder_role_note": "Como fundador do clube, não pode aprovar o seu próprio pedido de treinador ou juiz, por isso é analisado pelos administradores da sua região ou pela DivingHQ.",
       "spectator_note_see_above": "Todas as contas começam como Espectador. A função que solicitar acima é analisada como indica a nota por baixo. Pode iniciar sessão depois de verificar o seu e-mail.",
       "username_taken": "Esse nome de utilizador já está a ser usado. Escolha outro.",
-      "age_confirmation": "Tenho 13 anos ou mais."
+      "age_confirmation": "Tenho 13 anos ou mais.",
+      "date_of_birth": "Data de nascimento",
+      "dob_hint": "Define em que escalões etários pode participar. A idade conta-se a 31 de dezembro do ano da competição (World Aquatics, artigo 1.8).",
+      "gender": "Género",
+      "gender_hint": "As provas masculinas e femininas verificam-no; as provas mistas aceitam qualquer pessoa.",
+      "under_13": "As contas DivingHQ destinam-se a pessoas com 13 anos ou mais. Um pai, mãe, treinador ou administrador de clube pode, em vez disso, adicionar um saltador mais novo como perfil júnior (ver Saltadores júnior no guia)."
     },
     "register_org": {
       "title": "Registar Organização",
@@ -185,6 +190,13 @@
       "next_claim_sysadmin": "Depois da verificação, a sua reivindicação é aberta e a equipa da DivingHQ analisa-a. Pode iniciar sessão enquanto se decide."
     }
   },
+  "genders": {
+    "placeholder": "— Selecionar —",
+    "female": "Feminino",
+    "male": "Masculino",
+    "other": "Outro",
+    "prefer_not_to_say": "Prefiro não dizer"
+  },
   "coach": {
     "dashboard": {
       "label": "Painel do Treinador",
@@ -262,7 +274,8 @@
       "badge_can_withdraw": "Pode retirar",
       "badge_can_withdraw_tip": "Pode retirar saltadores inscritos desta prova.",
       "badge_read_only": "Só leitura",
-      "badge_read_only_tip": "Pode ver esta prova, mas as alterações estão fechadas ou a sua ligação de treinador não as permite."
+      "badge_read_only_tip": "Pode ver esta prova, mas as alterações estão fechadas ou a sua ligação de treinador não as permite.",
+      "badge_ineligible": "Não elegível"
     }
   },
   "home": {
@@ -431,7 +444,9 @@
     },
     "diver_panel": {
       "live_meta": "Toque para ver o seu próximo salto, classificação atual e o que precisa para pontuar",
-      "next_fallback": "Percorra o construtor de listas de saltos"
+      "next_fallback": "Percorra o construtor de listas de saltos",
+      "details_title": "Complete os seus dados de competição",
+      "details_body": "Adicione a sua data de nascimento e o seu género para poder ser inscrito em provas masculinas, femininas e por escalão etário."
     },
     "activity": {
       "view_full_log": "Ver registo de auditoria completo →",
@@ -538,7 +553,17 @@
       "conflict": "Não é possível fundir: a conta antiga e a tua conta atual têm ambas inscrições para a mesma prova e ronda. Desmarca o candidato em conflito, ou escreve para {email} e fundimo-las manualmente.",
       "success_toast": "Resultados anteriores religados ao teu perfil."
     },
-    "club_request_sent": "Pedido enviado. A mudança acontece depois de aprovada: pela sua federação ou, onde ainda não existe, pelos administradores do novo clube."
+    "club_request_sent": "Pedido enviado. A mudança acontece depois de aprovada: pela sua federação ou, onde ainda não existe, pelos administradores do novo clube.",
+    "details": {
+      "title": "Dados de competição",
+      "body": "A sua data de nascimento e o seu género definem em que provas se pode inscrever: as provas masculinas e femininas verificam o género, e as provas por escalão etário usam a sua idade a 31 de dezembro do ano da competição.",
+      "missing": "Preencha ambos antes de se inscrever numa prova. Uma prova masculina, feminina ou por escalão etário não o pode aceitar sem eles.",
+      "date_of_birth": "Data de nascimento",
+      "gender": "Género",
+      "save": "Guardar",
+      "saved": "Guardado",
+      "failed": "Não foi possível guardar os seus dados"
+    }
   },
   "scoreboard": {
     "page_label": "Painel de resultados",

@@ -40,7 +40,7 @@ test("diver registers, gates on email verification, then submits a dive list", a
   const username = `e2e-diver-${slug}`;
   const email    = `e2e-diver-${slug}@example.test`;
   const reg = await request.post("/api/auth/register", {
-    data: { age_13_or_older: true,
+    data: { age_13_or_older: true, date_of_birth: "1990-06-15", gender: "female",
       username,
       password:        setup.TEST_PASSWORD,
       email,

@@ -1190,6 +1190,7 @@ function detachSocketHandlers() {
       v-else-if="activeTab === 'diver'"
       :diver-next-meet="diverNextMeet"
       :diver-live-meet="diverLiveMeet"
+      :details-missing="!!auth.user && (!auth.user.date_of_birth || !auth.user.gender)"
       :fmt-closes="fmtCloses"    />
     <OtherPanel
       v-else-if="activeTab === 'other'"    />

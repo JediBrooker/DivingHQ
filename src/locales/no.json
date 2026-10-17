@@ -85,7 +85,12 @@
       "founder_role_note": "Som klubbens grunnlegger kan du ikke godkjenne din egen forespørsel om å bli trener eller dommer, så den går til regionens administratorer eller til DivingHQ.",
       "spectator_note_see_above": "Alle kontoer starter som tilskuer. En rolle du ber om ovenfor, vurderes slik merknaden under den sier. Du kan logge inn når e-posten din er bekreftet.",
       "username_taken": "Det brukernavnet er tatt. Velg et annet.",
-      "age_confirmation": "Jeg er 13 år eller eldre."
+      "age_confirmation": "Jeg er 13 år eller eldre.",
+      "date_of_birth": "Fødselsdato",
+      "dob_hint": "Avgjør hvilke aldersklasser du kan delta i. Alderen regnes per 31. desember i konkurranseåret (World Aquatics artikkel 1.8).",
+      "gender": "Kjønn",
+      "gender_hint": "Herre- og damekonkurranser sjekker dette; mixede konkurranser er åpne for alle.",
+      "under_13": "DivingHQ-kontoer er for personer på 13 år og eldre. En forelder, trener eller klubbadministrator kan i stedet legge til en yngre stuper som juniorprofil (se Juniorstupere i veiledningen)."
     },
     "register_org": {
       "title": "Registrer organisasjon",
@@ -185,6 +190,13 @@
       "next_claim_sysadmin": "Når du er bekreftet, åpnes kravet ditt, og DivingHQ-teamet vurderer det. Du kan logge inn mens det avgjøres."
     }
   },
+  "genders": {
+    "placeholder": "— Velg —",
+    "female": "Kvinne",
+    "male": "Mann",
+    "other": "Annet",
+    "prefer_not_to_say": "Ønsker ikke å oppgi"
+  },
   "coach": {
     "dashboard": {
       "label": "Trenerens oversikt",
@@ -262,7 +274,8 @@
       "badge_can_withdraw": "Kan trekke",
       "badge_can_withdraw_tip": "Du kan trekke påmeldte stupere fra denne konkurransen.",
       "badge_read_only": "Kun lesing",
-      "badge_read_only_tip": "Du kan se denne konkurransen, men endringer er stengt eller ikke tillatt med trenerkoblingen din."
+      "badge_read_only_tip": "Du kan se denne konkurransen, men endringer er stengt eller ikke tillatt med trenerkoblingen din.",
+      "badge_ineligible": "Ikke kvalifisert"
     }
   },
   "home": {
@@ -431,7 +444,9 @@
     },
     "diver_panel": {
       "live_meta": "Trykk for å se ditt neste stup, nåværende plassering, og hva du trenger for å få poeng",
-      "next_fallback": "Gå gjennom stupelistebyggeren"
+      "next_fallback": "Gå gjennom stupelistebyggeren",
+      "details_title": "Fullfør konkurranseopplysningene dine",
+      "details_body": "Legg til fødselsdato og kjønn slik at du kan meldes på herre-, dame- og aldersklassekonkurranser."
     },
     "activity": {
       "view_full_log": "Se full revisjonslogg →",
@@ -538,7 +553,17 @@
       "conflict": "Kan ikke slå sammen: både den gamle kontoen og din nåværende konto har oppføringer for samme stevne og runde. Fjern haken fra kandidaten som kolliderer, eller skriv til {email}, så slår vi dem sammen manuelt.",
       "success_toast": "Tidligere resultater knyttet til profilen din igjen."
     },
-    "club_request_sent": "Forespørselen er sendt. Du flyttes når den er godkjent: av forbundet ditt, eller der det ikke finnes et ennå, av den nye klubbens administratorer."
+    "club_request_sent": "Forespørselen er sendt. Du flyttes når den er godkjent: av forbundet ditt, eller der det ikke finnes et ennå, av den nye klubbens administratorer.",
+    "details": {
+      "title": "Konkurranseopplysninger",
+      "body": "Fødselsdatoen og kjønnet ditt avgjør hvilke konkurranser du kan melde deg på: herre- og damekonkurranser sjekker kjønn, og aldersklassekonkurranser bruker alderen din per 31. desember i konkurranseåret.",
+      "missing": "Fyll ut begge før du melder deg på en konkurranse. En herre-, dame- eller aldersklassekonkurranse kan ikke ta deg inn uten dem.",
+      "date_of_birth": "Fødselsdato",
+      "gender": "Kjønn",
+      "save": "Lagre",
+      "saved": "Lagret",
+      "failed": "Kunne ikke lagre opplysningene dine"
+    }
   },
   "scoreboard": {
     "page_label": "Resultattavle",

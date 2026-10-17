@@ -16,7 +16,7 @@ import RequestRoleDialog     from '@/components/RequestRoleDialog.vue'
 // Preferences (own profile): appearance + language, per the redesign.
 import ThemeToggle from '@/components/ThemeToggle.vue'
 import LocaleSwitcher from '@/components/LocaleSwitcher.vue'
-import { Palette, Languages } from '@lucide/vue'
+import { Palette, Languages, CalendarDays } from '@lucide/vue'
 
 // Per-widget components, see src/components/profile-widgets/.
 // Each takes a `data` prop (the relevant analytics / profile
@@ -78,6 +78,44 @@ const WIDGET_CATALOG = [
 // :id route param is optional, falls back to the logged-in user.
 const targetId = computed(() => route.params.id || auth.user?.id)
 const isSelf = computed(() => targetId.value && targetId.value === auth.user?.id)
+
+// Competition details (own profile): date of birth and gender, the two
+// fields entry eligibility reads (lib/entry-eligibility.js). Saved through
+// PUT /api/users/me/details and mirrored into the session user so the
+// dashboard prompt and Dive Sheets pick the change up without a reload.
+const detailsDob = ref('')
+const detailsGender = ref('')
+const detailsSaving = ref(false)
+const detailsMsg = ref('')
+const detailsErr = ref('')
+const detailsToday = new Date().toISOString().slice(0, 10)
+const detailsMissing = computed(() => isSelf.value && !!auth.user && (!auth.user.date_of_birth || !auth.user.gender))
+const detailsDirty = computed(() =>
+  (detailsDob.value || '') !== (auth.user?.date_of_birth || '')
+  || (detailsGender.value || '') !== (auth.user?.gender || ''),
+)
+watch(() => auth.user, (u) => {
+  detailsDob.value = u?.date_of_birth || ''
+  detailsGender.value = u?.gender || ''
+}, { immediate: true })
+async function saveDetails() {
+  detailsMsg.value = ''
+  detailsErr.value = ''
+  detailsSaving.value = true
+  try {
+    const saved = await auth.apiFetch('/api/users/me/details', {
+      method: 'PUT',
+      body: JSON.stringify({ date_of_birth: detailsDob.value || '', gender: detailsGender.value || '' }),
+    })
+    auth.saveSession({ ...auth.user, date_of_birth: saved.date_of_birth, gender: saved.gender })
+    detailsMsg.value = t('profile.details.saved')
+    setTimeout(() => { detailsMsg.value = '' }, 4000)
+  } catch (err) {
+    detailsErr.value = err?.message || t('profile.details.failed')
+  } finally {
+    detailsSaving.value = false
+  }
+}
 
 // Widget toggles + order (Customise modal), the date-range filter and
 // the print button, shared with the judge analysis page. Choices persist
@@ -720,6 +758,48 @@ function onClaimed() {
          someone else's profile. Pinned to the bottom via a high
          CSS order so account-management actions stay below the
          analytics widgets even when widgets get reordered. -->
+    <!-- Competition details (own profile only). Entry eligibility
+         checks the event's gender and age group against these; a
+         diver with either missing can't enter a men's, women's or
+         age-group event and the dashboard sends them here. -->
+    <section v-if="isSelf" class="pref-section" :style="{ order: 8900 }" data-test-id="competition-details">
+      <h2 class="pref-title">{{ $t('profile.details.title') }}</h2>
+      <div class="pref-card">
+        <div class="set-row details-row">
+          <div class="set-row-info">
+            <div class="set-ic"><CalendarDays /></div>
+            <div>
+              <div class="set-title">{{ $t('profile.details.title') }}</div>
+              <div class="set-desc">{{ $t('profile.details.body') }}</div>
+              <div v-if="detailsMissing" class="set-desc details-missing">{{ $t('profile.details.missing') }}</div>
+            </div>
+          </div>
+          <form class="set-control details-form" @submit.prevent="saveDetails">
+            <label class="details-field">
+              <span class="label">{{ $t('profile.details.date_of_birth') }}</span>
+              <input class="input" type="date" v-model="detailsDob" :max="detailsToday" min="1900-01-01"
+                     autocomplete="bday" data-test-id="details-dob">
+            </label>
+            <label class="details-field">
+              <span class="label">{{ $t('profile.details.gender') }}</span>
+              <select class="select" v-model="detailsGender" data-test-id="details-gender">
+                <option value="">{{ $t('genders.placeholder') }}</option>
+                <option value="female">{{ $t('genders.female') }}</option>
+                <option value="male">{{ $t('genders.male') }}</option>
+                <option value="other">{{ $t('genders.other') }}</option>
+                <option value="prefer_not_to_say">{{ $t('genders.prefer_not_to_say') }}</option>
+              </select>
+            </label>
+            <button type="submit" class="btn btn-primary btn-sm" :disabled="detailsSaving || !detailsDirty" data-test-id="details-save">
+              {{ detailsSaving ? '…' : $t('profile.details.save') }}
+            </button>
+            <span v-if="detailsMsg" class="details-msg ok" role="status">{{ detailsMsg }}</span>
+            <span v-if="detailsErr" class="details-msg err" role="alert">{{ detailsErr }}</span>
+          </form>
+        </div>
+      </div>
+    </section>
+
     <!-- Preferences (own profile only): appearance + language.
          Surfaced here per the redesign; both controls persist
          globally (theme via the ui store, locale via vue-i18n). -->

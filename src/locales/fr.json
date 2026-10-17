@@ -85,7 +85,12 @@
       "founder_role_note": "En tant que fondateur du club, vous ne pouvez pas approuver votre propre demande d'entraîneur ou de juge : elle part aux administrateurs de votre région, ou à DivingHQ.",
       "spectator_note_see_above": "Tous les comptes commencent en tant que Spectateur. Le rôle que vous demandez ci-dessus est examiné comme l'indique la note juste en dessous. Vous pourrez vous connecter une fois votre e-mail vérifié.",
       "username_taken": "Ce nom d'utilisateur est déjà pris. Choisissez-en un autre.",
-      "age_confirmation": "J’ai 13 ans ou plus."
+      "age_confirmation": "J’ai 13 ans ou plus.",
+      "date_of_birth": "Date de naissance",
+      "dob_hint": "Détermine les catégories d'âge auxquelles vous pouvez participer. L'âge est pris au 31 décembre de l'année de la compétition (World Aquatics, article 1.8).",
+      "gender": "Genre",
+      "gender_hint": "Les épreuves hommes et dames le vérifient ; les épreuves mixtes sont ouvertes à tous.",
+      "under_13": "Les comptes DivingHQ sont réservés aux personnes de 13 ans et plus. Un parent, un entraîneur ou un administrateur de club peut plutôt ajouter un plongeur plus jeune comme profil junior (voir Jeunes plongeurs dans le guide)."
     },
     "register_org": {
       "title": "Inscrire une organisation",
@@ -185,6 +190,13 @@
       "next_claim_sysadmin": "Une fois la vérification faite, votre revendication s'ouvre et l'équipe DivingHQ l'examine. Vous pouvez vous connecter pendant la décision."
     }
   },
+  "genders": {
+    "placeholder": "— Sélectionner —",
+    "female": "Féminin",
+    "male": "Masculin",
+    "other": "Autre",
+    "prefer_not_to_say": "Préfère ne pas répondre"
+  },
   "coach": {
     "dashboard": {
       "label": "Tableau de bord Entraîneur",
@@ -262,7 +274,8 @@
       "badge_can_withdraw": "Peut retirer",
       "badge_can_withdraw_tip": "Vous pouvez retirer des plongeurs inscrits de cette épreuve.",
       "badge_read_only": "Lecture seule",
-      "badge_read_only_tip": "Vous pouvez consulter cette épreuve, mais les modifications sont fermées ou non autorisées par votre lien d'entraîneur."
+      "badge_read_only_tip": "Vous pouvez consulter cette épreuve, mais les modifications sont fermées ou non autorisées par votre lien d'entraîneur.",
+      "badge_ineligible": "Non éligible"
     }
   },
   "home": {
@@ -431,7 +444,9 @@
     },
     "diver_panel": {
       "live_meta": "Touchez pour voir votre prochain plongeon, votre classement actuel et ce qu'il vous faut marquer",
-      "next_fallback": "Parcourez le générateur de listes de plongeons"
+      "next_fallback": "Parcourez le générateur de listes de plongeons",
+      "details_title": "Complétez vos informations de compétition",
+      "details_body": "Ajoutez votre date de naissance et votre genre pour pouvoir être inscrit aux épreuves hommes, dames et par catégorie d'âge."
     },
     "activity": {
       "view_full_log": "Voir le journal d'audit complet →",
@@ -538,7 +553,17 @@
       "conflict": "Fusion impossible : l’ancien compte et votre compte actuel ont tous deux des inscriptions pour la même épreuve et le même tour. Décochez le candidat en conflit, ou écrivez à {email} et nous les fusionnerons à la main.",
       "success_toast": "Résultats passés re-rattachés à votre profil."
     },
-    "club_request_sent": "Demande envoyée. Le changement se fera une fois approuvé : par votre fédération, ou là où il n'y en a pas encore, par les administrateurs du nouveau club."
+    "club_request_sent": "Demande envoyée. Le changement se fera une fois approuvé : par votre fédération, ou là où il n'y en a pas encore, par les administrateurs du nouveau club.",
+    "details": {
+      "title": "Informations de compétition",
+      "body": "Votre date de naissance et votre genre déterminent les épreuves auxquelles vous pouvez vous inscrire : les épreuves hommes et dames vérifient le genre, les épreuves par catégorie d'âge prennent votre âge au 31 décembre de l'année de la compétition.",
+      "missing": "Renseignez les deux avant de vous inscrire à une épreuve. Une épreuve hommes, dames ou par catégorie d'âge ne peut pas vous accepter sans cela.",
+      "date_of_birth": "Date de naissance",
+      "gender": "Genre",
+      "save": "Enregistrer",
+      "saved": "Enregistré",
+      "failed": "Impossible d'enregistrer vos informations"
+    }
   },
   "scoreboard": {
     "page_label": "Tableau",

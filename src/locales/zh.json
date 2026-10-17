@@ -85,7 +85,12 @@
       "founder_role_note": "作为俱乐部创始人，您不能批准自己成为教练或裁判的申请，因此将由您所在地区的管理员或 DivingHQ 审核。",
       "spectator_note_see_above": "所有账户起初均为观众。您在上方申请的角色将按其下方说明进行审核。验证邮箱后即可登录。",
       "username_taken": "该用户名已被使用，请换一个。",
-      "age_confirmation": "我已年满13岁。"
+      "age_confirmation": "我已年满13岁。",
+      "date_of_birth": "出生日期",
+      "dob_hint": "决定你可以参加哪些年龄组。年龄按比赛年度 12 月 31 日计算（World Aquatics 第 1.8 条）。",
+      "gender": "性别",
+      "gender_hint": "男子和女子项目会核对此项；混合项目对所有人开放。",
+      "under_13": "DivingHQ 账户面向 13 岁及以上人士。年龄更小的运动员可由家长、教练或俱乐部管理员添加为青少年档案（见指南中的“青少年运动员”）。"
     },
     "register_org": {
       "title": "注册机构",
@@ -185,6 +190,13 @@
       "next_claim_sysadmin": "验证后，你的认领申请即开启，由 DivingHQ 团队审核。决定期间你也可以登录。"
     }
   },
+  "genders": {
+    "placeholder": "— 请选择 —",
+    "female": "女",
+    "male": "男",
+    "other": "其他",
+    "prefer_not_to_say": "不愿透露"
+  },
   "coach": {
     "dashboard": {
       "label": "教练控制台",
@@ -262,7 +274,8 @@
       "badge_can_withdraw": "可退赛",
       "badge_can_withdraw_tip": "你可以让已报名的运动员退出本项目。",
       "badge_read_only": "只读",
-      "badge_read_only_tip": "你可以查看本项目，但修改已关闭，或你的教练关联不允许修改。"
+      "badge_read_only_tip": "你可以查看本项目，但修改已关闭，或你的教练关联不允许修改。",
+      "badge_ineligible": "不符合资格"
     }
   },
   "home": {
@@ -431,7 +444,9 @@
     },
     "diver_panel": {
       "live_meta": "点击查看您的下一跳、当前名次，以及您需要的得分",
-      "next_fallback": "逐步使用跳表生成器"
+      "next_fallback": "逐步使用跳表生成器",
+      "details_title": "完善你的参赛信息",
+      "details_body": "添加出生日期和性别，以便报名男子、女子和年龄组项目。"
     },
     "activity": {
       "view_full_log": "查看完整审计日志 →",
@@ -527,7 +542,17 @@
       "conflict": "无法合并：旧账户与你当前账户均对同一赛事和同一轮次有记录。请取消勾选冲突的候选项，或发送邮件至 {email}，我们会手动合并。",
       "success_toast": "过往成绩已重新关联到你的个人资料。"
     },
-    "club_request_sent": "申请已发送。获批后即完成转会：由您的协会审批，尚无协会的地区则由新俱乐部的管理员审批。"
+    "club_request_sent": "申请已发送。获批后即完成转会：由您的协会审批，尚无协会的地区则由新俱乐部的管理员审批。",
+    "details": {
+      "title": "参赛信息",
+      "body": "你的出生日期和性别决定你可以报名哪些项目：男子和女子项目核对性别，年龄组项目按比赛年度 12 月 31 日的年龄计算。",
+      "missing": "报名项目前请填写这两项。男子、女子或年龄组项目在缺少它们时无法接受你的报名。",
+      "date_of_birth": "出生日期",
+      "gender": "性别",
+      "save": "保存",
+      "saved": "已保存",
+      "failed": "无法保存你的信息"
+    }
   },
   "scoreboard": {
     "page_label": "记分牌",

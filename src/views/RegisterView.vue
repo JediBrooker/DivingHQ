@@ -36,6 +36,13 @@ const fullName = ref('')
 const username = ref('')
 const email = ref('')
 const password = ref('')
+// Competition details. Every entry path checks the event's gender and
+// age group against these, so an account starts with them. The server
+// refuses an under-13 birthday (lib/direct-use-age.js); the error points
+// at junior profiles.
+const dateOfBirth = ref('')
+const gender = ref('')
+const todayIso = new Date().toISOString().slice(0, 10)
 const ageConfirmed = ref(false)
 // Default to "diver", the most common public-registration use case.
 // Spectator-only sign-ups will pick "Spectator" explicitly.
@@ -256,6 +263,8 @@ async function handleSubmit() {
       username: username.value,
       email:    email.value || undefined,
       password: password.value,
+      date_of_birth: dateOfBirth.value,
+      gender: gender.value,
       age_13_or_older: ageConfirmed.value,
     }
     if (orgId.value) body.org_id = orgId.value
@@ -286,6 +295,7 @@ async function handleSubmit() {
         throw new Error(codeError.value)
       }
       if (data.code === 'username_taken') throw new Error(t('auth.register.username_taken'))
+      if (data.code === 'minimum_age') throw new Error(t('auth.register.under_13'))
       throw new Error(data.error || t('auth.register.failed'))
     }
     registered.value = {
@@ -475,6 +485,25 @@ async function handleSubmit() {
         !noFederation ? $t('auth.register.spectator_note')
           : founderAsksUp || requestedRole === 'referee' ? $t('auth.register.spectator_note_see_above')
             : $t('auth.register.spectator_note_club') }}</p>
+      <!-- After the country / club / role selects on purpose: the e2e
+           suite reaches the country picker as the first select. -->
+      <div class="field">
+        <label class="label" for="reg-dob">{{ $t('auth.register.date_of_birth') }}</label>
+        <input id="reg-dob" class="input" type="date" v-model="dateOfBirth" :max="todayIso"
+               min="1900-01-01" autocomplete="bday" required data-testid="dob">
+        <span class="hint-line">{{ $t('auth.register.dob_hint') }}</span>
+      </div>
+      <div class="field">
+        <label class="label" for="reg-gender">{{ $t('auth.register.gender') }}</label>
+        <select id="reg-gender" class="select" v-model="gender" required data-testid="gender">
+          <option value="">{{ $t('genders.placeholder') }}</option>
+          <option value="female">{{ $t('genders.female') }}</option>
+          <option value="male">{{ $t('genders.male') }}</option>
+          <option value="other">{{ $t('genders.other') }}</option>
+          <option value="prefer_not_to_say">{{ $t('genders.prefer_not_to_say') }}</option>
+        </select>
+        <span class="hint-line">{{ $t('auth.register.gender_hint') }}</span>
+      </div>
       <label class="field">
         <span><input v-model="ageConfirmed" type="checkbox" required data-testid="age-confirmation"> {{ $t('auth.register.age_confirmation') }}</span>
       </label>

@@ -54,6 +54,25 @@
  *   Body-only: a club this user started that's still waiting for its
  *   federation to approve it (migration 096, lib/club-approvals.js).
  *   null once it's approved or rejected.
+ * @property {?string} [date_of_birth] Body-only, YYYY-MM-DD. Set at signup or
+ *   under Competition details (PUT /api/users/me/details); entry
+ *   eligibility reads it (lib/entry-eligibility.js).
+ * @property {?string} [gender] Body-only: 'female' | 'male' | 'other' |
+ *   'prefer_not_to_say', same source.
+ */
+
+/**
+ * @typedef {Object} EntryEligibility
+ * May a diver be entered in an event (lib/entry-eligibility.js): the
+ * event's gender and age group against the diver's profile. Rides on
+ * GET /api/events (`entry_eligibility`, divers only, about the caller),
+ * GET /api/orgs/:id/divers?event_id= and GET /api/coach/dive-lists/:id
+ * (per diver). Every entry path answers 400 `code: 'ineligible'` with the
+ * same reason when it fails.
+ *
+ * @property {boolean} allowed
+ * @property {?('missing_gender'|'gender'|'missing_dob'|'too_young'|'too_old')} code
+ * @property {?string} reason  Readable, names the WA Article.
  */
 
 /**
@@ -940,6 +959,8 @@
  *   or correct a score here (manual entry, PUT /api/scores/:id, conflict
  *   resolution, dive-off results): the host's meet managers only, per
  *   scoreAuthority in lib/middleware.js. Always false for anonymous callers.
+ * @property {EntryEligibility} [entry_eligibility]  Only when the caller
+ *   holds the diver role: may they themselves enter this event.
  */
 
 /**
@@ -1007,6 +1028,8 @@
  * @property {string|null} [withdrawn_at]
  * @property {boolean}     is_reserve
  * @property {number|null} [reserve_position]
+ * @property {EntryEligibility} entry_eligibility  The event's gender / age group
+ *   against this diver; can_submit is false when it isn't allowed.
  * @property {CoachEligibility} coach_eligibility
  */
 

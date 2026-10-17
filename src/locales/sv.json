@@ -85,7 +85,12 @@
       "founder_role_note": "Som klubbens grundare kan du inte godkänna din egen förfrågan om att bli tränare eller domare, så den går till regionens administratörer eller till DivingHQ.",
       "spectator_note_see_above": "Alla konton börjar som åskådare. En roll du begär ovan granskas som anteckningen under den säger. Du kan logga in när din e-post är verifierad.",
       "username_taken": "Det användarnamnet är upptaget. Välj ett annat.",
-      "age_confirmation": "Jag är 13 år eller äldre."
+      "age_confirmation": "Jag är 13 år eller äldre.",
+      "date_of_birth": "Födelsedatum",
+      "dob_hint": "Avgör vilka åldersklasser du kan tävla i. Åldern räknas per den 31 december tävlingsåret (World Aquatics artikel 1.8).",
+      "gender": "Kön",
+      "gender_hint": "Herr- och damtävlingar kontrollerar detta; mixade tävlingar är öppna för alla.",
+      "under_13": "DivingHQ-konton är för personer som är 13 år eller äldre. En förälder, tränare eller klubbadministratör kan i stället lägga till en yngre hoppare som juniorprofil (se Juniorhoppare i guiden)."
     },
     "register_org": {
       "title": "Registrera organisation",
@@ -185,6 +190,13 @@
       "next_claim_sysadmin": "När du har verifierat öppnas ditt anspråk och DivingHQ-teamet granskar det. Du kan logga in medan det avgörs."
     }
   },
+  "genders": {
+    "placeholder": "— Välj —",
+    "female": "Kvinna",
+    "male": "Man",
+    "other": "Annat",
+    "prefer_not_to_say": "Vill inte uppge"
+  },
   "coach": {
     "dashboard": {
       "label": "Tränarens översikt",
@@ -262,7 +274,8 @@
       "badge_can_withdraw": "Kan stryka",
       "badge_can_withdraw_tip": "Du kan stryka anmälda hoppare från den här tävlingen.",
       "badge_read_only": "Endast läsning",
-      "badge_read_only_tip": "Du kan se den här tävlingen, men ändringar är stängda eller inte tillåtna via din tränarkoppling."
+      "badge_read_only_tip": "Du kan se den här tävlingen, men ändringar är stängda eller inte tillåtna via din tränarkoppling.",
+      "badge_ineligible": "Ej behörig"
     }
   },
   "home": {
@@ -431,7 +444,9 @@
     },
     "diver_panel": {
       "live_meta": "Tryck för att se nästa hopp, aktuell placering och vad som krävs för att få poäng",
-      "next_fallback": "Gå igenom byggaren för hopplistor"
+      "next_fallback": "Gå igenom byggaren för hopplistor",
+      "details_title": "Komplettera dina tävlingsuppgifter",
+      "details_body": "Lägg till födelsedatum och kön så att du kan anmälas till herr-, dam- och åldersklasstävlingar."
     },
     "activity": {
       "view_full_log": "Visa hela revisionsloggen →",
@@ -538,7 +553,17 @@
       "conflict": "Kan inte slå samman: både det gamla kontot och ditt nuvarande konto har anmälningar för samma tävling och omgång. Bocka av den krockande kandidaten, eller skriv till {email} så slår vi ihop dem för hand.",
       "success_toast": "Tidigare resultat omkopplade till din profil."
     },
-    "club_request_sent": "Förfrågan skickad. Du flyttas när den godkänts: av ditt förbund, eller där det ännu inte finns något, av den nya klubbens administratörer."
+    "club_request_sent": "Förfrågan skickad. Du flyttas när den godkänts: av ditt förbund, eller där det ännu inte finns något, av den nya klubbens administratörer.",
+    "details": {
+      "title": "Tävlingsuppgifter",
+      "body": "Ditt födelsedatum och kön avgör vilka tävlingar du kan anmäla dig till: herr- och damtävlingar kontrollerar kön, och åldersklasstävlingar räknar din ålder per den 31 december tävlingsåret.",
+      "missing": "Fyll i båda innan du anmäler dig till en tävling. En herr-, dam- eller åldersklasstävling kan inte ta emot dig utan dem.",
+      "date_of_birth": "Födelsedatum",
+      "gender": "Kön",
+      "save": "Spara",
+      "saved": "Sparat",
+      "failed": "Dina uppgifter kunde inte sparas"
+    }
   },
   "scoreboard": {
     "page_label": "Resultattavla",
