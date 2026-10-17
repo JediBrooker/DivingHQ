@@ -34,7 +34,8 @@ const { queueAction } = useHttpOutbox()
 
 const lateBusy = ref(false)
 const lateErr = ref('')
-const lateDivers  = ref([])          // candidate divers in the org
+const lateDivers  = ref([])          // candidate divers in the org, with entry_eligibility for this event
+const lateDiversForEvent = ref('')   // which event lateDivers was fetched for
 const lateDiveDir = ref([])          // full dive directory (filtered to height in lateDiveOptions)
 const latePartnerId = ref('')        // synchro-pair only
 const lateTeamId    = ref('')        // team events only
@@ -66,10 +67,16 @@ watch(() => props.open, async (isOpen) => {
   // to 6 if the event metadata hasnt loaded yet (rare).
   const totalRounds = Number(props.event?.total_rounds) || 6
   lateRounds.value = Array.from({ length: totalRounds }, () => ({ text: '', dive: null, competitorId: '' }))
-  // Lazy-load org divers + dive directory once per session
-  if (!lateDivers.value.length) {
+  // Org divers come with entry_eligibility for THIS event (gender and
+  // age group, lib/entry-eligibility.js), so they're re-read when the
+  // modal opens on a different event; the dive directory below is
+  // still once per session.
+  const eventId = props.event?.id || ''
+  if (!lateDivers.value.length || lateDiversForEvent.value !== eventId) {
     try {
-      lateDivers.value = await auth.apiFetch(`/api/orgs/${auth.user.org_id}/divers`)
+      const qs = eventId ? `?event_id=${encodeURIComponent(eventId)}` : ''
+      lateDivers.value = await auth.apiFetch(`/api/orgs/${props.event?.org_id || auth.user.org_id}/divers${qs}`)
+      lateDiversForEvent.value = eventId
     } catch { lateDivers.value = [] }
   }
   if (!lateDiveDir.value.length) {
@@ -90,6 +97,17 @@ watch(() => props.open, async (isOpen) => {
     } catch { lateTeams.value = [] }
   }
 })
+
+// Only divers the server would accept go in the pickers; the rest are
+// listed under the picker with the reason, so the operator can send a
+// diver to fix their profile rather than wonder why a name is missing.
+const lateEligible = computed(() =>
+  lateDivers.value.filter((d) => !d.entry_eligibility || d.entry_eligibility.allowed !== false),
+)
+const lateIneligible = computed(() =>
+  lateDivers.value.filter((d) => d.entry_eligibility && d.entry_eligibility.allowed === false),
+)
+const lateShowIneligible = ref(false)
 
 // Dive directory filtered to the event's height. Re-used by every
 // round's autocomplete; matching is on `dive_code + position` so
@@ -236,10 +254,21 @@ async function submitLateEntry() {
     <div class="lb-body">
       <div class="field">
         <label class="label">Diver</label>
-        <select class="select" v-model="lateCompetitorId">
+        <select class="select" v-model="lateCompetitorId" data-test-id="late-diver">
           <option value="">— Pick a diver —</option>
-          <option v-for="d in lateDivers" :key="d.id" :value="d.id">{{ d.full_name }}</option>
+          <option v-for="d in lateEligible" :key="d.id" :value="d.id">{{ d.full_name }}</option>
         </select>
+        <p v-if="lateDivers.length && !lateEligible.length" class="msg msg-error" style="margin-top:0.5rem" data-test-id="late-none-eligible">
+          None of the org's divers can enter this event.
+        </p>
+        <div v-if="lateIneligible.length" class="late-ineligible" data-test-id="late-ineligible">
+          <button type="button" class="btn btn-ghost btn-sm" @click="lateShowIneligible = !lateShowIneligible">
+            {{ lateIneligible.length }} {{ lateIneligible.length === 1 ? 'diver' : 'divers' }} not eligible for this event {{ lateShowIneligible ? '▴' : '▾' }}
+          </button>
+          <ul v-if="lateShowIneligible">
+            <li v-for="d in lateIneligible" :key="d.id"><strong>{{ d.full_name }}</strong> — {{ d.entry_eligibility.reason }}</li>
+          </ul>
+        </div>
       </div>
 
       <!-- Synchro pair partner picker, only shown for synchro_pair events. -->
@@ -247,7 +276,7 @@ async function submitLateEntry() {
         <label class="label">Partner</label>
         <select class="select" v-model="latePartnerId">
           <option value="">— Pick partner —</option>
-          <option v-for="d in lateDivers"
+          <option v-for="d in lateEligible"
                   :key="d.id"
                   :value="d.id"
                   :disabled="d.id === lateCompetitorId">
@@ -339,6 +368,9 @@ async function submitLateEntry() {
 </template>
 
 <style scoped>
+.late-ineligible { margin-top: 0.5rem; font-size: 13px; color: var(--fg-2); }
+.late-ineligible ul { margin: 0.4rem 0 0; padding-left: 1.1rem; display: grid; gap: 0.3rem; }
+
 /* Late-entry styles MOVED from ControlView.css (exclusive to
    this modal). The lb-* frame now lives in BaseModal + the global
    lb-* in ControlView.css (max-width passed via BaseModal). */

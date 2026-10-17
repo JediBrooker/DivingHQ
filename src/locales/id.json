@@ -85,7 +85,12 @@
       "founder_role_note": "Sebagai pendiri klub, Anda tidak bisa menyetujui sendiri permintaan Anda menjadi pelatih atau juri, jadi permintaan itu ditinjau oleh admin wilayah Anda atau oleh DivingHQ.",
       "spectator_note_see_above": "Semua akun dimulai sebagai Penonton. Peran yang Anda minta di atas ditinjau seperti yang dijelaskan catatan di bawahnya. Anda dapat masuk setelah email Anda terverifikasi.",
       "username_taken": "Nama pengguna itu sudah dipakai. Pilih yang lain.",
-      "age_confirmation": "Saya berusia 13 tahun atau lebih."
+      "age_confirmation": "Saya berusia 13 tahun atau lebih.",
+      "date_of_birth": "Tanggal lahir",
+      "dob_hint": "Menentukan kelompok umur yang bisa Anda ikuti. Usia dihitung per 31 Desember tahun kompetisi (World Aquatics Pasal 1.8).",
+      "gender": "Jenis kelamin",
+      "gender_hint": "Nomor putra dan putri memeriksanya; nomor campuran terbuka untuk semua.",
+      "under_13": "Akun DivingHQ untuk orang berusia 13 tahun ke atas. Orang tua, pelatih, atau admin klub dapat menambahkan peloncat yang lebih muda sebagai profil junior (lihat Peloncat junior di panduan)."
     },
     "register_org": {
       "title": "Daftarkan organisasi",
@@ -185,6 +190,13 @@
       "next_claim_sysadmin": "Setelah Anda terverifikasi, klaim Anda dibuka dan tim DivingHQ akan meninjaunya. Anda bisa masuk selama keputusan diambil."
     }
   },
+  "genders": {
+    "placeholder": "— Pilih —",
+    "female": "Perempuan",
+    "male": "Laki-laki",
+    "other": "Lainnya",
+    "prefer_not_to_say": "Tidak ingin menyebutkan"
+  },
   "coach": {
     "dashboard": {
       "label": "Dasbor Pelatih",
@@ -262,7 +274,8 @@
       "badge_can_withdraw": "Dapat menarik",
       "badge_can_withdraw_tip": "Anda dapat menarik atlet terdaftar dari nomor ini.",
       "badge_read_only": "Hanya baca",
-      "badge_read_only_tip": "Anda dapat melihat nomor ini, tetapi perubahan ditutup atau tidak diizinkan oleh tautan pelatih Anda."
+      "badge_read_only_tip": "Anda dapat melihat nomor ini, tetapi perubahan ditutup atau tidak diizinkan oleh tautan pelatih Anda.",
+      "badge_ineligible": "Tidak memenuhi syarat"
     }
   },
   "home": {
@@ -431,7 +444,9 @@
     },
     "diver_panel": {
       "live_meta": "Ketuk untuk melihat loncatan Anda berikutnya, peringkat saat ini, dan apa yang perlu Anda capai untuk mendapatkan skor",
-      "next_fallback": "Lalui pembuat daftar loncatan"
+      "next_fallback": "Lalui pembuat daftar loncatan",
+      "details_title": "Lengkapi data kompetisi Anda",
+      "details_body": "Tambahkan tanggal lahir dan jenis kelamin agar Anda bisa didaftarkan ke nomor putra, putri, dan kelompok umur."
     },
     "activity": {
       "view_full_log": "Lihat log audit lengkap →",
@@ -525,7 +540,17 @@
       "conflict": "Tidak dapat digabungkan: akun lama dan akun Anda saat ini sama-sama memiliki entri untuk acara dan ronde yang sama. Hapus centang pada kandidat yang bertabrakan, atau kirim email ke {email} dan kami akan menggabungkannya secara manual.",
       "success_toast": "Hasil sebelumnya kembali ditautkan ke profil Anda."
     },
-    "club_request_sent": "Permintaan terkirim. Anda akan pindah setelah disetujui: oleh federasi Anda, atau jika belum ada, oleh admin klub yang baru."
+    "club_request_sent": "Permintaan terkirim. Anda akan pindah setelah disetujui: oleh federasi Anda, atau jika belum ada, oleh admin klub yang baru.",
+    "details": {
+      "title": "Data kompetisi",
+      "body": "Tanggal lahir dan jenis kelamin Anda menentukan nomor mana yang bisa Anda daftari: nomor putra dan putri memeriksa jenis kelamin, dan nomor kelompok umur memakai usia Anda per 31 Desember tahun kompetisi.",
+      "missing": "Isi keduanya sebelum mendaftar ke sebuah nomor. Nomor putra, putri, atau kelompok umur tidak bisa menerima Anda tanpa keduanya.",
+      "date_of_birth": "Tanggal lahir",
+      "gender": "Jenis kelamin",
+      "save": "Simpan",
+      "saved": "Tersimpan",
+      "failed": "Data Anda tidak dapat disimpan"
+    }
   },
   "scoreboard": {
     "page_label": "Papan skor",

@@ -85,7 +85,12 @@
       "founder_role_note": "Come fondatore del club non puoi approvare la tua richiesta di allenatore o giudice, quindi la esaminano gli amministratori della tua regione o DivingHQ.",
       "spectator_note_see_above": "Tutti gli account partono come Spettatore. Il ruolo che richiedi qui sopra viene esaminato come indica la nota sotto. Potrai accedere dopo aver verificato la tua email.",
       "username_taken": "Questo nome utente è già in uso. Scegline un altro.",
-      "age_confirmation": "Ho almeno 13 anni."
+      "age_confirmation": "Ho almeno 13 anni.",
+      "date_of_birth": "Data di nascita",
+      "dob_hint": "Stabilisce a quali categorie di età puoi partecipare. L'età si calcola al 31 dicembre dell'anno della competizione (World Aquatics, articolo 1.8).",
+      "gender": "Genere",
+      "gender_hint": "Le gare maschili e femminili lo verificano; le gare miste sono aperte a tutti.",
+      "under_13": "Gli account DivingHQ sono per persone dai 13 anni in su. Un genitore, un allenatore o un amministratore di club può invece aggiungere un tuffatore più giovane come profilo junior (vedi Tuffatori junior nella guida)."
     },
     "register_org": {
       "title": "Registra organizzazione",
@@ -185,6 +190,13 @@
       "next_claim_sysadmin": "Dopo la verifica, la tua richiesta si apre e il team di DivingHQ la esamina. Puoi accedere mentre si decide."
     }
   },
+  "genders": {
+    "placeholder": "— Seleziona —",
+    "female": "Femminile",
+    "male": "Maschile",
+    "other": "Altro",
+    "prefer_not_to_say": "Preferisco non dirlo"
+  },
   "coach": {
     "dashboard": {
       "label": "Pannello Allenatore",
@@ -262,7 +274,8 @@
       "badge_can_withdraw": "Può ritirare",
       "badge_can_withdraw_tip": "Puoi ritirare i tuffatori iscritti da questa gara.",
       "badge_read_only": "Sola lettura",
-      "badge_read_only_tip": "Puoi vedere questa gara, ma le modifiche sono chiuse o non consentite dal tuo collegamento da allenatore."
+      "badge_read_only_tip": "Puoi vedere questa gara, ma le modifiche sono chiuse o non consentite dal tuo collegamento da allenatore.",
+      "badge_ineligible": "Non idoneo"
     }
   },
   "home": {
@@ -431,7 +444,9 @@
     },
     "diver_panel": {
       "live_meta": "Tocchi per vedere il suo prossimo tuffo, la classifica attuale e cosa deve fare per ottenere il punteggio.",
-      "next_fallback": "Segua il generatore di liste di tuffi"
+      "next_fallback": "Segua il generatore di liste di tuffi",
+      "details_title": "Completa i tuoi dati di gara",
+      "details_body": "Aggiungi data di nascita e genere per poter essere iscritto a gare maschili, femminili e per categoria di età."
     },
     "activity": {
       "view_full_log": "Visualizzi il registro audit completo →",
@@ -536,7 +551,17 @@
       "conflict": "Impossibile unire: l’account vecchio e quello attuale hanno entrambi iscrizioni per lo stesso evento e turno. Deseleziona il candidato in conflitto, oppure scrivi a {email} e li uniremo a mano.",
       "success_toast": "Risultati passati ricollegati al tuo profilo."
     },
-    "club_request_sent": "Richiesta inviata. Il passaggio avverrà dopo l'approvazione: della tua federazione o, dove non c'è ancora, degli amministratori del nuovo club."
+    "club_request_sent": "Richiesta inviata. Il passaggio avverrà dopo l'approvazione: della tua federazione o, dove non c'è ancora, degli amministratori del nuovo club.",
+    "details": {
+      "title": "Dati di gara",
+      "body": "La tua data di nascita e il tuo genere stabiliscono a quali gare puoi iscriverti: le gare maschili e femminili verificano il genere, le gare per categoria di età considerano la tua età al 31 dicembre dell'anno della competizione.",
+      "missing": "Inserisci entrambi prima di iscriverti a una gara. Una gara maschile, femminile o per categoria di età non può accettarti senza.",
+      "date_of_birth": "Data di nascita",
+      "gender": "Genere",
+      "save": "Salva",
+      "saved": "Salvato",
+      "failed": "Impossibile salvare i tuoi dati"
+    }
   },
   "scoreboard": {
     "page_label": "Tabellone",

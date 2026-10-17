@@ -85,7 +85,12 @@
       "founder_role_note": "Jako zakladatel klubu nemůžete schválit vlastní žádost o roli trenéra nebo rozhodčího, proto ji posoudí správci vašeho regionu, nebo DivingHQ.",
       "spectator_note_see_above": "Všechny účty začínají jako Divák. Roli, o kterou výše požádáte, posoudí ten, koho uvádí poznámka pod ní. Přihlásit se můžete po ověření e-mailu.",
       "username_taken": "Toto uživatelské jméno je obsazené. Zvolte jiné.",
-      "age_confirmation": "Je mi 13 let nebo více."
+      "age_confirmation": "Je mi 13 let nebo více.",
+      "date_of_birth": "Datum narození",
+      "dob_hint": "Určuje, ve kterých věkových kategoriích můžete startovat. Věk se počítá k 31. prosinci roku soutěže (World Aquatics, článek 1.8).",
+      "gender": "Pohlaví",
+      "gender_hint": "Mužské a ženské soutěže to kontrolují; smíšené soutěže jsou otevřené všem.",
+      "under_13": "Účty DivingHQ jsou pro osoby ve věku 13 let a starší. Rodič, trenér nebo správce klubu může místo toho přidat mladšího skokana jako juniorský profil (viz Junioři v příručce)."
     },
     "register_org": {
       "title": "Registrace organizace",
@@ -185,6 +190,13 @@
       "next_claim_sysadmin": "Po ověření se vaše žádost otevře a posoudí ji tým DivingHQ. Během rozhodování se můžete přihlásit."
     }
   },
+  "genders": {
+    "placeholder": "— Vyberte —",
+    "female": "Žena",
+    "male": "Muž",
+    "other": "Jiné",
+    "prefer_not_to_say": "Nechci uvádět"
+  },
   "coach": {
     "dashboard": {
       "label": "Nástěnka trenéra",
@@ -262,7 +274,8 @@
       "badge_can_withdraw": "Může odhlásit",
       "badge_can_withdraw_tip": "Přihlášené skokany můžete z této soutěže odhlásit.",
       "badge_read_only": "Jen pro čtení",
-      "badge_read_only_tip": "Tuto soutěž můžete zobrazit, ale úpravy jsou uzavřené nebo je vaše trenérské propojení nepovoluje."
+      "badge_read_only_tip": "Tuto soutěž můžete zobrazit, ale úpravy jsou uzavřené nebo je vaše trenérské propojení nepovoluje.",
+      "badge_ineligible": "Nezpůsobilý"
     }
   },
   "home": {
@@ -431,7 +444,9 @@
     },
     "diver_panel": {
       "live_meta": "Klepněte pro zobrazení Vašeho dalšího skoku, aktuálního umístění a co potřebujete nasbírat za body",
-      "next_fallback": "Projděte průvodce tvorbou sestavy skoků"
+      "next_fallback": "Projděte průvodce tvorbou sestavy skoků",
+      "details_title": "Doplňte své soutěžní údaje",
+      "details_body": "Přidejte datum narození a pohlaví, abyste mohli být přihlášeni do mužských, ženských a věkových soutěží."
     },
     "activity": {
       "view_full_log": "Zobrazit celý auditní záznam →",
@@ -525,7 +540,17 @@
       "conflict": "Nelze sloučit: starý účet i váš současný účet mají záznamy pro stejnou disciplínu a kolo. Odškrtněte kolidujícího kandidáta, nebo napište na {email} a sloučíme je ručně.",
       "success_toast": "Minulé výsledky byly znovu propojeny s vaším profilem."
     },
-    "club_request_sent": "Žádost odeslána. Přesun proběhne po schválení: vaší federací, nebo tam, kde zatím není, správci nového klubu."
+    "club_request_sent": "Žádost odeslána. Přesun proběhne po schválení: vaší federací, nebo tam, kde zatím není, správci nového klubu.",
+    "details": {
+      "title": "Soutěžní údaje",
+      "body": "Datum narození a pohlaví určují, do kterých soutěží se můžete přihlásit: mužské a ženské soutěže kontrolují pohlaví a soutěže věkových kategorií počítají váš věk k 31. prosinci roku soutěže.",
+      "missing": "Vyplňte obojí, než se přihlásíte do soutěže. Mužská, ženská nebo věková soutěž vás bez nich nemůže přijmout.",
+      "date_of_birth": "Datum narození",
+      "gender": "Pohlaví",
+      "save": "Uložit",
+      "saved": "Uloženo",
+      "failed": "Údaje se nepodařilo uložit"
+    }
   },
   "scoreboard": {
     "page_label": "Výsledková tabule",

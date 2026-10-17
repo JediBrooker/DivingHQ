@@ -85,7 +85,12 @@
       "founder_role_note": "Sebagai pengasas kelab, anda tidak boleh meluluskan sendiri permintaan anda sebagai jurulatih atau hakim, jadi ia disemak oleh pentadbir rantau anda atau DivingHQ.",
       "spectator_note_see_above": "Semua akaun bermula sebagai Penonton. Peranan yang anda minta di atas disemak seperti yang diterangkan dalam nota di bawahnya. Anda boleh log masuk selepas e-mel anda disahkan.",
       "username_taken": "Nama pengguna itu sudah digunakan. Pilih yang lain.",
-      "age_confirmation": "Saya berumur 13 tahun atau lebih."
+      "age_confirmation": "Saya berumur 13 tahun atau lebih.",
+      "date_of_birth": "Tarikh lahir",
+      "dob_hint": "Menentukan kumpulan umur yang boleh anda sertai. Umur dikira pada 31 Disember tahun pertandingan (World Aquatics Perkara 1.8).",
+      "gender": "Jantina",
+      "gender_hint": "Acara lelaki dan wanita menyemaknya; acara campuran terbuka kepada semua.",
+      "under_13": "Akaun DivingHQ adalah untuk mereka yang berumur 13 tahun ke atas. Ibu bapa, jurulatih atau pentadbir kelab boleh menambah penerjun yang lebih muda sebagai profil junior (lihat Penerjun junior dalam panduan)."
     },
     "register_org": {
       "title": "Daftarkan organisasi",
@@ -185,6 +190,13 @@
       "next_claim_sysadmin": "Selepas disahkan, tuntutan anda dibuka dan pasukan DivingHQ akan menyemaknya. Anda boleh log masuk sementara keputusan dibuat."
     }
   },
+  "genders": {
+    "placeholder": "— Pilih —",
+    "female": "Perempuan",
+    "male": "Lelaki",
+    "other": "Lain-lain",
+    "prefer_not_to_say": "Tidak mahu nyatakan"
+  },
   "coach": {
     "dashboard": {
       "label": "Papan Pemuka Jurulatih",
@@ -262,7 +274,8 @@
       "badge_can_withdraw": "Boleh tarik diri",
       "badge_can_withdraw_tip": "Anda boleh menarik diri penerjun yang berdaftar daripada acara ini.",
       "badge_read_only": "Baca sahaja",
-      "badge_read_only_tip": "Anda boleh melihat acara ini, tetapi suntingan telah ditutup atau tidak dibenarkan oleh pautan jurulatih anda."
+      "badge_read_only_tip": "Anda boleh melihat acara ini, tetapi suntingan telah ditutup atau tidak dibenarkan oleh pautan jurulatih anda.",
+      "badge_ineligible": "Tidak layak"
     }
   },
   "home": {
@@ -431,7 +444,9 @@
     },
     "diver_panel": {
       "live_meta": "Ketuk untuk melihat terjunan anda seterusnya, kedudukan semasa, dan apa yang anda perlu capai untuk memperoleh markah",
-      "next_fallback": "Ikuti pembina senarai terjun"
+      "next_fallback": "Ikuti pembina senarai terjun",
+      "details_title": "Lengkapkan butiran pertandingan anda",
+      "details_body": "Tambah tarikh lahir dan jantina supaya anda boleh didaftarkan ke acara lelaki, wanita dan kumpulan umur."
     },
     "activity": {
       "view_full_log": "Lihat log audit penuh →",
@@ -525,7 +540,17 @@
       "conflict": "Tidak boleh digabungkan: akaun lama dan akaun semasa anda kedua-duanya mempunyai entri untuk acara dan pusingan yang sama. Buang tandakan calon yang bercanggah, atau tulis kepada {email} dan kami akan menggabungkannya secara manual.",
       "success_toast": "Keputusan lampau dipautkan semula ke profil anda."
     },
-    "club_request_sent": "Permintaan dihantar. Anda akan berpindah selepas ia diluluskan: oleh persekutuan anda, atau jika belum ada, oleh pentadbir kelab baharu."
+    "club_request_sent": "Permintaan dihantar. Anda akan berpindah selepas ia diluluskan: oleh persekutuan anda, atau jika belum ada, oleh pentadbir kelab baharu.",
+    "details": {
+      "title": "Butiran pertandingan",
+      "body": "Tarikh lahir dan jantina anda menentukan acara yang boleh anda daftar: acara lelaki dan wanita menyemak jantina, dan acara kumpulan umur mengambil umur anda pada 31 Disember tahun pertandingan.",
+      "missing": "Isi kedua-duanya sebelum mendaftar acara. Acara lelaki, wanita atau kumpulan umur tidak boleh menerima anda tanpanya.",
+      "date_of_birth": "Tarikh lahir",
+      "gender": "Jantina",
+      "save": "Simpan",
+      "saved": "Disimpan",
+      "failed": "Butiran anda tidak dapat disimpan"
+    }
   },
   "scoreboard": {
     "page_label": "Papan markah",

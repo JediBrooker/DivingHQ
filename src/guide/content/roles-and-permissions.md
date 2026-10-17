@@ -167,11 +167,11 @@ The person actually running the meet on the day. Lives in the Control Room view 
 **Can:**
 - Schedule events (`scheduled_at`) and set the registration deadline (`entries_close_at`)
 - Build the day timeline in the [Session Scheduler](/guide/session-scheduler): boards, warmups, event starts, breaks, ceremonies, conflict warnings, live re-flow on event completion, and duplicate-to-next-day
-- Import a roster from CSV
+- Import a roster from CSV. Rows whose diver doesn't fit the event's gender or age group are reported like a bad dive code, and the rest still import
 - Lock the dive order, drag-reorder pre-meet, or randomise starts
 - Drive the Control Room during the meet — advance divers round by round
 - Flip event status: Upcoming → Live → Completed
-- Add a late-arriving diver via the late-entry override (works after entries close)
+- Add a late-arriving diver via the late-entry override (works after entries close). The picker offers only divers who fit the event's gender and age group, and lists the rest with the reason
 - Edit a team's bulk dive list
 - Withdraw or scratch divers mid-event
 - Correct or type in scores on meets their own club, region or federation hosts (see [Who can change a score](#who-can-change-a-score))
@@ -221,7 +221,8 @@ Works closely with individual diver data. Spots trends across meets, compares tw
 Phone-native and impatient. The night before each meet they submit their list; during the meet they watch their own scoreboard between rounds and review judges' scores after each round to calibrate against the panel.
 
 **Can:**
-- Submit a dive list for an event — only while the event is Upcoming **and** `entries_close_at` hasn't passed
+- Set their own date of birth and gender under **Competition details** on their profile (sign-up asks for both); every entry path checks them against the event's gender and age group, age taken on 31 December of the competition year (World Aquatics Part Four Article 1.8, groups per Article 13)
+- Submit a dive list for an event — only while the event is Upcoming **and** `entries_close_at` hasn't passed, and only for events whose gender and age group they fit
 - Save the current list as a named template, scoped to the event's board height
 - Load a saved template and tweak before submitting
 - Pick a synchro partner via the autocomplete (filters fellow divers in the org)

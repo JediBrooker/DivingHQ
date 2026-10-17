@@ -85,7 +85,12 @@
       "founder_role_note": "A klub alapítójaként nem hagyhatja jóvá saját edzői vagy pontozóbírói kérelmét, ezért azt a régiója adminisztrátorai vagy a DivingHQ bírálja el.",
       "spectator_note_see_above": "Minden fiók Nézőként indul. A fent kért szerepkört az alatta lévő megjegyzés szerint bírálják el. Az e-mail-címe megerősítése után bejelentkezhet.",
       "username_taken": "Ez a felhasználónév már foglalt. Válasszon másikat.",
-      "age_confirmation": "Legalább 13 éves vagyok."
+      "age_confirmation": "Legalább 13 éves vagyok.",
+      "date_of_birth": "Születési dátum",
+      "dob_hint": "Meghatározza, mely korcsoportokban indulhatsz. Az életkor a versenyév december 31-i állapot szerint számít (World Aquatics 1.8. cikk).",
+      "gender": "Nem",
+      "gender_hint": "A férfi és női versenyszámok ezt ellenőrzik; a vegyes versenyszámok mindenki előtt nyitottak.",
+      "under_13": "A DivingHQ-fiókok 13 éves vagy idősebb személyek számára készültek. Egy szülő, edző vagy klubadminisztrátor ehelyett junior profilként adhat hozzá fiatalabb ugrót (lásd a Junior ugrók részt az útmutatóban)."
     },
     "register_org": {
       "title": "Szervezet regisztrációja",
@@ -185,6 +190,13 @@
       "next_claim_sysadmin": "A megerősítés után megnyílik az igénylésed, és a DivingHQ csapata elbírálja. Amíg döntenek, bejelentkezhetsz."
     }
   },
+  "genders": {
+    "placeholder": "— Válassz —",
+    "female": "Nő",
+    "male": "Férfi",
+    "other": "Egyéb",
+    "prefer_not_to_say": "Nem kívánom megadni"
+  },
   "coach": {
     "dashboard": {
       "label": "Edzői vezérlőpult",
@@ -262,7 +274,8 @@
       "badge_can_withdraw": "Visszaléptethet",
       "badge_can_withdraw_tip": "A nevezett versenyzőket visszaléptetheti ebből a versenyszámból.",
       "badge_read_only": "Csak olvasható",
-      "badge_read_only_tip": "Ezt a versenyszámot megtekintheti, de a módosítás lezárult, vagy az edzői kapcsolata nem engedi."
+      "badge_read_only_tip": "Ezt a versenyszámot megtekintheti, de a módosítás lezárult, vagy az edzői kapcsolata nem engedi.",
+      "badge_ineligible": "Nem indulhat"
     }
   },
   "home": {
@@ -431,7 +444,9 @@
     },
     "diver_panel": {
       "live_meta": "Koppintson a következő ugrás, az aktuális helyezés és a szükséges pontszám megtekintéséhez.",
-      "next_fallback": "Lépjen végig az ugrólista-készítőn."
+      "next_fallback": "Lépjen végig az ugrólista-készítőn.",
+      "details_title": "Egészítsd ki a versenyadataidat",
+      "details_body": "Add meg a születési dátumod és a nemed, hogy férfi, női és korcsoportos versenyszámokra nevezhessenek."
     },
     "activity": {
       "view_full_log": "Teljes audit napló megtekintése →",
@@ -536,7 +551,17 @@
       "conflict": "Nem egyesíthető: a régi fiók és a jelenlegi fiókod is rendelkezik bejegyzésekkel ugyanarra az eseményre és fordulóra. Vedd ki a pipát az ütköző jelöltről, vagy írj a(z) {email} címre, és kézzel egyesítjük őket.",
       "success_toast": "Korábbi eredmények újra a profilodhoz kapcsolva."
     },
-    "club_request_sent": "Kérelem elküldve. Az átlépés a jóváhagyás után történik meg: a szövetsége, vagy ahol még nincs ilyen, az új klub adminisztrátorai hagyják jóvá."
+    "club_request_sent": "Kérelem elküldve. Az átlépés a jóváhagyás után történik meg: a szövetsége, vagy ahol még nincs ilyen, az új klub adminisztrátorai hagyják jóvá.",
+    "details": {
+      "title": "Versenyadatok",
+      "body": "A születési dátumod és a nemed határozza meg, mely versenyszámokra nevezhetsz: a férfi és női számok a nemet ellenőrzik, a korcsoportos számok pedig a versenyév december 31-i életkorodat veszik.",
+      "missing": "Töltsd ki mindkettőt, mielőtt versenyszámra nevezel. Férfi, női vagy korcsoportos szám nem fogadhat el nélkülük.",
+      "date_of_birth": "Születési dátum",
+      "gender": "Nem",
+      "save": "Mentés",
+      "saved": "Mentve",
+      "failed": "Az adataidat nem sikerült menteni"
+    }
   },
   "scoreboard": {
     "page_label": "Eredménytábla",

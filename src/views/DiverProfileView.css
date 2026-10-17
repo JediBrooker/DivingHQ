@@ -431,3 +431,14 @@
   background: #b91c1c;
   border-color: #b91c1c;
 }
+
+/* Competition details (own profile): the form sits beside the
+   description on wide screens and wraps under it on a phone. */
+.pref-card .details-row { align-items: flex-start; flex-wrap: wrap; }
+.details-form { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; }
+.details-field { display: flex; flex-direction: column; gap: 4px; min-width: 150px; }
+.details-field .label { font-size: 12px; }
+.details-missing { color: var(--warn-fg); font-weight: 600; margin-top: 4px; }
+.details-msg { font-size: 13px; align-self: center; }
+.details-msg.ok { color: var(--ok-fg); }
+.details-msg.err { color: var(--danger-fg); }

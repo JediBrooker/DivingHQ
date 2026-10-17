@@ -85,7 +85,12 @@
       "founder_role_note": "Jako założyciel klubu nie możesz zatwierdzić własnej prośby o rolę trenera lub sędziego, więc rozpatrują ją administratorzy twojego regionu albo DivingHQ.",
       "spectator_note_see_above": "Wszystkie konta zaczynają jako Widz. Rolę, o którą prosisz powyżej, rozpatruje się tak, jak mówi uwaga pod nią. Zalogujesz się po potwierdzeniu adresu e-mail.",
       "username_taken": "Ta nazwa użytkownika jest już zajęta. Wybierz inną.",
-      "age_confirmation": "Mam co najmniej 13 lat."
+      "age_confirmation": "Mam co najmniej 13 lat.",
+      "date_of_birth": "Data urodzenia",
+      "dob_hint": "Decyduje, w których kategoriach wiekowych możesz startować. Wiek liczy się na 31 grudnia roku zawodów (World Aquatics, artykuł 1.8).",
+      "gender": "Płeć",
+      "gender_hint": "Konkurencje mężczyzn i kobiet to sprawdzają; konkurencje mieszane są otwarte dla wszystkich.",
+      "under_13": "Konta DivingHQ są dla osób w wieku 13 lat i starszych. Rodzic, trener lub administrator klubu może zamiast tego dodać młodszego skoczka jako profil juniora (zobacz Skoczkowie juniorzy w przewodniku)."
     },
     "register_org": {
       "title": "Rejestracja organizacji",
@@ -185,6 +190,13 @@
       "next_claim_sysadmin": "Po weryfikacji Twoje zgłoszenie zostanie otwarte, a rozpatrzy je zespół DivingHQ. W trakcie decyzji możesz się logować."
     }
   },
+  "genders": {
+    "placeholder": "— Wybierz —",
+    "female": "Kobieta",
+    "male": "Mężczyzna",
+    "other": "Inna",
+    "prefer_not_to_say": "Wolę nie podawać"
+  },
   "coach": {
     "dashboard": {
       "label": "Panel Trenera",
@@ -262,7 +274,8 @@
       "badge_can_withdraw": "Może wycofać",
       "badge_can_withdraw_tip": "Możesz wycofać zgłoszonych zawodników z tych zawodów.",
       "badge_read_only": "Tylko odczyt",
-      "badge_read_only_tip": "Możesz przeglądać te zawody, ale edycja jest zamknięta lub niedozwolona w ramach Twojego powiązania trenerskiego."
+      "badge_read_only_tip": "Możesz przeglądać te zawody, ale edycja jest zamknięta lub niedozwolona w ramach Twojego powiązania trenerskiego.",
+      "badge_ineligible": "Brak uprawnień"
     }
   },
   "home": {
@@ -431,7 +444,9 @@
     },
     "diver_panel": {
       "live_meta": "Stuknij, aby zobaczyć następny skok, aktualną pozycję i jaki wynik musisz uzyskać",
-      "next_fallback": "Skorzystaj z kreatora listy skoków"
+      "next_fallback": "Skorzystaj z kreatora listy skoków",
+      "details_title": "Uzupełnij swoje dane zawodnicze",
+      "details_body": "Dodaj datę urodzenia i płeć, aby można było zgłosić Cię do konkurencji mężczyzn, kobiet i w kategoriach wiekowych."
     },
     "activity": {
       "view_full_log": "Zobacz pełny dziennik audytu →",
@@ -536,7 +551,17 @@
       "conflict": "Nie można scalić: stare konto i Twoje obecne konto mają wpisy dla tego samego wydarzenia i rundy. Odznacz kolidującego kandydata albo napisz na {email}, a scalimy je ręcznie.",
       "success_toast": "Wcześniejsze wyniki ponownie powiązane z Twoim profilem."
     },
-    "club_request_sent": "Prośba wysłana. Przeniesienie nastąpi po jej zatwierdzeniu: przez twoją federację lub, tam gdzie jej jeszcze nie ma, przez administratorów nowego klubu."
+    "club_request_sent": "Prośba wysłana. Przeniesienie nastąpi po jej zatwierdzeniu: przez twoją federację lub, tam gdzie jej jeszcze nie ma, przez administratorów nowego klubu.",
+    "details": {
+      "title": "Dane zawodnicze",
+      "body": "Twoja data urodzenia i płeć decydują, do których konkurencji możesz się zgłosić: konkurencje mężczyzn i kobiet sprawdzają płeć, a konkurencje w kategoriach wiekowych liczą Twój wiek na 31 grudnia roku zawodów.",
+      "missing": "Uzupełnij oba pola przed zgłoszeniem do konkurencji. Konkurencja mężczyzn, kobiet lub w kategorii wiekowej nie może Cię przyjąć bez nich.",
+      "date_of_birth": "Data urodzenia",
+      "gender": "Płeć",
+      "save": "Zapisz",
+      "saved": "Zapisano",
+      "failed": "Nie udało się zapisać Twoich danych"
+    }
   },
   "scoreboard": {
     "page_label": "Tablica wyników",

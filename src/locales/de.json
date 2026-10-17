@@ -85,7 +85,12 @@
       "founder_role_note": "Als Gründer des Vereins können Sie Ihre eigene Anfrage als Trainer oder Kampfrichter nicht genehmigen. Sie geht an die Admins Ihrer Region oder an DivingHQ.",
       "spectator_note_see_above": "Alle Konten beginnen als Zuschauer. Eine Rolle, die Sie oben anfordern, wird so geprüft, wie es der Hinweis darunter beschreibt. Sie können sich anmelden, sobald Ihre E-Mail bestätigt ist.",
       "username_taken": "Dieser Benutzername ist bereits vergeben. Bitte wählen Sie einen anderen.",
-      "age_confirmation": "Ich bin mindestens 13 Jahre alt."
+      "age_confirmation": "Ich bin mindestens 13 Jahre alt.",
+      "date_of_birth": "Geburtsdatum",
+      "dob_hint": "Bestimmt, in welchen Altersklassen Sie starten können. Maßgeblich ist das Alter am 31. Dezember des Wettkampfjahres (World Aquatics Artikel 1.8).",
+      "gender": "Geschlecht",
+      "gender_hint": "Herren- und Damenwettbewerbe prüfen dies; gemischte Wettbewerbe stehen allen offen.",
+      "under_13": "DivingHQ-Konten sind für Personen ab 13 Jahren. Ein Elternteil, Trainer oder Vereinsadmin kann einen jüngeren Springer stattdessen als Juniorenprofil anlegen (siehe Juniorenspringer im Leitfaden)."
     },
     "register_org": {
       "title": "Organisation registrieren",
@@ -185,6 +190,13 @@
       "next_claim_sysadmin": "Nach der Bestätigung wird Ihr Anspruch eröffnet und das DivingHQ-Team prüft ihn. Sie können sich anmelden, während entschieden wird."
     }
   },
+  "genders": {
+    "placeholder": "— Auswählen —",
+    "female": "Weiblich",
+    "male": "Männlich",
+    "other": "Divers",
+    "prefer_not_to_say": "Keine Angabe"
+  },
   "coach": {
     "dashboard": {
       "label": "Trainer-Dashboard",
@@ -262,7 +274,8 @@
       "badge_can_withdraw": "Darf zurückziehen",
       "badge_can_withdraw_tip": "Sie können gemeldete Springer aus diesem Event zurückziehen.",
       "badge_read_only": "Nur lesen",
-      "badge_read_only_tip": "Sie können dieses Event ansehen, aber Änderungen sind geschlossen oder über Ihre Trainer-Verknüpfung nicht erlaubt."
+      "badge_read_only_tip": "Sie können dieses Event ansehen, aber Änderungen sind geschlossen oder über Ihre Trainer-Verknüpfung nicht erlaubt.",
+      "badge_ineligible": "Nicht startberechtigt"
     }
   },
   "home": {
@@ -431,7 +444,9 @@
     },
     "diver_panel": {
       "live_meta": "Tippen Sie, um Ihren nächsten Sprung, die aktuelle Platzierung und Ihre erforderliche Punktzahl zu sehen",
-      "next_fallback": "Führen Sie den Sprunglisten-Generator durch"
+      "next_fallback": "Führen Sie den Sprunglisten-Generator durch",
+      "details_title": "Wettkampfdaten vervollständigen",
+      "details_body": "Tragen Sie Geburtsdatum und Geschlecht ein, damit Sie für Herren-, Damen- und Altersklassenwettbewerbe gemeldet werden können."
     },
     "activity": {
       "view_full_log": "Vollständiges Audit-Log anzeigen →",
@@ -536,7 +551,17 @@
       "conflict": "Zusammenführen nicht möglich: Sowohl das alte Konto als auch Ihr aktuelles Konto haben Einträge für dieselbe Veranstaltung und Runde. Entfernen Sie das Häkchen beim kollidierenden Kandidaten, oder schreiben Sie an {email}, dann führen wir die Konten von Hand zusammen.",
       "success_toast": "Frühere Ergebnisse mit deinem Profil neu verknüpft."
     },
-    "club_request_sent": "Anfrage gesendet. Der Wechsel erfolgt, sobald sie genehmigt ist: von Ihrem Verband oder, wo es noch keinen gibt, von den Admins des neuen Vereins."
+    "club_request_sent": "Anfrage gesendet. Der Wechsel erfolgt, sobald sie genehmigt ist: von Ihrem Verband oder, wo es noch keinen gibt, von den Admins des neuen Vereins.",
+    "details": {
+      "title": "Wettkampfdaten",
+      "body": "Geburtsdatum und Geschlecht bestimmen, welche Wettbewerbe Sie melden können: Herren- und Damenwettbewerbe prüfen das Geschlecht, Altersklassen zählen Ihr Alter am 31. Dezember des Wettkampfjahres.",
+      "missing": "Tragen Sie beides ein, bevor Sie einen Wettbewerb melden. Ein Herren-, Damen- oder Altersklassenwettbewerb kann Sie sonst nicht aufnehmen.",
+      "date_of_birth": "Geburtsdatum",
+      "gender": "Geschlecht",
+      "save": "Speichern",
+      "saved": "Gespeichert",
+      "failed": "Ihre Angaben konnten nicht gespeichert werden"
+    }
   },
   "scoreboard": {
     "page_label": "Anzeigetafel",

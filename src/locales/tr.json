@@ -85,7 +85,12 @@
       "founder_role_note": "Kulübün kurucusu olarak kendi antrenör veya hakem talebinizi onaylayamazsınız; talep bölgenizin yöneticilerine ya da DivingHQ'ya gider.",
       "spectator_note_see_above": "Tüm hesaplar Seyirci olarak başlar. Yukarıda talep ettiğiniz rol, altındaki notta belirtildiği gibi incelenir. E-postanız doğrulandıktan sonra giriş yapabilirsiniz.",
       "username_taken": "Bu kullanıcı adı zaten alınmış. Başka bir tane seçin.",
-      "age_confirmation": "13 yaşındayım veya daha büyüğüm."
+      "age_confirmation": "13 yaşındayım veya daha büyüğüm.",
+      "date_of_birth": "Doğum tarihi",
+      "dob_hint": "Hangi yaş gruplarında yarışabileceğinizi belirler. Yaş, yarışma yılının 31 Aralık tarihine göre hesaplanır (World Aquatics Madde 1.8).",
+      "gender": "Cinsiyet",
+      "gender_hint": "Erkekler ve kadınlar yarışmaları bunu kontrol eder; karma yarışmalar herkese açıktır.",
+      "under_13": "DivingHQ hesapları 13 yaş ve üzeri kişiler içindir. Bir ebeveyn, antrenör veya kulüp yöneticisi daha genç bir atlayıcıyı bunun yerine genç profili olarak ekleyebilir (kılavuzdaki Genç atlayıcılar bölümüne bakın)."
     },
     "register_org": {
       "title": "Kuruluş Kaydı",
@@ -185,6 +190,13 @@
       "next_claim_sysadmin": "Doğrulamadan sonra talebiniz açılır ve DivingHQ ekibi inceler. Karar verilirken giriş yapabilirsiniz."
     }
   },
+  "genders": {
+    "placeholder": "— Seçin —",
+    "female": "Kadın",
+    "male": "Erkek",
+    "other": "Diğer",
+    "prefer_not_to_say": "Belirtmek istemiyorum"
+  },
   "coach": {
     "dashboard": {
       "label": "Antrenör Paneli",
@@ -262,7 +274,8 @@
       "badge_can_withdraw": "Çekebilir",
       "badge_can_withdraw_tip": "Kayıtlı sporcuları bu yarışmadan çekebilirsiniz.",
       "badge_read_only": "Salt okunur",
-      "badge_read_only_tip": "Bu yarışmayı görüntüleyebilirsiniz, ancak değişiklikler kapalı ya da antrenör bağlantınız buna izin vermiyor."
+      "badge_read_only_tip": "Bu yarışmayı görüntüleyebilirsiniz, ancak değişiklikler kapalı ya da antrenör bağlantınız buna izin vermiyor.",
+      "badge_ineligible": "Uygun değil"
     }
   },
   "home": {
@@ -431,7 +444,9 @@
     },
     "diver_panel": {
       "live_meta": "Bir sonraki atlayışınızı, mevcut sıralamanızı ve hangi puana ihtiyacınız olduğunu görmek için dokunun",
-      "next_fallback": "Atlayış listesi oluşturucusunu adım adım inceleyin"
+      "next_fallback": "Atlayış listesi oluşturucusunu adım adım inceleyin",
+      "details_title": "Yarışma bilgilerinizi tamamlayın",
+      "details_body": "Erkekler, kadınlar ve yaş grubu yarışmalarına kaydedilebilmeniz için doğum tarihinizi ve cinsiyetinizi ekleyin."
     },
     "activity": {
       "view_full_log": "Tam denetim günlüğünü görüntüle →",
@@ -525,7 +540,17 @@
       "conflict": "Birleştirilemez: eski hesap ve mevcut hesabınızın ikisinde de aynı etkinlik ve tur için kayıtlar var. Çakışan adayın işaretini kaldırın ya da {email} adresine yazın, hesapları elle birleştirelim.",
       "success_toast": "Geçmiş sonuçlar profilinize yeniden bağlandı."
     },
-    "club_request_sent": "Talep gönderildi. Onaylandığında geçiş yapılır: federasyonunuz tarafından ya da henüz federasyon yoksa yeni kulübün yöneticileri tarafından."
+    "club_request_sent": "Talep gönderildi. Onaylandığında geçiş yapılır: federasyonunuz tarafından ya da henüz federasyon yoksa yeni kulübün yöneticileri tarafından.",
+    "details": {
+      "title": "Yarışma bilgileri",
+      "body": "Doğum tarihiniz ve cinsiyetiniz hangi yarışmalara kayıt olabileceğinizi belirler: erkekler ve kadınlar yarışmaları cinsiyeti kontrol eder, yaş grubu yarışmaları yarışma yılının 31 Aralık tarihindeki yaşınızı esas alır.",
+      "missing": "Bir yarışmaya kayıt olmadan önce ikisini de doldurun. Erkekler, kadınlar veya yaş grubu yarışması bunlar olmadan sizi kabul edemez.",
+      "date_of_birth": "Doğum tarihi",
+      "gender": "Cinsiyet",
+      "save": "Kaydet",
+      "saved": "Kaydedildi",
+      "failed": "Bilgileriniz kaydedilemedi"
+    }
   },
   "scoreboard": {
     "page_label": "Skor Tablosu",

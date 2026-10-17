@@ -85,7 +85,12 @@
       "founder_role_note": "Bilang tagapagtatag ng club, hindi mo maaaprubahan ang sarili mong kahilingan bilang tagasanay o hukom, kaya susuriin ito ng mga admin ng iyong rehiyon o ng DivingHQ.",
       "spectator_note_see_above": "Lahat ng account ay nagsisimula bilang Manonood. Ang role na hihilingin mo sa itaas ay susuriin ayon sa nakasaad sa paalala sa ilalim nito. Makakapag-log in ka kapag na-verify na ang iyong email.",
       "username_taken": "Ginagamit na ang username na iyan. Pumili ng iba.",
-      "age_confirmation": "Ako ay 13 taong gulang o mas matanda."
+      "age_confirmation": "Ako ay 13 taong gulang o mas matanda.",
+      "date_of_birth": "Petsa ng kapanganakan",
+      "dob_hint": "Tumutukoy kung aling mga pangkat ng edad ang maaari mong salihan. Ang edad ay binibilang sa 31 Disyembre ng taon ng kompetisyon (World Aquatics Artikulo 1.8).",
+      "gender": "Kasarian",
+      "gender_hint": "Sinusuri ito ng mga event ng kalalakihan at kababaihan; bukas sa lahat ang mga mixed event.",
+      "under_13": "Ang mga DivingHQ account ay para sa mga 13 taong gulang pataas. Maaaring idagdag ng magulang, coach o club admin ang mas batang diver bilang junior profile sa halip (tingnan ang Mga junior diver sa gabay)."
     },
     "register_org": {
       "title": "Irehistro ang organisasyon",
@@ -185,6 +190,13 @@
       "next_claim_sysadmin": "Kapag na-verify ka na, bubuksan ang iyong claim at susuriin ito ng DivingHQ team. Maaari kang mag-sign in habang pinagpapasyahan ito."
     }
   },
+  "genders": {
+    "placeholder": "— Pumili —",
+    "female": "Babae",
+    "male": "Lalaki",
+    "other": "Iba pa",
+    "prefer_not_to_say": "Ayaw kong sabihin"
+  },
   "coach": {
     "dashboard": {
       "label": "Dashboard ng coach",
@@ -262,7 +274,8 @@
       "badge_can_withdraw": "Puwedeng mag-withdraw",
       "badge_can_withdraw_tip": "Puwede mong i-withdraw ang mga naka-enter na diver mula sa event na ito.",
       "badge_read_only": "Pang-basa lang",
-      "badge_read_only_tip": "Makikita mo ang event na ito, pero sarado na ang pag-edit o hindi ito pinapayagan ng coach link mo."
+      "badge_read_only_tip": "Makikita mo ang event na ito, pero sarado na ang pag-edit o hindi ito pinapayagan ng coach link mo.",
+      "badge_ineligible": "Hindi kwalipikado"
     }
   },
   "home": {
@@ -431,7 +444,9 @@
     },
     "diver_panel": {
       "live_meta": "I-tap upang makita ang inyong susunod na dive, kasalukuyang ranggo, at kung ano ang kailangan ninyo para makapuntos",
-      "next_fallback": "Sundan ang dive list builder"
+      "next_fallback": "Sundan ang dive list builder",
+      "details_title": "Kumpletuhin ang iyong mga detalye sa kompetisyon",
+      "details_body": "Idagdag ang iyong petsa ng kapanganakan at kasarian para maipasok ka sa mga event ng kalalakihan, kababaihan at pangkat ng edad."
     },
     "activity": {
       "view_full_log": "Tingnan ang buong audit log →",
@@ -525,7 +540,17 @@
       "conflict": "Hindi pwedeng i-merge: ang lumang account at ang kasalukuyang account mo ay parehong may entry para sa parehong event at round. I-untick ang nag-conflict na candidate, o sumulat sa {email} at kami ang mano-manong magme-merge.",
       "success_toast": "Naka-link ulit sa profile mo ang nakaraang resulta."
     },
-    "club_request_sent": "Naipadala ang kahilingan. Lilipat ka kapag naaprubahan na ito: ng iyong federation, o kung wala pa, ng mga admin ng bagong club."
+    "club_request_sent": "Naipadala ang kahilingan. Lilipat ka kapag naaprubahan na ito: ng iyong federation, o kung wala pa, ng mga admin ng bagong club.",
+    "details": {
+      "title": "Mga detalye sa kompetisyon",
+      "body": "Tumutukoy ang iyong petsa ng kapanganakan at kasarian kung aling mga event ang maaari mong salihan: sinusuri ng mga event ng kalalakihan at kababaihan ang kasarian, at ginagamit ng mga event ng pangkat ng edad ang iyong edad sa 31 Disyembre ng taon ng kompetisyon.",
+      "missing": "Punan ang dalawa bago sumali sa isang event. Hindi ka matatanggap ng event ng kalalakihan, kababaihan o pangkat ng edad kung wala ang mga ito.",
+      "date_of_birth": "Petsa ng kapanganakan",
+      "gender": "Kasarian",
+      "save": "I-save",
+      "saved": "Na-save",
+      "failed": "Hindi ma-save ang iyong mga detalye"
+    }
   },
   "scoreboard": {
     "page_label": "Pisara ng iskor",
